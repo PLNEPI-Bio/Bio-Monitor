@@ -663,6 +663,17 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 
 /* Pareto chart head with month filter */
 .pareto-chart-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.pareto-controls{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
+.pareto-toggle-group{
+  display:flex;flex-direction:column;gap:6px;
+  padding:8px 12px;background:var(--panel-3);border-left:2px solid var(--accent);
+}
+.pareto-toggle{
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  color:var(--text);letter-spacing:1px;text-transform:uppercase;user-select:none;
+}
+.pareto-toggle input[type="checkbox"]{width:14px;height:14px;cursor:pointer;accent-color:var(--accent)}
 .pareto-month-filter-wrap{display:flex;flex-direction:column;gap:4px}
 .pareto-month-filter-wrap label{
   font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);
@@ -1483,23 +1494,33 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
     <div class="real-card">
       <div class="pareto-chart-head">
         <h3 style="margin-bottom:0">Pareto Chart · Loss Contribution by Category</h3>
-        <div class="pareto-month-filter-wrap">
-          <label>Month Filter</label>
-          <select id="pareto-month-filter">
-            <option value="all">All Months (YTD)</option>
-            <option value="0">January</option>
-            <option value="1">February</option>
-            <option value="2">March</option>
-            <option value="3">April</option>
-            <option value="4">May</option>
-            <option value="5">June</option>
-            <option value="6">July</option>
-            <option value="7">August</option>
-            <option value="8">September</option>
-            <option value="9">October</option>
-            <option value="10">November</option>
-            <option value="11">December</option>
-          </select>
+        <div class="pareto-controls">
+          <div class="pareto-toggle-group">
+            <label class="pareto-toggle">
+              <input type="checkbox" id="pareto-show-loss" checked> Show Loss values
+            </label>
+            <label class="pareto-toggle">
+              <input type="checkbox" id="pareto-show-cumpct" checked> Show Cumulative %
+            </label>
+          </div>
+          <div class="pareto-month-filter-wrap">
+            <label>Month Filter</label>
+            <select id="pareto-month-filter">
+              <option value="all">All Months (YTD)</option>
+              <option value="0">January</option>
+              <option value="1">February</option>
+              <option value="2">March</option>
+              <option value="3">April</option>
+              <option value="4">May</option>
+              <option value="5">June</option>
+              <option value="6">July</option>
+              <option value="7">August</option>
+              <option value="8">September</option>
+              <option value="9">October</option>
+              <option value="10">November</option>
+              <option value="11">December</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="chart-wrap h320"><canvas id="paretoPrimaryChart"></canvas></div>
@@ -1640,6 +1661,8 @@ const state = {
   kontrakFilters: { genco: 'all', pltu: 'all', mitra: 'all', jenis: 'all', tahun: 'all', bulan: 'all' },
   kontrakShowOldYears: false,
   kontrakOnlyActive: true,
+  paretoShowLoss: true,
+  paretoShowCumPct: true,
 };
 
 // ========= utils =========
@@ -2839,6 +2862,27 @@ function renderParetoView(){
     monthSel.dataset.built = '1';
   }
 
+  // Wire toggle checkboxes for label visibility (re-render chart on change)
+  const showLossChk = document.getElementById('pareto-show-loss');
+  if (showLossChk && !showLossChk.dataset.built){
+    showLossChk.checked = state.paretoShowLoss;
+    showLossChk.onchange = () => {
+      state.paretoShowLoss = showLossChk.checked;
+      // Trigger redraw via update (no destroy needed - plugin reads state on each draw)
+      if (paretoCharts.pareto) paretoCharts.pareto.update();
+    };
+    showLossChk.dataset.built = '1';
+  }
+  const showCumChk = document.getElementById('pareto-show-cumpct');
+  if (showCumChk && !showCumChk.dataset.built){
+    showCumChk.checked = state.paretoShowCumPct;
+    showCumChk.onchange = () => {
+      state.paretoShowCumPct = showCumChk.checked;
+      if (paretoCharts.pareto) paretoCharts.pareto.update();
+    };
+    showCumChk.dataset.built = '1';
+  }
+
   // --- Loss by month across all plants (unchanged - shows full year) ---
   const monthlyLoss = MONTHS.map(() => 0);
   const monthlyTarget = MONTHS.map(() => 0);
@@ -2987,6 +3031,45 @@ function renderParetoPrimaryChart(){
 
   // Pareto chart
   if (paretoCharts.pareto) paretoCharts.pareto.destroy();
+  // Custom plugin: draw value labels above bars, cumulative % above line points
+  const paretoLabelsPlugin = {
+    id: 'paretoLabels',
+    afterDatasetsDraw(chart){
+      const {ctx, data} = chart;
+      ctx.save();
+      const barMeta = chart.getDatasetMeta(0);
+      const lineMeta = chart.getDatasetMeta(1);
+      const isLightMode = document.documentElement.getAttribute('data-theme') === 'light';
+      const barColor = isLightMode ? '#0f172a' : '#f1f5f9';
+      const lineColor = isLightMode ? '#0f172a' : '#10b981';
+      ctx.textAlign = 'center';
+      data.datasets[0].data.forEach((v, i) => {
+        const bar = barMeta.data[i];
+        if (!bar) return;
+        // Draw bar value above the bar (only if Loss labels enabled)
+        if (state.paretoShowLoss){
+          ctx.font = "700 10px 'JetBrains Mono', monospace";
+          ctx.fillStyle = barColor;
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(fmtInt(v), bar.x, bar.y - 4);
+        }
+        // Draw cumulative % above line point (only if Cumulative labels enabled)
+        if (state.paretoShowCumPct){
+          const linePoint = lineMeta.data[i];
+          if (linePoint){
+            const cumValue = data.datasets[1].data[i];
+            if (cumValue !== undefined && cumValue !== null){
+              ctx.fillStyle = lineColor;
+              ctx.font = "700 9px 'JetBrains Mono', monospace";
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(cumValue.toFixed(1) + '%', linePoint.x, linePoint.y - 8);
+            }
+          }
+        }
+      });
+      ctx.restore();
+    }
+  };
   paretoCharts.pareto = new Chart(document.getElementById('paretoPrimaryChart'), {
     data:{
       labels: sortedCats.map(([c]) => c.toUpperCase()),
@@ -3009,6 +3092,8 @@ function renderParetoPrimaryChart(){
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{ mode:'index', intersect:false },
+      // Add some top padding so labels aren't clipped
+      layout:{ padding:{ top: 30 } },
       plugins:{
         legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:11, family:"'JetBrains Mono', monospace"}, boxWidth:14, boxHeight:8, padding:14 } },
         tooltip:{
@@ -3017,9 +3102,9 @@ function renderParetoPrimaryChart(){
             title: items => {
               if (!sortedCats[items[0].dataIndex]) return '';
               const code = sortedCats[items[0].dataIndex][0];
-              return `${code.toUpperCase()} — ${cats[code]||''}`;
+              return code.toUpperCase() + ' — ' + (cats[code]||'');
             },
-            label: c => c.datasetIndex === 0 ? `Loss: ${fmtInt(c.parsed.y)} ton` : `Cumulative: ${c.parsed.y.toFixed(1)}%`
+            label: c => c.datasetIndex === 0 ? 'Loss: ' + fmtInt(c.parsed.y) + ' ton' : 'Cumulative: ' + c.parsed.y.toFixed(1) + '%'
           }
         }
       },
@@ -3028,7 +3113,8 @@ function renderParetoPrimaryChart(){
         y:{ grid:{ color:'#1a2530' }, ticks:{ color:'#64748b', font:{size:10, family:"'JetBrains Mono', monospace"}, callback: v => fmt(v) }, title:{display:true, text:'Loss (ton)', color:'#64748b', font:{size:10}} },
         y1:{ position:'right', grid:{ display:false }, ticks:{ color:'#64748b', font:{size:10, family:"'JetBrains Mono', monospace"}, callback: v => v.toFixed(0)+'%' }, min:0, max:100, title:{display:true, text:'Cumulative %', color:'#64748b', font:{size:10}} }
       }
-    }
+    },
+    plugins: [paretoLabelsPlugin]
   });
 
   // Also re-render the pie (same filter)
