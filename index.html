@@ -663,6 +663,54 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 
 /* Pareto chart head with month filter */
 .pareto-chart-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+
+/* Generic chart card head with toggles (used in Realisasi tab) */
+.chart-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;padding-right:46px}
+.chart-toggle-group{
+  display:flex;flex-wrap:wrap;gap:6px 14px;
+  padding:6px 10px;background:var(--panel-3);border-left:2px solid var(--accent);
+}
+.chart-toggle{
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:9px;
+  color:var(--text);letter-spacing:1px;text-transform:uppercase;user-select:none;
+}
+.chart-toggle input[type="checkbox"]{width:14px;height:14px;cursor:pointer;accent-color:var(--accent)}
+
+/* Trend chart's optional data table (under Multi-Year Comparison chart) */
+.trend-table-wrap{display:none;margin-top:14px;border:1px solid var(--border);background:var(--panel-2)}
+.trend-table-wrap.shown{display:block}
+.trend-table-actions{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:8px 12px;border-bottom:1px solid var(--border);background:var(--panel-3);
+  flex-wrap:wrap;
+}
+.trend-table-actions-buttons{display:flex;gap:6px;flex-wrap:wrap}
+.trend-table-title{
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;
+  color:var(--text-dim);text-transform:uppercase;
+}
+.trend-table-download-btn{
+  background:var(--panel);border:1px solid var(--border-bright);color:var(--text);
+  cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:9px;
+  letter-spacing:1px;text-transform:uppercase;padding:6px 12px;
+  display:inline-flex;align-items:center;gap:6px;transition:all .15s;border-radius:3px;
+}
+.trend-table-download-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--panel-3)}
+.trend-table-download-btn svg{width:12px;height:12px}
+.trend-table-scroll{overflow-x:auto}
+.trend-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:10px;min-width:520px}
+.trend-table th,.trend-table td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.trend-table th{background:var(--panel-3);font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;font-size:9px;position:sticky;top:0;z-index:1}
+.trend-table th:first-child,.trend-table td:first-child{text-align:left;color:var(--text-dim);font-size:9px;text-transform:uppercase;letter-spacing:1px}
+.trend-table td.zero{color:var(--text-dim);opacity:.4}
+.trend-table tfoot td{background:var(--panel-3);color:var(--text-bright);font-weight:600;border-bottom:none;border-top:1px solid var(--border-bright)}
+/* Year-color text per column (matches chart legend) */
+.trend-table th.col-2023,.trend-table td.col-2023{color:#64748b}
+.trend-table th.col-2024,.trend-table td.col-2024{color:#3b82f6}
+.trend-table th.col-2025,.trend-table td.col-2025{color:#f59e0b}
+.trend-table th.col-2026,.trend-table td.col-2026{color:#10b981}
+.trend-table td.col-2023.zero,.trend-table td.col-2024.zero,.trend-table td.col-2025.zero,.trend-table td.col-2026.zero{color:var(--text-dim);opacity:.35}
 .pareto-controls{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}
 .pareto-toggle-group{
   display:flex;flex-direction:column;gap:6px;
@@ -1350,11 +1398,32 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 
     <div class="real-grid">
       <div class="real-card">
-        <h3>Monthly Realisasi · Multi-Year Comparison</h3>
+        <div class="chart-card-head">
+          <h3 style="margin-bottom:0">Monthly Realisasi · Multi-Year Comparison</h3>
+          <div class="chart-toggle-group">
+            <label class="chart-toggle">
+              <input type="checkbox" id="trend-show-values"> Show values
+            </label>
+            <label class="chart-toggle">
+              <input type="checkbox" id="trend-show-points" checked> Show points
+            </label>
+            <label class="chart-toggle">
+              <input type="checkbox" id="trend-show-table"> Show table
+            </label>
+          </div>
+        </div>
         <div class="chart-wrap h320"><canvas id="realTrendChart"></canvas></div>
+        <div class="trend-table-wrap" id="trend-table-wrap"></div>
       </div>
       <div class="real-card">
-        <h3>Annual Total</h3>
+        <div class="chart-card-head">
+          <h3 style="margin-bottom:0">Annual Total</h3>
+          <div class="chart-toggle-group">
+            <label class="chart-toggle">
+              <input type="checkbox" id="annual-show-values" checked> Show values
+            </label>
+          </div>
+        </div>
         <div class="chart-wrap h320"><canvas id="realAnnualChart"></canvas></div>
       </div>
     </div>
@@ -1663,6 +1732,10 @@ const state = {
   kontrakOnlyActive: true,
   paretoShowLoss: true,
   paretoShowCumPct: true,
+  trendShowValues: false,
+  trendShowPoints: true,
+  trendShowTable: false,
+  annualShowValues: true,
 };
 
 // ========= utils =========
@@ -2158,6 +2231,256 @@ function drawTrend(){
 
 // ========= TAB 2: REALISASI VIEW =========
 const realCharts = {};
+
+/**
+ * Render the optional Trend data table (months × years).
+ * Visibility controlled by state.trendShowTable + .shown class.
+ * Includes a download-as-CSV button.
+ */
+function renderTrendTable(yearTotals){
+  const wrap = document.getElementById('trend-table-wrap');
+  if (!wrap) return;
+  const years = ['2023','2024','2025','2026'];
+  const yearSums = { '2023':0, '2024':0, '2025':0, '2026':0 };
+  let header = '<table class="trend-table"><thead><tr><th>Month</th>';
+  for (let i = 0; i < years.length; i++) header += '<th class="col-' + years[i] + '">' + years[i] + '</th>';
+  header += '</tr></thead><tbody>';
+  let body = '';
+  for (let mi = 0; mi < 12; mi++){
+    body += '<tr><td>' + MONTHS[mi] + '</td>';
+    for (let yi = 0; yi < years.length; yi++){
+      const v = (yearTotals[years[yi]] || [])[mi] || 0;
+      yearSums[years[yi]] += v;
+      const cls = 'col-' + years[yi] + (v === 0 ? ' zero' : '');
+      body += '<td class="' + cls + '">' + (v ? fmtInt(v) : '—') + '</td>';
+    }
+    body += '</tr>';
+  }
+  let footer = '<tfoot><tr><td>TOTAL</td>';
+  for (let yi = 0; yi < years.length; yi++){
+    footer += '<td class="col-' + years[yi] + '">' + fmtInt(yearSums[years[yi]]) + '</td>';
+  }
+  footer += '</tr></tfoot>';
+  const tableHtml = header + body + '</tbody>' + footer + '</table>';
+
+  // Action bar with title and download buttons (CSV + PNG)
+  const dlIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>';
+  const actions =
+    '<div class="trend-table-actions">' +
+      '<span class="trend-table-title">Monthly Realisasi · 2023–2026</span>' +
+      '<div class="trend-table-actions-buttons">' +
+        '<button class="trend-table-download-btn" id="trend-table-download-csv" title="Download as CSV">' +
+          dlIcon + ' CSV' +
+        '</button>' +
+        '<button class="trend-table-download-btn" id="trend-table-download-png" title="Download as PNG image">' +
+          dlIcon + ' PNG' +
+        '</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="trend-table-scroll">' + tableHtml + '</div>';
+
+  wrap.innerHTML = actions;
+  wrap.classList.toggle('shown', !!state.trendShowTable);
+
+  // Wire downloads
+  const csvBtn = document.getElementById('trend-table-download-csv');
+  if (csvBtn) csvBtn.onclick = () => downloadTrendTableCSV(yearTotals);
+  const pngBtn = document.getElementById('trend-table-download-png');
+  if (pngBtn) pngBtn.onclick = () => downloadTrendTablePNG(yearTotals);
+}
+
+function downloadTrendTableCSV(yearTotals){
+  const years = ['2023','2024','2025','2026'];
+  // Build CSV
+  const rows = [];
+  rows.push(['Month'].concat(years).join(','));
+  const yearSums = { '2023':0, '2024':0, '2025':0, '2026':0 };
+  for (let mi = 0; mi < 12; mi++){
+    const row = [MONTHS[mi]];
+    for (let yi = 0; yi < years.length; yi++){
+      const v = (yearTotals[years[yi]] || [])[mi] || 0;
+      yearSums[years[yi]] += v;
+      // Format with no thousand separator for CSV (clean numbers)
+      row.push(Math.round(v));
+    }
+    rows.push(row.join(','));
+  }
+  const totalRow = ['TOTAL'];
+  for (let yi = 0; yi < years.length; yi++) totalRow.push(Math.round(yearSums[years[yi]]));
+  rows.push(totalRow.join(','));
+  const csv = rows.join('\n');
+
+  // Download
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const d = new Date();
+  const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+  link.download = 'biomassa_monthly_realisasi_2023-2026_' + stamp + '.csv';
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Download trend table as PNG image. Renders the table directly to a canvas
+ * (rather than using html2canvas) for crisp font rendering and theme-aware colors.
+ */
+function downloadTrendTablePNG(yearTotals){
+  const years = ['2023','2024','2025','2026'];
+  const yearColors = { '2023':'#64748b', '2024':'#3b82f6', '2025':'#f59e0b', '2026':'#10b981' };
+  const lightMode = (typeof isLight === 'function') ? isLight() : (document.documentElement.getAttribute('data-theme') === 'light');
+
+  // Theme-aware palette
+  const bg = lightMode ? '#ffffff' : '#111820';
+  const headerBg = lightMode ? '#e2e8f0' : '#1a2530';
+  const totalBg = lightMode ? '#cbd5e1' : '#1e2a38';
+  const borderC = lightMode ? '#cbd5e1' : '#1e2a38';
+  const dimC = lightMode ? '#475569' : '#64748b';
+  const textC = lightMode ? '#0f172a' : '#cbd5e1';
+  const titleC = lightMode ? '#0f172a' : '#f1f5f9';
+  const accentC = '#10b981';
+
+  // Layout constants (px). Use 2x scale for crisp rendering on retina.
+  const scale = 2;
+  const pad = 24 * scale;
+  const colW = 130 * scale;     // year columns
+  const labelW = 110 * scale;   // first column (Month)
+  const rowH = 28 * scale;
+  const headerH = 36 * scale;
+  const titleH = 60 * scale;
+  const footerH = 32 * scale;
+
+  const tableW = labelW + colW * years.length;
+  const totalW = pad * 2 + tableW;
+  const totalH = pad + titleH + headerH + rowH * 12 + footerH + pad;
+
+  const cnv = document.createElement('canvas');
+  cnv.width = totalW;
+  cnv.height = totalH;
+  const ctx = cnv.getContext('2d');
+
+  // Background
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, totalW, totalH);
+
+  // Title block
+  ctx.fillStyle = accentC;
+  ctx.font = '700 ' + (10 * scale) + "px 'JetBrains Mono', monospace";
+  ctx.textBaseline = 'top';
+  ctx.fillText('BIOMASSA SUPPLY MONITORING', pad, pad);
+
+  ctx.fillStyle = titleC;
+  ctx.font = '700 ' + (18 * scale) + "px 'JetBrains Mono', monospace";
+  ctx.fillText('Monthly Realisasi · 2023–2026', pad, pad + 18 * scale);
+
+  // Compute year sums for footer
+  const yearSums = { '2023':0, '2024':0, '2025':0, '2026':0 };
+  for (let mi = 0; mi < 12; mi++){
+    for (let yi = 0; yi < years.length; yi++){
+      yearSums[years[yi]] += (yearTotals[years[yi]] || [])[mi] || 0;
+    }
+  }
+
+  // Table starts here
+  const tableX = pad;
+  const tableY = pad + titleH;
+
+  // Header row
+  ctx.fillStyle = headerBg;
+  ctx.fillRect(tableX, tableY, tableW, headerH);
+  ctx.font = '500 ' + (10 * scale) + "px 'JetBrains Mono', monospace";
+  ctx.fillStyle = dimC;
+  ctx.textBaseline = 'middle';
+  // Month label header
+  ctx.textAlign = 'left';
+  ctx.fillText('MONTH', tableX + 12 * scale, tableY + headerH / 2);
+  // Year headers (right-aligned)
+  ctx.textAlign = 'right';
+  for (let yi = 0; yi < years.length; yi++){
+    const cx = tableX + labelW + colW * yi + colW - 12 * scale;
+    ctx.fillStyle = yearColors[years[yi]];
+    ctx.fillText(years[yi], cx, tableY + headerH / 2);
+  }
+
+  // Data rows
+  ctx.font = '400 ' + (11 * scale) + "px 'JetBrains Mono', monospace";
+  for (let mi = 0; mi < 12; mi++){
+    const rowY = tableY + headerH + rowH * mi;
+    // Border bottom
+    ctx.strokeStyle = borderC;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tableX, rowY + rowH);
+    ctx.lineTo(tableX + tableW, rowY + rowH);
+    ctx.stroke();
+    // Month name (uppercase, dim)
+    ctx.fillStyle = dimC;
+    ctx.font = '500 ' + (10 * scale) + "px 'JetBrains Mono', monospace";
+    ctx.textAlign = 'left';
+    ctx.fillText(MONTHS[mi].toUpperCase(), tableX + 12 * scale, rowY + rowH / 2);
+    // Values per year (right-aligned, year-colored)
+    ctx.font = '400 ' + (11 * scale) + "px 'JetBrains Mono', monospace";
+    ctx.textAlign = 'right';
+    for (let yi = 0; yi < years.length; yi++){
+      const v = (yearTotals[years[yi]] || [])[mi] || 0;
+      const cx = tableX + labelW + colW * yi + colW - 12 * scale;
+      if (v === 0){
+        ctx.fillStyle = dimC;
+        ctx.globalAlpha = 0.4;
+        ctx.fillText('—', cx, rowY + rowH / 2);
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = yearColors[years[yi]];
+        ctx.fillText(fmtInt(v), cx, rowY + rowH / 2);
+      }
+    }
+  }
+
+  // Footer (TOTAL)
+  const footerY = tableY + headerH + rowH * 12;
+  ctx.fillStyle = totalBg;
+  ctx.fillRect(tableX, footerY, tableW, footerH);
+  // Top border
+  ctx.strokeStyle = accentC;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(tableX, footerY);
+  ctx.lineTo(tableX + tableW, footerY);
+  ctx.stroke();
+  // TOTAL label
+  ctx.fillStyle = titleC;
+  ctx.font = '700 ' + (11 * scale) + "px 'JetBrains Mono', monospace";
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillText('TOTAL', tableX + 12 * scale, footerY + footerH / 2);
+  // Year totals (right-aligned, year-colored)
+  ctx.textAlign = 'right';
+  for (let yi = 0; yi < years.length; yi++){
+    const cx = tableX + labelW + colW * yi + colW - 12 * scale;
+    ctx.fillStyle = yearColors[years[yi]];
+    ctx.fillText(fmtInt(yearSums[years[yi]]), cx, footerY + footerH / 2);
+  }
+
+  // Outer table border
+  ctx.strokeStyle = borderC;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(tableX, tableY, tableW, headerH + rowH * 12 + footerH);
+
+  // Trigger download
+  const dataUrl = cnv.toDataURL('image/png');
+  const link = document.createElement('a');
+  const d = new Date();
+  const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+  link.download = 'biomassa_monthly_realisasi_2023-2026_' + stamp + '.png';
+  link.href = dataUrl;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 function renderRealView(){
   // Totals per year
   const yearTotals = { '2023': new Array(12).fill(0), '2024': new Array(12).fill(0), '2025': new Array(12).fill(0), '2026': new Array(12).fill(0) };
@@ -2189,6 +2512,31 @@ function renderRealView(){
     </div>`;
   }).join('');
 
+  // Plugin: draw values above each line point (theme-aware, color matches dataset)
+  const trendValuesPlugin = {
+    id: 'trendValues',
+    afterDatasetsDraw(chart){
+      if (!state.trendShowValues) return;
+      const {ctx, data} = chart;
+      ctx.save();
+      ctx.font = "700 9px 'JetBrains Mono', monospace";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      data.datasets.forEach((ds, dsIdx) => {
+        const meta = chart.getDatasetMeta(dsIdx);
+        const color = ds.borderColor || '#cbd5e1';
+        ctx.fillStyle = color;
+        ds.data.forEach((v, i) => {
+          if (v === null || v === undefined || v === 0) return;
+          const pt = meta.data[i];
+          if (!pt) return;
+          ctx.fillText(fmtInt(v), pt.x, pt.y - 6);
+        });
+      });
+      ctx.restore();
+    }
+  };
+
   // Main trend chart (monthly)
   if (realCharts.trend) realCharts.trend.destroy();
   realCharts.trend = new Chart(document.getElementById('realTrendChart'), {
@@ -2196,25 +2544,53 @@ function renderRealView(){
     data:{
       labels: MONTHS,
       datasets: [
-        { label:'2023', data: yearTotals['2023'], borderColor:'#64748b', backgroundColor:'transparent', borderWidth:2, borderDash:[4,4], tension:.3, pointRadius:0, pointHoverRadius:5 },
-        { label:'2024', data: yearTotals['2024'], borderColor:'#3b82f6', backgroundColor:'transparent', borderWidth:2, tension:.3, pointRadius:0, pointHoverRadius:5 },
-        { label:'2025', data: yearTotals['2025'], borderColor:'#f59e0b', backgroundColor:'transparent', borderWidth:2, tension:.3, pointRadius:0, pointHoverRadius:5 },
-        { label:'2026', data: yearTotals['2026'], borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.15)', fill:true, borderWidth:2.5, tension:.3, pointRadius:0, pointHoverRadius:6 },
+        { label:'2023', data: yearTotals['2023'], borderColor:'#64748b', backgroundColor:'transparent', borderWidth:2, borderDash:[4,4], tension:.3, pointRadius: state.trendShowPoints ? 3 : 0, pointHoverRadius:5, pointBackgroundColor:'#64748b' },
+        { label:'2024', data: yearTotals['2024'], borderColor:'#3b82f6', backgroundColor:'transparent', borderWidth:2, tension:.3, pointRadius: state.trendShowPoints ? 3 : 0, pointHoverRadius:5, pointBackgroundColor:'#3b82f6' },
+        { label:'2025', data: yearTotals['2025'], borderColor:'#f59e0b', backgroundColor:'transparent', borderWidth:2, tension:.3, pointRadius: state.trendShowPoints ? 3 : 0, pointHoverRadius:5, pointBackgroundColor:'#f59e0b' },
+        { label:'2026', data: yearTotals['2026'], borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.15)', fill:true, borderWidth:2.5, tension:.3, pointRadius: state.trendShowPoints ? 4 : 0, pointHoverRadius:6, pointBackgroundColor:'#10b981' },
       ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{ mode:'index', intersect:false },
+      layout:{ padding:{ top: 14 } },
       plugins:{
         legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:11, family:"'JetBrains Mono', monospace"}, boxWidth:16, boxHeight:2, padding:16 } },
-        tooltip:{ backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1', borderColor:'#1e2a38', borderWidth:1, padding:12, titleFont:{family:"'JetBrains Mono', monospace", size:11}, bodyFont:{family:"'JetBrains Mono', monospace", size:11}, callbacks:{ label: c => `${c.dataset.label}: ${fmtInt(c.parsed.y)} ton` } }
+        tooltip:{ backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1', borderColor:'#1e2a38', borderWidth:1, padding:12, titleFont:{family:"'JetBrains Mono', monospace", size:11}, bodyFont:{family:"'JetBrains Mono', monospace", size:11}, callbacks:{ label: c => c.dataset.label + ': ' + fmtInt(c.parsed.y) + ' ton' } }
       },
       scales:{
         x:{ grid:{ color:'#1a2530',drawBorder:false }, ticks:{ color:'#64748b', font:{size:10, family:"'JetBrains Mono', monospace"} } },
         y:{ grid:{ color:'#1a2530',drawBorder:false }, ticks:{ color:'#64748b', font:{size:10, family:"'JetBrains Mono', monospace"}, callback: v => fmt(v) } }
       }
-    }
+    },
+    plugins: [trendValuesPlugin]
   });
+
+  // Render data table under the chart (visibility toggled via state.trendShowTable)
+  renderTrendTable(yearTotals);
+
+  // Plugin: draw values above bars in Annual Total chart
+  const annualValuesPlugin = {
+    id: 'annualValues',
+    afterDatasetsDraw(chart){
+      if (!state.annualShowValues) return;
+      const {ctx, data} = chart;
+      const meta = chart.getDatasetMeta(0);
+      ctx.save();
+      ctx.font = "700 11px 'JetBrains Mono', monospace";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      data.datasets[0].data.forEach((v, i) => {
+        if (v === null || v === undefined) return;
+        const bar = meta.data[i];
+        if (!bar) return;
+        const color = (data.datasets[0].backgroundColor && data.datasets[0].backgroundColor[i]) || '#cbd5e1';
+        ctx.fillStyle = color;
+        ctx.fillText(fmtInt(v), bar.x, bar.y - 6);
+      });
+      ctx.restore();
+    }
+  };
 
   // Annual totals bar chart
   if (realCharts.annual) realCharts.annual.destroy();
@@ -2230,15 +2606,17 @@ function renderRealView(){
     },
     options:{
       responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top: 22 } },
       plugins:{
         legend:{ display:false },
-        tooltip:{ backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1', borderColor:'#1e2a38', borderWidth:1, padding:10, titleFont:{family:"'JetBrains Mono', monospace", size:11}, bodyFont:{family:"'JetBrains Mono', monospace", size:11}, callbacks:{ label: c => `${fmtInt(c.parsed.y)} ton` } }
+        tooltip:{ backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1', borderColor:'#1e2a38', borderWidth:1, padding:10, titleFont:{family:"'JetBrains Mono', monospace", size:11}, bodyFont:{family:"'JetBrains Mono', monospace", size:11}, callbacks:{ label: c => fmtInt(c.parsed.y) + ' ton' } }
       },
       scales:{
         x:{ grid:{ display:false }, ticks:{ color:'#cbd5e1', font:{size:11, family:"'JetBrains Mono', monospace"} } },
         y:{ grid:{ color:'#1a2530',drawBorder:false }, ticks:{ color:'#64748b', font:{size:10, family:"'JetBrains Mono', monospace"}, callback: v => fmt(v) } }
       }
-    }
+    },
+    plugins: [annualValuesPlugin]
   });
 
   // Cumulative chart
@@ -2381,6 +2759,51 @@ function renderRealView(){
       }
     }
   });
+
+  // Wire toggle checkboxes for trend & annual chart labels (first-time bind only)
+  const trendValuesChk = document.getElementById('trend-show-values');
+  if (trendValuesChk && !trendValuesChk.dataset.built){
+    trendValuesChk.checked = state.trendShowValues;
+    trendValuesChk.onchange = () => {
+      state.trendShowValues = trendValuesChk.checked;
+      if (realCharts.trend) realCharts.trend.update();
+    };
+    trendValuesChk.dataset.built = '1';
+  }
+  const trendPointsChk = document.getElementById('trend-show-points');
+  if (trendPointsChk && !trendPointsChk.dataset.built){
+    trendPointsChk.checked = state.trendShowPoints;
+    trendPointsChk.onchange = () => {
+      state.trendShowPoints = trendPointsChk.checked;
+      if (realCharts.trend){
+        // Update each dataset's pointRadius
+        realCharts.trend.data.datasets.forEach((ds, i) => {
+          ds.pointRadius = state.trendShowPoints ? (i === 3 ? 4 : 3) : 0;
+        });
+        realCharts.trend.update();
+      }
+    };
+    trendPointsChk.dataset.built = '1';
+  }
+  const annualValuesChk = document.getElementById('annual-show-values');
+  if (annualValuesChk && !annualValuesChk.dataset.built){
+    annualValuesChk.checked = state.annualShowValues;
+    annualValuesChk.onchange = () => {
+      state.annualShowValues = annualValuesChk.checked;
+      if (realCharts.annual) realCharts.annual.update();
+    };
+    annualValuesChk.dataset.built = '1';
+  }
+  const trendTableChk = document.getElementById('trend-show-table');
+  if (trendTableChk && !trendTableChk.dataset.built){
+    trendTableChk.checked = state.trendShowTable;
+    trendTableChk.onchange = () => {
+      state.trendShowTable = trendTableChk.checked;
+      const wrap = document.getElementById('trend-table-wrap');
+      if (wrap) wrap.classList.toggle('shown', state.trendShowTable);
+    };
+    trendTableChk.dataset.built = '1';
+  }
 }
 
 function buildRealFilters(){
