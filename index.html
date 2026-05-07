@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomassa Dashboard V4 — PLTU PLN Group 2026</title>
+<title>Biomassa Dashboard V5 — PLTU PLN Group 2026</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>/* ======= Biomassa Monitoring Dashboard v2 ======= */
 
 /* DARK THEME (default) */
@@ -921,6 +922,63 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 .kontrak-amandemen-text.none{color:var(--text-dim);opacity:.5;font-style:italic}
 
 /* ===== Usulan Kontrak tab ===== */
+
+/* Sync status bar (Supabase connection indicator + user identity) */
+.usulan-sync-bar{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+  margin-bottom:10px;padding:10px 14px;
+  background:var(--panel-2);border:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+}
+.usulan-sync-status{display:inline-flex;align-items:center;gap:8px}
+.usulan-sync-dot{
+  width:8px;height:8px;border-radius:50%;display:inline-block;
+  background:var(--text-dim);transition:background .25s;
+  box-shadow:0 0 6px transparent;
+}
+.usulan-sync-dot.connecting{background:var(--warn);box-shadow:0 0 6px rgba(245,158,11,.5);animation:syncPulse 1.5s ease-in-out infinite}
+.usulan-sync-dot.online{background:var(--accent);box-shadow:0 0 6px rgba(16,185,129,.6)}
+.usulan-sync-dot.syncing{background:var(--accent);box-shadow:0 0 8px rgba(16,185,129,.8);animation:syncPulse 1s ease-in-out infinite}
+.usulan-sync-dot.offline{background:var(--danger);box-shadow:0 0 6px rgba(239,68,68,.5)}
+.usulan-sync-dot.error{background:var(--danger);box-shadow:0 0 6px rgba(239,68,68,.5)}
+@keyframes syncPulse{0%,100%{opacity:1}50%{opacity:.4}}
+.usulan-sync-label{
+  letter-spacing:1px;text-transform:uppercase;font-size:9px;color:var(--text-dim);
+}
+.usulan-sync-label.online{color:var(--accent)}
+.usulan-sync-label.syncing{color:var(--accent)}
+.usulan-sync-label.offline,.usulan-sync-label.error{color:var(--danger)}
+.usulan-sync-label.connecting{color:var(--warn)}
+.usulan-sync-queue-count{
+  display:inline-block;margin-left:8px;padding:2px 7px;
+  background:var(--warn);color:#0a0e14;border-radius:8px;
+  font-weight:700;font-size:9px;letter-spacing:.5px;
+}
+.usulan-user-info{display:inline-flex;align-items:center;gap:8px}
+.usulan-user-label{color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;font-size:9px}
+.usulan-user-name{
+  color:var(--accent);font-weight:600;letter-spacing:.5px;
+  max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.usulan-change-name-btn{
+  background:transparent;border:1px solid var(--border-bright);color:var(--text-dim);
+  cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:9px;
+  padding:3px 8px;border-radius:3px;letter-spacing:.5px;text-transform:uppercase;
+  transition:all .15s;
+}
+.usulan-change-name-btn:hover{color:var(--accent);border-color:var(--accent)}
+
+/* "Last edited by" tooltip on row hover */
+.usulan-table tr[data-edit-by]:hover td.no-cell::after{
+  content:attr(data-edit-tooltip);
+  position:absolute;background:var(--panel);border:1px solid var(--border-bright);
+  padding:4px 8px;font-size:9px;color:var(--text);
+  border-radius:3px;white-space:nowrap;z-index:50;
+  margin-top:18px;margin-left:-10px;
+  font-family:'JetBrains Mono',monospace;letter-spacing:.5px;
+}
+.usulan-table td.no-cell{position:relative}
+
 .usulan-action-row{
   display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
   margin-bottom:14px;padding:12px 14px;
@@ -1772,7 +1830,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
     <div class="real-header">
       <div>
         <div class="real-title">Usulan Kontrak</div>
-        <div class="real-title-sub">Tracking tahap administrasi pengadaan biomassa · auto-saved progress per row</div>
+        <div class="real-title-sub">Tracking tahap administrasi pengadaan biomassa · synced via Supabase</div>
       </div>
     </div>
 
@@ -1780,13 +1838,27 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
       <h3>
         <span>Daftar Usulan <span class="recap-count" id="usulan-count"></span></span>
       </h3>
+
+      <!-- Sync status bar (Supabase connection indicator) -->
+      <div class="usulan-sync-bar" id="usulan-sync-bar">
+        <div class="usulan-sync-status" id="usulan-sync-status">
+          <span class="usulan-sync-dot" id="usulan-sync-dot"></span>
+          <span class="usulan-sync-label" id="usulan-sync-label">Connecting…</span>
+        </div>
+        <div class="usulan-user-info">
+          <span class="usulan-user-label">Editing as:</span>
+          <span class="usulan-user-name" id="usulan-user-name">—</span>
+          <button class="usulan-change-name-btn" id="usulan-change-name-btn" title="Change name">✎ Change</button>
+        </div>
+      </div>
+
       <div class="usulan-action-row">
         <div class="usulan-legend">
           <span class="usulan-legend-item"><span class="usulan-legend-swatch complete"></span> Complete (semua tahap selesai)</span>
           <span class="usulan-legend-item"><span class="usulan-legend-swatch progress"></span> In Progress</span>
           <span class="usulan-legend-item"><span class="usulan-legend-swatch pending"></span> Belum Dimulai</span>
         </div>
-        <button class="usulan-reset-btn" id="usulan-reset-btn" title="Reset all checkmarks to original Excel data">↺ Reset to original</button>
+        <button class="usulan-reset-btn" id="usulan-reset-btn" title="Reset semua tahap ke kondisi awal Excel (bersih)">↺ Reset all to default</button>
       </div>
       <div class="recap-scroll">
         <div id="usulan-table"></div>
@@ -3709,7 +3781,7 @@ function switchTab(tab){
   }
   if (tab === 'usulan' && !usulanInit){
     try {
-      renderUsulanTable();
+      bootUsulan();
       usulanInit = true;
     } catch (e) {
       console.error('Usulan init failed:', e);
@@ -4317,39 +4389,287 @@ function renderKontrakTable(){
   container.innerHTML = '<table class="kontrak-table">' + header + '<tbody>' + rowParts.join('') + '</tbody>' + footer + '</table>';
 }
 
-// ========= USULAN KONTRAK =========
-const USULAN_STORAGE_KEY = 'biomassa-usulan-tahap-v1';
+// ========= USULAN KONTRAK (Supabase-synced) =========
+// ---------- Supabase config ----------
+const SUPABASE_URL = 'https://emezjgefsgpsxucqfypa.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtZXpqZ2Vmc2dwc3h1Y3FmeXBhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNDg0OTMsImV4cCI6MjA5MzYyNDQ5M30.l5GFO18ZzvaITkpTulanouGIOzPZpSlZZLHjNindp7U';
+
 const USULAN_TAHAP_KEYS = ['tor', 'rks', 'pengumuman', 'aanwijzing', 'kontrak'];
 const USULAN_TAHAP_LABELS = ['TOR', 'RKS/HPE', 'Pengumuman', 'Aanwijzing', 'Kontrak'];
 
-function loadUsulanState(){
+// localStorage keys for caching + offline queue + user identity
+const USULAN_CACHE_KEY = 'biomassa-usulan-tahap-cache-v2';     // last-known server state
+const USULAN_QUEUE_KEY = 'biomassa-usulan-tahap-queue-v2';     // pending edits (offline)
+const USULAN_USER_KEY = 'biomassa-user-name-v1';               // user's chosen identity
+
+// In-memory state — single source of truth at runtime, populated from cache then server
+let usulanRemoteState = {};   // { [usulan_no]: { tor, rks, pengumuman, aanwijzing, kontrak, updated_at, updated_by } }
+let usulanQueue = [];         // pending updates: [{ usulan_no, tahap_key, value, updated_by, ts }]
+let supabaseClient = null;
+let supabaseChannel = null;
+let usulanSyncStatus = 'connecting'; // connecting | online | syncing | offline | error
+let usulanInitialLoadDone = false;
+
+// ---------- localStorage helpers ----------
+function loadUsulanCache(){
   try {
-    const raw = localStorage.getItem(USULAN_STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) || {};
+    const raw = localStorage.getItem(USULAN_CACHE_KEY);
+    return raw ? (JSON.parse(raw) || {}) : {};
+  } catch(e){ return {}; }
+}
+function saveUsulanCache(stateObj){
+  try { localStorage.setItem(USULAN_CACHE_KEY, JSON.stringify(stateObj)); } catch(e){}
+}
+function loadUsulanQueue(){
+  try {
+    const raw = localStorage.getItem(USULAN_QUEUE_KEY);
+    return raw ? (JSON.parse(raw) || []) : [];
+  } catch(e){ return []; }
+}
+function saveUsulanQueue(q){
+  try { localStorage.setItem(USULAN_QUEUE_KEY, JSON.stringify(q)); } catch(e){}
+}
+function getUserName(){
+  try { return localStorage.getItem(USULAN_USER_KEY) || ''; } catch(e){ return ''; }
+}
+function setUserName(name){
+  try { localStorage.setItem(USULAN_USER_KEY, name); } catch(e){}
+}
+
+// ---------- Sync status UI ----------
+function setSyncStatus(status, extra){
+  usulanSyncStatus = status;
+  const dot = document.getElementById('usulan-sync-dot');
+  const label = document.getElementById('usulan-sync-label');
+  if (!dot || !label) return;
+  dot.className = 'usulan-sync-dot ' + status;
+  label.className = 'usulan-sync-label ' + status;
+  const labels = {
+    connecting: 'Connecting…',
+    online: 'Online · Synced',
+    syncing: 'Syncing…',
+    offline: 'Offline',
+    error: 'Connection error'
+  };
+  let text = labels[status] || status;
+  // Append queue count if any
+  const qLen = usulanQueue.length;
+  if (qLen > 0 && (status === 'offline' || status === 'error' || status === 'syncing')){
+    text += ' <span class="usulan-sync-queue-count">' + qLen + ' pending</span>';
+  }
+  if (extra) text += ' · ' + extra;
+  label.innerHTML = text;
+}
+
+// ---------- User identity ----------
+function promptUserName(initial){
+  const current = getUserName();
+  const prompt_msg = initial
+    ? 'Nama Anda (untuk tracking edit di tabel Usulan Kontrak):\n\nNama akan ditampilkan saat Anda atau user lain melihat siapa yang terakhir mengubah suatu tahap.'
+    : 'Ganti nama Anda:';
+  const name = (window.prompt(prompt_msg, current || '') || '').trim();
+  if (name){
+    setUserName(name);
+    const el = document.getElementById('usulan-user-name');
+    if (el) el.textContent = name;
+    return name;
+  }
+  return current;
+}
+
+function ensureUserName(){
+  let name = getUserName();
+  if (!name){
+    name = promptUserName(true);
+    if (!name){
+      // User cancelled or empty — set anonymous fallback
+      name = 'Anonymous';
+      setUserName(name);
+    }
+  }
+  const el = document.getElementById('usulan-user-name');
+  if (el) el.textContent = name;
+  return name;
+}
+
+// ---------- Supabase initialization ----------
+function initSupabase(){
+  if (supabaseClient) return supabaseClient;
+  if (typeof window.supabase === 'undefined' || !window.supabase.createClient){
+    console.warn('[Usulan] Supabase SDK not loaded; running in offline-only mode.');
+    setSyncStatus('error', 'SDK not loaded');
+    return null;
+  }
+  try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      realtime: { params: { eventsPerSecond: 5 } }
+    });
+    return supabaseClient;
   } catch(e){
-    console.warn('Failed to load usulan state:', e);
-    return {};
+    console.error('[Usulan] Supabase init failed:', e);
+    setSyncStatus('error');
+    return null;
   }
 }
 
-function saveUsulanState(stateObj){
+// Fetch all rows from server, populate usulanRemoteState
+async function fetchUsulanFromServer(){
+  if (!supabaseClient){ return false; }
+  setSyncStatus('syncing');
   try {
-    localStorage.setItem(USULAN_STORAGE_KEY, JSON.stringify(stateObj));
+    const { data, error } = await supabaseClient
+      .from('usulan_tahap')
+      .select('*');
+    if (error){
+      console.error('[Usulan] Fetch error:', error);
+      setSyncStatus('error', error.message);
+      return false;
+    }
+    const state = {};
+    (data || []).forEach(row => {
+      state[row.usulan_no] = {
+        tor: !!row.tor, rks: !!row.rks, pengumuman: !!row.pengumuman,
+        aanwijzing: !!row.aanwijzing, kontrak: !!row.kontrak,
+        updated_at: row.updated_at, updated_by: row.updated_by
+      };
+    });
+    usulanRemoteState = state;
+    saveUsulanCache(state);
+    setSyncStatus('online');
+    return true;
   } catch(e){
-    console.warn('Failed to save usulan state:', e);
+    console.error('[Usulan] Fetch failed:', e);
+    setSyncStatus('offline');
+    return false;
   }
 }
 
-function getUsulanTahap(rec, savedState){
-  const saved = savedState[rec.no] || {};
+// Push one tahap update to server
+async function pushTahapUpdate(usulanNo, tahapKey, value, updatedBy){
+  if (!supabaseClient) return false;
+  const payload = {
+    usulan_no: usulanNo,
+    [tahapKey]: value,
+    updated_at: new Date().toISOString(),
+    updated_by: updatedBy || 'Anonymous',
+  };
+  // Also include other tahap values from current state to avoid losing them on upsert
+  const current = usulanRemoteState[usulanNo] || {};
+  USULAN_TAHAP_KEYS.forEach(k => {
+    if (k !== tahapKey){
+      payload[k] = !!current[k];
+    }
+  });
+  try {
+    const { data, error } = await supabaseClient
+      .from('usulan_tahap')
+      .upsert(payload, { onConflict: 'usulan_no' })
+      .select();
+    if (error){
+      console.error('[Usulan] Push error:', error);
+      return false;
+    }
+    if (data && data[0]){
+      const r = data[0];
+      usulanRemoteState[usulanNo] = {
+        tor: !!r.tor, rks: !!r.rks, pengumuman: !!r.pengumuman,
+        aanwijzing: !!r.aanwijzing, kontrak: !!r.kontrak,
+        updated_at: r.updated_at, updated_by: r.updated_by
+      };
+      saveUsulanCache(usulanRemoteState);
+    }
+    return true;
+  } catch(e){
+    console.error('[Usulan] Push failed:', e);
+    return false;
+  }
+}
+
+// Try to flush queued updates. Called on app load + on reconnect + after each successful push.
+async function flushQueue(){
+  if (usulanQueue.length === 0) return;
+  if (!supabaseClient){ return; }
+  if (!navigator.onLine){ return; }
+  setSyncStatus('syncing');
+  // Process queue items in order. Group by usulan_no, take latest per tahap_key (idempotent compaction).
+  // For simplicity, push one-by-one in FIFO order.
+  const queueCopy = usulanQueue.slice();
+  let processed = 0;
+  for (let i = 0; i < queueCopy.length; i++){
+    const item = queueCopy[i];
+    const ok = await pushTahapUpdate(item.usulan_no, item.tahap_key, item.value, item.updated_by);
+    if (!ok){ break; }
+    processed++;
+  }
+  // Remove processed items from front of queue
+  usulanQueue = usulanQueue.slice(processed);
+  saveUsulanQueue(usulanQueue);
+  setSyncStatus(usulanQueue.length === 0 ? 'online' : 'syncing');
+  // Re-render only if anything was processed (to refresh "last edited by" tooltips)
+  if (processed > 0) renderUsulanTable();
+}
+
+// Subscribe to realtime updates from other users
+function subscribeRealtime(){
+  if (!supabaseClient) return;
+  if (supabaseChannel){
+    try { supabaseClient.removeChannel(supabaseChannel); } catch(e){}
+  }
+  supabaseChannel = supabaseClient
+    .channel('usulan-tahap-changes')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'usulan_tahap' },
+      (payload) => {
+        // payload.new = new row state (for INSERT/UPDATE)
+        const r = payload.new;
+        if (!r || typeof r.usulan_no === 'undefined') return;
+        usulanRemoteState[r.usulan_no] = {
+          tor: !!r.tor, rks: !!r.rks, pengumuman: !!r.pengumuman,
+          aanwijzing: !!r.aanwijzing, kontrak: !!r.kontrak,
+          updated_at: r.updated_at, updated_by: r.updated_by
+        };
+        saveUsulanCache(usulanRemoteState);
+        // Re-render visible table to reflect remote changes
+        if (state.tab === 'usulan') renderUsulanTable();
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED'){
+        setSyncStatus('online');
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR'){
+        setSyncStatus('offline');
+      }
+    });
+}
+
+// Online/offline event handlers
+function setupOnlineHandlers(){
+  window.addEventListener('online', () => {
+    if (!supabaseClient) initSupabase();
+    fetchUsulanFromServer().then(ok => { if (ok) flushQueue(); });
+    subscribeRealtime();
+  });
+  window.addEventListener('offline', () => {
+    setSyncStatus('offline');
+  });
+}
+
+// ---------- Tahap state composition ----------
+// Priority: queued (pending unsent edits) > remote/cache > Excel default
+function getEffectiveTahap(rec){
   const result = {};
-  for (let i = 0; i < USULAN_TAHAP_KEYS.length; i++){
-    const k = USULAN_TAHAP_KEYS[i];
-    if (Object.prototype.hasOwnProperty.call(saved, k)){
-      result[k] = !!saved[k];
-    } else {
-      result[k] = !!(rec.tahap && rec.tahap[k]);
+  const remote = usulanRemoteState[rec.no] || {};
+  // Start with Excel defaults
+  USULAN_TAHAP_KEYS.forEach(k => { result[k] = !!(rec.tahap && rec.tahap[k]); });
+  // Overlay remote
+  USULAN_TAHAP_KEYS.forEach(k => {
+    if (Object.prototype.hasOwnProperty.call(remote, k)) result[k] = !!remote[k];
+  });
+  // Overlay queued (pending) edits — these are local pending writes
+  for (let i = 0; i < usulanQueue.length; i++){
+    const item = usulanQueue[i];
+    if (item.usulan_no === rec.no){
+      result[item.tahap_key] = !!item.value;
     }
   }
   return result;
@@ -4360,6 +4680,19 @@ function classifyUsulan(tahap){
   if (checked === 0) return { cls: '', label: 'Belum Dimulai', pillCls: '' };
   if (checked === USULAN_TAHAP_KEYS.length) return { cls: 'state-complete', label: 'Complete', pillCls: 'complete' };
   return { cls: 'state-progress', label: checked + '/' + USULAN_TAHAP_KEYS.length + ' tahap', pillCls: 'progress' };
+}
+
+function fmtUpdatedAt(iso){
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const dd = d.getDate(), mm = months[d.getMonth()], yy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mn = String(d.getMinutes()).padStart(2,'0');
+    return dd + ' ' + mm + ' ' + yy + ' ' + hh + ':' + mn;
+  } catch(e){ return ''; }
 }
 
 function renderUsulanTable(){
@@ -4374,8 +4707,7 @@ function renderUsulanTable(){
     return;
   }
 
-  const savedState = loadUsulanState();
-
+  // Header
   let header = '<thead><tr>';
   header += '<th style="width:40px">No</th>';
   header += '<th>Regional</th>';
@@ -4392,9 +4724,15 @@ function renderUsulanTable(){
   const rowParts = [];
   for (let i = 0; i < usulan.length; i++){
     const u = usulan[i];
-    const tahap = getUsulanTahap(u, savedState);
+    const tahap = getEffectiveTahap(u);
     const cls = classifyUsulan(tahap);
-    let row = '<tr class="' + cls.cls + '" data-usulan-no="' + u.no + '">';
+    const remote = usulanRemoteState[u.no] || {};
+    const editedTooltip = (remote.updated_by || remote.updated_at)
+      ? 'Last edit: ' + (remote.updated_by || '?') + (remote.updated_at ? ' · ' + fmtUpdatedAt(remote.updated_at) : '')
+      : '';
+    let row = '<tr class="' + cls.cls + '" data-usulan-no="' + u.no + '"' +
+      (editedTooltip ? ' data-edit-by="1" data-edit-tooltip="' + escapeHtml(editedTooltip) + '"' : '') +
+      '>';
     row += '<td class="no-cell">' + u.no + '</td>';
     row += '<td>' + escapeHtml(u.regional || '—') + '</td>';
     row += '<td class="pltu-cell">' + escapeHtml(u.pltu || '—') + '</td>';
@@ -4418,8 +4756,9 @@ function renderUsulanTable(){
 
   container.innerHTML = '<table class="usulan-table">' + header + '<tbody>' + rowParts.join('') + '</tbody></table>';
 
+  // Wire checkbox click delegation
   if (!container.dataset.handlerBuilt){
-    container.addEventListener('click', (e) => {
+    container.addEventListener('click', async (e) => {
       const btn = e.target && e.target.closest && e.target.closest('.tahap-checkbox');
       if (!btn) return;
       const tahapKey = btn.getAttribute('data-tahap');
@@ -4427,12 +4766,11 @@ function renderUsulanTable(){
       if (!tr || !tahapKey) return;
       const usulanNo = parseInt(tr.getAttribute('data-usulan-no'), 10);
       const wasChecked = btn.classList.contains('checked');
-      btn.classList.toggle('checked', !wasChecked);
-      btn.setAttribute('aria-pressed', String(!wasChecked));
-      const ss = loadUsulanState();
-      if (!ss[usulanNo]) ss[usulanNo] = {};
-      ss[usulanNo][tahapKey] = !wasChecked;
-      saveUsulanState(ss);
+      const newValue = !wasChecked;
+
+      // Optimistic UI update
+      btn.classList.toggle('checked', newValue);
+      btn.setAttribute('aria-pressed', String(newValue));
       const rowTahap = {};
       tr.querySelectorAll('.tahap-checkbox').forEach(cb => {
         rowTahap[cb.getAttribute('data-tahap')] = cb.classList.contains('checked');
@@ -4446,20 +4784,109 @@ function renderUsulanTable(){
         if (newCls.pillCls) pill.classList.add(newCls.pillCls);
         pill.textContent = newCls.label;
       }
+
+      // Push to Supabase or queue for later
+      const userName = getUserName() || 'Anonymous';
+      if (supabaseClient && navigator.onLine){
+        setSyncStatus('syncing');
+        const ok = await pushTahapUpdate(usulanNo, tahapKey, newValue, userName);
+        if (ok){
+          setSyncStatus('online');
+        } else {
+          // Network/server error — queue it
+          usulanQueue.push({ usulan_no: usulanNo, tahap_key: tahapKey, value: newValue, updated_by: userName, ts: Date.now() });
+          saveUsulanQueue(usulanQueue);
+          setSyncStatus('offline');
+        }
+      } else {
+        // Offline — queue
+        usulanQueue.push({ usulan_no: usulanNo, tahap_key: tahapKey, value: newValue, updated_by: userName, ts: Date.now() });
+        saveUsulanQueue(usulanQueue);
+        setSyncStatus('offline');
+      }
     });
     container.dataset.handlerBuilt = '1';
   }
 
+  // Wire reset button (only once)
   const resetBtn = document.getElementById('usulan-reset-btn');
   if (resetBtn && !resetBtn.dataset.built){
-    resetBtn.onclick = () => {
-      const ok = confirm('Reset semua checkmark ke kondisi asli dari Excel? Perubahan yang Anda simpan di browser akan hilang.');
+    resetBtn.onclick = async () => {
+      const ok = confirm('Reset SEMUA tahap administrasi (untuk semua user) ke kondisi awal Excel?\n\n⚠️ Tindakan ini akan mengubah data di server dan terlihat oleh semua user lain.');
       if (!ok) return;
-      try { localStorage.removeItem(USULAN_STORAGE_KEY); } catch(e){}
-      renderUsulanTable();
+      const userName = getUserName() || 'Anonymous';
+      // Push reset to Supabase: set all tahap back to Excel defaults
+      if (supabaseClient && navigator.onLine){
+        setSyncStatus('syncing');
+        const usulanArr = (DATA && DATA.usulan) || [];
+        for (let i = 0; i < usulanArr.length; i++){
+          const u = usulanArr[i];
+          const payload = {
+            usulan_no: u.no,
+            tor: !!(u.tahap && u.tahap.tor),
+            rks: !!(u.tahap && u.tahap.rks),
+            pengumuman: !!(u.tahap && u.tahap.pengumuman),
+            aanwijzing: !!(u.tahap && u.tahap.aanwijzing),
+            kontrak: !!(u.tahap && u.tahap.kontrak),
+            updated_at: new Date().toISOString(),
+            updated_by: userName + ' (reset)',
+          };
+          try {
+            await supabaseClient.from('usulan_tahap').upsert(payload, { onConflict: 'usulan_no' });
+          } catch(e){
+            console.error('[Usulan] Reset error for #' + u.no, e);
+          }
+        }
+        await fetchUsulanFromServer();
+        renderUsulanTable();
+        setSyncStatus('online');
+      } else {
+        alert('Reset memerlukan koneksi internet karena akan mengubah data di server.');
+      }
     };
     resetBtn.dataset.built = '1';
   }
+
+  // Wire change-name button
+  const changeNameBtn = document.getElementById('usulan-change-name-btn');
+  if (changeNameBtn && !changeNameBtn.dataset.built){
+    changeNameBtn.onclick = () => { promptUserName(false); };
+    changeNameBtn.dataset.built = '1';
+  }
+}
+
+// Boot the Usulan tab — called on first switchTab to 'usulan'
+async function bootUsulan(){
+  // 1. Load cached state from localStorage immediately (so UI shows something even before network)
+  usulanRemoteState = loadUsulanCache();
+  usulanQueue = loadUsulanQueue();
+  setSyncStatus('connecting');
+
+  // 2. Ensure user has a name
+  ensureUserName();
+
+  // 3. Initial render with cached state
+  renderUsulanTable();
+
+  // 4. Init Supabase, fetch, subscribe
+  initSupabase();
+  if (supabaseClient){
+    setupOnlineHandlers();
+    if (navigator.onLine){
+      const ok = await fetchUsulanFromServer();
+      if (ok) renderUsulanTable();
+      // Try to flush any queued offline edits
+      await flushQueue();
+      // Subscribe to realtime
+      subscribeRealtime();
+    } else {
+      setSyncStatus('offline');
+    }
+  } else {
+    setSyncStatus('error');
+  }
+
+  usulanInitialLoadDone = true;
 }
 
 // ========= INIT =========
