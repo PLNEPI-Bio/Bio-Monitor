@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomassa Dashboard — PLTU PLN Group 2026</title>
+<title>Biomassa Monitor — PLTU PLN Group 2026</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +11,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>/* ======= Biomassa Monitoring Dashboard v2 ======= */
 
 /* DARK THEME (default) */
@@ -37,6 +38,7 @@
   --uik:#a855f7;
   --map-bg:#050810;
   --map-tiles:dark;
+  --overlay-bg:rgba(13,20,28,.92);
   --shadow-sm:0 2px 4px rgba(0,0,0,.4);
   --shadow-md:0 8px 24px rgba(0,0,0,.5);
 }
@@ -64,6 +66,7 @@
   --uik:#7c3aed;
   --map-bg:#e2e8f0;
   --map-tiles:light;
+  --overlay-bg:rgba(255,255,255,.95);
   --shadow-sm:0 2px 4px rgba(0,0,0,.06);
   --shadow-md:0 8px 24px rgba(15,23,42,.12);
 }
@@ -248,7 +251,7 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
 
 /* Map overlays */
 .map-overlay{
-  position:absolute;background:rgba(13,20,28,.92);backdrop-filter:blur(8px);
+  position:absolute;background:var(--overlay-bg);backdrop-filter:blur(8px);
   border:1px solid var(--border);padding:14px 16px;z-index:500;
 }
 .legend{top:16px;left:16px;min-width:200px;transition:all .2s ease}
@@ -1277,6 +1280,199 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
   .usulan-modal-backdrop{padding:20px 12px}
 }
 
+/* ===== UPDATE DATA TAB ===== */
+.update-auth-gate{
+  background:var(--panel-2);border:1px solid var(--border);
+  padding:60px 40px;text-align:center;max-width:540px;margin:40px auto;
+}
+.update-auth-icon{font-size:48px;margin-bottom:18px}
+.update-auth-title{
+  font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--danger);
+  font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;
+}
+.update-auth-msg{font-size:12px;color:var(--text);line-height:1.6;margin-bottom:18px}
+.update-auth-info{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px}
+.update-auth-name{color:var(--accent);font-weight:600}
+
+.update-status-card{
+  background:var(--panel-2);border:1px solid var(--border);padding:18px 22px;
+  margin-bottom:20px;
+}
+.update-status-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.update-status-eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;
+}
+.update-status-title{font-size:15px;color:var(--text-bright);font-weight:600}
+.update-status-meta{
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);
+  text-align:right;letter-spacing:.3px;line-height:1.5;
+}
+.update-status-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;
+}
+.update-status-cell{
+  background:var(--panel-3);padding:9px 11px;border-left:2px solid var(--accent);
+}
+.update-status-cell-label{
+  font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-dim);
+  letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;
+}
+.update-status-cell-value{
+  font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text-bright);
+  font-weight:700;font-variant-numeric:tabular-nums;
+}
+
+.update-upload-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;
+}
+.update-upload-zone{
+  background:var(--panel-2);border:2px dashed var(--border-bright);
+  padding:28px 22px;text-align:center;transition:all .2s ease;
+  position:relative;cursor:pointer;
+}
+.update-upload-zone:hover{border-color:var(--accent);background:var(--panel-3)}
+.update-upload-zone.drag-over{border-color:var(--accent);background:rgba(16,185,129,.08);transform:scale(1.01)}
+.update-upload-zone.has-file{border-style:solid;border-color:var(--accent);background:rgba(16,185,129,.05)}
+.update-upload-icon{font-size:32px;margin-bottom:12px}
+.update-upload-title{
+  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+  color:var(--text-bright);letter-spacing:.5px;margin-bottom:5px;
+}
+.update-upload-sub{font-size:10px;color:var(--text-dim);margin-bottom:14px;line-height:1.4}
+.update-upload-cta{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.update-upload-btn{
+  background:var(--panel);border:1px solid var(--border-bright);color:var(--text);
+  cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;padding:8px 14px;border-radius:3px;
+  transition:all .15s;
+}
+.update-upload-btn:hover{color:var(--accent);border-color:var(--accent)}
+.update-upload-or{
+  font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-dim);
+  letter-spacing:1px;text-transform:uppercase;
+}
+.update-upload-filename{
+  margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--accent);font-weight:600;word-break:break-all;
+  display:none;
+}
+.update-upload-zone.has-file .update-upload-filename{display:block}
+
+.update-action-row{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;
+}
+.update-process-btn{
+  background:var(--accent);border:1px solid var(--accent);color:#0a0e14;
+  cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;padding:11px 22px;border-radius:4px;
+  transition:all .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.update-process-btn:hover:not(:disabled){background:#16d390;border-color:#16d390;box-shadow:0 0 12px rgba(16,185,129,.4)}
+.update-process-btn:disabled{opacity:.4;cursor:not-allowed}
+.update-process-icon{font-size:14px;font-weight:700}
+.update-clear-btn{
+  background:transparent;border:1px solid var(--border-bright);color:var(--text-dim);
+  cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:1.5px;text-transform:uppercase;padding:11px 18px;border-radius:4px;
+  transition:all .15s;
+}
+.update-clear-btn:hover{color:var(--text);border-color:var(--text-dim)}
+
+.update-help{
+  font-size:10px;color:var(--text-dim);font-style:italic;line-height:1.5;
+  margin-bottom:16px;padding:8px 12px;background:var(--panel-3);border-left:2px solid var(--text-dim);
+}
+
+.update-log{
+  background:var(--panel-2);border:1px solid var(--border);padding:14px 18px;
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);
+  line-height:1.6;max-height:240px;overflow-y:auto;margin-bottom:18px;
+  display:none;
+}
+.update-log.visible{display:block}
+.update-log-line{margin:2px 0}
+.update-log-line.info{color:var(--text)}
+.update-log-line.success{color:var(--accent)}
+.update-log-line.warn{color:var(--warn)}
+.update-log-line.error{color:var(--danger)}
+.update-log-line.dim{color:var(--text-dim)}
+.update-log-line b{color:var(--text-bright)}
+
+/* Confirmation modal */
+.update-confirm-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:9100;display:none;align-items:center;justify-content:center;padding:20px;
+}
+.update-confirm-backdrop.open{display:flex}
+.update-confirm{
+  background:var(--bg);border:1px solid var(--border-bright);
+  width:100%;max-width:580px;
+  display:flex;flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.update-confirm-head{padding:20px 24px;border-bottom:1px solid var(--border);background:var(--panel-2)}
+.update-confirm-eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;
+  color:var(--accent);text-transform:uppercase;margin-bottom:4px;
+}
+.update-confirm-title{font-size:16px;font-weight:600;color:var(--text-bright)}
+.update-confirm-body{padding:18px 24px;font-size:11px;color:var(--text);line-height:1.6}
+.update-confirm-body table{width:100%;font-family:'JetBrains Mono',monospace;font-size:10px;border-collapse:collapse;margin-top:8px}
+.update-confirm-body table th{
+  text-align:left;padding:6px 8px;color:var(--text-dim);font-weight:500;
+  border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:1px;font-size:9px;
+}
+.update-confirm-body table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text)}
+.update-confirm-body table td.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--text-bright)}
+.update-confirm-body table tr:last-child td{border-bottom:none}
+.update-confirm-warn{
+  margin:0 24px 14px;padding:10px 12px;background:rgba(245,158,11,.1);
+  border-left:2px solid var(--warn);font-size:10px;color:var(--text);line-height:1.5;
+}
+.update-confirm-foot{
+  padding:14px 24px;border-top:1px solid var(--border);background:var(--panel-2);
+  display:flex;justify-content:flex-end;gap:10px;
+}
+.update-confirm-cancel,.update-confirm-apply{
+  cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;
+  letter-spacing:1.5px;text-transform:uppercase;padding:9px 16px;border-radius:4px;
+  font-weight:600;transition:all .15s;
+}
+.update-confirm-cancel{background:var(--panel-3);border:1px solid var(--border-bright);color:var(--text)}
+.update-confirm-cancel:hover{color:var(--text-bright);border-color:var(--text)}
+.update-confirm-apply{background:var(--accent);border:1px solid var(--accent);color:#0a0e14;font-weight:700}
+.update-confirm-apply:hover{background:#16d390;border-color:#16d390}
+.update-confirm-apply:disabled{opacity:.5;cursor:not-allowed}
+
+.update-history{margin-top:24px}
+.update-history h4{
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-dim);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;
+}
+.update-history-list{display:flex;flex-direction:column;gap:6px}
+.update-history-empty{
+  padding:18px;text-align:center;color:var(--text-dim);
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;
+  background:var(--panel-3);
+}
+.update-history-item{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:9px 14px;background:var(--panel-3);
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);
+  border-left:2px solid var(--accent);
+}
+.update-history-item.failed{border-left-color:var(--danger)}
+.update-history-time{color:var(--text-dim);min-width:130px}
+.update-history-user{color:var(--accent);font-weight:600;min-width:120px}
+.update-history-action{flex:1;color:var(--text)}
+.update-history-status{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--accent)}
+.update-history-item.failed .update-history-status{color:var(--danger)}
+
+@media (max-width: 768px){
+  .update-upload-grid{grid-template-columns:1fr}
+}
+
 /* Pemasok name as clickable link */
 .kontrak-pemasok-link{
   color:var(--text);text-decoration:none;border-bottom:1px dashed var(--text-dim);
@@ -1653,6 +1849,10 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
   <button class="tab" data-tab="usulan">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12v10H2zM2 6h12M5 8h6M5 10h4"/><circle cx="13" cy="3" r="2" fill="currentColor" stroke="none"/></svg>
     USULAN KONTRAK
+  </button>
+  <button class="tab" data-tab="update">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 5l3-3 3 3M2 12v2h12v-2"/></svg>
+    UPDATE DATA
   </button>
 </nav>
 
@@ -2083,6 +2283,111 @@ html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg
       <div class="recap-scroll">
         <div id="usulan-table"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== TAB 8: UPDATE DATA ====== -->
+<div class="view" data-view="update">
+  <div class="real-view">
+    <div class="real-header">
+      <div>
+        <div class="real-title">Update Data</div>
+        <div class="real-title-sub">Upload Excel monitoring untuk refresh data dashboard secara langsung</div>
+      </div>
+    </div>
+
+    <!-- Authorization gate: only admin can use this tab -->
+    <div class="update-auth-gate" id="updateAuthGate" style="display:none">
+      <div class="update-auth-icon">🔒</div>
+      <div class="update-auth-title">Akses Ditolak</div>
+      <div class="update-auth-msg">Hanya admin yang dapat melakukan upload data. Hubungi administrator dashboard kalau Anda perlu meng-update data.</div>
+      <div class="update-auth-info">Identitas Anda saat ini: <span class="update-auth-name" id="updateAuthName">—</span></div>
+    </div>
+
+    <!-- Main upload UI (only visible for admin) -->
+    <div class="update-main" id="updateMain" style="display:none">
+
+      <!-- Status section: current data summary -->
+      <div class="update-status-card">
+        <div class="update-status-head">
+          <div>
+            <div class="update-status-eyebrow">Current Dashboard Data</div>
+            <div class="update-status-title" id="updateStatusTitle">Loading...</div>
+          </div>
+          <div class="update-status-meta" id="updateStatusMeta">—</div>
+        </div>
+        <div class="update-status-grid" id="updateStatusGrid"></div>
+      </div>
+
+      <!-- Upload zones -->
+      <div class="update-upload-grid">
+        <div class="update-upload-zone" id="uploadZoneProd" data-kind="prod">
+          <input type="file" accept=".xlsx,.xls" id="fileInputProd" style="display:none">
+          <div class="update-upload-icon">📊</div>
+          <div class="update-upload-title">Monitoring Prod RP</div>
+          <div class="update-upload-sub">Plants, monthly trend, bottlenecks, pareto loss</div>
+          <div class="update-upload-cta">
+            <button class="update-upload-btn" data-trigger="prod">Choose file</button>
+            <span class="update-upload-or">or drop here</span>
+          </div>
+          <div class="update-upload-filename" id="filenameProd"></div>
+        </div>
+
+        <div class="update-upload-zone" id="uploadZoneKontrak" data-kind="kontrak">
+          <input type="file" accept=".xlsx,.xls" id="fileInputKontrak" style="display:none">
+          <div class="update-upload-icon">📋</div>
+          <div class="update-upload-title">Monitoring Kontrak Bio</div>
+          <div class="update-upload-sub">Daftar kontrak mitra (PNP/PIP/UIW)</div>
+          <div class="update-upload-cta">
+            <button class="update-upload-btn" data-trigger="kontrak">Choose file</button>
+            <span class="update-upload-or">or drop here</span>
+          </div>
+          <div class="update-upload-filename" id="filenameKontrak"></div>
+        </div>
+      </div>
+
+      <!-- Action area + processing log -->
+      <div class="update-action-row">
+        <button class="update-process-btn" id="updateProcessBtn" disabled>
+          <span class="update-process-icon">↑</span>
+          <span class="update-process-label">Process &amp; Upload to Server</span>
+        </button>
+        <button class="update-clear-btn" id="updateClearBtn">Clear selection</button>
+      </div>
+      <div class="update-help">
+        Upload satu atau dua file. Kalau Anda hanya upload satu, data dari kategori lainnya tetap dipertahankan dari versi sebelumnya.
+      </div>
+
+      <!-- Processing log/output -->
+      <div class="update-log" id="updateLog"></div>
+
+      <!-- Confirmation modal -->
+      <div class="update-confirm-backdrop" id="updateConfirmBackdrop">
+        <div class="update-confirm">
+          <div class="update-confirm-head">
+            <div class="update-confirm-eyebrow">Konfirmasi Upload</div>
+            <div class="update-confirm-title">Apply data baru ke dashboard?</div>
+          </div>
+          <div class="update-confirm-body" id="updateConfirmBody"></div>
+          <div class="update-confirm-warn">
+            ⚠ Data yang ada di server akan ditimpa. Semua user yang sedang membuka dashboard akan otomatis lihat data baru.
+          </div>
+          <div class="update-confirm-foot">
+            <button class="update-confirm-cancel" id="updateConfirmCancel">Cancel</button>
+            <button class="update-confirm-apply" id="updateConfirmApply">Apply Now</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent upload history -->
+      <div class="update-history" id="updateHistory">
+        <h4>Recent Uploads</h4>
+        <div class="update-history-list" id="updateHistoryList">
+          <div class="update-history-empty">Loading history...</div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -4083,6 +4388,7 @@ function renderParetoPrimaryChart(){
 let rekapInit = false;
 let kontrakInit = false;
 let usulanInit = false;
+let updateInit = false;
 function switchTab(tab){
   state.tab = tab;
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -4110,6 +4416,18 @@ function switchTab(tab){
       usulanInit = true;
     } catch (e) {
       console.error('Usulan init failed:', e);
+    }
+  }
+  if (tab === 'update'){
+    try {
+      bootUpdateTab();
+      // Always re-check auth on tab open (user might have changed name)
+      if (!updateInit){
+        wireUpdateTab();
+        updateInit = true;
+      }
+    } catch (e) {
+      console.error('Update tab init failed:', e);
     }
   }
   if (tab === 'bottleneck'){
@@ -5894,6 +6212,920 @@ async function deleteCustomUsulan(usulanNo){
   }
 }
 
+// ============================================================
+// UPDATE DATA TAB — Excel upload + Supabase sync
+// ============================================================
+
+// Authorized admin names — case-sensitive, must match localStorage user name
+const UPDATE_ADMIN_NAMES = ['Maulana - Admin'];
+
+// Module state
+let updateFiles = { prod: null, kontrak: null }; // { name, parsedData, summary }
+let updateProcessing = false;
+let updateRealtimeChannel = null;
+let updateInitialLoadDone = false;
+
+// ---------- Boot logic: load latest data from Supabase on app start ----------
+async function loadDashboardDataFromServer(){
+  if (!supabaseClient){
+    console.warn('[Update] Supabase client not available, using embedded HTML data');
+    return null;
+  }
+  try {
+    const { data, error } = await supabaseClient
+      .from('dashboard_data')
+      .select('*')
+      .eq('id', 1)
+      .single();
+    if (error){
+      // PGRST116 = no rows found, that's OK on first run
+      if (error.code !== 'PGRST116'){
+        console.warn('[Update] dashboard_data fetch error:', error);
+      }
+      return null;
+    }
+    if (!data || !data.data) return null;
+    console.log('[Update] Loaded dashboard data from Supabase, uploaded by', data.uploaded_by, 'at', data.uploaded_at);
+    return data;
+  } catch(e){
+    console.error('[Update] Load failed:', e);
+    return null;
+  }
+}
+
+// Subscribe to dashboard_data changes (so all users update in realtime)
+function subscribeUpdateDataRealtime(){
+  if (!supabaseClient) return;
+  if (updateRealtimeChannel){
+    try { supabaseClient.removeChannel(updateRealtimeChannel); } catch(e){}
+  }
+  updateRealtimeChannel = supabaseClient
+    .channel('dashboard-data-changes')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'dashboard_data' },
+      (payload) => {
+        const r = payload.new;
+        if (!r || !r.data) return;
+        // Apply new data
+        applyDashboardData(r.data, { uploaded_by: r.uploaded_by, uploaded_at: r.uploaded_at, source_filename: r.source_filename });
+      }
+    )
+    .subscribe();
+}
+
+// Replace DATA in memory + re-render all visible tabs
+function applyDashboardData(newData, meta){
+  if (!newData || typeof newData !== 'object') return;
+  // Preserve fields not part of upload (usulan is managed separately, last_updated may be present)
+  const preservedUsulan = (DATA && DATA.usulan) ? DATA.usulan : (newData.usulan || []);
+  // Replace top-level DATA fields by mutation (since DATA is const)
+  ['plants', 'monthly', 'bottlenecks', 'pareto', 'contracts'].forEach(k => {
+    if (newData[k] !== undefined){
+      DATA[k] = newData[k];
+    }
+  });
+  // last_updated: prefer newData's value (set at upload time)
+  if (newData.last_updated){
+    DATA.last_updated = newData.last_updated;
+  }
+  // Preserve usulan from DATA (it's not part of upload schema)
+  DATA.usulan = preservedUsulan;
+
+  // Update last-updated indicator
+  populateUpdatedIndicator();
+
+  // Re-render visible tab + invalidate caches for tabs not yet shown
+  rerenderActiveTab();
+  // Invalidate lazy-init flags so other tabs re-init when visited
+  rekapInit = false;
+  kontrakInit = false;
+  // Don't reset usulanInit (different data path)
+  if (markerLayer) refreshMarkers();
+  if (state && state.tab === 'update'){
+    refreshUpdateStatusCard();
+  }
+  // Show banner
+  showDataAppliedBanner(meta);
+}
+
+function populateUpdatedIndicator(){
+  const el = document.getElementById('updatedDate');
+  if (!el) return;
+  const lastUpdated = (DATA && DATA.last_updated) || '';
+  if (!lastUpdated){ el.textContent = '—'; return; }
+  const parts = lastUpdated.split('-');
+  if (parts.length !== 3){ el.textContent = lastUpdated; return; }
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = parseInt(parts[2], 10);
+  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  if (m < 0 || m > 11){ el.textContent = lastUpdated; return; }
+  el.textContent = d + ' ' + months[m] + ' ' + y;
+}
+
+function rerenderActiveTab(){
+  if (!state || !state.tab) return;
+  try {
+    if (state.tab === 'map'){
+      // Refresh markers + sidebar list
+      if (markerLayer) refreshMarkers();
+      if (typeof renderSidebarList === 'function') renderSidebarList();
+      // If a plant is selected, re-render its detail
+      if (state.selectedPlant){
+        const p = DATA.plants.find(pl => pl.code === state.selectedPlant);
+        if (p && typeof renderDetail === 'function'){
+          renderDetail(p);
+        }
+      }
+    } else if (state.tab === 'realisasi'){
+      // Force re-render
+      Object.keys(realCharts).forEach(k => {
+        if (realCharts[k] && realCharts[k].destroy) {
+          try { realCharts[k].destroy(); } catch(e){}
+        }
+        delete realCharts[k];
+      });
+      renderRealView();
+    } else if (state.tab === 'rekap'){
+      buildRealFilters();
+      renderRealRecap();
+      rekapInit = true;
+    } else if (state.tab === 'bottleneck'){
+      if (bnMarkerLayer) refreshBnMap();
+      renderBnList();
+    } else if (state.tab === 'pareto'){
+      if (typeof renderParetoView === 'function') renderParetoView();
+    } else if (state.tab === 'kontrak'){
+      buildKontrakFilters();
+      renderKontrakTable();
+      kontrakInit = true;
+    }
+  } catch(e){
+    console.error('[Update] Re-render error for tab', state.tab, e);
+  }
+}
+
+function showDataAppliedBanner(meta){
+  // Brief toast at top-right
+  const existing = document.getElementById('updateAppliedBanner');
+  if (existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.id = 'updateAppliedBanner';
+  banner.style.cssText = 'position:fixed;top:60px;right:16px;background:var(--accent);color:#0a0e14;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;padding:10px 16px;border-radius:4px;letter-spacing:.5px;box-shadow:0 6px 20px rgba(0,0,0,.4);z-index:9999;animation:slideInRight .3s ease;';
+  let label = '✓ Dashboard data updated';
+  if (meta && meta.uploaded_by){
+    label += ' by ' + meta.uploaded_by;
+  }
+  banner.textContent = label;
+  document.body.appendChild(banner);
+  setTimeout(() => {
+    banner.style.transition = 'opacity .4s';
+    banner.style.opacity = '0';
+    setTimeout(() => banner.remove(), 500);
+  }, 3500);
+}
+
+// ---------- Update Data tab UI ----------
+function bootUpdateTab(){
+  const userName = getUserName ? getUserName() : '';
+  const isAdmin = UPDATE_ADMIN_NAMES.indexOf(userName) >= 0;
+  const gate = document.getElementById('updateAuthGate');
+  const main = document.getElementById('updateMain');
+  if (!gate || !main) return;
+  if (!isAdmin){
+    gate.style.display = 'block';
+    main.style.display = 'none';
+    const nameEl = document.getElementById('updateAuthName');
+    if (nameEl) nameEl.textContent = userName || '(belum diset)';
+    return;
+  }
+  gate.style.display = 'none';
+  main.style.display = 'block';
+  refreshUpdateStatusCard();
+  loadUpdateHistory();
+}
+
+function refreshUpdateStatusCard(){
+  const titleEl = document.getElementById('updateStatusTitle');
+  const metaEl = document.getElementById('updateStatusMeta');
+  const gridEl = document.getElementById('updateStatusGrid');
+  if (!titleEl || !metaEl || !gridEl) return;
+  const lastUp = (DATA && DATA.last_updated) || '—';
+  titleEl.textContent = 'Active dataset · last updated ' + lastUp;
+  metaEl.innerHTML = '';
+  // Cells with counts
+  const cells = [
+    { label: 'Plants', value: (DATA.plants || []).length },
+    { label: 'Bottlenecks', value: (DATA.bottlenecks || []).length },
+    { label: 'Contracts', value: (DATA.contracts || []).length },
+    { label: 'Usulan', value: (DATA.usulan || []).length },
+    { label: 'Pareto plants', value: ((DATA.pareto || {}).plants || []).length },
+  ];
+  gridEl.innerHTML = cells.map(c =>
+    '<div class="update-status-cell">' +
+      '<div class="update-status-cell-label">' + c.label + '</div>' +
+      '<div class="update-status-cell-value">' + fmtInt(c.value) + '</div>' +
+    '</div>'
+  ).join('');
+}
+
+async function loadUpdateHistory(){
+  const list = document.getElementById('updateHistoryList');
+  if (!list) return;
+  if (!supabaseClient){
+    list.innerHTML = '<div class="update-history-empty">Supabase tidak terhubung.</div>';
+    return;
+  }
+  try {
+    const { data, error } = await supabaseClient
+      .from('upload_log')
+      .select('*')
+      .order('uploaded_at', { ascending: false })
+      .limit(10);
+    if (error || !data || data.length === 0){
+      list.innerHTML = '<div class="update-history-empty">Belum ada riwayat upload.</div>';
+      return;
+    }
+    list.innerHTML = data.map(r => {
+      const dt = new Date(r.uploaded_at);
+      const timeStr = isNaN(dt) ? r.uploaded_at : (
+        dt.getDate() + ' ' + ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][dt.getMonth()] +
+        ' ' + dt.getFullYear() + ', ' + String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0')
+      );
+      const failedClass = r.success ? '' : ' failed';
+      return '<div class="update-history-item' + failedClass + '">' +
+        '<span class="update-history-time">' + escapeHtml(timeStr) + '</span>' +
+        '<span class="update-history-user">' + escapeHtml(r.uploaded_by || '—') + '</span>' +
+        '<span class="update-history-action">' + escapeHtml(r.summary || r.action || '—') + '</span>' +
+        '<span class="update-history-status">' + (r.success ? 'OK' : 'FAILED') + '</span>' +
+      '</div>';
+    }).join('');
+  } catch(e){
+    list.innerHTML = '<div class="update-history-empty">Error: ' + (e.message || e) + '</div>';
+  }
+}
+
+function wireUpdateTab(){
+  // File input triggers
+  document.querySelectorAll('.update-upload-btn').forEach(btn => {
+    btn.onclick = () => {
+      const kind = btn.getAttribute('data-trigger');
+      const inputId = kind === 'prod' ? 'fileInputProd' : 'fileInputKontrak';
+      document.getElementById(inputId).click();
+    };
+  });
+  // File input change
+  const inProd = document.getElementById('fileInputProd');
+  const inKontrak = document.getElementById('fileInputKontrak');
+  if (inProd) inProd.onchange = (e) => handleFileSelect('prod', e.target.files[0]);
+  if (inKontrak) inKontrak.onchange = (e) => handleFileSelect('kontrak', e.target.files[0]);
+  // Drag-drop
+  ['uploadZoneProd', 'uploadZoneKontrak'].forEach(zid => {
+    const zone = document.getElementById(zid);
+    if (!zone) return;
+    const kind = zone.getAttribute('data-kind');
+    zone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      zone.classList.add('drag-over');
+    });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('drag-over');
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) handleFileSelect(kind, file);
+    });
+  });
+  // Process button
+  const procBtn = document.getElementById('updateProcessBtn');
+  if (procBtn) procBtn.onclick = () => openConfirmDialog();
+  const clearBtn = document.getElementById('updateClearBtn');
+  if (clearBtn) clearBtn.onclick = () => {
+    updateFiles.prod = null;
+    updateFiles.kontrak = null;
+    document.getElementById('fileInputProd').value = '';
+    document.getElementById('fileInputKontrak').value = '';
+    document.getElementById('uploadZoneProd').classList.remove('has-file');
+    document.getElementById('uploadZoneKontrak').classList.remove('has-file');
+    document.getElementById('filenameProd').textContent = '';
+    document.getElementById('filenameKontrak').textContent = '';
+    procBtn.disabled = true;
+    updateLog('Selection cleared.', 'dim');
+  };
+  // Confirmation modal
+  const confirmCancel = document.getElementById('updateConfirmCancel');
+  const confirmApply = document.getElementById('updateConfirmApply');
+  const confirmBackdrop = document.getElementById('updateConfirmBackdrop');
+  if (confirmCancel) confirmCancel.onclick = () => closeConfirmDialog();
+  if (confirmApply) confirmApply.onclick = () => doProcessAndUpload();
+  if (confirmBackdrop) confirmBackdrop.onclick = (e) => { if (e.target === confirmBackdrop) closeConfirmDialog(); };
+}
+
+function updateLog(line, kind){
+  const log = document.getElementById('updateLog');
+  if (!log) return;
+  log.classList.add('visible');
+  const cls = kind || 'info';
+  const div = document.createElement('div');
+  div.className = 'update-log-line ' + cls;
+  // Allow innerHTML for bold tags
+  div.innerHTML = line;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearLog(){
+  const log = document.getElementById('updateLog');
+  if (log){ log.innerHTML = ''; log.classList.remove('visible'); }
+}
+
+async function handleFileSelect(kind, file){
+  if (!file) return;
+  const zone = document.getElementById(kind === 'prod' ? 'uploadZoneProd' : 'uploadZoneKontrak');
+  const filenameEl = document.getElementById(kind === 'prod' ? 'filenameProd' : 'filenameKontrak');
+  filenameEl.textContent = file.name + ' · ' + (file.size / 1024).toFixed(0) + ' KB';
+  zone.classList.add('has-file');
+  updateFiles[kind] = { file: file, name: file.name, parsedData: null };
+  // Pre-parse to validate format
+  clearLog();
+  updateLog('Reading <b>' + escapeHtml(file.name) + '</b>...', 'info');
+  try {
+    const buf = await readFileAsArrayBuffer(file);
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+    updateLog('  Workbook loaded · sheets: ' + wb.SheetNames.length, 'dim');
+    if (kind === 'prod'){
+      updateFiles.prod.workbook = wb;
+      updateFiles.prod.parsedData = await parseProdExcel(wb);
+      const d = updateFiles.prod.parsedData;
+      updateLog('  ✓ Parsed: <b>' + d.plants.length + '</b> plants · <b>' + d.bottlenecks.length + '</b> bottlenecks · <b>' + (d.pareto.plants || []).length + '</b> pareto plants', 'success');
+    } else {
+      updateFiles.kontrak.workbook = wb;
+      updateFiles.kontrak.parsedData = await parseKontrakExcel(wb);
+      const d = updateFiles.kontrak.parsedData;
+      updateLog('  ✓ Parsed: <b>' + d.contracts.length + '</b> contracts', 'success');
+    }
+    // Enable process button
+    document.getElementById('updateProcessBtn').disabled = false;
+  } catch(e){
+    console.error('[Update] Parse failed:', e);
+    updateLog('  ✗ Parse failed: ' + escapeHtml(e.message || String(e)), 'error');
+    updateFiles[kind] = null;
+    zone.classList.remove('has-file');
+    filenameEl.textContent = '';
+  }
+}
+
+function readFileAsArrayBuffer(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('File read failed'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function openConfirmDialog(){
+  const body = document.getElementById('updateConfirmBody');
+  const backdrop = document.getElementById('updateConfirmBackdrop');
+  if (!body || !backdrop) return;
+  // Build summary table comparing old vs new
+  let rows = '';
+  const fields = [
+    { key: 'plants', label: 'Plants', source: 'prod' },
+    { key: 'monthly', label: 'Monthly trend', source: 'prod', getCount: (d) => d.monthly && d.monthly.length },
+    { key: 'bottlenecks', label: 'Bottlenecks', source: 'prod' },
+    { key: 'pareto', label: 'Pareto plants', source: 'prod', getCount: (d) => (d.pareto && d.pareto.plants) ? d.pareto.plants.length : 0 },
+    { key: 'contracts', label: 'Contracts', source: 'kontrak' },
+  ];
+  for (let i = 0; i < fields.length; i++){
+    const f = fields[i];
+    const src = updateFiles[f.source];
+    if (!src || !src.parsedData){
+      rows += '<tr><td>' + f.label + '</td><td class="num" style="color:var(--text-dim)">' + ((DATA[f.key] && (f.getCount ? f.getCount(DATA) : DATA[f.key].length)) || 0) + '</td><td class="num" style="color:var(--text-dim)">unchanged</td></tr>';
+      continue;
+    }
+    const oldCount = (DATA[f.key] && (f.getCount ? f.getCount(DATA) : DATA[f.key].length)) || 0;
+    const newCount = f.getCount ? f.getCount(src.parsedData) : (src.parsedData[f.key] || []).length;
+    const diff = newCount - oldCount;
+    const diffStr = diff > 0 ? ('<span style="color:var(--accent)">+' + diff + '</span>') : (diff < 0 ? ('<span style="color:var(--warn)">' + diff + '</span>') : '<span style="color:var(--text-dim)">no change</span>');
+    rows += '<tr><td>' + f.label + '</td><td class="num">' + oldCount + '</td><td class="num">' + newCount + ' (' + diffStr + ')</td></tr>';
+  }
+  body.innerHTML =
+    '<div>Berikut adalah ringkasan perubahan yang akan diterapkan:</div>' +
+    '<table>' +
+      '<thead><tr><th>Field</th><th>Current</th><th>New</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+  backdrop.classList.add('open');
+}
+
+function closeConfirmDialog(){
+  const backdrop = document.getElementById('updateConfirmBackdrop');
+  if (backdrop) backdrop.classList.remove('open');
+}
+
+async function doProcessAndUpload(){
+  if (updateProcessing) return;
+  updateProcessing = true;
+  closeConfirmDialog();
+  const applyBtn = document.getElementById('updateConfirmApply');
+  if (applyBtn) applyBtn.disabled = true;
+  const procBtn = document.getElementById('updateProcessBtn');
+  if (procBtn) procBtn.disabled = true;
+  const userName = getUserName ? getUserName() : 'Anonymous';
+  const today = new Date().toISOString().slice(0,10);
+  updateLog('Building merged dataset...', 'info');
+  // Merge: take new data from uploaded files, preserve fields not uploaded
+  const newDataset = {
+    plants: (updateFiles.prod && updateFiles.prod.parsedData && updateFiles.prod.parsedData.plants) || DATA.plants || [],
+    monthly: (updateFiles.prod && updateFiles.prod.parsedData && updateFiles.prod.parsedData.monthly) || DATA.monthly || [],
+    bottlenecks: (updateFiles.prod && updateFiles.prod.parsedData && updateFiles.prod.parsedData.bottlenecks) || DATA.bottlenecks || [],
+    pareto: (updateFiles.prod && updateFiles.prod.parsedData && updateFiles.prod.parsedData.pareto) || DATA.pareto || { categories: [], plants: [] },
+    contracts: (updateFiles.kontrak && updateFiles.kontrak.parsedData && updateFiles.kontrak.parsedData.contracts) || DATA.contracts || [],
+    last_updated: today,
+  };
+  // usulan is NOT part of upload - intentionally not included; preserved on apply
+  updateLog('  Dataset built: <b>' + newDataset.plants.length + '</b> plants · <b>' + newDataset.bottlenecks.length + '</b> bottlenecks · <b>' + newDataset.contracts.length + '</b> contracts', 'success');
+
+  // Estimate JSON size
+  const jsonStr = JSON.stringify(newDataset);
+  const sizeKB = (jsonStr.length / 1024).toFixed(0);
+  updateLog('  JSON size: ' + sizeKB + ' KB', 'dim');
+  if (jsonStr.length > 4 * 1024 * 1024){
+    updateLog('  ⚠ JSON > 4 MB, may exceed Supabase value limit.', 'warn');
+  }
+
+  if (!supabaseClient){
+    updateLog('✗ Supabase client unavailable. Upload aborted.', 'error');
+    updateProcessing = false;
+    if (procBtn) procBtn.disabled = false;
+    if (applyBtn) applyBtn.disabled = false;
+    return;
+  }
+  if (!navigator.onLine){
+    updateLog('✗ Offline. Upload aborted.', 'error');
+    updateProcessing = false;
+    if (procBtn) procBtn.disabled = false;
+    if (applyBtn) applyBtn.disabled = false;
+    return;
+  }
+
+  // Build summary description
+  const sourceFiles = [];
+  if (updateFiles.prod) sourceFiles.push(updateFiles.prod.name);
+  if (updateFiles.kontrak) sourceFiles.push(updateFiles.kontrak.name);
+  const summary = 'Updated: ' + sourceFiles.join(', ') + ' · ' +
+    newDataset.plants.length + ' plants, ' +
+    newDataset.bottlenecks.length + ' bn, ' +
+    newDataset.contracts.length + ' kontrak';
+
+  updateLog('Uploading to Supabase...', 'info');
+  try {
+    // Upsert dashboard_data with id=1
+    const { error: upError } = await supabaseClient
+      .from('dashboard_data')
+      .upsert({
+        id: 1,
+        data: newDataset,
+        uploaded_by: userName,
+        uploaded_at: new Date().toISOString(),
+        source_filename: sourceFiles.join(' + '),
+        data_summary: summary,
+      }, { onConflict: 'id' });
+    if (upError){
+      console.error('[Update] Upsert error:', upError);
+      updateLog('✗ Upload failed: ' + escapeHtml(upError.message), 'error');
+      // Log the failure
+      await supabaseClient.from('upload_log').insert({
+        uploaded_by: userName,
+        source_filename: sourceFiles.join(' + '),
+        action: 'upload',
+        summary: 'FAILED: ' + (upError.message || 'unknown error'),
+        success: false,
+      });
+      updateProcessing = false;
+      if (procBtn) procBtn.disabled = false;
+      if (applyBtn) applyBtn.disabled = false;
+      return;
+    }
+    updateLog('  ✓ Server data updated', 'success');
+    // Log the upload
+    await supabaseClient.from('upload_log').insert({
+      uploaded_by: userName,
+      source_filename: sourceFiles.join(' + '),
+      action: 'upload',
+      summary: summary,
+      success: true,
+    });
+    updateLog('  ✓ Upload logged in audit trail', 'success');
+    // Apply locally (realtime will broadcast to others)
+    applyDashboardData(newDataset, { uploaded_by: userName, uploaded_at: new Date().toISOString(), source_filename: sourceFiles.join(' + ') });
+    updateLog('✓ <b>Done.</b> All connected users now see the updated data.', 'success');
+    // Reload history
+    loadUpdateHistory();
+    // Clear file selections
+    document.getElementById('updateClearBtn').click();
+  } catch(e){
+    console.error('[Update] Upload exception:', e);
+    updateLog('✗ Upload exception: ' + escapeHtml(e.message || String(e)), 'error');
+  } finally {
+    updateProcessing = false;
+    if (procBtn) procBtn.disabled = false;
+    if (applyBtn) applyBtn.disabled = false;
+  }
+}
+
+// ============================================================
+// EXCEL PARSERS — port from Python refresh_dashboard.py
+// ============================================================
+
+// Helpers
+function _safeStr(v){
+  if (v === null || v === undefined) return '';
+  return String(v).trim();
+}
+function _safeNum(v){
+  if (v === null || v === undefined || v === '') return 0;
+  const n = (typeof v === 'number') ? v : parseFloat(String(v).replace(/[^\d.\-]/g,''));
+  return isNaN(n) ? 0 : n;
+}
+function _safeBool(v){
+  if (v === true) return true;
+  if (typeof v === 'string'){
+    const s = v.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes' || s === '✓';
+  }
+  if (typeof v === 'number') return v !== 0;
+  return false;
+}
+function _xlDate(v){
+  if (!v) return '';
+  if (v instanceof Date && !isNaN(v)){
+    const y = v.getFullYear();
+    const m = String(v.getMonth()+1).padStart(2,'0');
+    const d = String(v.getDate()).padStart(2,'0');
+    return y + '-' + m + '-' + d;
+  }
+  // String
+  if (typeof v === 'string'){
+    const trimmed = v.trim();
+    if (!trimmed) return '';
+    // Try parse common formats
+    const dt = new Date(trimmed);
+    if (!isNaN(dt)){
+      return _xlDate(dt);
+    }
+  }
+  return '';
+}
+// Get sheet as 2D array (preserves empty cells as null)
+function _sheetToMatrix(ws){
+  return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+}
+
+// ----- PARSE PROD EXCEL (Monitoring_Prod_RP.xlsx) -----
+async function parseProdExcel(wb){
+  const result = {
+    plants: [],
+    monthly: [],
+    bottlenecks: [],
+    pareto: { categories: [], plants: [] },
+  };
+  // Coordinate map preserved from existing DATA.plants (if any), so we don't lose lat/lon
+  const coordMap = {};
+  ((DATA && DATA.plants) || []).forEach(p => {
+    if (p.name && (p.lat !== undefined || p.lon !== undefined)){
+      coordMap[p.name] = { lat: p.lat, lon: p.lon, regional: p.regional, genco: p.genco, code: p.code, boiler: p.boiler };
+    }
+  });
+
+  // ---------- Plants from Rekap sheet ----------
+  // Rekap sheet structure (well-tested in Python refresh):
+  //   2026 block: rows 6-56 (Excel row 7-57 with 1-indexed header at row 6)
+  //     Plants list rows 7-57
+  //     Target Jan-Dec at columns 8-19, DO at 21-32, Real at 34-45
+  //     Gap at 48-59, Sisa Kontrak at col 61, Kebutuhan Batubara at col 62
+  //   2025 block: rows 68-118
+  //   2024 block: rows 130-180
+  //   2023 block: rows 193-243
+  // SheetJS uses 0-indexed; rows 0-N as arrays.
+  if (!wb.Sheets['Rekap']){
+    throw new Error('Sheet "Rekap" tidak ditemukan dalam workbook');
+  }
+  const rekap = _sheetToMatrix(wb.Sheets['Rekap']);
+
+  // Helper: extract a numeric block. Returns plant rows from rowStart (0-indexed) for `count` rows.
+  function extractMonthBlock(rowStart, monthsCol0, count){
+    // monthsCol0 = first column of 12 months (0-indexed)
+    const out = [];
+    for (let i = 0; i < count; i++){
+      const r = rekap[rowStart + i] || [];
+      const months = [];
+      for (let m = 0; m < 12; m++){
+        months.push(_safeNum(r[monthsCol0 + m]));
+      }
+      out.push(months);
+    }
+    return out;
+  }
+  function extractCol(rowStart, col, count){
+    const out = [];
+    for (let i = 0; i < count; i++){
+      const r = rekap[rowStart + i] || [];
+      out.push(_safeNum(r[col]));
+    }
+    return out;
+  }
+  function extractStr(rowStart, col, count){
+    const out = [];
+    for (let i = 0; i < count; i++){
+      const r = rekap[rowStart + i] || [];
+      out.push(_safeStr(r[col]));
+    }
+    return out;
+  }
+
+  // 2026 block - data at rows 5-55 (0-indexed in JS via SheetJS).
+  // Note: SheetJS column numbering differs from pandas by -1, and row by -1.
+  // Python iloc[idx, 2]=no, iloc[idx, 3]=name, iloc[idx, 4]=genco, iloc[idx, 5]=code,
+  //   iloc[idx, 6]=boiler, iloc[idx, 7]=regional
+  //   iloc[idx, 8..19]=target Jan-Dec, iloc[idx, 21..32]=DO Jan-Dec, iloc[idx, 34..45]=real Jan-Dec
+  //   iloc[idx, 48..59]=gap, iloc[idx, 61]=sisa_kontrak, iloc[idx, 62]=kebutuhan_batubara
+  // SheetJS subtracts 1 from each (no leading empty col): col 1=no, col 2=name, etc.
+  const PLANT_COUNT = 51;
+  const ROW_2026 = 4;
+  const ROW_2025 = 66;
+  const ROW_2024 = 128;
+  const ROW_2023 = 191;
+  const COL_NO = 1, COL_NAME = 2, COL_GENCO = 3, COL_CODE = 4, COL_BOILER = 5, COL_REGIONAL = 6;
+  const COL_TARGET_JAN = 7;    // 12 cols Jan-Dec
+  const COL_DO_JAN = 20;       // 12 cols Jan-Dec
+  const COL_REAL_JAN = 33;     // 12 cols Jan-Dec
+  const COL_GAP_JAN = 47;      // 12 cols Jan-Dec
+  const COL_SISA_KONTRAK = 60;
+  const COL_KEBUTUHAN_BATUBARA = 61;
+
+  // Extract names + meta from 2026 block first
+  const targets2026 = extractMonthBlock(ROW_2026, COL_TARGET_JAN, PLANT_COUNT);
+  const dos2026 = extractMonthBlock(ROW_2026, COL_DO_JAN, PLANT_COUNT);
+  const reals2026 = extractMonthBlock(ROW_2026, COL_REAL_JAN, PLANT_COUNT);
+  const gaps2026 = extractMonthBlock(ROW_2026, COL_GAP_JAN, PLANT_COUNT);
+  const sisaKontrak = extractCol(ROW_2026, COL_SISA_KONTRAK, PLANT_COUNT);
+  const kebButubara = extractCol(ROW_2026, COL_KEBUTUHAN_BATUBARA, PLANT_COUNT);
+
+  const targets2025 = extractMonthBlock(ROW_2025, COL_TARGET_JAN, PLANT_COUNT);
+  const reals2025 = extractMonthBlock(ROW_2025, COL_REAL_JAN, PLANT_COUNT);
+  const reals2024 = extractMonthBlock(ROW_2024, COL_REAL_JAN, PLANT_COUNT);
+  const reals2023 = extractMonthBlock(ROW_2023, COL_REAL_JAN, PLANT_COUNT);
+
+  for (let i = 0; i < PLANT_COUNT; i++){
+    const noRow = rekap[ROW_2026 + i] || [];
+    const noVal = noRow[COL_NO];
+    if (noVal === null || noVal === undefined || noVal === '') continue;
+    const noNum = _safeNum(noVal);
+    if (!noNum) continue;
+    const name = _safeStr(noRow[COL_NAME]);
+    if (!name) continue;
+    const genco = _safeStr(noRow[COL_GENCO]);
+    const code = _safeStr(noRow[COL_CODE]) || ('P' + String(noNum).padStart(3,'0'));
+    const boiler = _safeStr(noRow[COL_BOILER]) || 'N/A';
+    const regional = _safeStr(noRow[COL_REGIONAL]);
+    const target_2026 = targets2026[i];
+    // Read totals from Excel's "Total" columns (matches Python; values may differ slightly from sum due to rounding/formulas)
+    const target_total = _safeNum(noRow[19]);   // target_total col
+    const do_total = _safeNum(noRow[32]);        // do_total col
+    const real_2026 = reals2026[i];
+    const real_total = _safeNum(noRow[45]);      // real_total col
+    const real_pct_raw = _safeNum(noRow[46]);    // real_pct (decimal) col
+    const gap_akm = _safeNum(noRow[59]);          // gap_akm col
+    // Coords from existing data
+    const existing = coordMap[name];
+    const lat = existing ? existing.lat : null;
+    const lon = existing ? existing.lon : null;
+    const plant = {
+      no: noNum,
+      name: name,
+      genco: genco,
+      code: code,
+      boiler: boiler,
+      regional: regional,
+      target_2026: target_2026,
+      target_2026_total: target_total,
+      do_2026: dos2026[i],
+      do_2026_total: do_total,
+      real_2026: real_2026,
+      real_2026_total: real_total,
+      real_pct: real_pct_raw,
+      gap_2026: gaps2026[i],
+      gap_akm: gap_akm,
+      sisa_kontrak: sisaKontrak[i],
+      kebutuhan_batubara: kebButubara[i],
+      historical_real: {
+        '2023': reals2023[i],
+        '2024': reals2024[i],
+        '2025': reals2025[i],
+        '2026': real_2026,
+      },
+      historical_target: {
+        '2025': targets2025[i],
+        '2026': target_2026,
+      },
+      lat: lat, lon: lon,
+      status: real_total >= target_total ? 'on-track' : 'shortfall',
+    };
+    result.plants.push(plant);
+  }
+
+  // ---------- Monthly aggregate ----------
+  // Sum target/real/do across all plants per month. 12 months.
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  for (let m = 0; m < 12; m++){
+    let t = 0, r = 0, d = 0;
+    for (let i = 0; i < result.plants.length; i++){
+      t += result.plants[i].target_2026[m] || 0;
+      r += result.plants[i].real_2026[m] || 0;
+      d += result.plants[i].do_2026[m] || 0;
+    }
+    result.monthly.push({ month: months[m], target: t, real: r, do: d });
+  }
+
+  // ---------- Bottlenecks ----------
+  if (wb.Sheets['Bottleneck - Mitigasi 2026']){
+    const bn = _sheetToMatrix(wb.Sheets['Bottleneck - Mitigasi 2026']);
+    // JS layout: header row 11, data from row 12.
+    // Cols: 0=No, 1=PLTU, 2=Bulan, 3=Sumber, 4=Bottleneck, 5=Action Plan, 6=PIC,
+    //       7=Informant, 8=Contact Person, 9=Progress, 10=Evaluasi, 11=Complete?
+    for (let i = 12; i < bn.length; i++){
+      const r = bn[i];
+      if (!r) continue;
+      const pltu = _safeStr(r[1]);
+      if (!pltu) continue;
+      const existing = coordMap[pltu];
+      const noVal = r[0];
+      const rec = {
+        no: (typeof noVal === 'number') ? noVal : _safeNum(noVal),
+        pltu: pltu,
+        bulan: _safeStr(r[2]),
+        sumber: _safeStr(r[3]),
+        bottleneck: _safeStr(r[4]),
+        action_plan: _safeStr(r[5]),
+        pic: _safeStr(r[6]),
+        informant: _safeStr(r[7]),
+        contact_person: _safeStr(r[8]),
+        progress: _safeStr(r[9]),
+        evaluasi: _safeStr(r[10]),
+        complete: _safeBool(r[11]),
+        lat: existing ? existing.lat : null,
+        lon: existing ? existing.lon : null,
+      };
+      result.bottlenecks.push(rec);
+    }
+  }
+
+  // ---------- Pareto Loss ----------
+  // Python schema: Pareto Loss v2 sheet, starts row 79.
+  // For each plant row: col 0 = pltu, col 1 = kode, col 2 = rkap.
+  // Then 12 months × 4 cols each starting col 4: target, real, loss, category-letter.
+  // Company group rows have pltu set but kode null (header rows).
+  // Categories = {a-n} mapped to descriptions.
+  const PARETO_CATEGORIES = {
+    'a': 'Pemeliharaan terencana/tidak terencana atau gangguan unit',
+    'b': 'Perubahan dispatch/pembatasan operasi sistem',
+    'c': 'Keterbatasan pasokan MRC dan HOP rendah yang membatasi co-firing',
+    'd': 'Kendala Teknis peralatan PLTU',
+    'e': 'Stok biomassa pembangkit mencapai batas operasional',
+    'f': 'Cuaca ekstrem/penghujan yang menghambat akses penerimaan',
+    'g': 'Force majeure atau kebijakan korporat PLN Group',
+    'h': 'Keterbatasan kontraktual',
+    'i': 'Kinerja mitra pemasok (underperformance)',
+    'j': 'Gangguan fasilitas produksi mitra pemasok',
+    'k': 'Keterbatasan/kelangkaan raw material',
+    'l': 'Kendala logistik & transportasi',
+    'm': 'Faktor pasar dan ekonomi',
+    'n': 'Faktor sosial dan tenaga kerja',
+  };
+  result.pareto.categories = PARETO_CATEGORIES;
+
+  if (wb.Sheets['Pareto Loss v2']){
+    const pl = _sheetToMatrix(wb.Sheets['Pareto Loss v2']);
+    const monthLabels = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    let currentCompany = '';
+    for (let i = 79; i < pl.length; i++){
+      const r = pl[i];
+      if (!r) continue;
+      const pltu = r[0];
+      const kode = r[1];
+      if (pltu === null || pltu === undefined || _safeStr(pltu) === '') continue;
+      // Company-header rows have kode = null
+      if (kode === null || kode === undefined || _safeStr(kode) === ''){
+        currentCompany = _safeStr(pltu);
+        continue;
+      }
+      const rkap = _safeNum(r[2]);
+      const monthly = [];
+      for (let mi = 0; mi < 12; mi++){
+        const colBase = 4 + mi * 4;
+        const t = (colBase < r.length) ? _safeNum(r[colBase]) : 0;
+        const re = (colBase + 1 < r.length) ? _safeNum(r[colBase + 1]) : 0;
+        const loss = (colBase + 2 < r.length) ? _safeNum(r[colBase + 2]) : 0;
+        const p = (colBase + 3 < r.length) ? _safeStr(r[colBase + 3]) : '';
+        monthly.push({ month: monthLabels[mi], target: t, real: re, loss: loss, pareto: p });
+      }
+      result.pareto.plants.push({
+        company: currentCompany,
+        pltu: _safeStr(pltu),
+        kode: _safeStr(kode),
+        rkap: rkap,
+        monthly: monthly,
+      });
+    }
+  }
+
+  return result;
+}
+
+// ----- PARSE KONTRAK EXCEL (Monitoring_Kontrak_Bio.xlsx) -----
+const _CONTRACT_CFG = {
+  PNP: {
+    genco: 'PNP', data_start: 2,
+    cols: { pltu: 1, pemasok: 2, vol_mt: 3, kontrak: 4, jenis: 5, amandemen: 6, awal: 8, akhir: 9 },
+    year_blocks: {
+      '2024': [12,13,14,15,16,17,18,19,20,21,22,23],
+      '2025': [30,31,32,33,34,35,36,37,38,39,40,41],
+      '2026': [46,47,48,49,50,51,52,53,54,55,56,57],
+    },
+  },
+  PIP: {
+    genco: 'PIP', data_start: 1,
+    cols: { pltu: 0, pemasok: 1, vol_mt: 2, kontrak: 3, amandemen: 4, awal: 5, akhir: 7, jenis: 9 },
+    year_blocks: {
+      '2024': [10,11,12,13,14,15,16,17,18,19,20,21],
+      '2025': [26,27,28,29,30,31,32,33,34,35,36,37],
+      '2026': [42,43,44,45,46,47,48,49,50,51,52,53],
+    },
+  },
+  UIW: {
+    genco: 'UIW', data_start: 1,
+    cols: { pltu: 0, pemasok: 1, vol_mt: 2, kontrak: 3, amandemen: 4, awal: 5, akhir: 7, jenis: 9 },
+    year_blocks: {
+      '2024': [10,11,12,13,14,15,16,17,18,19,20,21],
+      '2025': [26,27,28,29,30,31,32,33,34,35,36,37],
+      '2026': [41,42,43,44,45,46,47,48,49,50,51,52],
+    },
+  },
+};
+const _JENIS_NORM = { 'sawdust': 'Sawdust', 'Cangkang Sawit ': 'Cangkang Sawit' };
+
+async function parseKontrakExcel(wb){
+  const records = [];
+  const sheetNames = ['PNP', 'PIP', 'UIW'];
+  for (let s = 0; s < sheetNames.length; s++){
+    const sheet = sheetNames[s];
+    if (!wb.Sheets[sheet]) continue;
+    const cfg = _CONTRACT_CFG[sheet];
+    const data = _sheetToMatrix(wb.Sheets[sheet]);
+    for (let ri = cfg.data_start; ri < data.length; ri++){
+      const row = data[ri];
+      if (!row) continue;
+      const pltu = row[cfg.cols.pltu];
+      const pemasok = row[cfg.cols.pemasok];
+      if (pltu === null || pltu === undefined || _safeStr(pltu) === '') continue;
+      if (pemasok === null || pemasok === undefined || _safeStr(pemasok) === '') continue;
+      const pltuStr = _safeStr(pltu);
+      const lc = pltuStr.toLowerCase();
+      if (lc === 'total' || lc === 'grand total' || lc === 'subtotal') continue;
+      let jenisStr = _safeStr(row[cfg.cols.jenis]);
+      if (_JENIS_NORM[jenisStr]) jenisStr = _JENIS_NORM[jenisStr];
+      jenisStr = jenisStr.trim();
+      const rec = {
+        genco: cfg.genco,
+        pltu: pltuStr,
+        pemasok: _safeStr(pemasok),
+        vol_mt: _safeNum(row[cfg.cols.vol_mt]),
+        kontrak: _safeStr(row[cfg.cols.kontrak]),
+        amandemen: _safeStr(row[cfg.cols.amandemen]),
+        awal: _xlDate(row[cfg.cols.awal]),
+        akhir: _xlDate(row[cfg.cols.akhir]),
+        jenis: jenisStr,
+        realisasi: { '2023': new Array(12).fill(0), '2024': new Array(12).fill(0), '2025': new Array(12).fill(0), '2026': new Array(12).fill(0) },
+        realisasi_total: { '2023': 0, '2024': 0, '2025': 0, '2026': 0 },
+      };
+      Object.keys(cfg.year_blocks).forEach(year => {
+        const cols = cfg.year_blocks[year];
+        const months = cols.map(c => _safeNum(row[c]));
+        rec.realisasi[year] = months;
+        rec.realisasi_total[year] = months.reduce((s,x) => s+x, 0);
+      });
+      const totalReal = Object.values(rec.realisasi_total).reduce((s,x) => s+x, 0);
+      rec.sisa_kontrak = rec.vol_mt - totalReal;
+      rec.pct_kontrak = rec.vol_mt > 0 ? (totalReal / rec.vol_mt * 100) : 0;
+      rec.total_realisasi = totalReal;
+      records.push(rec);
+    }
+  }
+  return { contracts: records };
+}
+
 // ========= INIT =========
 window.addEventListener('DOMContentLoaded', () => {
   // Tabs
@@ -6178,25 +7410,27 @@ window.addEventListener('DOMContentLoaded', () => {
   setInterval(updateClock, 30000); // update every 30s
 
   // ========= "UPDATED PER" INDICATOR =========
-  // Populate from DATA.last_updated (set at refresh time)
-  (function populateUpdatedIndicator(){
-    const el = document.getElementById('updatedDate');
-    if (!el) return;
-    const lastUpdated = (DATA && DATA.last_updated) || '';
-    if (!lastUpdated){
-      el.textContent = '—';
-      return;
-    }
-    // Parse YYYY-MM-DD
-    const parts = lastUpdated.split('-');
-    if (parts.length !== 3){ el.textContent = lastUpdated; return; }
-    const y = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10) - 1;
-    const d = parseInt(parts[2], 10);
-    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-    if (m < 0 || m > 11){ el.textContent = lastUpdated; return; }
-    el.textContent = d + ' ' + months[m] + ' ' + y;
-  })();
+  populateUpdatedIndicator();
+
+  // ========= SUPABASE: load latest dashboard data on app start =========
+  // Boot Supabase early so Update Data tab + Usulan tab share the same client
+  initSupabase();
+  if (supabaseClient && navigator.onLine){
+    // Async load latest dashboard data from server (overrides embedded HTML data)
+    loadDashboardDataFromServer().then(serverRow => {
+      if (serverRow && serverRow.data){
+        applyDashboardData(serverRow.data, {
+          uploaded_by: serverRow.uploaded_by,
+          uploaded_at: serverRow.uploaded_at,
+          source_filename: serverRow.source_filename
+        });
+      }
+      // Subscribe to realtime updates (so all users see uploads instantly)
+      subscribeUpdateDataRealtime();
+    }).catch(e => {
+      console.warn('[Update] Initial server load failed:', e);
+    });
+  }
 
   // ========= MOBILE MENU (hamburger) =========
   const mobileMenuBtn = document.getElementById('mobileMenuBtn');
