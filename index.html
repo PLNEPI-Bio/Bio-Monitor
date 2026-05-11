@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomassa Monitor — PLTU PLN Group 2026</title>
+<title>Biomassa Dashboard — PLTU PLN Group 2026</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -6288,6 +6288,11 @@ function applyDashboardData(newData, meta){
   if (newData.last_updated){
     DATA.last_updated = newData.last_updated;
   }
+  // Track full upload metadata from server (for the "Updated per" indicator with time)
+  if (meta){
+    if (meta.uploaded_at) DATA.last_upload_at = meta.uploaded_at;
+    if (meta.uploaded_by) DATA.last_uploaded_by = meta.uploaded_by;
+  }
   // Preserve usulan from DATA (it's not part of upload schema)
   DATA.usulan = preservedUsulan;
 
@@ -6308,19 +6313,56 @@ function applyDashboardData(newData, meta){
   showDataAppliedBanner(meta);
 }
 
+// Track the most authoritative upload timestamp (from server when available).
+// On embedded HTML data, only DATA.last_updated (date string) exists.
+// After loading from Supabase, DATA.last_upload_at (ISO timestamp) takes precedence.
 function populateUpdatedIndicator(){
   const el = document.getElementById('updatedDate');
   if (!el) return;
-  const lastUpdated = (DATA && DATA.last_updated) || '';
-  if (!lastUpdated){ el.textContent = '—'; return; }
-  const parts = lastUpdated.split('-');
-  if (parts.length !== 3){ el.textContent = lastUpdated; return; }
-  const y = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10) - 1;
-  const d = parseInt(parts[2], 10);
-  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-  if (m < 0 || m > 11){ el.textContent = lastUpdated; return; }
-  el.textContent = d + ' ' + months[m] + ' ' + y;
+
+  // Priority 1: server-side timestamp (from Supabase row's uploaded_at field)
+  // Priority 2: DATA.last_updated (date-only string from embedded HTML or fallback)
+  const tooltipEl = document.getElementById('updatedIndicator');
+  let displayText = '—';
+  let tooltipText = '';
+
+  if (DATA && DATA.last_upload_at){
+    // Full timestamp available - format as "8 Mei 2026, 14:32"
+    const dt = new Date(DATA.last_upload_at);
+    if (!isNaN(dt)){
+      const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      const d = dt.getDate();
+      const m = dt.getMonth();
+      const y = dt.getFullYear();
+      const hh = String(dt.getHours()).padStart(2,'0');
+      const mn = String(dt.getMinutes()).padStart(2,'0');
+      displayText = d + ' ' + months[m] + ' ' + y + ', ' + hh + ':' + mn;
+      const uploadedBy = (DATA.last_uploaded_by || '').trim();
+      tooltipText = 'Diupdate ' + displayText + (uploadedBy ? ' oleh ' + uploadedBy : '');
+    }
+  } else if (DATA && DATA.last_updated){
+    // Date-only fallback (e.g. "2026-05-08")
+    const parts = DATA.last_updated.split('-');
+    if (parts.length === 3){
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      if (m >= 0 && m <= 11){
+        displayText = d + ' ' + months[m] + ' ' + y;
+        tooltipText = 'Diupdate ' + displayText;
+      } else {
+        displayText = DATA.last_updated;
+      }
+    } else {
+      displayText = DATA.last_updated;
+    }
+  }
+
+  el.textContent = displayText;
+  if (tooltipEl && tooltipText){
+    tooltipEl.setAttribute('title', tooltipText);
+  }
 }
 
 function rerenderActiveTab(){
@@ -6410,9 +6452,25 @@ function refreshUpdateStatusCard(){
   const metaEl = document.getElementById('updateStatusMeta');
   const gridEl = document.getElementById('updateStatusGrid');
   if (!titleEl || !metaEl || !gridEl) return;
-  const lastUp = (DATA && DATA.last_updated) || '—';
-  titleEl.textContent = 'Active dataset · last updated ' + lastUp;
-  metaEl.innerHTML = '';
+  // Build human-readable last-updated label
+  let lastUpLabel = '—';
+  if (DATA && DATA.last_upload_at){
+    const dt = new Date(DATA.last_upload_at);
+    if (!isNaN(dt)){
+      const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      const hh = String(dt.getHours()).padStart(2,'0');
+      const mn = String(dt.getMinutes()).padStart(2,'0');
+      lastUpLabel = dt.getDate() + ' ' + months[dt.getMonth()] + ' ' + dt.getFullYear() + ' · ' + hh + ':' + mn;
+    }
+  } else if (DATA && DATA.last_updated){
+    lastUpLabel = DATA.last_updated;
+  }
+  titleEl.textContent = 'Active dataset · last updated ' + lastUpLabel;
+  if (DATA && DATA.last_uploaded_by){
+    metaEl.innerHTML = 'by <b style="color:var(--accent)">' + escapeHtml(DATA.last_uploaded_by) + '</b>';
+  } else {
+    metaEl.innerHTML = '';
+  }
   // Cells with counts
   const cells = [
     { label: 'Plants', value: (DATA.plants || []).length },
