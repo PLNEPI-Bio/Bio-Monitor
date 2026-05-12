@@ -7437,16 +7437,43 @@ async function doProcessAndUpload(){
   const userName = getUserName ? getUserName() : 'Anonymous';
   const today = new Date().toISOString().slice(0,10);
   updateLog('Building merged dataset...', 'info');
-  // Merge: take new data from uploaded files, preserve fields not uploaded
+  // Merge: take new data from uploaded files, preserve fields not uploaded.
+  // SAFETY: if the parser returns an empty array (e.g. failed schema match) the
+  // existing data is preserved instead of being wiped. The || operator alone is
+  // unsafe because empty arrays are truthy in JS.
+  function _pick(parsedField, existingField){
+    if (Array.isArray(parsedField) && parsedField.length > 0) return parsedField;
+    return existingField || [];
+  }
+  function _pickPareto(parsedPareto, existingPareto){
+    if (parsedPareto && parsedPareto.plants && parsedPareto.plants.length > 0) return parsedPareto;
+    return existingPareto || { categories: [], plants: [] };
+  }
+  const prodData = (updateFiles.prod && updateFiles.prod.parsedData) || {};
+  const kontrakData = (updateFiles.kontrak && updateFiles.kontrak.parsedData) || {};
+  const prodUploaded = !!(updateFiles.prod && updateFiles.prod.parsedData);
+  const kontrakUploaded = !!(updateFiles.kontrak && updateFiles.kontrak.parsedData);
   const newDataset = {
-    plants: (updateFiles.prod && updateFiles.prod.parsedData && updateFiles.prod.parsedData.plants) || DATA.plants || [],
-    monthly: (updateFiles.prod && updateFiles.prod.parsedData && updateFiles.prod.parsedData.monthly) || DATA.monthly || [],
-    bottlenecks: (updateFiles.prod && updateFiles.prod.parsedData && updateFiles.prod.parsedData.bottlenecks) || DATA.bottlenecks || [],
-    pareto: (updateFiles.prod && updateFiles.prod.parsedData && updateFiles.prod.parsedData.pareto) || DATA.pareto || { categories: [], plants: [] },
-    pembangkit: (updateFiles.prod && updateFiles.prod.parsedData && updateFiles.prod.parsedData.pembangkit) || DATA.pembangkit || [],
-    contracts: (updateFiles.kontrak && updateFiles.kontrak.parsedData && updateFiles.kontrak.parsedData.contracts) || DATA.contracts || [],
+    plants: prodUploaded ? _pick(prodData.plants, DATA.plants) : (DATA.plants || []),
+    monthly: prodUploaded ? _pick(prodData.monthly, DATA.monthly) : (DATA.monthly || []),
+    bottlenecks: prodUploaded ? _pick(prodData.bottlenecks, DATA.bottlenecks) : (DATA.bottlenecks || []),
+    pareto: prodUploaded ? _pickPareto(prodData.pareto, DATA.pareto) : (DATA.pareto || { categories: [], plants: [] }),
+    pembangkit: prodUploaded ? _pick(prodData.pembangkit, DATA.pembangkit) : (DATA.pembangkit || []),
+    contracts: kontrakUploaded ? _pick(kontrakData.contracts, DATA.contracts) : (DATA.contracts || []),
     last_updated: today,
   };
+  // Warn user if a parsed category came up empty (unexpected for an uploaded file)
+  if (prodUploaded){
+    if (!prodData.plants || prodData.plants.length === 0)
+      updateLog('  ⚠ Parsed plants is empty - keeping existing ' + (DATA.plants || []).length + ' plants', 'warn');
+    if (!prodData.bottlenecks || prodData.bottlenecks.length === 0)
+      updateLog('  ⚠ Parsed bottlenecks is empty - keeping existing ' + (DATA.bottlenecks || []).length + ' bottlenecks', 'warn');
+    if (!prodData.pembangkit || prodData.pembangkit.length === 0)
+      updateLog('  ⚠ Parsed pembangkit is empty - keeping existing ' + (DATA.pembangkit || []).length + ' pembangkit', 'warn');
+  }
+  if (kontrakUploaded && (!kontrakData.contracts || kontrakData.contracts.length === 0)){
+    updateLog('  ⚠ Parsed contracts is empty - keeping existing ' + (DATA.contracts || []).length + ' contracts', 'warn');
+  }
   // usulan is NOT part of upload - intentionally not included; preserved on apply
   updateLog('  Dataset built: <b>' + newDataset.plants.length + '</b> plants · <b>' + newDataset.bottlenecks.length + '</b> bottlenecks · <b>' + newDataset.contracts.length + '</b> contracts · <b>' + newDataset.pembangkit.length + '</b> pembangkit', 'success');
 
@@ -8063,33 +8090,65 @@ async function parseProdExcel(wb){
   // ---------- Bottlenecks ----------
   if (wb.Sheets['Bottleneck - Mitigasi 2026']){
     const bn = _sheetToMatrix(wb.Sheets['Bottleneck - Mitigasi 2026']);
-    // JS layout: header row 11, data from row 12.
-    // Cols: 0=No, 1=PLTU, 2=Bulan, 3=Sumber, 4=Bottleneck, 5=Action Plan, 6=PIC,
-    //       7=Informant, 8=Contact Person, 9=Progress, 10=Evaluasi, 11=Complete?
-    for (let i = 12; i < bn.length; i++){
+    // Auto-detect header row + column offsets.
+    // Different versions of the Excel template put the header at different
+    // starting columns (some at col 0, others at col 2). Scan rows 0..30 to
+    // find the row containing "PLTU" + "Bulan" + "Bottleneck" headers, then
+    // derive column offsets from that.
+    let headerRow = -1;
+    let baseCol = -1;
+    for (let i = 0; i < Math.min(30, bn.length); i++){
       const r = bn[i];
       if (!r) continue;
-      const pltu = _safeStr(r[1]);
-      if (!pltu) continue;
-      const existing = coordMap[pltu];
-      const noVal = r[0];
-      const rec = {
-        no: (typeof noVal === 'number') ? noVal : _safeNum(noVal),
-        pltu: pltu,
-        bulan: _safeStr(r[2]),
-        sumber: _safeStr(r[3]),
-        bottleneck: _safeStr(r[4]),
-        action_plan: _safeStr(r[5]),
-        pic: _safeStr(r[6]),
-        informant: _safeStr(r[7]),
-        contact_person: _safeStr(r[8]),
-        progress: _safeStr(r[9]),
-        evaluasi: _safeStr(r[10]),
-        complete: _safeBool(r[11]),
-        lat: existing ? existing.lat : null,
-        lon: existing ? existing.lon : null,
-      };
-      result.bottlenecks.push(rec);
+      for (let c = 0; c < Math.min(r.length, 12); c++){
+        const v = _safeStr(r[c]).toLowerCase();
+        if (v === 'pltu'){
+          // Check next 2 cells match "Bulan" + "Sumber Bottleneck" pattern
+          const next1 = _safeStr(r[c+1] || '').toLowerCase();
+          const next2 = _safeStr(r[c+2] || '').toLowerCase();
+          if (next1 === 'bulan' && next2.indexOf('sumber') >= 0){
+            headerRow = i;
+            // The "No" column is one before PLTU (typically)
+            baseCol = c - 1;
+            break;
+          }
+        }
+      }
+      if (headerRow >= 0) break;
+    }
+
+    if (headerRow >= 0 && baseCol >= 0){
+      // Offsets relative to baseCol:
+      //   0=No, 1=PLTU, 2=Bulan, 3=Sumber, 4=Bottleneck, 5=Action Plan, 6=PIC,
+      //   7=Informant, 8=Contact Person, 9=Progress, 10=Evaluasi, 11=Complete?
+      for (let i = headerRow + 1; i < bn.length; i++){
+        const r = bn[i];
+        if (!r) continue;
+        const pltu = _safeStr(r[baseCol + 1]);
+        if (!pltu) continue;
+        const existing = coordMap[pltu];
+        const noVal = r[baseCol + 0];
+        const rec = {
+          no: (typeof noVal === 'number') ? noVal : _safeNum(noVal),
+          pltu: pltu,
+          bulan: _safeStr(r[baseCol + 2]),
+          sumber: _safeStr(r[baseCol + 3]),
+          bottleneck: _safeStr(r[baseCol + 4]),
+          action_plan: _safeStr(r[baseCol + 5]),
+          pic: _safeStr(r[baseCol + 6]),
+          informant: _safeStr(r[baseCol + 7]),
+          contact_person: _safeStr(r[baseCol + 8]),
+          progress: _safeStr(r[baseCol + 9]),
+          evaluasi: _safeStr(r[baseCol + 10]),
+          complete: _safeBool(r[baseCol + 11]),
+          lat: existing ? existing.lat : null,
+          lon: existing ? existing.lon : null,
+        };
+        result.bottlenecks.push(rec);
+      }
+    } else {
+      // Header not found → log warning. Bottlenecks left empty, caller will use existing.
+      console.warn('[Parser] Bottleneck header row not found - skipping extraction');
     }
   }
 
