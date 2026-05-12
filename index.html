@@ -8010,8 +8010,15 @@ async function parseProdExcel(wb){
 
   const targets2025 = extractMonthBlock(ROW_2025, COL_TARGET_JAN, PLANT_COUNT);
   const reals2025 = extractMonthBlock(ROW_2025, COL_REAL_JAN, PLANT_COUNT);
-  const reals2024 = extractMonthBlock(ROW_2024, COL_REAL_JAN, PLANT_COUNT);
-  const reals2023 = extractMonthBlock(ROW_2023, COL_REAL_JAN, PLANT_COUNT);
+  // V20: 2024 and 2023 blocks have a DIFFERENT layout than 2026/2025.
+  // 2024/2023 only have ONE set of monthly columns (the real values),
+  // located at cols 7-18 (same Excel cols as COL_TARGET_JAN in newer year blocks).
+  // Verified empirically from sheet "Rekap" rows 128 (2024) and 191 (2023):
+  //   col[2]=name, col[3-6]=meta, col[7-18]=Real Jan-Dec, col[19]=Total.
+  // Reading from col 33 (COL_REAL_JAN, used for 2026) yielded null → 0 totals.
+  const COL_REAL_JAN_HISTORICAL = 7;
+  const reals2024 = extractMonthBlock(ROW_2024, COL_REAL_JAN_HISTORICAL, PLANT_COUNT);
+  const reals2023 = extractMonthBlock(ROW_2023, COL_REAL_JAN_HISTORICAL, PLANT_COUNT);
 
   for (let i = 0; i < PLANT_COUNT; i++){
     const noRow = rekap[ROW_2026 + i] || [];
