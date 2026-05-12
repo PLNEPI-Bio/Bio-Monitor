@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomassa Dashboard — PLTU PLN Group 2026</title>
+<title>Biomassa Dashboard V22 — PLTU PLN Group 2026</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3177,20 +3177,34 @@ function selectPlant(code){
       </div>
     </div>
     <div class="detail-body">
+      ${state.mapPeriod.year === '2026' ? (() => {
+        // V21: compute color from real_pct directly so the bar always renders,
+        // even if p.status was persisted with stale/wrong keys (legacy uploads).
+        const pct = p.real_pct || 0;
+        let achColor = '#475569'; // default: no_data slate
+        if (p.target_2026_total){
+          if (pct >= 0.95) achColor = '#10b981';      // on_track green
+          else if (pct >= 0.70) achColor = '#f59e0b'; // at_risk amber
+          else achColor = '#ef4444';                  // behind red
+        }
+        const fillPct = Math.min(100, Math.max(0.5, pct*100)); // min 0.5% so bar is always visible
+        return `
       <div class="detail-section">
         <h4>Achievement · 2026 YTD</h4>
         <div class="progress-block">
           <div class="progress-head">
             <span class="progress-label">Realisasi vs Target</span>
-            <span class="progress-value" style="color:${statusColor(p.status)}">${(p.real_pct*100).toFixed(1)}%</span>
+            <span class="progress-value" style="color:${achColor}">${(pct*100).toFixed(1)}%</span>
           </div>
-          <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, p.real_pct*100)}%;background:${statusColor(p.status)}"></div></div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${fillPct}%;background:${achColor}"></div></div>
           <div class="progress-meta">
             <span>REAL <b>${fmtInt(p.real_2026_total)}</b> ton</span>
             <span>TARGET <b>${fmtInt(p.target_2026_total)}</b> ton</span>
           </div>
         </div>
       </div>
+        `;
+      })() : ''}
 
       <div class="detail-section">
         <h4>Kapasitas Pembangkit</h4>
@@ -4446,6 +4460,16 @@ function refreshBnMap(){
 
   const byPlant = bottlenecksByPlant();
 
+  // V20: pairs of PLTU that are co-located and overlap visually at low zoom.
+  // Apply a small offset (in degrees) so both are clickable. Offsets are
+  // map-only — underlying plant.lat/lon stays unchanged.
+  const VISUAL_OFFSETS = {
+    'Paiton 1-2':   { dLat: -0.08, dLon: -0.10 },
+    'Paiton 9':     { dLat: +0.08, dLon: +0.10 },
+    'Suralaya 1-7': { dLat: -0.08, dLon: -0.10 },
+    'Suralaya 8':   { dLat: +0.08, dLon: +0.10 },
+  };
+
   // Show a marker for every PLTU we have coordinates for; dim those without bottlenecks
   DATA.plants.forEach(p => {
     if (!p.lat) return;
@@ -4453,6 +4477,11 @@ function refreshBnMap(){
     const count = (byPlant[p.name] || []).length;
     const isSelected = state.bnSelectedPltu === p.name;
     const hasBottlenecks = count > 0;
+
+    // Apply visual offset if this PLTU is in an overlap pair
+    const off = VISUAL_OFFSETS[p.name];
+    const markerLat = off ? p.lat + off.dLat : p.lat;
+    const markerLon = off ? p.lon + off.dLon : p.lon;
 
     // Size proportional to bottleneck count; plants without issues get minimum size
     const size = hasBottlenecks
@@ -4473,14 +4502,17 @@ function refreshBnMap(){
       iconSize:[size, size*1.15],
       iconAnchor:[size/2, size*1.15],
     });
-    const m = L.marker([p.lat, p.lon], { icon, title: p.name });
-    m.bindPopup(renderBnPopup(p, byPlant[p.name] || []), { closeButton:false, offset:[0,-4] });
+    const m = L.marker([markerLat, markerLon], { icon, title: p.name });
+    // V20: bindTooltip on hover (no auto-pan) instead of bindPopup
+    m.bindTooltip(renderBnPopup(p, byPlant[p.name] || []), {
+      direction: 'top', offset: [0, -8], opacity: 1, sticky: false,
+      className: 'plant-tooltip', interactive: false,
+    });
     if (hasBottlenecks){
-      m.on('click', () => showBnPltuDetail({ pltu: p.name, lat: p.lat, lon: p.lon, items: byPlant[p.name] }));
+      m.on('click', () => showBnPltuDetail({ pltu: p.name, lat: markerLat, lon: markerLon, items: byPlant[p.name] }));
     } else {
       m.on('click', () => showBnPltuEmpty(p));
     }
-    m.on('mouseover', function(){ this.openPopup(); });
     bnMarkers[p.name] = m;
     bnMarkerLayer.addLayer(m);
   });
@@ -8076,7 +8108,15 @@ async function parseProdExcel(wb){
         '2026': target_2026,
       },
       lat: lat, lon: lon,
-      status: real_total >= target_total ? 'on-track' : 'shortfall',
+      // V20: status keys must match statusColor() lookup table:
+      //   on_track (≥95%), at_risk (≥70%), behind (<70%), no_data (no target)
+      status: (() => {
+        if (!target_total) return 'no_data';
+        const ratio = real_total / target_total;
+        if (ratio >= 0.95) return 'on_track';
+        if (ratio >= 0.70) return 'at_risk';
+        return 'behind';
+      })(),
     };
     result.plants.push(plant);
   }
