@@ -3150,20 +3150,30 @@ function renderPlantJenisList(plant){
   // Render as a list with bars
   let html = '<div class="jenis-list">';
   list.forEach(item => {
-    const pct = totalVol > 0 ? (item.vol / totalVol * 100) : 0;
+    // V23: progress bar shows realisasi/kontrak per jenis (not share-of-total).
+    // Previously used (item.vol / totalVol * 100) which made tiny contracts
+    // appear empty even at 98% completion. Now matches the "Realisasi YTD" line.
     const realPct = item.vol > 0 ? Math.min(100, item.real / item.vol * 100) : 0;
+    // Color by completion: ≥70% green, ≥30% amber, >0% red, 0 slate
+    let barColor = '#10b981';
+    if (realPct >= 70) barColor = '#10b981';
+    else if (realPct >= 30) barColor = '#f59e0b';
+    else if (realPct > 0) barColor = '#ef4444';
+    else barColor = '#475569';
+    // Minimum 0.5% width so bar is always slightly visible
+    const barFillWidth = item.vol > 0 ? Math.max(0.5, realPct) : 0;
     html += '<div class="jenis-item">';
     html += '<div class="jenis-row">';
     html += '<span class="jenis-name">' + escapeHtml(item.jenis) + '</span>';
     html += '<span class="jenis-meta">' + item.count + ' kontrak · ' + item.mitra.size + ' mitra</span>';
     html += '</div>';
     html += '<div class="jenis-bar-row">';
-    html += '<div class="jenis-bar-track"><div class="jenis-bar-fill" style="width:' + pct.toFixed(1) + '%"></div></div>';
+    html += '<div class="jenis-bar-track"><div class="jenis-bar-fill" style="width:' + barFillWidth.toFixed(2) + '%;background:' + barColor + '"></div></div>';
     html += '<span class="jenis-bar-value">' + fmtInt(item.vol) + '</span>';
     html += '</div>';
     html += '<div class="jenis-progress-row">';
     html += '<span class="jenis-progress-label">Realisasi YTD</span>';
-    html += '<span class="jenis-progress-value">' + fmtInt(item.real) + ' ton (' + realPct.toFixed(1) + '%)</span>';
+    html += '<span class="jenis-progress-value" style="color:' + barColor + '">' + fmtInt(item.real) + ' ton (' + realPct.toFixed(1) + '%)</span>';
     html += '</div>';
     html += '</div>';
   });
