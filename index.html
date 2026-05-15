@@ -11116,8 +11116,10 @@ function renderBeritaCard(a){
 
   const timeAgo = a.publishedAt ? formatTimeAgo(new Date(a.publishedAt)) : '';
   const source = escapeHtml(a.source || '—');
-  const title = escapeHtml(a.title || '(tanpa judul)');
-  const snippet = a.snippet ? escapeHtml(a.snippet) : '';
+  const title = escapeHtml(stripHtmlFromText(a.title || '(tanpa judul)'));
+  // V36: client-side defense — strip HTML tags from snippet that leaked
+  // from Google News RSS (some Edge Function versions didn't decode fully).
+  const snippet = a.snippet ? escapeHtml(stripHtmlFromText(a.snippet)) : '';
   const url = a.url || '#';
 
   // V36: thumbnail banner at top of card. If no image, show PLN-branded
@@ -11154,6 +11156,28 @@ function renderBeritaCard(a){
         </div>
       </div>
     </a>`;
+}
+
+// V36: strip HTML tags + decode entities from text that may have leaked
+// from RSS feeds. Defense layer in case Edge Function didn't clean fully.
+function stripHtmlFromText(s){
+  if (!s) return '';
+  // First decode entities (double-pass for nested encoding like &amp;lt;)
+  let out = String(s);
+  for (let i = 0; i < 2; i++){
+    out = out
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&apos;/g, "'")
+      .replace(/&nbsp;/g, ' ');
+  }
+  // Then strip any remaining tags
+  out = out.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return out;
 }
 
 function formatTimeAgo(date){
