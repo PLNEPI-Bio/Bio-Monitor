@@ -2662,6 +2662,10 @@ html,body{
 .berita-loading-text{
   font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;letter-spacing:.5px;
 }
+.berita-loading-hint{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  color:var(--text-dim);margin-top:8px;letter-spacing:.3px;opacity:.7;
+}
 .berita-empty,.berita-error{
   grid-column:1 / -1;
   text-align:center;padding:60px 20px;color:var(--text-dim);
@@ -2682,6 +2686,38 @@ html,body{
   border-color:var(--accent);transform:translateY(-2px);
   box-shadow:var(--shadow-md);
 }
+/* V36: Card thumbnail banner (top of card). PLN-branded gradient
+   placeholder for articles where OG image scrape failed or returned no_image. */
+.berita-card-thumb{
+  position:relative;width:100%;aspect-ratio:16 / 9;overflow:hidden;
+  background:linear-gradient(135deg,#0F496E 0%,#00A0E0 60%,#FFC72C 100%);
+  flex-shrink:0;
+}
+.berita-card-thumb img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  display:block;background:var(--panel-3);
+  transition:opacity .2s;
+}
+.berita-card-thumb-fallback{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  padding:14px;text-align:center;color:white;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  text-shadow:0 1px 4px rgba(0,0,0,.35);
+  /* Hidden by default — only shown when no image OR image fails to load */
+  opacity:0;
+}
+.berita-card-thumb-fallback-label{
+  font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  display:inline-block;padding:6px 14px;
+  background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.25);
+  border-radius:3px;backdrop-filter:blur(2px);
+}
+/* No-image variant: hide the <img> tag, show fallback */
+.berita-card-thumb.thumb-empty .berita-card-thumb-fallback{opacity:1}
+/* Failed-load variant: hide the broken <img>, show fallback */
+.berita-card-thumb.thumb-failed img{opacity:0;visibility:hidden}
+.berita-card-thumb.thumb-failed .berita-card-thumb-fallback{opacity:1}
+
 .berita-card-source-row{
   display:flex;justify-content:space-between;align-items:center;
   padding:10px 14px;background:var(--panel-3);border-bottom:1px solid var(--border);
@@ -11000,7 +11036,8 @@ function renderBeritaFeed(){
     feedEl.innerHTML = `
       <div class="berita-loading">
         <div class="berita-loading-spinner"></div>
-        <div class="berita-loading-text">Memuat berita...</div>
+        <div class="berita-loading-text">Memuat berita & thumbnail...</div>
+        <div class="berita-loading-hint">Pertama kali load dapat memakan waktu 15-25 detik</div>
       </div>`;
     if (metaEl) metaEl.textContent = '';
     return;
@@ -11083,8 +11120,27 @@ function renderBeritaCard(a){
   const snippet = a.snippet ? escapeHtml(a.snippet) : '';
   const url = a.url || '#';
 
+  // V36: thumbnail banner at top of card. If no image, show PLN-branded
+  // gradient placeholder. The onerror handler hides broken images and
+  // reveals the placeholder behind (CSS sibling selector).
+  const hasThumb = a.thumbnail && typeof a.thumbnail === 'string' && a.thumbnail.startsWith('http');
+  const thumbBlock = hasThumb
+    ? `<div class="berita-card-thumb">
+         <img src="${escapeHtml(a.thumbnail)}" alt="" loading="lazy"
+              onerror="this.parentElement.classList.add('thumb-failed')">
+         <div class="berita-card-thumb-fallback">
+           <span class="berita-card-thumb-fallback-label">${escapeHtml(source)}</span>
+         </div>
+       </div>`
+    : `<div class="berita-card-thumb thumb-empty">
+         <div class="berita-card-thumb-fallback">
+           <span class="berita-card-thumb-fallback-label">${escapeHtml(source)}</span>
+         </div>
+       </div>`;
+
   return `
     <a class="berita-card" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+      ${thumbBlock}
       <div class="berita-card-source-row">
         <span class="berita-card-source">${source}</span>
         <span class="berita-card-time">${escapeHtml(timeAgo)}</span>
