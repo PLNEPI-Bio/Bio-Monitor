@@ -2644,14 +2644,14 @@ html,body{
   letter-spacing:.5px;margin-bottom:14px;
 }
 
-/* Feed grid */
+/* V38: Feed switches from grid to vertical list. First item is "featured"
+   (larger card), rest are compact list items with hover slide effect. */
 .berita-feed{
-  display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:14px;
+  display:flex;flex-direction:column;gap:10px;
 }
 
 /* Loading state */
 .berita-loading{
-  grid-column:1 / -1;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:60px 20px;color:var(--text-dim);
 }
@@ -2667,7 +2667,6 @@ html,body{
   color:var(--text-dim);margin-top:8px;letter-spacing:.3px;opacity:.7;
 }
 .berita-empty,.berita-error{
-  grid-column:1 / -1;
   text-align:center;padding:60px 20px;color:var(--text-dim);
   font-family:'Plus Jakarta Sans',sans-serif;
 }
@@ -2675,105 +2674,198 @@ html,body{
 .berita-empty-title{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text)}
 .berita-empty-sub{font-size:11px;color:var(--text-dim)}
 
-/* News card */
+/* ============================================================
+   BERITA CARD (V38) — featured + list items
+   ============================================================ */
 .berita-card{
-  background:var(--panel);border:1px solid var(--border);
-  padding:0;cursor:pointer;transition:all .15s;
-  display:flex;flex-direction:column;text-decoration:none;color:inherit;
-  border-radius:4px;overflow:hidden;
+  text-decoration:none;color:inherit;cursor:pointer;
+  display:block;position:relative;
+  border-radius:6px;overflow:hidden;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
 }
-.berita-card:hover{
-  border-color:var(--accent);transform:translateY(-2px);
-  box-shadow:var(--shadow-md);
-}
-/* V36: Card thumbnail banner (top of card). PLN-branded gradient
-   placeholder for articles where OG image scrape failed or returned no_image. */
-.berita-card-thumb{
-  position:relative;width:100%;aspect-ratio:16 / 9;overflow:hidden;
-  background:linear-gradient(135deg,#0F496E 0%,#00A0E0 60%,#FFC72C 100%);
-  flex-shrink:0;
-}
-.berita-card-thumb img{
-  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  display:block;background:var(--panel-3);
-  transition:opacity .2s;
-}
-.berita-card-thumb-fallback{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  padding:14px;text-align:center;color:white;
-  font-family:'Plus Jakarta Sans',sans-serif;
-  text-shadow:0 1px 4px rgba(0,0,0,.35);
-  /* Hidden by default — only shown when no image OR image fails to load */
-  opacity:0;
-}
-.berita-card-thumb-fallback-label{
-  font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
-  display:inline-block;padding:6px 14px;
-  background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.25);
-  border-radius:3px;backdrop-filter:blur(2px);
-}
-/* No-image variant: hide the <img> tag, show fallback */
-.berita-card-thumb.thumb-empty .berita-card-thumb-fallback{opacity:1}
-/* Failed-load variant: hide the broken <img>, show fallback */
-.berita-card-thumb.thumb-failed img{opacity:0;visibility:hidden}
-.berita-card-thumb.thumb-failed .berita-card-thumb-fallback{opacity:1}
 
-.berita-card-source-row{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:10px 14px;background:var(--panel-3);border-bottom:1px solid var(--border);
+/* Per-source accent colors (rotating 5 options derived from PLN palette).
+   Used as left-border on cards for visual variety while staying on-brand. */
+.berita-card.accent-0{--card-accent:#0F496E}  /* PLN blue */
+.berita-card.accent-1{--card-accent:#FFC72C}  /* PLN yellow */
+.berita-card.accent-2{--card-accent:#00A0E0}  /* PLN cyan */
+.berita-card.accent-3{--card-accent:#B6302B}  /* PLN red */
+.berita-card.accent-4{--card-accent:#7c3aed}  /* purple */
+
+/* ---------- FEATURED CARD (first item) ---------- */
+.berita-featured{
+  background:linear-gradient(135deg, var(--panel) 0%, var(--panel-2) 100%);
+  border:1px solid var(--border);
+  border-left:4px solid var(--card-accent);
+  padding:24px 28px;margin-bottom:18px;
+  position:relative;overflow:hidden;
 }
-.berita-card-source{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:700;
-  letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);
+.berita-featured::before{
+  /* Decorative accent corner — subtle radial gradient */
+  content:"";position:absolute;top:-40px;right:-40px;
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle, var(--card-accent) 0%, transparent 70%);
+  opacity:.08;pointer-events:none;
 }
-.berita-card-time{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
-  letter-spacing:.3px;
+.berita-featured:hover{
+  border-color:var(--card-accent);
+  box-shadow:0 8px 28px rgba(15,73,110,.12);
+  transform:translateY(-2px);
 }
-.berita-card-body{padding:14px;display:flex;flex-direction:column;gap:8px;flex:1}
-.berita-card-title{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;
-  color:var(--text-bright);line-height:1.4;letter-spacing:-.1px;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
-  overflow:hidden;
+.berita-featured-meta{
+  display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;
+  position:relative;z-index:1;
 }
-.berita-card-snippet{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--text-dim);
-  line-height:1.5;
+.berita-featured-badge{
+  display:inline-flex;align-items:center;
+  background:var(--card-accent);color:white;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:9px;font-weight:800;letter-spacing:1.5px;
+  padding:4px 10px;border-radius:3px;
+}
+.berita-featured-source{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:1.2px;text-transform:uppercase;color:var(--card-accent);
+}
+.berita-featured-time{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  color:var(--text-dim);margin-left:auto;letter-spacing:.3px;
+}
+.berita-featured-title{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:22px;font-weight:700;line-height:1.3;letter-spacing:-.3px;
+  color:var(--text-bright);margin-bottom:10px;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  position:relative;z-index:1;
 }
-.berita-card-footer{
-  margin-top:auto;padding-top:10px;border-top:1px solid var(--border);
-  display:flex;justify-content:space-between;align-items:center;gap:8px;
+.berita-featured-snippet{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;
+  line-height:1.6;color:var(--text);opacity:.85;margin-bottom:16px;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  position:relative;z-index:1;
 }
-.berita-card-tags{display:flex;gap:4px;flex-wrap:wrap}
+.berita-featured-footer{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  position:relative;z-index:1;flex-wrap:wrap;
+}
+
+/* ---------- LIST ITEM (remaining items) ---------- */
+.berita-list-item{
+  background:var(--panel);border:1px solid var(--border);
+  display:grid;grid-template-columns:auto 1fr auto;
+  align-items:center;gap:18px;
+  padding:16px 20px;
+  position:relative;
+}
+.berita-list-item::before{
+  /* Left accent bar that slides in on hover */
+  content:"";position:absolute;top:0;left:0;bottom:0;width:3px;
+  background:var(--card-accent);
+  transform:scaleY(0);transform-origin:center;
+  transition:transform .2s ease;
+}
+.berita-list-item:hover{
+  border-color:var(--card-accent);
+  background:var(--panel-2);
+  transform:translateX(2px);
+  box-shadow:0 2px 8px rgba(15,73,110,.06);
+}
+.berita-list-item:hover::before{
+  transform:scaleY(1);
+}
+.berita-list-number{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:24px;font-weight:800;font-feature-settings:"tnum";
+  color:var(--card-accent);opacity:.4;
+  line-height:1;min-width:34px;
+  transition:opacity .2s;letter-spacing:-.5px;
+}
+.berita-list-item:hover .berita-list-number{opacity:.85}
+.berita-list-content{
+  display:flex;flex-direction:column;gap:6px;min-width:0;
+}
+.berita-list-meta{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.berita-list-source{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--card-accent);
+}
+.berita-list-dot{color:var(--text-dim);opacity:.6}
+.berita-list-time{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  color:var(--text-dim);letter-spacing:.3px;
+}
+.berita-list-tags{display:inline-flex;gap:4px;margin-left:auto}
+.berita-list-title{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:15px;font-weight:600;line-height:1.4;letter-spacing:-.1px;
+  color:var(--text-bright);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.berita-list-snippet{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
+  line-height:1.5;color:var(--text-dim);
+  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
+}
+.berita-list-arrow{
+  color:var(--text-dim);opacity:.4;flex-shrink:0;
+  transition:transform .2s, opacity .2s, color .2s;
+}
+.berita-list-item:hover .berita-list-arrow{
+  color:var(--card-accent);opacity:1;
+  transform:translateX(4px);
+}
+
+/* ---------- Shared: tags & link ---------- */
+.berita-card-tags{display:inline-flex;gap:4px;flex-wrap:wrap}
 .berita-card-tag{
   display:inline-block;font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;
-  font-weight:600;letter-spacing:.8px;text-transform:uppercase;
-  padding:2px 7px;background:var(--panel-3);color:var(--text);border-radius:2px;
+  font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  padding:3px 8px;background:var(--panel-3);color:var(--text);
+  border-radius:10px;
 }
 .berita-card-tag.topic-plnepi{background:rgba(15,73,110,.12);color:#0F496E}
-.berita-card-tag.topic-biomassa{background:rgba(255,199,44,.18);color:#92660B}
-.berita-card-tag.topic-bioenergi{background:rgba(0,160,224,.15);color:#0F496E}
+.berita-card-tag.topic-biomassa{background:rgba(255,199,44,.20);color:#8a5a00}
+.berita-card-tag.topic-bioenergi{background:rgba(0,160,224,.15);color:#006d99}
 .berita-card-tag.topic-pltu{background:rgba(124,58,237,.12);color:#5B21B6}
-.berita-card-link{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:600;
-  letter-spacing:.5px;text-transform:uppercase;color:var(--accent);
-  display:inline-flex;align-items:center;gap:4px;
-}
 
-/* Light theme tweaks for berita */
-:root[data-theme="light"] .berita-card-source{color:#0F496E}
-:root[data-theme="light"] .berita-card{box-shadow:var(--shadow-sm)}
+.berita-card-link{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;color:var(--card-accent);
+  display:inline-flex;align-items:center;gap:4px;
+  transition:transform .15s;
+}
+.berita-featured:hover .berita-card-link{transform:translateX(3px)}
+
+/* Dark theme: featured card gets a richer treatment */
+:root[data-theme="dark"] .berita-featured{
+  background:linear-gradient(135deg, var(--panel) 0%, #0f1a26 100%);
+}
+:root[data-theme="dark"] .berita-card-tag.topic-biomassa{color:#f0c44a}
+:root[data-theme="dark"] .berita-card-tag.topic-bioenergi{color:#5dc7f0}
 
 /* Mobile responsive */
 @media (max-width:768px){
   .berita-view{padding:12px 10px}
   .berita-title{font-size:18px}
   .berita-filter-row{grid-template-columns:1fr;gap:10px}
-  .berita-feed{grid-template-columns:1fr;gap:10px}
-  .berita-card-title{font-size:13px}
+  .berita-feed{gap:8px}
   .berita-header{flex-direction:column;align-items:flex-start}
+  .berita-featured{padding:18px 18px}
+  .berita-featured-title{font-size:18px}
+  .berita-featured-snippet{font-size:12px;-webkit-line-clamp:2}
+  .berita-featured-meta{gap:8px}
+  .berita-featured-time{margin-left:0;width:100%;order:99}
+  .berita-list-item{
+    grid-template-columns:auto 1fr;padding:14px 14px;gap:12px;
+  }
+  .berita-list-arrow{display:none}
+  .berita-list-number{font-size:20px;min-width:28px}
+  .berita-list-title{font-size:13px}
+  .berita-list-snippet{display:none}
+  .berita-list-tags{display:none}
 }
 </style>
 </head>
@@ -11101,10 +11193,10 @@ function renderBeritaFeed(){
     return;
   }
 
-  feedEl.innerHTML = filtered.map(a => renderBeritaCard(a)).join('');
+  feedEl.innerHTML = filtered.map((a, i) => renderBeritaCard(a, i)).join('');
 }
 
-function renderBeritaCard(a){
+function renderBeritaCard(a, index){
   const topics = a.topics || [];
   const topicTags = topics.slice(0, 3).map(t => {
     const label = t === 'plnepi' ? 'PLN EPI' :
@@ -11117,45 +11209,62 @@ function renderBeritaCard(a){
   const timeAgo = a.publishedAt ? formatTimeAgo(new Date(a.publishedAt)) : '';
   const source = escapeHtml(a.source || '—');
   const title = escapeHtml(stripHtmlFromText(a.title || '(tanpa judul)'));
-  // V36: client-side defense — strip HTML tags from snippet that leaked
-  // from Google News RSS (some Edge Function versions didn't decode fully).
   const snippet = a.snippet ? escapeHtml(stripHtmlFromText(a.snippet)) : '';
   const url = a.url || '#';
 
-  // V36: thumbnail banner at top of card. If no image, show PLN-branded
-  // gradient placeholder. The onerror handler hides broken images and
-  // reveals the placeholder behind (CSS sibling selector).
-  const hasThumb = a.thumbnail && typeof a.thumbnail === 'string' && a.thumbnail.startsWith('http');
-  const thumbBlock = hasThumb
-    ? `<div class="berita-card-thumb">
-         <img src="${escapeHtml(a.thumbnail)}" alt="" loading="lazy"
-              onerror="this.parentElement.classList.add('thumb-failed')">
-         <div class="berita-card-thumb-fallback">
-           <span class="berita-card-thumb-fallback-label">${escapeHtml(source)}</span>
-         </div>
-       </div>`
-    : `<div class="berita-card-thumb thumb-empty">
-         <div class="berita-card-thumb-fallback">
-           <span class="berita-card-thumb-fallback-label">${escapeHtml(source)}</span>
-         </div>
-       </div>`;
+  // V38: text-only list design (thumbnail scraping unreliable, reverted).
+  // First card is "featured" (larger, more prominent). Rest are list items.
+  // Color accent derived from source name hash for visual variety.
+  const accentClass = sourceAccentClass(a.source);
+  const isFeatured = index === 0;
+
+  if (isFeatured){
+    return `
+      <a class="berita-card berita-featured ${accentClass}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+        <div class="berita-featured-meta">
+          <span class="berita-featured-badge">TERBARU</span>
+          <span class="berita-featured-source">${source}</span>
+          <span class="berita-featured-time">${escapeHtml(timeAgo)}</span>
+        </div>
+        <div class="berita-featured-title">${title}</div>
+        ${snippet ? `<div class="berita-featured-snippet">${snippet}</div>` : ''}
+        <div class="berita-featured-footer">
+          <div class="berita-card-tags">${topicTags}</div>
+          <span class="berita-card-link">Baca selengkapnya →</span>
+        </div>
+      </a>`;
+  }
 
   return `
-    <a class="berita-card" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
-      ${thumbBlock}
-      <div class="berita-card-source-row">
-        <span class="berita-card-source">${source}</span>
-        <span class="berita-card-time">${escapeHtml(timeAgo)}</span>
-      </div>
-      <div class="berita-card-body">
-        <div class="berita-card-title">${title}</div>
-        ${snippet ? `<div class="berita-card-snippet">${snippet}</div>` : ''}
-        <div class="berita-card-footer">
-          <div class="berita-card-tags">${topicTags}</div>
-          <span class="berita-card-link">Baca →</span>
+    <a class="berita-card berita-list-item ${accentClass}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+      <div class="berita-list-number">${(index).toString().padStart(2, '0')}</div>
+      <div class="berita-list-content">
+        <div class="berita-list-meta">
+          <span class="berita-list-source">${source}</span>
+          <span class="berita-list-dot">·</span>
+          <span class="berita-list-time">${escapeHtml(timeAgo)}</span>
+          <div class="berita-list-tags">${topicTags}</div>
         </div>
+        <div class="berita-list-title">${title}</div>
+        ${snippet ? `<div class="berita-list-snippet">${snippet}</div>` : ''}
+      </div>
+      <div class="berita-list-arrow">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M2 8h12M9 3l5 5-5 5"/>
+        </svg>
       </div>
     </a>`;
+}
+
+// V38: assign accent class based on hash of source name for visual variety.
+// 5 rotating accent options derived from PLN brand palette.
+function sourceAccentClass(source){
+  if (!source) return 'accent-0';
+  let h = 0;
+  for (let i = 0; i < source.length; i++){
+    h = ((h << 5) - h + source.charCodeAt(i)) | 0;
+  }
+  return 'accent-' + (Math.abs(h) % 5);
 }
 
 // V36: strip HTML tags + decode entities from text that may have leaked
