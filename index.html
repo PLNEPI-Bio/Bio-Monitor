@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomassa Dashboard — PLTU PLN Group 2026</title>
+<title>Biomassa Dashboard V41 — PLTU PLN Group 2026</title>
 
 <!-- ===== SEO / Social media preview meta tags =====
      When this URL is shared on WhatsApp, Twitter, Facebook, LinkedIn, Slack, etc.,
@@ -2645,12 +2645,12 @@ html,body{
 }
 
 /* ============================================================
-   V39: Feed grid (multi-column) with new card design.
-   Card structure: [source bar] → [title] → [snippet] → [footer]
+   V40: Feed grid (forced 3 columns desktop) + visual hero per card.
+   Card structure: [hero SVG] → [source bar] → [body] → [footer]
    ============================================================ */
 .berita-feed{
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns:repeat(3, 1fr);
   gap:14px;
 }
 
@@ -2707,7 +2707,7 @@ html,body{
   content:"";position:absolute;top:0;left:0;right:0;height:3px;
   background:var(--card-accent);
   transition:height .18s ease;
-  z-index:1;
+  z-index:2;
 }
 .berita-card:hover{
   border-color:var(--card-accent);
@@ -2804,9 +2804,7 @@ html,body{
   .berita-card-snippet{font-size:11px;-webkit-line-clamp:2}
 }
 
-/* Tablet: 2 columns explicit (auto-fill already does this around 600-900px,
-   but force minimum 2 columns to avoid awkward single column on portrait
-   tablets) */
+/* Tablet: 2 columns explicit */
 @media (min-width:769px) and (max-width:1100px){
   .berita-feed{grid-template-columns:repeat(2, 1fr)}
 }
@@ -11155,9 +11153,9 @@ function renderBeritaCard(a, index){
   const snippet = a.snippet ? escapeHtml(stripHtmlFromText(a.snippet)) : '';
   const url = a.url || '#';
 
-  // V39: grid card design. Structure per tile (top → bottom):
-  //   1. Source bar (publisher name + time-ago, color-accented)
-  //   2. Title (3-line clamp, prominent)
+  // V41: text-only card, 3-column grid. Structure:
+  //   1. Source bar (publisher + time)
+  //   2. Title (prominent, 3-line clamp)
   //   3. Snippet (kalimat pertama, 3-line clamp)
   //   4. Footer (topic tags + arrow)
   const accentClass = sourceAccentClass(a.source);
