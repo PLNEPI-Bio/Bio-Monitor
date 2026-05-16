@@ -2644,13 +2644,22 @@ html,body{
   letter-spacing:.5px;margin-bottom:14px;
 }
 
-/* V38: Feed switches from grid to vertical list. First item is "featured"
-   (larger card), rest are compact list items with hover slide effect. */
+/* ============================================================
+   V39: Feed grid (multi-column) with new card design.
+   Card structure: [source bar] → [title] → [snippet] → [footer]
+   ============================================================ */
 .berita-feed{
-  display:flex;flex-direction:column;gap:10px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+  gap:14px;
 }
 
-/* Loading state */
+/* Loading / empty / error states span full grid width */
+.berita-loading,
+.berita-empty,
+.berita-error{
+  grid-column:1 / -1;
+}
 .berita-loading{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:60px 20px;color:var(--text-dim);
@@ -2675,174 +2684,112 @@ html,body{
 .berita-empty-sub{font-size:11px;color:var(--text-dim)}
 
 /* ============================================================
-   BERITA CARD (V38) — featured + list items
+   Card (V39) — per-source accent color, structured tiles
    ============================================================ */
 .berita-card{
   text-decoration:none;color:inherit;cursor:pointer;
-  display:block;position:relative;
+  display:flex;flex-direction:column;
+  background:var(--panel);border:1px solid var(--border);
   border-radius:6px;overflow:hidden;
   transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  position:relative;
 }
 
-/* Per-source accent colors (rotating 5 options derived from PLN palette).
-   Used as left-border on cards for visual variety while staying on-brand. */
+/* Per-source accent colors (5 rotating, hash-based for consistency) */
 .berita-card.accent-0{--card-accent:#0F496E}  /* PLN blue */
 .berita-card.accent-1{--card-accent:#FFC72C}  /* PLN yellow */
 .berita-card.accent-2{--card-accent:#00A0E0}  /* PLN cyan */
 .berita-card.accent-3{--card-accent:#B6302B}  /* PLN red */
 .berita-card.accent-4{--card-accent:#7c3aed}  /* purple */
 
-/* ---------- FEATURED CARD (first item) ---------- */
-.berita-featured{
-  background:linear-gradient(135deg, var(--panel) 0%, var(--panel-2) 100%);
-  border:1px solid var(--border);
-  border-left:4px solid var(--card-accent);
-  padding:24px 28px;margin-bottom:18px;
-  position:relative;overflow:hidden;
-}
-.berita-featured::before{
-  /* Decorative accent corner — subtle radial gradient */
-  content:"";position:absolute;top:-40px;right:-40px;
-  width:200px;height:200px;border-radius:50%;
-  background:radial-gradient(circle, var(--card-accent) 0%, transparent 70%);
-  opacity:.08;pointer-events:none;
-}
-.berita-featured:hover{
-  border-color:var(--card-accent);
-  box-shadow:0 8px 28px rgba(15,73,110,.12);
-  transform:translateY(-2px);
-}
-.berita-featured-meta{
-  display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;
-  position:relative;z-index:1;
-}
-.berita-featured-badge{
-  display:inline-flex;align-items:center;
-  background:var(--card-accent);color:white;
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:9px;font-weight:800;letter-spacing:1.5px;
-  padding:4px 10px;border-radius:3px;
-}
-.berita-featured-source{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;
-  letter-spacing:1.2px;text-transform:uppercase;color:var(--card-accent);
-}
-.berita-featured-time{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
-  color:var(--text-dim);margin-left:auto;letter-spacing:.3px;
-}
-.berita-featured-title{
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:22px;font-weight:700;line-height:1.3;letter-spacing:-.3px;
-  color:var(--text-bright);margin-bottom:10px;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
-  position:relative;z-index:1;
-}
-.berita-featured-snippet{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;
-  line-height:1.6;color:var(--text);opacity:.85;margin-bottom:16px;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
-  position:relative;z-index:1;
-}
-.berita-featured-footer{
-  display:flex;justify-content:space-between;align-items:center;gap:12px;
-  position:relative;z-index:1;flex-wrap:wrap;
-}
-
-/* ---------- LIST ITEM (remaining items) ---------- */
-.berita-list-item{
-  background:var(--panel);border:1px solid var(--border);
-  display:grid;grid-template-columns:auto 1fr auto;
-  align-items:center;gap:18px;
-  padding:16px 20px;
-  position:relative;
-}
-.berita-list-item::before{
-  /* Left accent bar that slides in on hover */
-  content:"";position:absolute;top:0;left:0;bottom:0;width:3px;
+.berita-card::before{
+  /* Top accent bar — 3px slim line that animates to 4px on hover */
+  content:"";position:absolute;top:0;left:0;right:0;height:3px;
   background:var(--card-accent);
-  transform:scaleY(0);transform-origin:center;
-  transition:transform .2s ease;
+  transition:height .18s ease;
+  z-index:1;
 }
-.berita-list-item:hover{
+.berita-card:hover{
   border-color:var(--card-accent);
-  background:var(--panel-2);
-  transform:translateX(2px);
-  box-shadow:0 2px 8px rgba(15,73,110,.06);
+  transform:translateY(-3px);
+  box-shadow:0 10px 24px rgba(15,73,110,.10);
 }
-.berita-list-item:hover::before{
-  transform:scaleY(1);
+.berita-card:hover::before{height:4px}
+
+/* 1) Source bar (top): publisher + time-ago */
+.berita-card-source-bar{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:14px 16px 10px;
 }
-.berita-list-number{
+.berita-card-source{
   font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:24px;font-weight:800;font-feature-settings:"tnum";
-  color:var(--card-accent);opacity:.4;
-  line-height:1;min-width:34px;
-  transition:opacity .2s;letter-spacing:-.5px;
-}
-.berita-list-item:hover .berita-list-number{opacity:.85}
-.berita-list-content{
-  display:flex;flex-direction:column;gap:6px;min-width:0;
-}
-.berita-list-meta{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-}
-.berita-list-source{
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:9px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;
+  font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;
   color:var(--card-accent);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:75%;
 }
-.berita-list-dot{color:var(--text-dim);opacity:.6}
-.berita-list-time{
+.berita-card-time{
   font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
   color:var(--text-dim);letter-spacing:.3px;
-}
-.berita-list-tags{display:inline-flex;gap:4px;margin-left:auto}
-.berita-list-title{
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:15px;font-weight:600;line-height:1.4;letter-spacing:-.1px;
-  color:var(--text-bright);
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-}
-.berita-list-snippet{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
-  line-height:1.5;color:var(--text-dim);
-  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
-}
-.berita-list-arrow{
-  color:var(--text-dim);opacity:.4;flex-shrink:0;
-  transition:transform .2s, opacity .2s, color .2s;
-}
-.berita-list-item:hover .berita-list-arrow{
-  color:var(--card-accent);opacity:1;
-  transform:translateX(4px);
+  white-space:nowrap;flex-shrink:0;
 }
 
-/* ---------- Shared: tags & link ---------- */
-.berita-card-tags{display:inline-flex;gap:4px;flex-wrap:wrap}
+/* 2) Body: title + snippet */
+.berita-card-body{
+  display:flex;flex-direction:column;gap:8px;
+  padding:0 16px 12px;flex:1;
+}
+.berita-card-title{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:14px;font-weight:700;line-height:1.4;letter-spacing:-.1px;
+  color:var(--text-bright);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.berita-card-snippet{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:12px;line-height:1.55;color:var(--text-dim);
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.berita-card-snippet-empty{opacity:.4;font-style:italic}
+
+/* 3) Footer: tags + arrow */
+.berita-card-footer{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:10px 16px 14px;
+  border-top:1px solid var(--border);
+  margin-top:auto;
+}
+.berita-card-tags{
+  display:flex;gap:4px;flex-wrap:wrap;
+  flex:1;min-width:0;
+}
 .berita-card-tag{
-  display:inline-block;font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;
-  font-weight:700;letter-spacing:.8px;text-transform:uppercase;
-  padding:3px 8px;background:var(--panel-3);color:var(--text);
+  display:inline-block;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:8px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  padding:3px 7px;background:var(--panel-3);color:var(--text);
   border-radius:10px;
+  white-space:nowrap;
 }
 .berita-card-tag.topic-plnepi{background:rgba(15,73,110,.12);color:#0F496E}
 .berita-card-tag.topic-biomassa{background:rgba(255,199,44,.20);color:#8a5a00}
 .berita-card-tag.topic-bioenergi{background:rgba(0,160,224,.15);color:#006d99}
 .berita-card-tag.topic-pltu{background:rgba(124,58,237,.12);color:#5B21B6}
 
-.berita-card-link{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;
-  letter-spacing:.8px;text-transform:uppercase;color:var(--card-accent);
-  display:inline-flex;align-items:center;gap:4px;
-  transition:transform .15s;
+.berita-card-arrow{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:14px;color:var(--card-accent);opacity:.6;
+  flex-shrink:0;
+  transition:transform .15s, opacity .15s;
 }
-.berita-featured:hover .berita-card-link{transform:translateX(3px)}
+.berita-card:hover .berita-card-arrow{
+  opacity:1;
+  transform:translateX(4px);
+}
 
-/* Dark theme: featured card gets a richer treatment */
-:root[data-theme="dark"] .berita-featured{
-  background:linear-gradient(135deg, var(--panel) 0%, #0f1a26 100%);
-}
+/* Dark theme tweaks for tag readability */
 :root[data-theme="dark"] .berita-card-tag.topic-biomassa{color:#f0c44a}
 :root[data-theme="dark"] .berita-card-tag.topic-bioenergi{color:#5dc7f0}
 
@@ -2851,21 +2798,17 @@ html,body{
   .berita-view{padding:12px 10px}
   .berita-title{font-size:18px}
   .berita-filter-row{grid-template-columns:1fr;gap:10px}
-  .berita-feed{gap:8px}
+  .berita-feed{grid-template-columns:1fr;gap:10px}
   .berita-header{flex-direction:column;align-items:flex-start}
-  .berita-featured{padding:18px 18px}
-  .berita-featured-title{font-size:18px}
-  .berita-featured-snippet{font-size:12px;-webkit-line-clamp:2}
-  .berita-featured-meta{gap:8px}
-  .berita-featured-time{margin-left:0;width:100%;order:99}
-  .berita-list-item{
-    grid-template-columns:auto 1fr;padding:14px 14px;gap:12px;
-  }
-  .berita-list-arrow{display:none}
-  .berita-list-number{font-size:20px;min-width:28px}
-  .berita-list-title{font-size:13px}
-  .berita-list-snippet{display:none}
-  .berita-list-tags{display:none}
+  .berita-card-title{font-size:13px}
+  .berita-card-snippet{font-size:11px;-webkit-line-clamp:2}
+}
+
+/* Tablet: 2 columns explicit (auto-fill already does this around 600-900px,
+   but force minimum 2 columns to avoid awkward single column on portrait
+   tablets) */
+@media (min-width:769px) and (max-width:1100px){
+  .berita-feed{grid-template-columns:repeat(2, 1fr)}
 }
 </style>
 </head>
@@ -11212,46 +11155,26 @@ function renderBeritaCard(a, index){
   const snippet = a.snippet ? escapeHtml(stripHtmlFromText(a.snippet)) : '';
   const url = a.url || '#';
 
-  // V38: text-only list design (thumbnail scraping unreliable, reverted).
-  // First card is "featured" (larger, more prominent). Rest are list items.
-  // Color accent derived from source name hash for visual variety.
+  // V39: grid card design. Structure per tile (top → bottom):
+  //   1. Source bar (publisher name + time-ago, color-accented)
+  //   2. Title (3-line clamp, prominent)
+  //   3. Snippet (kalimat pertama, 3-line clamp)
+  //   4. Footer (topic tags + arrow)
   const accentClass = sourceAccentClass(a.source);
-  const isFeatured = index === 0;
-
-  if (isFeatured){
-    return `
-      <a class="berita-card berita-featured ${accentClass}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
-        <div class="berita-featured-meta">
-          <span class="berita-featured-badge">TERBARU</span>
-          <span class="berita-featured-source">${source}</span>
-          <span class="berita-featured-time">${escapeHtml(timeAgo)}</span>
-        </div>
-        <div class="berita-featured-title">${title}</div>
-        ${snippet ? `<div class="berita-featured-snippet">${snippet}</div>` : ''}
-        <div class="berita-featured-footer">
-          <div class="berita-card-tags">${topicTags}</div>
-          <span class="berita-card-link">Baca selengkapnya →</span>
-        </div>
-      </a>`;
-  }
 
   return `
-    <a class="berita-card berita-list-item ${accentClass}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
-      <div class="berita-list-number">${(index).toString().padStart(2, '0')}</div>
-      <div class="berita-list-content">
-        <div class="berita-list-meta">
-          <span class="berita-list-source">${source}</span>
-          <span class="berita-list-dot">·</span>
-          <span class="berita-list-time">${escapeHtml(timeAgo)}</span>
-          <div class="berita-list-tags">${topicTags}</div>
-        </div>
-        <div class="berita-list-title">${title}</div>
-        ${snippet ? `<div class="berita-list-snippet">${snippet}</div>` : ''}
+    <a class="berita-card ${accentClass}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+      <div class="berita-card-source-bar">
+        <span class="berita-card-source">${source}</span>
+        <span class="berita-card-time">${escapeHtml(timeAgo)}</span>
       </div>
-      <div class="berita-list-arrow">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-          <path d="M2 8h12M9 3l5 5-5 5"/>
-        </svg>
+      <div class="berita-card-body">
+        <div class="berita-card-title">${title}</div>
+        ${snippet ? `<div class="berita-card-snippet">${snippet}</div>` : '<div class="berita-card-snippet berita-card-snippet-empty">—</div>'}
+      </div>
+      <div class="berita-card-footer">
+        <div class="berita-card-tags">${topicTags}</div>
+        <span class="berita-card-arrow">→</span>
       </div>
     </a>`;
 }
