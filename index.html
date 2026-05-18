@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomassa Dashboard V41 — PLTU PLN Group 2026</title>
+<title>Biomassa Dashboard V42 — PLTU PLN Group 2026</title>
 
 <!-- ===== SEO / Social media preview meta tags =====
      When this URL is shared on WhatsApp, Twitter, Facebook, LinkedIn, Slack, etc.,
@@ -2314,8 +2314,11 @@ html,body{
 
 /* Alert feed */
 .alert-filter-dropdowns{
-  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;
   margin-bottom:10px;
+}
+@media (max-width:768px){
+  .alert-filter-dropdowns{grid-template-columns:1fr;gap:8px}
 }
 .alert-filter-cell{display:flex;flex-direction:column;gap:4px}
 .alert-filter-label{
@@ -3212,13 +3215,19 @@ html,body{
           </select>
         </div>
         <div class="alert-filter-cell">
-          <label class="alert-filter-label">Bulan</label>
-          <select id="alertMonthFilter" class="alert-filter-select">
-            <option value="all">Semua Bulan</option>
-            <option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option>
-            <option value="3">Apr</option><option value="4">May</option><option value="5">Jun</option>
-            <option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option>
-            <option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
+          <label class="alert-filter-label">Genco</label>
+          <select id="alertGencoFilter" class="alert-filter-select">
+            <option value="all">Semua Genco</option>
+            <option value="PNP">PNP</option>
+            <option value="PIP">PIP</option>
+            <option value="UIW">UIW</option>
+            <option value="UIK">UIK</option>
+          </select>
+        </div>
+        <div class="alert-filter-cell">
+          <label class="alert-filter-label">PLTU</label>
+          <select id="alertPltuFilter" class="alert-filter-select">
+            <option value="all">Semua PLTU</option>
           </select>
         </div>
       </div>
@@ -5583,10 +5592,20 @@ function initBnMap(){
     maxBounds: SEA_BOUNDS, maxBoundsViscosity:0.8, minZoom:3,
   }).fitBounds(INDONESIA_BOUNDS);
   L.control.zoom({position:'topright'}).addTo(bnMap);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{
+  // V42: theme-aware tile selection. Previously hardcoded to dark tiles
+  // regardless of current theme — caused light-mode users to see dark map
+  // when first opening the Bottleneck tab.
+  const isLightTheme = (typeof isLight === 'function') ? isLight() : false;
+  const baseUrl = isLightTheme
+    ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+  const labelsUrl = isLightTheme
+    ? 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png';
+  L.tileLayer(baseUrl,{
     attribution:'&copy; OSM &copy; CARTO', subdomains:'abcd', maxZoom:12, minZoom:3,
   }).addTo(bnMap);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',{
+  L.tileLayer(labelsUrl,{
     attribution:'', subdomains:'abcd', maxZoom:12, minZoom:3, pane:'shadowPane',
   }).addTo(bnMap);
   bnMarkerLayer = L.layerGroup().addTo(bnMap);
@@ -10058,7 +10077,8 @@ window.addEventListener('DOMContentLoaded', () => {
 let insightsCharts = {};
 let alertSeverityFilter = 'all';
 let alertProvinceFilter = 'all';
-let alertMonthFilter = 'all'; // 'all' or month index 0..11 as string
+let alertGencoFilter = 'all';  // V42: replaces alertMonthFilter (which was buggy)
+let alertPltuFilter = 'all';   // V42: filter by specific plant name
 
 function renderInsightsView(){
   // V27: Forecast section temporarily hidden per user request.
@@ -10451,9 +10471,10 @@ function renderGencoCompareSection(){
 function renderAnomalySection(){
   const alerts = computeAlerts();
   const plants = DATA.plants || [];
-  // Build name -> regional map for province lookup
+  // Build name -> regional + genco map for lookups
   const regionalByName = Object.fromEntries(plants.map(p => [p.name, p.regional]));
-  // Apply filters: severity + province + month
+  const gencoByName = Object.fromEntries(plants.map(p => [p.name, p.genco]));
+  // V42: filter by severity + province + genco + specific PLTU
   function passFilters(a){
     if (alertSeverityFilter !== 'all' && a.severity !== alertSeverityFilter) return false;
     if (alertProvinceFilter !== 'all'){
@@ -10463,11 +10484,12 @@ function renderAnomalySection(){
       const grp = (typeof PROVINCE_GROUPS !== 'undefined') ? PROVINCE_GROUPS[alertProvinceFilter] : null;
       if (!grp || !grp.has(reg)) return false;
     }
-    if (alertMonthFilter !== 'all'){
-      const mIdx = parseInt(alertMonthFilter, 10);
-      // 'ytd' alerts (year-to-date metrics) always pass any specific month filter
-      // since they describe cumulative state, not a single month.
-      if (a.month !== 'ytd' && a.month !== 'any' && a.month !== mIdx) return false;
+    if (alertGencoFilter !== 'all'){
+      const genco = gencoByName[a.pltu];
+      if (!genco || genco !== alertGencoFilter) return false;
+    }
+    if (alertPltuFilter !== 'all'){
+      if (a.pltu !== alertPltuFilter) return false;
     }
     return true;
   }
@@ -10512,7 +10534,7 @@ function renderAnomalySection(){
     };
     btn.dataset.wired = '1';
   });
-  // Wire province + month dropdowns (once)
+  // Wire province dropdown
   const provSel = document.getElementById('alertProvinceFilter');
   if (provSel && !provSel.dataset.wired){
     provSel.value = alertProvinceFilter;
@@ -10522,14 +10544,41 @@ function renderAnomalySection(){
     };
     provSel.dataset.wired = '1';
   }
-  const monthSel = document.getElementById('alertMonthFilter');
-  if (monthSel && !monthSel.dataset.wired){
-    monthSel.value = alertMonthFilter;
-    monthSel.onchange = () => {
-      alertMonthFilter = monthSel.value;
+  // V42: Wire Genco dropdown
+  const gencoSel = document.getElementById('alertGencoFilter');
+  if (gencoSel && !gencoSel.dataset.wired){
+    gencoSel.value = alertGencoFilter;
+    gencoSel.onchange = () => {
+      alertGencoFilter = gencoSel.value;
       renderAnomalySection();
     };
-    monthSel.dataset.wired = '1';
+    gencoSel.dataset.wired = '1';
+  }
+  // V42: Wire PLTU dropdown — populate options dynamically from current plants
+  // Only PLTU that appear in current alerts to keep list relevant.
+  const pltuSel = document.getElementById('alertPltuFilter');
+  if (pltuSel){
+    // Always re-populate so options reflect latest data; preserve selection.
+    const previousValue = pltuSel.value || alertPltuFilter;
+    const uniquePltu = Array.from(new Set(alerts.map(a => a.pltu).filter(Boolean))).sort();
+    pltuSel.innerHTML = '<option value="all">Semua PLTU</option>' +
+      uniquePltu.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    // Restore selection if still valid, else reset to 'all'
+    if (previousValue && uniquePltu.includes(previousValue)){
+      pltuSel.value = previousValue;
+    } else if (previousValue === 'all') {
+      pltuSel.value = 'all';
+    } else {
+      pltuSel.value = 'all';
+      alertPltuFilter = 'all';
+    }
+    if (!pltuSel.dataset.wired){
+      pltuSel.onchange = () => {
+        alertPltuFilter = pltuSel.value;
+        renderAnomalySection();
+      };
+      pltuSel.dataset.wired = '1';
+    }
   }
 }
 
@@ -11069,8 +11118,8 @@ function renderBeritaFeed(){
     feedEl.innerHTML = `
       <div class="berita-loading">
         <div class="berita-loading-spinner"></div>
-        <div class="berita-loading-text">Memuat berita & thumbnail...</div>
-        <div class="berita-loading-hint">Pertama kali load dapat memakan waktu 15-25 detik</div>
+        <div class="berita-loading-text">Memuat berita...</div>
+        <div class="berita-loading-hint">Pertama kali load dapat memakan waktu beberapa detik</div>
       </div>`;
     if (metaEl) metaEl.textContent = '';
     return;
