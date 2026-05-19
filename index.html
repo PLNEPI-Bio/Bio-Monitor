@@ -1264,6 +1264,13 @@ html,body{
   font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
   margin-top:4px;letter-spacing:.5px;
 }
+/* V46: Clickable KPI cards for Vol and Sisa */
+.kontrak-summary-clickable{cursor:pointer;transition:all .15s ease}
+.kontrak-summary-clickable:hover{
+  border-color:var(--accent);background:var(--panel-2);
+  box-shadow:0 2px 8px rgba(0,0,0,.12);transform:translateY(-1px);
+}
+.kontrak-summary-clickable u{text-decoration-color:var(--accent);opacity:.7}
 @media (max-width: 960px){
   .kontrak-summary{grid-template-columns:repeat(2, 1fr)}
 }
@@ -1272,19 +1279,56 @@ html,body{
   .kontrak-summary-value{font-size:16px}
 }
 
-.kontrak-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px}
+/* V45.2: Jenis Biomassa pie chart section */
+.kontrak-jenis-chart-section{
+  background:var(--panel);border:1px solid var(--border);
+  padding:18px 20px;margin-bottom:16px;border-radius:3px;
+}
+.kontrak-jenis-chart-head{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:14px;gap:14px;flex-wrap:wrap;
+}
+.kontrak-jenis-chart-head h3{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;font-weight:600;
+}
+.kontrak-jenis-chart-head h3::before{
+  content:"";display:inline-block;width:10px;height:1px;
+  background:var(--accent);margin-right:8px;vertical-align:middle;
+}
+.kontrak-jenis-controls{display:flex;align-items:center;gap:10px}
+.kontrak-jenis-chart-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;
+}
+.kontrak-jenis-legend{
+  display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto;padding-right:4px;
+}
+.kontrak-jenis-legend-row{
+  display:flex;align-items:center;gap:10px;padding:5px 0;
+  border-bottom:1px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
+}
+.kontrak-jenis-legend-row:last-child{border-bottom:none}
+.kontrak-jenis-legend-dot{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+.kontrak-jenis-legend-name{color:var(--text);flex:1;min-width:0}
+.kontrak-jenis-legend-val{color:var(--text-bright);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kontrak-jenis-legend-pct{color:var(--text-dim);font-size:10px;white-space:nowrap;min-width:40px;text-align:right}
+@media (max-width:768px){
+  .kontrak-jenis-chart-grid{grid-template-columns:1fr}
+}
+
+.kontrak-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;table-layout:auto}
 .kontrak-table th{
-  text-align:center;padding:8px 6px;color:var(--text-dim);font-weight:500;
-  background:var(--panel-3);border-bottom:1px solid var(--border);font-size:9px;letter-spacing:1px;
+  text-align:left;padding:5px 5px;color:var(--text-dim);font-weight:600;
+  background:var(--panel-3);border-bottom:1px solid var(--border);font-size:8px;letter-spacing:.6px;
   text-transform:uppercase;position:sticky;top:0;z-index:2;white-space:nowrap;
 }
-.kontrak-table th.year-header{background:rgba(16,185,129,.08);color:var(--accent);padding:6px 8px;border-left:1px solid var(--border)}
+.kontrak-table th.year-header{background:rgba(16,185,129,.08);color:var(--accent);border-left:1px solid var(--border)}
 .kontrak-table th.old-year{background:rgba(100,116,139,.1);color:var(--text-dim)}
-.kontrak-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text);font-size:10px;vertical-align:top}
-.kontrak-table td.wrap{white-space:normal;min-width:120px;max-width:220px;line-height:1.35}
-.kontrak-table td.num{text-align:right;padding-right:10px;color:var(--text-bright);font-variant-numeric:tabular-nums;white-space:nowrap}
+.kontrak-table td{padding:4px 5px;border-bottom:1px solid var(--border);color:var(--text);font-size:9px;vertical-align:top}
+.kontrak-table td.wrap{white-space:normal;max-width:150px;line-height:1.3;overflow:hidden;text-overflow:ellipsis}
+.kontrak-table td.num{text-align:right;padding-right:6px;color:var(--text-bright);font-variant-numeric:tabular-nums;white-space:nowrap}
 .kontrak-table td.num.dim{color:var(--text-dim);opacity:.55}
-.kontrak-table td.year-real{background:rgba(16,185,129,.03);text-align:right;padding-right:10px;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500}
+.kontrak-table td.year-real{background:rgba(16,185,129,.03);text-align:right;padding-right:6px;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500}
 .kontrak-table td.year-real.zero{color:var(--text-dim);opacity:.5;font-weight:400}
 .kontrak-table td.old-year-cell{background:rgba(100,116,139,.04);color:var(--text-dim)}
 .kontrak-table tr:hover td{background:rgba(30,42,56,.35)}
@@ -3050,7 +3094,7 @@ html,body{
     </div>
     <div class="brand-text">
       <div class="brand-title">PT PLN Energi Primer Indonesia</div>
-      <div class="brand-sub">Biomassa Supply Monitoring · FY 2026</div>
+      <div class="brand-sub">Bioenergy Supply Monitoring · FY 2026</div>
     </div>
   </div>
   <div class="topbar-right">
@@ -3369,6 +3413,26 @@ html,body{
           </label>
         </div>
         <div class="chart-wrap h280"><canvas id="realGencoChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- V46: Pie chart — Komposisi Jenis Biomassa (moved from Daftar Kontrak) -->
+    <div class="real-card">
+      <div class="kontrak-jenis-chart-head">
+        <h3 style="margin:0">Komposisi Jenis Biomassa (Realisasi)</h3>
+        <div class="kontrak-jenis-controls">
+          <label class="pareto-control-label">Tahun</label>
+          <select id="kontrakJenisYearSel" class="pareto-month-select" style="min-width:100px">
+            <option value="all">Semua</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+          </select>
+        </div>
+      </div>
+      <div class="kontrak-jenis-chart-grid">
+        <div class="chart-wrap h320"><canvas id="kontrakJenisPieCanvas"></canvas></div>
+        <div class="kontrak-jenis-legend" id="kontrakJenisLegend"></div>
       </div>
     </div>
 
@@ -3947,6 +4011,7 @@ html,body{
 <div class="mobile-backdrop" id="mobileBackdrop"></div>
 
 <!-- Pemasok detail modal -->
+<!-- Pemasok Detail Modal -->
 <div class="pemasok-modal-backdrop" id="pemasokModalBackdrop">
   <div class="pemasok-modal" id="pemasokModal">
     <div class="pemasok-modal-head">
@@ -3958,6 +4023,21 @@ html,body{
       <button class="pemasok-modal-close" id="pemasokModalClose" title="Close">× CLOSE</button>
     </div>
     <div class="pemasok-modal-body" id="pemasokModalBody"></div>
+  </div>
+</div>
+
+<!-- V46: Kontrak Aktif Breakdown Modal -->
+<div class="pemasok-modal-backdrop" id="kontrakBreakdownBackdrop">
+  <div class="pemasok-modal" id="kontrakBreakdownModal" style="max-width:900px">
+    <div class="pemasok-modal-head">
+      <div class="pemasok-modal-title-wrap">
+        <div class="pemasok-modal-eyebrow" id="kontrakBreakdownEyebrow">Kontrak Aktif</div>
+        <div class="pemasok-modal-title" id="kontrakBreakdownTitle">—</div>
+        <div class="pemasok-modal-meta" id="kontrakBreakdownMeta"></div>
+      </div>
+      <button class="pemasok-modal-close" onclick="closeKontrakBreakdown()" title="Close">× CLOSE</button>
+    </div>
+    <div class="pemasok-modal-body" id="kontrakBreakdownBody"></div>
   </div>
 </div>
 
@@ -5015,7 +5095,7 @@ function downloadTrendTablePNG(yearTotals){
   ctx.fillStyle = accentC;
   ctx.font = '700 ' + (10 * scale) + "px 'Plus Jakarta Sans', sans-serif";
   ctx.textBaseline = 'top';
-  ctx.fillText('BIOMASSA SUPPLY MONITORING', pad, pad);
+  ctx.fillText('Bioenergy Supply Monitoring', pad, pad);
 
   ctx.fillStyle = titleC;
   ctx.font = '700 ' + (18 * scale) + "px 'Plus Jakarta Sans', sans-serif";
@@ -6983,7 +7063,12 @@ function switchTab(tab){
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === tab));
 
   // Lazy init - MUST happen after view becomes visible so maps get proper dimensions
-  if (tab === 'realisasi' && !realCharts.trend) renderRealView();
+  if (tab === 'realisasi' && !realCharts.trend){
+    renderRealView();
+    // V46: Pie chart jenis biomassa moved here from Daftar Kontrak
+    wireKontrakJenisYearSel();
+    renderKontrakJenisPie();
+  }
   if (tab === 'rekap' && !rekapInit){
     buildRealFilters();
     renderRealRecap();
@@ -7501,21 +7586,21 @@ function renderKontrakSummary(){
   const todayStr = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
 
   summaryEl.innerHTML =
-    '<div class="kontrak-summary-cell info">' +
+    '<div class="kontrak-summary-cell info kontrak-summary-clickable" onclick="showKontrakBreakdown(\'active\')" title="Klik untuk detail">' +
       '<div class="kontrak-summary-label">Active Contracts</div>' +
       '<div class="kontrak-summary-value">' + fmtInt(totalActiveContracts) +
         ' <span class="unit">of ' + fmtInt(all.length) + '</span></div>' +
-      '<div class="kontrak-summary-sub">As of ' + todayStr + ' · ' + uniquePltus + ' PLTU · ' + uniqueMitras + ' mitra</div>' +
+      '<div class="kontrak-summary-sub">As of ' + todayStr + ' · ' + uniquePltus + ' PLTU · ' + uniqueMitras + ' mitra · <u>Lihat detail</u></div>' +
     '</div>' +
-    '<div class="kontrak-summary-cell">' +
+    '<div class="kontrak-summary-cell kontrak-summary-clickable" onclick="showKontrakBreakdown(\'vol\')" title="Klik untuk detail">' +
       '<div class="kontrak-summary-label">Total Vol Kontrak Aktif</div>' +
       '<div class="kontrak-summary-value">' + fmtInt(totalActiveVol) + ' <span class="unit">MT</span></div>' +
-      '<div class="kontrak-summary-sub">Sum of contracted volume</div>' +
+      '<div class="kontrak-summary-sub">Sum of contracted volume · <u>Lihat detail</u></div>' +
     '</div>' +
-    '<div class="kontrak-summary-cell warn">' +
+    '<div class="kontrak-summary-cell warn kontrak-summary-clickable" onclick="showKontrakBreakdown(\'sisa\')" title="Klik untuk detail">' +
       '<div class="kontrak-summary-label">Total Sisa Kontrak Aktif</div>' +
       '<div class="kontrak-summary-value">' + fmtInt(totalActiveSisa) + ' <span class="unit">MT</span></div>' +
-      '<div class="kontrak-summary-sub">Net = Total Vol − Total Realisasi</div>' +
+      '<div class="kontrak-summary-sub">Net = Total Vol − Total Realisasi · <u>Lihat detail</u></div>' +
     '</div>' +
     '<div class="kontrak-summary-cell">' +
       '<div class="kontrak-summary-label">Overall Realisasi</div>' +
@@ -7523,6 +7608,240 @@ function renderKontrakSummary(){
       '<div class="kontrak-summary-sub">' + fmtInt(totalActiveReal) + ' / ' + fmtInt(totalActiveVol) + ' MT</div>' +
     '</div>';
 }
+
+// =====================================================
+// V45.2: Pie chart — Komposisi Jenis Biomassa
+// Groups all contracts by `jenis` field, sums realisasi for the selected year,
+// renders a doughnut chart + legend with tonnage and percentage.
+// =====================================================
+const JENIS_COLORS = [
+  '#0F496E', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4',
+  '#f97316', '#ec4899', '#84cc16', '#a855f7', '#3b82f6', '#eab308',
+  '#f43f5e', '#64748b', '#14b8a6', '#d946ef', '#fb923c', '#475569',
+  '#22c55e', '#e11d48', '#7c3aed', '#0ea5e9', '#facc15', '#be123c',
+  '#059669', '#6366f1',
+];
+
+let kontrakJenisPieChart = null;
+let kontrakJenisYear = '2026';
+
+function renderKontrakJenisPie(){
+  const canvas = document.getElementById('kontrakJenisPieCanvas');
+  const legendEl = document.getElementById('kontrakJenisLegend');
+  if (!canvas) return;
+
+  const all = (DATA && DATA.contracts) || [];
+  const year = kontrakJenisYear;
+
+  // Aggregate realisasi per jenis
+  const jenisMap = {};
+  for (const c of all){
+    const j = c.jenis || '—';
+    const yt = c.realisasi_total || {};
+    let val = 0;
+    if (year === 'all'){
+      val = (yt['2023']||0) + (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
+    } else {
+      val = yt[year] || 0;
+    }
+    if (val > 0){
+      jenisMap[j] = (jenisMap[j] || 0) + val;
+    }
+  }
+
+  // Sort by value desc
+  const sorted = Object.entries(jenisMap).sort((a, b) => b[1] - a[1]);
+  const grandTotal = sorted.reduce((s, [_, v]) => s + v, 0);
+
+  // Destroy old chart
+  if (kontrakJenisPieChart){ kontrakJenisPieChart.destroy(); kontrakJenisPieChart = null; }
+
+  if (sorted.length === 0 || grandTotal === 0){
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '13px Plus Jakarta Sans, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.fillText('Tidak ada realisasi di tahun terpilih', canvas.width / 2, canvas.height / 2);
+    if (legendEl) legendEl.innerHTML = '';
+    return;
+  }
+
+  const labels = sorted.map(([j]) => j);
+  const data = sorted.map(([_, v]) => v);
+  const colors = sorted.map((_, i) => JENIS_COLORS[i % JENIS_COLORS.length]);
+
+  const isLightTheme = (typeof isLight === 'function') ? isLight() : false;
+  const textColor = isLightTheme ? '#475569' : '#cbd5e1';
+
+  kontrakJenisPieChart = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderWidth: 1,
+        borderColor: isLightTheme ? '#ffffff' : '#0d141c',
+        hoverOffset: 8,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '45%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: isLightTheme ? '#FFFFFF' : '#0d141c',
+          titleColor: isLightTheme ? '#0f172a' : '#f1f5f9',
+          bodyColor: isLightTheme ? '#475569' : '#cbd5e1',
+          borderColor: isLightTheme ? '#e2e8f0' : '#1e2a38',
+          borderWidth: 1, padding: 10,
+          callbacks: {
+            label: ctx => {
+              const pct = grandTotal > 0 ? (ctx.parsed / grandTotal * 100).toFixed(1) : 0;
+              return ctx.label + ': ' + fmtInt(ctx.parsed) + ' ton (' + pct + '%)';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Render legend table
+  if (legendEl){
+    const yearLabel = year === 'all' ? 'Total 2023–2026' : year;
+    let html = '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:9px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:600">Realisasi ' + yearLabel + ' · ' + fmtInt(grandTotal) + ' ton</div>';
+    html += sorted.map(([j, v], i) => {
+      const pct = grandTotal > 0 ? (v / grandTotal * 100).toFixed(1) : 0;
+      return '<div class="kontrak-jenis-legend-row">'
+        + '<span class="kontrak-jenis-legend-dot" style="background:' + (JENIS_COLORS[i % JENIS_COLORS.length]) + '"></span>'
+        + '<span class="kontrak-jenis-legend-name">' + escapeHtml(j) + '</span>'
+        + '<span class="kontrak-jenis-legend-val">' + fmtInt(v) + '</span>'
+        + '<span class="kontrak-jenis-legend-pct">' + pct + '%</span>'
+        + '</div>';
+    }).join('');
+    legendEl.innerHTML = html;
+  }
+}
+
+// Wire year selector for jenis pie chart (called once at init)
+function wireKontrakJenisYearSel(){
+  const sel = document.getElementById('kontrakJenisYearSel');
+  if (!sel || sel.dataset.wired) return;
+  sel.value = kontrakJenisYear;
+  sel.onchange = () => {
+    kontrakJenisYear = sel.value;
+    renderKontrakJenisPie();
+  };
+  sel.dataset.wired = '1';
+}
+
+// =====================================================
+// V46: Kontrak Aktif Breakdown Popup
+// Opened when user clicks the Vol or Sisa KPI cards.
+// Shows a table of all active contracts sorted by the clicked metric.
+// =====================================================
+function showKontrakBreakdown(type){
+  const backdrop = document.getElementById('kontrakBreakdownBackdrop');
+  const titleEl = document.getElementById('kontrakBreakdownTitle');
+  const metaEl = document.getElementById('kontrakBreakdownMeta');
+  const eyebrowEl = document.getElementById('kontrakBreakdownEyebrow');
+  const bodyEl = document.getElementById('kontrakBreakdownBody');
+  if (!backdrop || !bodyEl) return;
+
+  const all = (DATA && DATA.contracts) || [];
+  const today = todayISO();
+  const active = all.filter(c => isContractActive(c, today));
+
+  // Compute per-contract stats
+  const rows = active.map(c => {
+    const vol = c.vol_mt || 0;
+    const yt = c.realisasi_total || {};
+    const totalReal = (yt['2023']||0) + (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
+    const sisa = vol - totalReal;
+    const pct = vol > 0 ? (totalReal / vol * 100) : 0;
+    return {
+      genco: c.genco || '—',
+      pltu: c.pltu || '—',
+      pemasok: c.pemasok || '—',
+      jenis: c.jenis || '—',
+      akhir: c.akhir || '—',
+      vol, totalReal, sisa, pct,
+    };
+  });
+
+  // Sort by the clicked metric
+  if (type === 'vol'){
+    rows.sort((a, b) => b.vol - a.vol);
+    titleEl.textContent = 'Total Volume Kontrak Aktif';
+    eyebrowEl.textContent = 'Detail Breakdown · Volume';
+  } else if (type === 'sisa'){
+    rows.sort((a, b) => b.sisa - a.sisa);
+    titleEl.textContent = 'Total Sisa Kontrak Aktif';
+    eyebrowEl.textContent = 'Detail Breakdown · Sisa';
+  } else {
+    // 'active' — sort by akhir kontrak ascending (soonest expiring first)
+    rows.sort((a, b) => (a.akhir || '').localeCompare(b.akhir || ''));
+    titleEl.textContent = 'Daftar Kontrak Aktif';
+    eyebrowEl.textContent = 'Detail Breakdown · Active Contracts';
+  }
+
+  const totalVol = rows.reduce((s, r) => s + r.vol, 0);
+  const totalReal = rows.reduce((s, r) => s + r.totalReal, 0);
+  const totalSisa = totalVol - totalReal;
+  metaEl.textContent = active.length + ' kontrak aktif (akhir ≥ ' + today + ') · Total Vol ' + fmtInt(totalVol) + ' MT · Total Realisasi ' + fmtInt(totalReal) + ' MT · Sisa ' + fmtInt(totalSisa) + ' MT';
+
+  // Build table
+  let html = '<div style="overflow:auto;max-height:500px;border:1px solid var(--border)">';
+  html += '<table class="kontrak-table" style="font-size:9px">';
+  html += '<thead><tr>';
+  html += '<th>#</th><th>Genco</th><th>PLTU</th><th>Pemasok</th><th>Jenis</th><th>Akhir</th>';
+  html += '<th>Vol (MT)</th><th>Realisasi</th><th>Sisa</th><th>%</th>';
+  html += '</tr></thead><tbody>';
+
+  for (let i = 0; i < rows.length; i++){
+    const r = rows[i];
+    const pctClass = r.pct >= 100 ? 'over' : r.pct >= 80 ? 'high' : r.pct >= 40 ? 'mid' : 'low';
+    const sisaColor = r.sisa < 0 ? 'var(--danger)' : 'var(--text-bright)';
+    const highlightCol = type === 'vol' ? 'vol' : type === 'sisa' ? 'sisa' : 'akhir';
+    html += '<tr>';
+    html += '<td style="color:var(--text-dim)">' + (i + 1) + '</td>';
+    html += '<td>' + escapeHtml(r.genco) + '</td>';
+    html += '<td style="font-weight:500;color:var(--text-bright)">' + escapeHtml(r.pltu) + '</td>';
+    html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(r.pemasok) + '">' + escapeHtml(r.pemasok) + '</td>';
+    html += '<td>' + escapeHtml(r.jenis) + '</td>';
+    html += '<td style="white-space:nowrap' + (highlightCol === 'akhir' ? ';font-weight:700;color:var(--accent)' : '') + '">' + fmtKontrakDate(r.akhir) + '</td>';
+    html += '<td class="num"' + (highlightCol === 'vol' ? ' style="font-weight:700;color:var(--accent)"' : '') + '>' + fmtInt(r.vol) + '</td>';
+    html += '<td class="num">' + fmtInt(r.totalReal) + '</td>';
+    html += '<td class="num"' + (highlightCol === 'sisa' ? ' style="font-weight:700;color:' + sisaColor + '"' : ' style="color:' + sisaColor + '"') + '>' + fmtInt(r.sisa) + '</td>';
+    html += '<td style="text-align:center"><span class="kontrak-pct-badge ' + pctClass + '" style="font-size:9px;padding:2px 5px;min-width:40px">' + r.pct.toFixed(1) + '%</span></td>';
+    html += '</tr>';
+  }
+
+  // Footer totals
+  html += '</tbody><tfoot><tr style="font-weight:700;background:var(--panel-3)">';
+  html += '<td colspan="6" style="text-align:right;padding-right:10px">TOTAL (' + rows.length + ' kontrak)</td>';
+  html += '<td class="num" style="color:var(--accent)">' + fmtInt(totalVol) + '</td>';
+  html += '<td class="num">' + fmtInt(totalReal) + '</td>';
+  html += '<td class="num" style="color:var(--text-bright)">' + fmtInt(totalSisa) + '</td>';
+  html += '<td></td>';
+  html += '</tr></tfoot></table></div>';
+
+  bodyEl.innerHTML = html;
+  backdrop.classList.add('open');
+
+  // Close on backdrop click
+  backdrop.onclick = (e) => { if (e.target === backdrop) closeKontrakBreakdown(); };
+}
+window.showKontrakBreakdown = showKontrakBreakdown;
+
+function closeKontrakBreakdown(){
+  const backdrop = document.getElementById('kontrakBreakdownBackdrop');
+  if (backdrop) backdrop.classList.remove('open');
+}
+window.closeKontrakBreakdown = closeKontrakBreakdown;
 
 function renderKontrakTable(){
   const container = document.getElementById('kontrak-table');
@@ -7543,24 +7862,24 @@ function renderKontrakTable(){
     return;
   }
 
-  // Header
+  // Header — V46: removed all min-width for autosize (no horizontal scroll)
   let header = '<thead><tr>';
-  header += '<th style="min-width:90px">Genco</th>';
-  header += '<th style="min-width:130px">PLTU</th>';
-  header += '<th style="min-width:200px">Pemasok</th>';
-  header += '<th style="min-width:90px">Vol (MT)</th>';
-  header += '<th style="min-width:160px">Kontrak</th>';
-  header += '<th style="min-width:110px">Awal Kontrak</th>';
-  header += '<th style="min-width:110px">Akhir Kontrak</th>';
-  header += '<th style="min-width:110px">Jenis</th>';
-  header += '<th style="min-width:100px">Sisa Kontrak</th>';
-  header += '<th style="min-width:80px">% Kontrak</th>';
+  header += '<th>Genco</th>';
+  header += '<th>PLTU</th>';
+  header += '<th>Pemasok</th>';
+  header += '<th>Vol (MT)</th>';
+  header += '<th>Kontrak</th>';
+  header += '<th>Awal</th>';
+  header += '<th>Akhir</th>';
+  header += '<th>Jenis</th>';
+  header += '<th>Sisa</th>';
+  header += '<th>%</th>';
   for (let i = 0; i < yearsToShow.length; i++){
     const y = yearsToShow[i];
     const isOld = oldYears.indexOf(y) >= 0;
-    header += '<th class="year-header' + (isOld ? ' old-year' : '') + '" style="min-width:100px">Real ' + y + '</th>';
+    header += '<th class="year-header' + (isOld ? ' old-year' : '') + '">Real ' + y + '</th>';
   }
-  header += '<th style="min-width:180px">Amandemen</th>';
+  header += '<th>Amandemen</th>';
   header += '</tr></thead>';
 
   // Determine cumulative cutoff month if filter is set
@@ -12095,7 +12414,7 @@ td.num { text-align:right; font-variant-numeric:tabular-nums; }
 </div>
 
 <div class="footer">
-  PT PLN Energi Primer Indonesia · Biomassa Supply Monitoring · FY 2026 · Confidential
+  PT PLN Energi Primer Indonesia · Bioenergy Supply Monitoring · FY 2026 · Confidential
 </div>
 
 <scr` + `ipt>
