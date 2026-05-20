@@ -142,6 +142,8 @@ html,body{
 .topbar::after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:1px;
   background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.3}
 .brand{display:flex;align-items:center;gap:12px;min-width:0;flex-shrink:1}
+.brand-logo-link{text-decoration:none;display:flex;flex-shrink:0;transition:opacity .15s}
+.brand-logo-link:hover{opacity:.8}
 .brand-logo{
   width:40px;height:40px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
@@ -157,6 +159,205 @@ html,body{
   .datetime-display{display:none}
   .topbar-right{gap:10px}
   .topbar{gap:12px;padding:0 14px}
+}
+
+/* V47: Update Data icon in header bar */
+.topbar-update-btn{
+  background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;border-radius:4px;transition:all .15s ease;flex-shrink:0;
+}
+.topbar-update-btn:hover{
+  background:var(--panel-3);border-color:var(--accent);color:var(--accent);
+}
+.topbar-update-btn.active{
+  background:var(--accent);border-color:var(--accent);color:white;
+}
+
+/* V48: Calendar header button */
+.topbar-calendar-btn{
+  background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  padding:6px 14px;display:flex;align-items:center;gap:6px;
+  cursor:pointer;border-radius:4px;transition:all .15s ease;flex-shrink:0;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:.5px;
+}
+.topbar-calendar-btn:hover{
+  background:var(--panel-3);border-color:var(--accent);color:var(--accent);
+}
+.topbar-calendar-btn.active{
+  background:var(--accent);border-color:var(--accent);color:white;
+}
+
+/* ============================================================
+   CALENDAR VIEW (V48)
+   ============================================================ */
+.cal-view{
+  height:100%;overflow:hidden;background:var(--bg);
+}
+.cal-layout{
+  display:grid;grid-template-columns:1fr 320px;height:100%;overflow:hidden;
+}
+.cal-main{
+  display:flex;flex-direction:column;overflow:hidden;padding:16px 20px;
+}
+.cal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:12px;flex-shrink:0;
+}
+.cal-nav{display:flex;align-items:center;gap:8px}
+.cal-nav-btn{
+  background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+  width:32px;height:32px;font-size:18px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;border-radius:4px;transition:all .12s;font-weight:700;line-height:1;
+}
+.cal-nav-btn:hover{background:var(--panel-3);border-color:var(--accent);color:var(--accent)}
+.cal-month-label{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;
+  color:var(--text-bright);min-width:200px;text-align:center;letter-spacing:.3px;
+}
+.cal-today-btn{
+  background:var(--accent);border:none;color:white;padding:6px 14px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-radius:3px;
+  transition:opacity .12s;
+}
+.cal-today-btn:hover{opacity:.85}
+
+/* Calendar grid */
+.cal-grid{
+  flex:1;display:grid;grid-template-columns:repeat(7, 1fr);
+  grid-template-rows:auto repeat(6, 1fr);
+  gap:1px;background:var(--border);border:1px solid var(--border);
+  overflow:hidden;border-radius:3px;
+}
+.cal-day-header{
+  background:var(--panel-3);padding:8px 4px;text-align:center;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:700;
+  color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;
+}
+.cal-day-header.weekend{color:var(--danger)}
+.cal-cell{
+  background:var(--panel);padding:4px 6px;min-height:70px;cursor:pointer;
+  transition:background .1s;overflow:hidden;position:relative;
+}
+.cal-cell:hover{background:var(--panel-2)}
+.cal-cell.today{background:rgba(15,73,110,.06)}
+.cal-cell.today .cal-cell-num{
+  background:var(--accent);color:white;border-radius:50%;
+  width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;
+}
+.cal-cell.selected{box-shadow:inset 0 0 0 2px var(--accent)}
+.cal-cell.other-month{opacity:.35}
+.cal-cell.other-month:hover{opacity:.5}
+.cal-cell-num{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;
+  color:var(--text-bright);margin-bottom:3px;display:inline-block;
+}
+.cal-cell.weekend .cal-cell-num{color:var(--danger)}
+.cal-event-pill{
+  display:block;padding:1px 5px;margin-bottom:2px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:500;
+  color:white;border-radius:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  line-height:1.5;
+}
+.cal-event-more{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
+  font-weight:600;padding:0 5px;
+}
+
+/* Sidebar */
+.cal-sidebar{
+  background:var(--panel-2);border-left:1px solid var(--border);
+  padding:20px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;
+}
+.cal-sidebar-head{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;
+  color:var(--text-bright);padding-bottom:10px;border-bottom:1px solid var(--border);
+}
+.cal-events{display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto}
+.cal-event-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:4px;
+  padding:10px 12px;position:relative;
+}
+.cal-event-card-color{
+  position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;
+}
+.cal-event-card-title{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;
+  color:var(--text-bright);margin-bottom:3px;padding-left:8px;
+}
+.cal-event-card-time{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);
+  padding-left:8px;margin-bottom:4px;
+}
+.cal-event-card-desc{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text);
+  line-height:1.5;padding-left:8px;
+}
+.cal-event-card-actions{
+  display:flex;gap:8px;justify-content:flex-end;margin-top:8px;
+}
+.cal-event-del{
+  background:transparent;border:none;color:var(--danger);cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:600;
+  letter-spacing:.5px;text-transform:uppercase;padding:2px 6px;opacity:.6;
+}
+.cal-event-del:hover{opacity:1}
+
+/* Add event form */
+.cal-add-form{
+  border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:8px;
+}
+.cal-form-title{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;
+  color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;
+}
+.cal-input{
+  background:var(--panel);border:1px solid var(--border);color:var(--text);
+  padding:8px 10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
+  border-radius:3px;outline:none;width:100%;box-sizing:border-box;
+}
+.cal-input:focus{border-color:var(--accent)}
+.cal-input-sm{width:auto;flex:1}
+.cal-form-row{display:flex;gap:8px}
+.cal-form-actions{display:flex;gap:8px;justify-content:flex-end}
+.cal-btn-save{
+  background:var(--accent);border:none;color:white;padding:7px 18px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.8px;text-transform:uppercase;cursor:pointer;border-radius:3px;
+}
+.cal-btn-save:hover{opacity:.85}
+.cal-btn-cancel{
+  background:var(--panel-3);border:1px solid var(--border);color:var(--text-dim);
+  padding:7px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  font-weight:600;letter-spacing:.5px;cursor:pointer;border-radius:3px;
+}
+.cal-btn-cancel:hover{background:var(--panel);color:var(--text)}
+.cal-add-btn{
+  background:var(--accent);border:none;color:white;width:100%;padding:10px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:.5px;cursor:pointer;border-radius:3px;text-align:center;
+}
+.cal-add-btn:hover{opacity:.85}
+.cal-no-events{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--text-dim);
+  text-align:center;padding:24px 0;
+}
+
+/* Mobile */
+@media (max-width:960px){
+  .cal-layout{grid-template-columns:1fr;grid-template-rows:1fr auto}
+  .cal-sidebar{border-left:none;border-top:1px solid var(--border);max-height:300px}
+  .cal-cell{min-height:50px}
+}
+@media (max-width:768px){
+  .cal-main{padding:10px}
+  .cal-month-label{font-size:14px;min-width:150px}
+  .cal-cell{min-height:40px;padding:2px 3px}
+  .cal-cell-num{font-size:10px}
+  .cal-event-pill{font-size:8px;padding:0 3px}
+  .topbar-calendar-btn{padding:6px 8px}
 }
 
 .updated-indicator{
@@ -2463,6 +2664,12 @@ html,body{
    INSIGHTS TAB — Forecast + Genco Compare + Anomaly Feed
    ============================================================ */
 .insights-view{padding:18px 22px;max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:22px;height:100%;overflow-y:auto}
+/* V47: Insights content moved inline within Realisasi tab */
+.insights-inline-section{
+  margin-top:24px;padding-top:24px;
+  border-top:2px solid var(--accent);
+  display:flex;flex-direction:column;gap:22px;
+}
 .insights-header{
   display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;
   border-bottom:1px solid var(--border);padding-bottom:14px;
@@ -3083,7 +3290,8 @@ html,body{
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
   </button>
   <div class="brand">
-    <div class="brand-logo" id="brandLogo">
+    <a href="https://www.plnepi.co.id/" target="_blank" rel="noopener noreferrer" class="brand-logo-link" title="PT PLN Energi Primer Indonesia">
+      <div class="brand-logo" id="brandLogo">
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
         <rect x="4" y="4" width="92" height="92" rx="10" ry="10" fill="#FFD500"/>
         <path d="M 58 16 L 32 52 L 46 52 L 40 84 L 70 48 L 56 48 L 62 16 Z" fill="#E60000"/>
@@ -3092,11 +3300,22 @@ html,body{
         <path d="M 18 80 Q 27 76 36 80 T 54 80 T 72 80 T 90 80" stroke="#1E5AA8" stroke-width="3.5" fill="none" stroke-linecap="round"/>
       </svg>
     </div>
+    </a>
     <div class="brand-text">
       <div class="brand-title">PT PLN Energi Primer Indonesia</div>
       <div class="brand-sub">Bioenergy Supply Monitoring · FY 2026</div>
     </div>
   </div>
+  <!-- V48: Calendar button in header center area -->
+  <button class="topbar-calendar-btn" id="topbarCalendarBtn" onclick="switchTab('calendar')" title="Kalender Tim">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" width="18" height="18">
+      <rect x="1" y="3" width="14" height="12" rx="1.5"/>
+      <path d="M1 7h14M5 1v4M11 1v4"/>
+      <circle cx="5" cy="10.5" r="1" fill="currentColor" stroke="none"/>
+      <circle cx="8" cy="10.5" r="1" fill="currentColor" stroke="none"/>
+      <circle cx="11" cy="10.5" r="1" fill="currentColor" stroke="none"/>
+    </svg>
+  </button>
   <div class="topbar-right">
     <div class="presence-indicator" id="presenceIndicator" title="Active users right now">
       <span class="presence-dot"></span>
@@ -3107,6 +3326,10 @@ html,body{
       <span class="updated-label">Updated per</span>
       <span class="updated-date" id="updatedDate">—</span>
     </div>
+    <!-- V47: Update Data moved from tab bar to header as icon-only -->
+    <button class="topbar-update-btn" id="topbarUpdateBtn" onclick="switchTab('update')" title="Update Data">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M8 2v8M5 5l3-3 3 3M2 12v2h12v-2"/></svg>
+    </button>
     <div class="datetime-display">
       <div class="datetime-date" id="topbarDate">—</div>
       <div class="datetime-time" id="topbarTime">—</div>
@@ -3138,10 +3361,6 @@ html,body{
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V2M2 14h12M4 11l3-4 3 2 4-6"/></svg>
     REALISASI 2023–2026
   </button>
-  <button class="tab" data-tab="insights">
-    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
-    INSIGHTS
-  </button>
   <button class="tab" data-tab="bottleneck">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v3m0 8v3M1 8h3m8 0h3M3.5 3.5l2 2m5 5l2 2M3.5 12.5l2-2m5-5l2-2"/></svg>
     BOTTLENECK
@@ -3161,10 +3380,6 @@ html,body{
   <button class="tab" data-tab="berita">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h10v10H2zM12 5h2v8a1 1 0 0 1-1 1H4M4 6h6M4 8h6M4 10h4"/></svg>
     BERITA
-  </button>
-  <button class="tab" data-tab="update">
-    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 5l3-3 3 3M2 12v2h12v-2"/></svg>
-    UPDATE DATA
   </button>
 </nav>
 
@@ -3456,86 +3671,68 @@ html,body{
       </div>
       <div class="chart-wrap h-allpltu-tall"><canvas id="realTopChart26"></canvas></div>
     </div>
-  </div>
-</div>
 
-<!-- ====== TAB: INSIGHTS (Forecast + Comparative Genco + Anomaly Feed) ====== -->
-<div class="view" data-view="insights">
-  <div class="insights-view">
-    <div class="insights-header">
-      <div>
-        <div class="insights-title">Operational Intelligence</div>
-        <div class="insights-subtitle">Forecast · Comparative Analysis · Anomaly Detection</div>
+    <!-- V47: Insights content moved here from standalone tab -->
+    <div class="insights-inline-section">
+      <div class="insights-header">
+        <div>
+          <div class="insights-title">Operational Intelligence</div>
+          <div class="insights-subtitle">Comparative Analysis · Anomaly Detection</div>
+        </div>
+        <div class="insights-meta" id="insightsMeta">—</div>
       </div>
-      <div class="insights-meta" id="insightsMeta">—</div>
-    </div>
 
-    <!-- Section 1: Forecast 2026 Year-End — V27: temporarily hidden per user request -->
-    <!-- <div class="insights-section">
-      <div class="insights-section-head">
-        <h3>2026 Forecast · Year-End Projection</h3>
-        <div class="insights-section-meta" id="forecastMeta">—</div>
-      </div>
-      <div class="insights-grid-2">
-        <div class="insights-card">
-          <div class="forecast-summary" id="forecastSummary"></div>
+      <!-- Comparative Genco -->
+      <div class="insights-section">
+        <div class="insights-section-head">
+          <h3>Comparative Analysis · Genco Performance</h3>
+          <div class="insights-section-meta">Side-by-side performance across 4 gencos</div>
         </div>
-        <div class="insights-card">
-          <div class="chart-wrap h280"><canvas id="forecastChart"></canvas></div>
-        </div>
+        <div class="genco-compare-grid" id="gencoCompareGrid"></div>
       </div>
-    </div> -->
 
-    <!-- Section 2: Comparative Genco -->
-    <div class="insights-section">
-      <div class="insights-section-head">
-        <h3>Comparative Analysis · Genco Performance</h3>
-        <div class="insights-section-meta">Side-by-side performance across 4 gencos</div>
-      </div>
-      <div class="genco-compare-grid" id="gencoCompareGrid"></div>
-    </div>
-
-    <!-- Section 3: Anomaly & Alert Feed -->
-    <div class="insights-section">
-      <div class="insights-section-head">
-        <h3>Anomaly &amp; Alert Feed</h3>
-        <div class="insights-section-meta" id="alertMeta">—</div>
-      </div>
-      <div class="alert-filter-dropdowns">
-        <div class="alert-filter-cell">
-          <label class="alert-filter-label">Wilayah</label>
-          <select id="alertProvinceFilter" class="alert-filter-select">
-            <option value="all">Semua Wilayah</option>
-            <option value="jawa">Jawa</option>
-            <option value="sumatera">Sumatera</option>
-            <option value="kalimantan">Kalimantan</option>
-            <option value="sulmapana">Sulmapana</option>
-          </select>
+      <!-- Anomaly & Alert Feed -->
+      <div class="insights-section">
+        <div class="insights-section-head">
+          <h3>Anomaly &amp; Alert Feed</h3>
+          <div class="insights-section-meta" id="alertMeta">—</div>
         </div>
-        <div class="alert-filter-cell">
-          <label class="alert-filter-label">Genco</label>
-          <select id="alertGencoFilter" class="alert-filter-select">
-            <option value="all">Semua Genco</option>
-            <option value="PNP">PNP</option>
-            <option value="PIP">PIP</option>
-            <option value="UIW">UIW</option>
-            <option value="UIK">UIK</option>
-          </select>
+        <div class="alert-filter-dropdowns">
+          <div class="alert-filter-cell">
+            <label class="alert-filter-label">Wilayah</label>
+            <select id="alertProvinceFilter" class="alert-filter-select">
+              <option value="all">Semua Wilayah</option>
+              <option value="jawa">Jawa</option>
+              <option value="sumatera">Sumatera</option>
+              <option value="kalimantan">Kalimantan</option>
+              <option value="sulmapana">Sulmapana</option>
+            </select>
+          </div>
+          <div class="alert-filter-cell">
+            <label class="alert-filter-label">Genco</label>
+            <select id="alertGencoFilter" class="alert-filter-select">
+              <option value="all">Semua Genco</option>
+              <option value="PNP">PNP</option>
+              <option value="PIP">PIP</option>
+              <option value="UIW">UIW</option>
+              <option value="UIK">UIK</option>
+            </select>
+          </div>
+          <div class="alert-filter-cell">
+            <label class="alert-filter-label">PLTU</label>
+            <select id="alertPltuFilter" class="alert-filter-select">
+              <option value="all">Semua PLTU</option>
+            </select>
+          </div>
         </div>
-        <div class="alert-filter-cell">
-          <label class="alert-filter-label">PLTU</label>
-          <select id="alertPltuFilter" class="alert-filter-select">
-            <option value="all">Semua PLTU</option>
-          </select>
+        <div class="alert-filter-row">
+          <button class="alert-filter-btn active" data-severity="all">All</button>
+          <button class="alert-filter-btn" data-severity="critical">Critical</button>
+          <button class="alert-filter-btn" data-severity="warning">Warning</button>
+          <button class="alert-filter-btn" data-severity="info">Info</button>
         </div>
+        <div class="alert-feed" id="alertFeed"></div>
       </div>
-      <div class="alert-filter-row">
-        <button class="alert-filter-btn active" data-severity="all">All</button>
-        <button class="alert-filter-btn" data-severity="critical">Critical</button>
-        <button class="alert-filter-btn" data-severity="warning">Warning</button>
-        <button class="alert-filter-btn" data-severity="info">Info</button>
-      </div>
-      <div class="alert-feed" id="alertFeed"></div>
     </div>
   </div>
 </div>
@@ -3840,6 +4037,51 @@ html,body{
       <div class="berita-loading">
         <div class="berita-loading-spinner"></div>
         <div class="berita-loading-text">Memuat berita...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== TAB: CALENDAR (V48) ====== -->
+<div class="view" data-view="calendar">
+  <div class="cal-view">
+    <div class="cal-layout">
+      <!-- Left: Calendar grid -->
+      <div class="cal-main">
+        <div class="cal-header">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" id="calPrevMonth" title="Bulan sebelumnya">‹</button>
+            <div class="cal-month-label" id="calMonthLabel">—</div>
+            <button class="cal-nav-btn" id="calNextMonth" title="Bulan berikutnya">›</button>
+            <button class="cal-today-btn" id="calTodayBtn">Hari Ini</button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+      <!-- Right: Event panel for selected date -->
+      <div class="cal-sidebar" id="calSidebar">
+        <div class="cal-sidebar-head" id="calSidebarHead">Pilih tanggal</div>
+        <div class="cal-events" id="calEvents"></div>
+        <div class="cal-add-form" id="calAddForm" style="display:none">
+          <div class="cal-form-title">Tambah Event</div>
+          <input type="text" id="calEventTitle" class="cal-input" placeholder="Judul event" maxlength="100">
+          <div class="cal-form-row">
+            <input type="time" id="calEventTime" class="cal-input cal-input-sm" value="09:00">
+            <select id="calEventColor" class="cal-input cal-input-sm">
+              <option value="#0F496E">Biru (Meeting)</option>
+              <option value="#10b981">Hijau (Target)</option>
+              <option value="#f59e0b">Kuning (Reminder)</option>
+              <option value="#ef4444">Merah (Deadline)</option>
+              <option value="#8b5cf6">Ungu (Personal)</option>
+              <option value="#06b6d4">Cyan (Info)</option>
+            </select>
+          </div>
+          <textarea id="calEventDesc" class="cal-input" placeholder="Deskripsi (opsional)" rows="3" maxlength="500"></textarea>
+          <div class="cal-form-actions">
+            <button class="cal-btn-save" id="calSaveBtn">Simpan</button>
+            <button class="cal-btn-cancel" id="calCancelBtn">Batal</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -5095,7 +5337,7 @@ function downloadTrendTablePNG(yearTotals){
   ctx.fillStyle = accentC;
   ctx.font = '700 ' + (10 * scale) + "px 'Plus Jakarta Sans', sans-serif";
   ctx.textBaseline = 'top';
-  ctx.fillText('Bioenergy Supply Monitoring', pad, pad);
+  ctx.fillText('BIOENERGY SUPPLY MONITORING', pad, pad);
 
   ctx.fillStyle = titleC;
   ctx.font = '700 ' + (18 * scale) + "px 'Plus Jakarta Sans', sans-serif";
@@ -7060,6 +7302,12 @@ let pembangkitInit = false;
 function switchTab(tab){
   state.tab = tab;
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  // V47: Update Data button moved to header — toggle its active state too
+  const topbarUpdateBtn = document.getElementById('topbarUpdateBtn');
+  if (topbarUpdateBtn) topbarUpdateBtn.classList.toggle('active', tab === 'update');
+  // V48: Calendar button active state
+  const topbarCalBtn = document.getElementById('topbarCalendarBtn');
+  if (topbarCalBtn) topbarCalBtn.classList.toggle('active', tab === 'calendar');
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === tab));
 
   // Lazy init - MUST happen after view becomes visible so maps get proper dimensions
@@ -7068,6 +7316,8 @@ function switchTab(tab){
     // V46: Pie chart jenis biomassa moved here from Daftar Kontrak
     wireKontrakJenisYearSel();
     renderKontrakJenisPie();
+    // V47: Insights content moved here from standalone tab
+    if (typeof renderInsightsView === 'function') renderInsightsView();
   }
   if (tab === 'rekap' && !rekapInit){
     buildRealFilters();
@@ -7131,6 +7381,12 @@ function switchTab(tab){
   } else if (tab === 'fasilitas' && fasilitasMap){
     setTimeout(() => { try { fasilitasMap.invalidateSize(); } catch(e){} }, 50);
   }
+  // V48: Calendar tab
+  if (tab === 'calendar' && !calState.init){
+    setTimeout(() => { try { bootCalendar(); } catch(e){ console.error('Calendar init failed:', e); } }, 30);
+  } else if (tab === 'calendar' && calState.init){
+    calRender(); // refresh on re-entry
+  }
   if (tab === 'bottleneck'){
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (!bnMap){
@@ -7146,9 +7402,8 @@ function switchTab(tab){
     }));
   }
   if (tab === 'pareto' && !paretoCharts.pareto) renderParetoView();
-  if (tab === 'insights'){
-    if (typeof renderInsightsView === 'function') renderInsightsView();
-  }
+  // V47: Insights tab removed — content now inside realisasi tab.
+  // Rendering handled above when realisasi tab opens.
   if (tab === 'berita'){
     if (typeof initBeritaView === 'function') initBeritaView();
   }
@@ -9899,17 +10154,36 @@ function initPembangkitMap(){
 
 function renderPembangkitFilters(){
   const data = (DATA && DATA.pembangkit) || [];
-  // Count per jenis
-  const jenisCounts = {};
-  const operatorCounts = {};
+
+  // V47: Dynamic counts — each filter dimension shows how many plants
+  // match the OTHER dimension's active filters. This way toggling "PLTU"
+  // updates operator counts to show only PLTU-type plants per operator.
+  const jenisCounts = {};       // count per jenis, filtered by active operators
+  const operatorCounts = {};    // count per operator, filtered by active jenis
+  const jenisTotal = {};        // total (unfiltered) per jenis
+  const operatorTotal = {};     // total (unfiltered) per operator
+
   for (const p of data){
-    jenisCounts[p.jenis] = (jenisCounts[p.jenis] || 0) + 1;
-    operatorCounts[p.unit_induk] = (operatorCounts[p.unit_induk] || 0) + 1;
+    // Unfiltered totals (always show these if other dimension has no selections)
+    jenisTotal[p.jenis] = (jenisTotal[p.jenis] || 0) + 1;
+    operatorTotal[p.unit_induk] = (operatorTotal[p.unit_induk] || 0) + 1;
+
+    // Cross-filtered: jenis count only if operator filter passes
+    const opPass = pembangkitFilters.operator.size === 0 || pembangkitFilters.operator.has(p.unit_induk);
+    if (opPass){
+      jenisCounts[p.jenis] = (jenisCounts[p.jenis] || 0) + 1;
+    }
+    // Cross-filtered: operator count only if jenis filter passes
+    const jenisPass = pembangkitFilters.jenis.size === 0 || pembangkitFilters.jenis.has(p.jenis);
+    if (jenisPass){
+      operatorCounts[p.unit_induk] = (operatorCounts[p.unit_induk] || 0) + 1;
+    }
   }
-  const jenisList = Object.keys(jenisCounts).sort();
-  // Sort operators by count desc, ties alphabetical
-  const operatorList = Object.keys(operatorCounts).sort((a, b) => {
-    const d = operatorCounts[b] - operatorCounts[a];
+
+  const jenisList = Object.keys(jenisTotal).sort();
+  // Sort operators by dynamic count desc, ties alphabetical
+  const operatorList = Object.keys(operatorTotal).sort((a, b) => {
+    const d = (operatorCounts[b] || 0) - (operatorCounts[a] || 0);
     return d !== 0 ? d : a.localeCompare(b);
   });
 
@@ -9923,7 +10197,7 @@ function renderPembangkitFilters(){
         '<span class="pembangkit-filter-checkbox"></span>' +
         '<span class="pembangkit-filter-color" style="background:' + getPembangkitColor(j) + '"></span>' +
         '<span class="pembangkit-filter-name">' + escapeHtml(j) + '</span>' +
-        '<span class="pembangkit-filter-count">' + jenisCounts[j] + '</span>' +
+        '<span class="pembangkit-filter-count">' + (jenisCounts[j] || 0) + '</span>' +
         '</div>';
     }
     jenisEl.innerHTML = html;
@@ -9947,7 +10221,7 @@ function renderPembangkitFilters(){
       html += '<div class="pembangkit-filter-item' + (active ? ' active' : '') + '" data-operator="' + escapeHtml(o) + '">' +
         '<span class="pembangkit-filter-checkbox"></span>' +
         '<span class="pembangkit-filter-name">' + escapeHtml(o) + '</span>' +
-        '<span class="pembangkit-filter-count">' + operatorCounts[o] + '</span>' +
+        '<span class="pembangkit-filter-count">' + (operatorCounts[o] || 0) + '</span>' +
         '</div>';
     }
     opEl.innerHTML = html;
@@ -10327,6 +10601,355 @@ function closeFasilitasDetail(){
 window.closeFasilitasDetail = closeFasilitasDetail;
 
 function wireFasilitasSidebarCollapse(){ /* V45.1: stub, sidebar removed */ }
+
+// ============================================================
+// CALENDAR VIEW (V48 → V48.1: Supabase sync + realtime)
+// Events synced via Supabase table `calendar_events`.
+// Realtime subscription pushes changes to all connected clients.
+// localStorage used as offline fallback only.
+// Table schema (run in Supabase SQL editor):
+//   CREATE TABLE calendar_events (
+//     id TEXT PRIMARY KEY,
+//     date TEXT NOT NULL,
+//     title TEXT NOT NULL,
+//     time TEXT DEFAULT '',
+//     color TEXT DEFAULT '#0F496E',
+//     description TEXT DEFAULT '',
+//     created_by TEXT DEFAULT '',
+//     created_at TIMESTAMPTZ DEFAULT NOW()
+//   );
+//   ALTER TABLE calendar_events REPLICA IDENTITY FULL;
+//   ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
+//   CREATE POLICY "Allow all" ON calendar_events FOR ALL USING (true) WITH CHECK (true);
+// ============================================================
+
+const CAL_STORAGE_KEY = 'biomassa-calendar-events';
+const CAL_MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const CAL_DAYS_SHORT = ['SEN','SEL','RAB','KAM','JUM','SAB','MIN'];
+
+const calState = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth(),
+  selectedDate: null,
+  events: [],
+  editingId: null,
+  init: false,
+  realtimeChannel: null,
+};
+
+// --- Supabase CRUD ---
+
+async function calFetchEvents(){
+  // Try Supabase first, fallback to localStorage
+  if (supabaseClient){
+    try {
+      const { data, error } = await supabaseClient
+        .from('calendar_events')
+        .select('*')
+        .order('date', { ascending: true });
+      if (!error && data){
+        calState.events = data.map(row => ({
+          id: row.id,
+          date: row.date,
+          title: row.title,
+          time: row.time || '',
+          color: row.color || '#0F496E',
+          desc: row.description || '',
+          created_by: row.created_by || '',
+        }));
+        // Also cache in localStorage for offline fallback
+        try { localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calState.events)); } catch(e){}
+        return;
+      }
+    } catch(e){ console.warn('[Calendar] Supabase fetch failed, using localStorage:', e); }
+  }
+  // Fallback: localStorage
+  try {
+    const raw = localStorage.getItem(CAL_STORAGE_KEY);
+    if (raw) calState.events = JSON.parse(raw);
+    else calState.events = [];
+  } catch(e){ calState.events = []; }
+}
+
+async function calInsertEvent(evt){
+  // Insert to Supabase
+  if (supabaseClient){
+    try {
+      const { error } = await supabaseClient
+        .from('calendar_events')
+        .insert({
+          id: evt.id,
+          date: evt.date,
+          title: evt.title,
+          time: evt.time || '',
+          color: evt.color || '#0F496E',
+          description: evt.desc || '',
+          created_by: evt.created_by || '',
+        });
+      if (error) console.error('[Calendar] Insert error:', error.message);
+    } catch(e){ console.error('[Calendar] Insert failed:', e); }
+  }
+  // Also update local state + localStorage
+  calState.events.push(evt);
+  try { localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calState.events)); } catch(e){}
+}
+
+async function calDeleteEvent(id){
+  // Delete from Supabase
+  if (supabaseClient){
+    try {
+      const { error } = await supabaseClient
+        .from('calendar_events')
+        .delete()
+        .eq('id', id);
+      if (error) console.error('[Calendar] Delete error:', error.message);
+    } catch(e){ console.error('[Calendar] Delete failed:', e); }
+  }
+  // Also update local state + localStorage
+  calState.events = calState.events.filter(e => e.id !== id);
+  try { localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calState.events)); } catch(e){}
+}
+
+function calSubscribeRealtime(){
+  if (!supabaseClient || calState.realtimeChannel) return;
+  calState.realtimeChannel = supabaseClient
+    .channel('calendar-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, (payload) => {
+      // On any change, re-fetch all events and re-render
+      calFetchEvents().then(() => calRender());
+    })
+    .subscribe();
+}
+function calGetEventsForDate(dateStr){
+  return calState.events.filter(e => e.date === dateStr).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+}
+function calGenId(){
+  return 'evt_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
+}
+function calDateStr(y, m, d){
+  return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+function calTodayStr(){
+  const d = new Date();
+  return calDateStr(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+async function bootCalendar(){
+  if (calState.init) return;
+  await calFetchEvents();
+  calState.selectedDate = calTodayStr();
+  calWireNav();
+  calRender();
+  calSubscribeRealtime();
+  calState.init = true;
+}
+
+function calWireNav(){
+  const prevBtn = document.getElementById('calPrevMonth');
+  const nextBtn = document.getElementById('calNextMonth');
+  const todayBtn = document.getElementById('calTodayBtn');
+  if (prevBtn && !prevBtn.dataset.wired){
+    prevBtn.onclick = () => { calState.month--; if (calState.month < 0){ calState.month = 11; calState.year--; } calRender(); };
+    prevBtn.dataset.wired = '1';
+  }
+  if (nextBtn && !nextBtn.dataset.wired){
+    nextBtn.onclick = () => { calState.month++; if (calState.month > 11){ calState.month = 0; calState.year++; } calRender(); };
+    nextBtn.dataset.wired = '1';
+  }
+  if (todayBtn && !todayBtn.dataset.wired){
+    todayBtn.onclick = () => {
+      const now = new Date();
+      calState.year = now.getFullYear();
+      calState.month = now.getMonth();
+      calState.selectedDate = calTodayStr();
+      calRender();
+    };
+    todayBtn.dataset.wired = '1';
+  }
+}
+
+function calRender(){
+  calRenderGrid();
+  calRenderSidebar();
+  // Update month label
+  const labelEl = document.getElementById('calMonthLabel');
+  if (labelEl) labelEl.textContent = CAL_MONTHS_ID[calState.month] + ' ' + calState.year;
+}
+
+function calRenderGrid(){
+  const gridEl = document.getElementById('calGrid');
+  if (!gridEl) return;
+  const y = calState.year;
+  const m = calState.month;
+  const today = calTodayStr();
+  const selected = calState.selectedDate;
+
+  // Day headers (Mon-Sun)
+  let html = '';
+  for (let i = 0; i < 7; i++){
+    const isWeekend = i >= 5;
+    html += '<div class="cal-day-header' + (isWeekend ? ' weekend' : '') + '">' + CAL_DAYS_SHORT[i] + '</div>';
+  }
+
+  // First day of month: 0=Sun → need to convert to Mon-based (0=Mon..6=Sun)
+  const firstDay = new Date(y, m, 1).getDay(); // 0=Sun
+  const startOffset = (firstDay + 6) % 7; // Convert to Mon=0
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const daysInPrevMonth = new Date(y, m, 0).getDate();
+
+  // Previous month trailing days
+  for (let i = startOffset - 1; i >= 0; i--){
+    const d = daysInPrevMonth - i;
+    const pm = m === 0 ? 11 : m - 1;
+    const py = m === 0 ? y - 1 : y;
+    const ds = calDateStr(py, pm, d);
+    const evts = calGetEventsForDate(ds);
+    html += calCellHtml(d, ds, evts, true, ds === today, ds === selected, i >= 5);
+  }
+
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++){
+    const ds = calDateStr(y, m, d);
+    const evts = calGetEventsForDate(ds);
+    const dayOfWeek = (startOffset + d - 1) % 7;
+    const isWeekend = dayOfWeek >= 5;
+    html += calCellHtml(d, ds, evts, false, ds === today, ds === selected, isWeekend);
+  }
+
+  // Fill remaining cells to complete 6 rows (42 cells total)
+  const totalCells = startOffset + daysInMonth;
+  const remaining = (totalCells % 7 === 0) ? 0 : 7 - (totalCells % 7);
+  for (let d = 1; d <= remaining; d++){
+    const nm = m === 11 ? 0 : m + 1;
+    const ny = m === 11 ? y + 1 : y;
+    const ds = calDateStr(ny, nm, d);
+    const evts = calGetEventsForDate(ds);
+    html += calCellHtml(d, ds, evts, true, ds === today, ds === selected, false);
+  }
+
+  gridEl.innerHTML = html;
+
+  // Wire click on cells
+  gridEl.querySelectorAll('.cal-cell').forEach(cell => {
+    cell.onclick = () => {
+      calState.selectedDate = cell.getAttribute('data-date');
+      calState.editingId = null;
+      calRender();
+    };
+  });
+}
+
+function calCellHtml(dayNum, dateStr, events, otherMonth, isToday, isSelected, isWeekend){
+  let cls = 'cal-cell';
+  if (otherMonth) cls += ' other-month';
+  if (isToday) cls += ' today';
+  if (isSelected) cls += ' selected';
+  if (isWeekend) cls += ' weekend';
+  let html = '<div class="' + cls + '" data-date="' + dateStr + '">';
+  html += '<div class="cal-cell-num">' + dayNum + '</div>';
+  const maxShow = 3;
+  for (let i = 0; i < Math.min(events.length, maxShow); i++){
+    const e = events[i];
+    html += '<div class="cal-event-pill" style="background:' + (e.color || '#0F496E') + '">' + escapeHtml(e.title) + '</div>';
+  }
+  if (events.length > maxShow){
+    html += '<div class="cal-event-more">+' + (events.length - maxShow) + ' lagi</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function calRenderSidebar(){
+  const headEl = document.getElementById('calSidebarHead');
+  const eventsEl = document.getElementById('calEvents');
+  const formEl = document.getElementById('calAddForm');
+  if (!headEl || !eventsEl) return;
+
+  const ds = calState.selectedDate;
+  if (!ds){
+    headEl.textContent = 'Pilih tanggal';
+    eventsEl.innerHTML = '<div class="cal-no-events">Klik tanggal di kalender</div>';
+    if (formEl) formEl.style.display = 'none';
+    return;
+  }
+
+  // Format date nicely
+  const parts = ds.split('-');
+  const dayNum = parseInt(parts[2], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const dayOfWeek = new Date(parseInt(parts[0],10), monthIdx, dayNum).getDay();
+  const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  headEl.textContent = dayNames[dayOfWeek] + ', ' + dayNum + ' ' + CAL_MONTHS_ID[monthIdx] + ' ' + parts[0];
+
+  const events = calGetEventsForDate(ds);
+  if (events.length === 0){
+    eventsEl.innerHTML = '<div class="cal-no-events">Tidak ada event</div>';
+  } else {
+    eventsEl.innerHTML = events.map(e => {
+      let html = '<div class="cal-event-card">';
+      html += '<div class="cal-event-card-color" style="background:' + (e.color || '#0F496E') + '"></div>';
+      html += '<div class="cal-event-card-title">' + escapeHtml(e.title) + '</div>';
+      if (e.time) html += '<div class="cal-event-card-time">' + escapeHtml(e.time) + '</div>';
+      if (e.desc) html += '<div class="cal-event-card-desc">' + escapeHtml(e.desc) + '</div>';
+      html += '<div class="cal-event-card-actions">';
+      html += '<button class="cal-event-del" data-id="' + e.id + '">Hapus</button>';
+      html += '</div></div>';
+      return html;
+    }).join('');
+
+    // Wire delete buttons
+    eventsEl.querySelectorAll('.cal-event-del').forEach(btn => {
+      btn.onclick = async (ev) => {
+        ev.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        await calDeleteEvent(id);
+        calRender();
+      };
+    });
+  }
+
+  // Show add button + form
+  if (formEl){
+    formEl.style.display = 'flex';
+    // Wire save/cancel
+    const saveBtn = document.getElementById('calSaveBtn');
+    const cancelBtn = document.getElementById('calCancelBtn');
+    const titleInput = document.getElementById('calEventTitle');
+    const timeInput = document.getElementById('calEventTime');
+    const colorInput = document.getElementById('calEventColor');
+    const descInput = document.getElementById('calEventDesc');
+
+    if (saveBtn && !saveBtn.dataset.wired){
+      saveBtn.onclick = async () => {
+        const title = (titleInput.value || '').trim();
+        if (!title){ titleInput.focus(); return; }
+        const evt = {
+          id: calGenId(),
+          date: calState.selectedDate,
+          title: title,
+          time: timeInput.value || '',
+          color: colorInput.value || '#0F496E',
+          desc: (descInput.value || '').trim(),
+          created_by: '',  // could be username if auth is added later
+        };
+        await calInsertEvent(evt);
+        // Clear form
+        titleInput.value = '';
+        descInput.value = '';
+        timeInput.value = '09:00';
+        calRender();
+      };
+      saveBtn.dataset.wired = '1';
+    }
+    if (cancelBtn && !cancelBtn.dataset.wired){
+      cancelBtn.onclick = () => {
+        titleInput.value = '';
+        descInput.value = '';
+      };
+      cancelBtn.dataset.wired = '1';
+    }
+  }
+}
 
 // ============================================================
 // EXCEL PARSERS — port from Python refresh_dashboard.py
