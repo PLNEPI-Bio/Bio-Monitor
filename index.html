@@ -3428,6 +3428,16 @@ html,body{
 .mou-bd-prog{width:100px;text-align:center}
 .mou-busdev-tbl td:nth-child(4){padding:4px 6px}
 .mou-busdev-tbl td:nth-child(5){text-align:center}
+
+/* V51: Revert button */
+.update-revert-btn{
+  background:transparent;border:1px solid var(--danger);color:var(--danger);
+  padding:8px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  font-weight:700;letter-spacing:.8px;cursor:pointer;border-radius:3px;
+  display:flex;align-items:center;gap:6px;transition:all .15s;
+}
+.update-revert-btn:hover{background:rgba(182,48,43,.1)}
+.update-revert-btn:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -4342,6 +4352,9 @@ html,body{
           <span class="update-process-label">Process &amp; Upload to Server</span>
         </button>
         <button class="update-clear-btn" id="updateClearBtn">Clear selection</button>
+        <button class="update-revert-btn" id="updateRevertBtn" title="Kembalikan data ke versi sebelum upload terakhir">
+          <span>↶</span> Revert ke Versi Sebelumnya
+        </button>
       </div>
       <div class="update-help">
         Upload satu atau dua file. Kalau Anda hanya upload satu, data dari kategori lainnya tetap dipertahankan dari versi sebelumnya.
@@ -10075,6 +10088,126 @@ function wireUpdateTab(){
   if (confirmCancel) confirmCancel.onclick = () => closeConfirmDialog();
   if (confirmApply) confirmApply.onclick = () => doProcessAndUpload();
   if (confirmBackdrop) confirmBackdrop.onclick = (e) => { if (e.target === confirmBackdrop) closeConfirmDialog(); };
+
+  // V51: Wire revert button
+  const revertBtn = document.getElementById('updateRevertBtn');
+  if (revertBtn) revertBtn.onclick = () => doRevertData();
+
+  // V51: Check if backup exists — enable/disable revert button
+  checkRevertAvailable();
+}
+
+// V51: Check if backup row (id=2) exists in dashboard_data
+async function checkRevertAvailable(){
+  const btn = document.getElementById('updateRevertBtn');
+  if (!btn) return;
+  btn.disabled = true;
+  if (!supabaseClient) return;
+  try {
+    const { data } = await supabaseClient
+      .from('dashboard_data')
+      .select('uploaded_by, uploaded_at, source_filename, data_summary')
+      .eq('id', 2).single();
+    if (data){
+      btn.disabled = false;
+      const when = data.uploaded_at ? new Date(data.uploaded_at).toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '?';
+      btn.title = 'Revert ke: ' + (data.source_filename || '') + ' (uploaded ' + when + ' by ' + (data.uploaded_by || '?') + ')';
+    }
+  } catch(e){ /* no backup */ }
+}
+
+// V51: Revert to backup data
+async function doRevertData(){
+  if (!supabaseClient){
+    updateLog('✗ Supabase unavailable.', 'error');
+    return;
+  }
+  // Confirm
+  if (!confirm('Yakin ingin mengembalikan data ke versi sebelum upload terakhir?\n\nSemua perubahan dari upload terakhir akan dibatalkan dan data akan kembali ke state sebelumnya. Aksi ini tidak bisa di-undo.')) return;
+
+  const revertBtn = document.getElementById('updateRevertBtn');
+  if (revertBtn) revertBtn.disabled = true;
+  clearLog();
+  updateLog('Starting revert...', 'info');
+
+  try {
+    // 1. Fetch backup (id=2)
+    updateLog('  Fetching backup data...', 'dim');
+    const { data: backup, error: fetchErr } = await supabaseClient
+      .from('dashboard_data')
+      .select('*')
+      .eq('id', 2).single();
+    if (fetchErr || !backup || !backup.data){
+      updateLog('✗ Backup tidak ditemukan: ' + (fetchErr ? fetchErr.message : 'empty'), 'error');
+      if (revertBtn) revertBtn.disabled = false;
+      return;
+    }
+    updateLog('  ✓ Backup found: ' + (backup.source_filename || '?'), 'dim');
+
+    // 2. Save current data as "forward" backup (id=3) in case user wants to un-revert
+    updateLog('  Saving current data as safety net (id=3)...', 'dim');
+    try {
+      const { data: current } = await supabaseClient
+        .from('dashboard_data')
+        .select('data, uploaded_by, uploaded_at, source_filename, data_summary')
+        .eq('id', 1).single();
+      if (current && current.data){
+        await supabaseClient.from('dashboard_data').upsert({
+          id: 3,
+          data: current.data,
+          uploaded_by: current.uploaded_by || '',
+          uploaded_at: current.uploaded_at || new Date().toISOString(),
+          source_filename: current.source_filename || '',
+          data_summary: 'PRE-REVERT: ' + (current.data_summary || ''),
+        }, { onConflict: 'id' });
+      }
+    } catch(e){ /* non-critical */ }
+
+    // 3. Restore backup to id=1
+    updateLog('  Restoring backup to active data...', 'info');
+    const userName = getUserName() || 'Anonymous';
+    const { error: restoreErr } = await supabaseClient
+      .from('dashboard_data')
+      .upsert({
+        id: 1,
+        data: backup.data,
+        uploaded_by: userName,
+        uploaded_at: new Date().toISOString(),
+        source_filename: 'REVERT from: ' + (backup.source_filename || '?'),
+        data_summary: 'REVERTED: ' + (backup.data_summary || '').replace('BACKUP: ', ''),
+      }, { onConflict: 'id' });
+
+    if (restoreErr){
+      updateLog('✗ Restore failed: ' + restoreErr.message, 'error');
+      if (revertBtn) revertBtn.disabled = false;
+      return;
+    }
+
+    // 4. Log the revert
+    await supabaseClient.from('upload_log').insert({
+      uploaded_by: userName,
+      source_filename: 'REVERT',
+      action: 'revert',
+      summary: 'Reverted to: ' + (backup.source_filename || '?'),
+      success: true,
+    });
+
+    // 5. Apply locally
+    applyDashboardData(backup.data, {
+      uploaded_by: userName,
+      uploaded_at: new Date().toISOString(),
+      source_filename: 'REVERT',
+    });
+
+    updateLog('✓ <b>Revert berhasil.</b> Data dikembalikan ke versi sebelum upload terakhir.', 'success');
+    updateLog('  Semua user yang terhubung akan menerima data reverted via realtime.', 'dim');
+    loadUpdateHistory();
+    checkRevertAvailable();
+  } catch(e){
+    console.error('[Revert] Exception:', e);
+    updateLog('✗ Revert gagal: ' + escapeHtml(e.message || String(e)), 'error');
+    if (revertBtn) revertBtn.disabled = false;
+  }
 }
 
 function updateLog(line, kind){
@@ -10320,6 +10453,28 @@ async function doProcessAndUpload(){
 
   updateLog('Uploading to Supabase...', 'info');
   try {
+    // V51: Backup current data before overwriting (save as id=2)
+    updateLog('  Backing up current data...', 'dim');
+    try {
+      const { data: currentRow } = await supabaseClient
+        .from('dashboard_data')
+        .select('data, uploaded_by, uploaded_at, source_filename, data_summary')
+        .eq('id', 1).single();
+      if (currentRow && currentRow.data){
+        await supabaseClient.from('dashboard_data').upsert({
+          id: 2,
+          data: currentRow.data,
+          uploaded_by: currentRow.uploaded_by || '',
+          uploaded_at: currentRow.uploaded_at || new Date().toISOString(),
+          source_filename: currentRow.source_filename || '',
+          data_summary: 'BACKUP: ' + (currentRow.data_summary || ''),
+        }, { onConflict: 'id' });
+        updateLog('  ✓ Backup saved (revert available)', 'dim');
+      }
+    } catch(bkErr){
+      console.warn('[Update] Backup failed (non-critical):', bkErr);
+      updateLog('  ⚠ Backup gagal (non-critical): ' + (bkErr.message || ''), 'warn');
+    }
     // Upsert dashboard_data with id=1
     const { error: upError } = await supabaseClient
       .from('dashboard_data')
