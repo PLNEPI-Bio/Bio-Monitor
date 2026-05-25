@@ -11602,15 +11602,22 @@ function renderMouTimeline(){
   html += '<tr class="mou-hdr-week">' + weekHeaders + '</tr>';
   html += '</thead><tbody>';
 
+  let _pastInternalEvent = false;
   for (const g of groups){
     const hasTasks = g.tasks && g.tasks.length > 0;
     const doneCount = hasTasks ? g.tasks.filter(t => (t.status||'').toLowerCase() === 'done').length : 0;
     const pct = hasTasks ? (doneCount / g.tasks.length * 100).toFixed(0) : 0;
     const totalCols = 6 + weekCols.length;
 
-    html += '<tr class="mou-grp-row" data-gid="' + g.id + '"><td colspan="' + totalCols + '" class="mou-fr">';
+    // V51: Track if we've passed "INTERNAL EVENT" group for green styling
+    const isInternalEvent = g.name.toUpperCase().includes('INTERNAL EVENT');
+    if (isInternalEvent) _pastInternalEvent = true;
+    const grpStyle = isInternalEvent ? 'background:#4b5563 !important' : (_pastInternalEvent ? '' : '');
+    const nameColor = _pastInternalEvent && !isInternalEvent ? 'color:#228B22' : '';
+    const nameColorWhite = isInternalEvent ? 'color:white' : '';
+    html += '<tr class="mou-grp-row" data-gid="' + g.id + '" style="' + grpStyle + '"><td colspan="' + totalCols + '" class="mou-fr" style="' + grpStyle + '">';
     html += '<span class="mou-grp-arrow" data-gid="' + g.id + '">&#x25B8;</span> ';
-    html += '<span class="mou-grp-name">' + escapeHtml(g.name) + '</span>';
+    html += '<span class="mou-grp-name" style="' + nameColor + nameColorWhite + '">' + escapeHtml(g.name) + '</span>';
     html += ' <span class="mou-grp-badge">' + doneCount + '/' + (hasTasks ? g.tasks.length : 0) + ' (' + pct + '%)</span>';
     html += '</td></tr>';
 
