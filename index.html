@@ -252,19 +252,19 @@ html,body{
 .mou-tbl{border-collapse:separate;border-spacing:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px}
 .mou-tbl thead{position:sticky;top:0;z-index:10}
 .mou-hdr-month th{
-  background:var(--accent);color:white;text-align:center;
+  background:#0F496E;color:white;text-align:center;
   font-size:8px;font-weight:700;letter-spacing:1px;padding:5px 2px;
   border-left:1px solid rgba(255,255,255,.2);border-bottom:0;
 }
 .mou-hdr-week th{
-  background:var(--panel-3);color:var(--text-dim);text-align:center;
+  background:#3b82f6;color:white;text-align:center;
   font-size:8px;font-weight:700;padding:4px 2px;
   border-bottom:1px solid var(--border);
 }
 /* Sticky frozen columns */
 .mou-fr{position:sticky;z-index:5;background:var(--panel)}
 .mou-tbl thead .mou-fr{z-index:12;background:var(--panel-3)}
-.mou-hdr-month .mou-fr{background:var(--accent) !important}
+.mou-hdr-month .mou-fr{background:#0F496E !important}
 .mou-fr1{left:0;width:30px;min-width:30px}
 .mou-fr2{left:30px;width:260px;min-width:260px}
 .mou-fr3{left:290px;width:80px;min-width:80px}
@@ -292,7 +292,7 @@ html,body{
 .mou-grp-badge{font-size:9px;font-weight:600;color:var(--text-dim);background:var(--panel-2);padding:2px 8px;border-radius:10px;margin-left:8px}
 /* Week cells */
 .mou-wk-hdr{width:20px;min-width:20px;max-width:20px;font-size:7px}
-.mou-month-hdr{font-size:8px;font-weight:700;letter-spacing:1px}
+.mou-month-hdr{font-size:8px;font-weight:700;letter-spacing:1px;color:white !important}
 .mou-wk-cell{
   width:20px;min-width:20px;max-width:20px;height:auto;
   padding:0 !important;border-left:1px solid var(--border);cursor:pointer;
@@ -3438,6 +3438,14 @@ html,body{
 }
 .update-revert-btn:hover{background:rgba(182,48,43,.1)}
 .update-revert-btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* V51: Merged frozen column headers — blue, vertically centered */
+.mou-fr-merged{
+  background:var(--accent) !important;color:white !important;
+  vertical-align:middle;text-align:center;
+  font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  border-right:1px solid rgba(255,255,255,.2);
+}
 </style>
 </head>
 <body>
@@ -11590,8 +11598,8 @@ function renderMouTimeline(){
   }
 
   let html = '<div class="mou-tl-wrap"><table class="mou-tbl"><thead>';
-  html += '<tr class="mou-hdr-month"><th class="mou-fr mou-fr1"></th><th class="mou-fr mou-fr2"></th><th class="mou-fr mou-fr3"></th><th class="mou-fr mou-fr4"></th><th class="mou-fr mou-fr-status"></th><th class="mou-fr mou-fr-ket"></th>' + monthHeaders + '</tr>';
-  html += '<tr class="mou-hdr-week"><th class="mou-fr mou-fr1">#</th><th class="mou-fr mou-fr2">Output</th><th class="mou-fr mou-fr3">PIC</th><th class="mou-fr mou-fr4">Due Date</th><th class="mou-fr mou-fr-status">Status</th><th class="mou-fr mou-fr-ket">Keterangan</th>' + weekHeaders + '</tr>';
+  html += '<tr class="mou-hdr-month"><th class="mou-fr mou-fr1 mou-fr-merged" rowspan="2">#</th><th class="mou-fr mou-fr2 mou-fr-merged" rowspan="2">Output</th><th class="mou-fr mou-fr3 mou-fr-merged" rowspan="2">PIC</th><th class="mou-fr mou-fr4 mou-fr-merged" rowspan="2">Due Date</th><th class="mou-fr mou-fr-status mou-fr-merged" rowspan="2">Status</th><th class="mou-fr mou-fr-ket mou-fr-merged" rowspan="2">Keterangan</th>' + monthHeaders + '</tr>';
+  html += '<tr class="mou-hdr-week">' + weekHeaders + '</tr>';
   html += '</thead><tbody>';
 
   for (const g of groups){
@@ -11601,7 +11609,7 @@ function renderMouTimeline(){
     const totalCols = 6 + weekCols.length;
 
     html += '<tr class="mou-grp-row" data-gid="' + g.id + '"><td colspan="' + totalCols + '" class="mou-fr">';
-    html += '<span class="mou-grp-arrow" data-gid="' + g.id + '">&#x25BE;</span> ';
+    html += '<span class="mou-grp-arrow" data-gid="' + g.id + '">&#x25B8;</span> ';
     html += '<span class="mou-grp-name">' + escapeHtml(g.name) + '</span>';
     html += ' <span class="mou-grp-badge">' + doneCount + '/' + (hasTasks ? g.tasks.length : 0) + ' (' + pct + '%)</span>';
     html += '</td></tr>';
@@ -11613,7 +11621,7 @@ function renderMouTimeline(){
       const ket = t.keterangan || '';
       const ketShort = ket.length > 40 ? ket.substring(0, 40) + '...' : ket;
 
-      html += '<tr class="mou-task-row" data-gid="' + g.id + '">';
+      html += '<tr class="mou-task-row" data-gid="' + g.id + '" style="display:none">';
       html += '<td class="mou-fr mou-fr1 mou-td-no">' + t.no + '</td>';
       html += '<td class="mou-fr mou-fr2 mou-td-output" title="' + escapeHtml(t.output) + '">' + escapeHtml(t.output) + '</td>';
       html += '<td class="mou-fr mou-fr3 mou-td-pic">' + escapeHtml(t.pic||'') + '</td>';
