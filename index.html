@@ -3505,6 +3505,21 @@ html,body{
 .fas-save-btn{flex:1}
 .fas-img-section{margin:10px 0}
 .fas-img-preview{border:1px solid var(--border);border-radius:3px;overflow:hidden;margin-bottom:8px}
+
+/* V52.1: MoU link pill buttons */
+.mou-grp-link-btns{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle}
+.mou-link-pill{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 8px;border-radius:10px;cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:600;
+  letter-spacing:.3px;border:none;transition:opacity .12s;line-height:1.4;
+}
+.mou-link-pill:hover{opacity:.8}
+.mou-link-pill.open{background:#3b82f6;color:white}
+.mou-link-pill.edit{background:var(--panel);border:1px solid var(--border);color:var(--text)}
+.mou-link-pill.hapus{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.mou-link-pill.add{background:transparent;border:1px solid var(--border);color:var(--text-dim);margin-left:8px;vertical-align:middle}
+.mou-link-pill.add:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -11821,12 +11836,17 @@ function renderMouTimeline(){
     html += '<span class="mou-grp-arrow" data-gid="' + g.id + '">&#x25B8;</span> ';
     html += '<span class="mou-grp-name" style="' + nameColor + nameColorWhite + '">' + escapeHtml(g.name) + '</span>';
     html += ' <span class="mou-grp-badge">' + doneCount + '/' + (hasTasks ? g.tasks.length : 0) + ' (' + pct + '%)</span>';
-    // V52: Google Drive link button
+    // V52.1: Drive link buttons — inline in group row
     const gLink = g.driveLink || '';
-    html += ' <span class="mou-grp-link-btn" data-gid="' + g.id + '" title="' + (gLink ? 'Link: ' + escapeHtml(gLink) : 'Tambah link') + '">';
-    html += gLink ? '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 8h4M10 8l-2-2M10 8l-2 2M3 8a5 5 0 015-5M13 8a5 5 0 01-5 5"/></svg>'
-                  : '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".4"><path d="M6 8h4M10 8l-2-2M10 8l-2 2M3 8a5 5 0 015-5M13 8a5 5 0 01-5 5"/></svg>';
-    html += '</span>';
+    if (gLink){
+      html += ' <span class="mou-grp-link-btns">';
+      html += '<button class="mou-link-pill open" data-gid="' + g.id + '" title="Buka link"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3H3v10h10v-3M9 2h5v5M14 2L7 9"/></svg> Buka</button>';
+      html += '<button class="mou-link-pill edit" data-gid="' + g.id + '" title="Edit link"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 2l3 3L5 14H2v-3z"/></svg> Edit</button>';
+      html += '<button class="mou-link-pill hapus" data-gid="' + g.id + '" title="Hapus link">× Hapus</button>';
+      html += '</span>';
+    } else {
+      html += ' <button class="mou-link-pill add" data-gid="' + g.id + '" title="Tambah link"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v10M3 8h10"/></svg> Add Link</button>';
+    }
     html += '</td></tr>';
 
     if (!hasTasks) continue;
@@ -11866,27 +11886,34 @@ function renderMouTimeline(){
     };
   });
 
-  // V52: Wire link buttons
-  el.querySelectorAll('.mou-grp-link-btn').forEach(btn => {
+  // V52.1: Wire link pill buttons
+  el.querySelectorAll('.mou-link-pill.open').forEach(btn => {
+    btn.onclick = (e) => { e.stopPropagation(); const g = mouState.timeline.find(x => x.id === btn.dataset.gid); if (g && g.driveLink) window.open(g.driveLink, '_blank'); };
+  });
+  el.querySelectorAll('.mou-link-pill.edit').forEach(btn => {
     btn.onclick = (e) => {
       e.stopPropagation();
-      const gid = btn.dataset.gid;
-      const g = mouState.timeline.find(x => x.id === gid);
+      const g = mouState.timeline.find(x => x.id === btn.dataset.gid);
       if (!g) return;
-      const current = g.driveLink || '';
-      // Show simple popup
-      const action = current
-        ? prompt('Link saat ini:\n' + current + '\n\nPilih aksi:\n1 = Buka link\n2 = Edit link\n3 = Hapus link\n\nAtau paste link baru:', current)
-        : prompt('Masukkan link Google Drive atau URL lainnya:', '');
-      if (action === null) return; // cancelled
-      if (action === '1' && current){ window.open(current, '_blank'); return; }
-      if (action === '3'){ g.driveLink = ''; mouSaveData(); renderMouTimeline(); return; }
-      const newLink = (action === '2' || action === '1') ? prompt('Edit link:', current) : action;
-      if (newLink !== null && newLink.trim()){
-        g.driveLink = newLink.trim();
-        mouSaveData();
-        renderMouTimeline();
-      }
+      const newLink = prompt('Edit link:', g.driveLink || '');
+      if (newLink !== null && newLink.trim()){ g.driveLink = newLink.trim(); mouSaveData(); renderMouTimeline(); }
+    };
+  });
+  el.querySelectorAll('.mou-link-pill.hapus').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const g = mouState.timeline.find(x => x.id === btn.dataset.gid);
+      if (!g) return;
+      if (confirm('Hapus link ini?')){ g.driveLink = ''; mouSaveData(); renderMouTimeline(); }
+    };
+  });
+  el.querySelectorAll('.mou-link-pill.add').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const g = mouState.timeline.find(x => x.id === btn.dataset.gid);
+      if (!g) return;
+      const link = prompt('Masukkan link Google Drive atau URL:', '');
+      if (link && link.trim()){ g.driveLink = link.trim(); mouSaveData(); renderMouTimeline(); }
     };
   });
 
