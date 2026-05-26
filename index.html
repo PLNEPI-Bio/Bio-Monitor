@@ -3520,6 +3520,21 @@ html,body{
 .mou-link-pill.hapus{background:transparent;color:var(--danger);border:1px solid var(--danger)}
 .mou-link-pill.add{background:transparent;border:1px solid var(--border);color:var(--text-dim);margin-left:8px;vertical-align:middle}
 .mou-link-pill.add:hover{border-color:var(--accent);color:var(--accent)}
+
+/* V53: Fasilitas custom field editor */
+.fas-custom-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.fas-cf-del{
+  background:transparent;border:1px solid var(--danger);color:var(--danger);
+  width:24px;height:24px;font-size:14px;cursor:pointer;border-radius:3px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.fas-cf-del:hover{background:rgba(239,68,68,.1)}
+.fas-add-field-btn{
+  width:100%;background:transparent;border:1px dashed var(--border);color:var(--text-dim);
+  padding:6px;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  font-weight:600;cursor:pointer;border-radius:3px;margin-top:8px;
+}
+.fas-add-field-btn:hover{border-color:var(--accent);color:var(--accent)}
 </style>
 </head>
 <body>
@@ -10190,7 +10205,7 @@ async function checkRevertAvailable(){
     const { data } = await supabaseClient
       .from('dashboard_data')
       .select('uploaded_by, uploaded_at, source_filename, data_summary')
-      .eq('id', 2).single();
+      .eq('id', 2).maybeSingle();
     if (data){
       btn.disabled = false;
       const when = data.uploaded_at ? new Date(data.uploaded_at).toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '?';
@@ -10219,7 +10234,7 @@ async function doRevertData(){
     const { data: backup, error: fetchErr } = await supabaseClient
       .from('dashboard_data')
       .select('*')
-      .eq('id', 2).single();
+      .eq('id', 2).maybeSingle();
     if (fetchErr || !backup || !backup.data){
       updateLog('✗ Backup tidak ditemukan: ' + (fetchErr ? fetchErr.message : 'empty'), 'error');
       if (revertBtn) revertBtn.disabled = false;
@@ -11072,7 +11087,9 @@ function buildFasilitasIconHtml(facility, selected){
     + iconSvg + '</div>';
 }
 
-function bootFasilitasTab(){
+async function bootFasilitasTab(){
+  // V53: Load custom data from Supabase first
+  await loadFasilitasCustom();
   // V52: Load custom fasilitas data from localStorage if exists
   try {
     const saved = localStorage.getItem('fasilitas-custom-data');
@@ -11211,15 +11228,25 @@ function renderFasilitasDetail(f){
   }
   html += '</div>';
 
-  // Image section
-  const imgKey = 'fasilitas-img-' + f.nama.replace(/\s/g, '_');
-  let savedImg = '';
-  try { savedImg = localStorage.getItem(imgKey) || ''; } catch(e){}
+  // Image section — V53: from Supabase fasilitas_custom
+  const fCustom = (fasilitasCustomData[f.nama] || {});
+  const savedImg = fCustom.image || '';
+  const customFields = fCustom.fields || [];
   html += '<div class="fas-img-section" id="fasImgSection">';
   if (savedImg){
     html += '<div class="fas-img-preview"><img src="' + savedImg + '" alt="' + escapeHtml(f.nama) + '" style="width:100%;border-radius:3px;max-height:200px;object-fit:cover"></div>';
   }
   html += '</div>';
+
+  // Custom fields (user-added)
+  if (customFields.length > 0){
+    html += '<div class="pembangkit-detail-grid" style="margin-top:8px">';
+    for (const cf of customFields){
+      html += '<div class="pembangkit-detail-cell" style="grid-column:1/-1"><div class="pembangkit-detail-cell-label">' + escapeHtml(cf.label) + '</div>';
+      html += '<div class="pembangkit-detail-cell-value text">' + escapeHtml(cf.value || '—') + '</div></div>';
+    }
+    html += '</div>';
+  }
 
   // Edit button
   html += '<button class="fas-edit-toggle-btn" id="fasEditToggle"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 1.5l3 3L5 14H2v-3z"/></svg> Edit Detail</button>';
@@ -11230,14 +11257,26 @@ function renderFasilitasDetail(f){
   for (const fd of fields){
     html += '<div class="pembangkit-detail-cell' + (fd.full ? '" style="grid-column:1/-1' : '') + '">';
     html += '<div class="pembangkit-detail-cell-label">' + fd.label + '</div>';
-    html += '<input class="fas-edit-input" data-fidx="' + fIdx + '" data-key="' + fd.key + '" value="' + escapeHtml(f[fd.key] || '') + '" placeholder="—">';
+    html += '<input class="fas-edit-input" data-fidx="' + fIdx + '" data-key="' + fd.key + '" value="' + escapeHtml(f[fd.key] || '') + '" placeholder="\u2014">';
     html += '</div>';
   }
   html += '</div>';
+  // Custom fields editor
+  html += '<div id="fasCustomFieldsEdit">';
+  for (let ci = 0; ci < customFields.length; ci++){
+    html += '<div class="fas-custom-row" data-ci="' + ci + '">';
+    html += '<input class="fas-edit-input fas-cf-label" value="' + escapeHtml(customFields[ci].label) + '" placeholder="Judul" style="flex:1">';
+    html += '<input class="fas-edit-input fas-cf-value" value="' + escapeHtml(customFields[ci].value) + '" placeholder="Data" style="flex:2">';
+    html += '<button class="fas-cf-del" data-ci="' + ci + '" title="Hapus">\u00d7</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  html += '<button class="fas-add-field-btn" id="fasAddFieldBtn">+ Tambah Kolom</button>';
   // Image upload
   html += '<div style="margin-top:10px">';
   html += '<div class="pembangkit-detail-cell-label">Gambar Fasilitas</div>';
   html += '<input type="file" id="fasImgInput" accept="image/*" class="fas-edit-input" style="padding:4px">';
+  if (savedImg) html += '<div style="margin-top:4px;font-size:9px;color:var(--text-dim)">\u2713 Gambar tersimpan. Upload baru untuk mengganti.</div>';
   html += '</div>';
   html += '<div class="fas-edit-actions">';
   html += '<button class="fas-save-btn" id="fasSaveBtn">Simpan</button>';
@@ -11272,29 +11311,97 @@ function renderFasilitasDetail(f){
       editToggle.style.display = '';
     };
   }
+  // Wire add custom field
+  const addFieldBtn = document.getElementById('fasAddFieldBtn');
+  if (addFieldBtn){
+    addFieldBtn.onclick = () => {
+      const container = document.getElementById('fasCustomFieldsEdit');
+      const ci = container.querySelectorAll('.fas-custom-row').length;
+      const row = document.createElement('div');
+      row.className = 'fas-custom-row';
+      row.dataset.ci = ci;
+      row.innerHTML = '<input class="fas-edit-input fas-cf-label" value="" placeholder="Judul" style="flex:1"><input class="fas-edit-input fas-cf-value" value="" placeholder="Data" style="flex:2"><button class="fas-cf-del" title="Hapus">\u00d7</button>';
+      container.appendChild(row);
+      row.querySelector('.fas-cf-del').onclick = () => row.remove();
+    };
+  }
+  // Wire delete custom field buttons
+  panel.querySelectorAll('.fas-cf-del').forEach(btn => {
+    btn.onclick = () => btn.closest('.fas-custom-row').remove();
+  });
+
   // Wire save
   const saveBtn = document.getElementById('fasSaveBtn');
   if (saveBtn){
-    saveBtn.onclick = () => {
+    saveBtn.onclick = async () => {
+      saveBtn.textContent = 'Menyimpan...';
+      saveBtn.disabled = true;
+      // Update standard fields
       const inputs = panel.querySelectorAll('.fas-edit-input[data-key]');
       inputs.forEach(inp => {
         const idx = parseInt(inp.dataset.fidx, 10);
         const key = inp.dataset.key;
         if (FASILITAS_DATA[idx]) FASILITAS_DATA[idx][key] = inp.value;
       });
-      // Handle image upload
+      // Collect custom fields
+      const cfRows = panel.querySelectorAll('.fas-custom-row');
+      const newCustomFields = [];
+      cfRows.forEach(row => {
+        const label = row.querySelector('.fas-cf-label')?.value?.trim();
+        const value = row.querySelector('.fas-cf-value')?.value?.trim();
+        if (label) newCustomFields.push({ label, value: value || '' });
+      });
+      // Handle image
       const imgInput = document.getElementById('fasImgInput');
+      let imgBase64 = fCustom.image || '';
       if (imgInput && imgInput.files && imgInput.files[0]){
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          try { localStorage.setItem(imgKey, ev.target.result); } catch(e){ alert('Gambar terlalu besar untuk disimpan di browser'); }
-          showFasilitasDetail(f); // re-render with image
-        };
-        reader.readAsDataURL(imgInput.files[0]);
+        imgBase64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target.result);
+          reader.readAsDataURL(imgInput.files[0]);
+        });
       }
+      // Save to fasilitasCustomData + Supabase
+      fasilitasCustomData[f.nama] = { image: imgBase64, fields: newCustomFields };
+      await saveFasilitasCustom();
+      // Also save standard fields to localStorage
       try { localStorage.setItem('fasilitas-custom-data', JSON.stringify(FASILITAS_DATA)); } catch(e){}
-      showFasilitasDetail(f); // re-render in view mode
+      showFasilitasDetail(f);
     };
+  }
+}
+
+// ============================================================
+// Fasilitas Custom Data — Supabase sync (V53)
+// Table: fasilitas_custom (singleton id=1, JSONB data)
+// ============================================================
+let fasilitasCustomData = {};
+let fasilitasCustomLoaded = false;
+
+async function loadFasilitasCustom(){
+  if (fasilitasCustomLoaded) return;
+  if (supabaseClient){
+    try {
+      const { data } = await supabaseClient.from('fasilitas_custom').select('data').eq('id', 1).maybeSingle();
+      if (data && data.data){ fasilitasCustomData = data.data; fasilitasCustomLoaded = true; return; }
+    } catch(e){ console.warn('[Fasilitas] Supabase load failed:', e); }
+  }
+  // Fallback: localStorage
+  try {
+    const saved = localStorage.getItem('fasilitas-custom-extended');
+    if (saved) fasilitasCustomData = JSON.parse(saved);
+  } catch(e){}
+  fasilitasCustomLoaded = true;
+}
+
+async function saveFasilitasCustom(){
+  // Save to localStorage as fallback
+  try { localStorage.setItem('fasilitas-custom-extended', JSON.stringify(fasilitasCustomData)); } catch(e){}
+  // Save to Supabase
+  if (supabaseClient){
+    try {
+      await supabaseClient.from('fasilitas_custom').upsert({ id: 1, data: fasilitasCustomData, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    } catch(e){ console.error('[Fasilitas] Save failed:', e); }
   }
 }
 
