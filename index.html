@@ -145,7 +145,7 @@ html,body{
 .brand-logo-link{text-decoration:none;display:flex;flex-shrink:0;transition:opacity .15s}
 .brand-logo-link:hover{opacity:.8}
 .brand-logo{
-  width:40px;height:40px;flex-shrink:0;
+  width:36px;height:36px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
 }
 .brand-logo img,.brand-logo svg{width:100%;height:100%;object-fit:contain;display:block}
@@ -273,8 +273,9 @@ html,body{
 .mou-fr-ket{left:535px;width:140px;min-width:140px;border-right:1px solid var(--border)}
 /* Cell styles */
 .mou-tbl td,.mou-tbl th{padding:6px 6px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;box-sizing:border-box}
-.mou-tbl tr:hover td{background:var(--panel-2)}
-.mou-tbl tr:hover .mou-fr{background:var(--panel-2)}
+.mou-tbl tr.mou-task-row:hover td{background:rgba(128,128,128,.08)}
+.mou-tbl tr.mou-task-row:hover .mou-fr{background:rgba(128,128,128,.08)}
+.mou-tbl tr.mou-task-row:hover .mou-wk-cell.filled{background:var(--mou-month-fill, var(--accent));opacity:.85}
 .mou-td-no{text-align:center;color:var(--text-dim);font-weight:600}
 .mou-td-output{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;font-weight:500}
 .mou-td-pic{font-size:9px}
@@ -570,24 +571,24 @@ html,body{
 /* Tabs navigation */
 .tabs{
   display:flex;background:var(--panel-2);border-bottom:1px solid var(--border);
-  padding:0 20px;gap:0;align-items:stretch;
+  padding:0 12px;gap:2px;align-items:stretch;
   position:relative;z-index:1000;
 }
 /* V49.2: No overflow-x/y on .tabs — dropdowns need to render below the bar.
    With dropdown consolidation (10 tabs → 7), horizontal scroll is no longer needed. */
 .tab{
-  background:transparent;border:none;border-right:1px solid var(--border);
-  color:var(--text-dim);padding:0 16px;cursor:pointer;
+  background:transparent;border:none;
+  color:var(--text-dim);padding:0 14px;cursor:pointer;
   font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:11px;
-  letter-spacing:.2px;text-transform:uppercase;transition:all .2s;position:relative;
+  letter-spacing:.2px;text-transform:uppercase;transition:all .15s;position:relative;
   display:flex;align-items:center;gap:6px;
-  flex-shrink:0;white-space:nowrap;
+  flex-shrink:0;white-space:nowrap;border-radius:6px 6px 0 0;
 }
-.tab:first-child{border-left:1px solid var(--border)}
 .tab:hover{color:var(--text);background:var(--panel-3)}
 .tab.active{color:var(--text-bright);background:var(--bg)}
-.tab.active::after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent)}
-.tab-icon{width:14px;height:14px;opacity:.7}
+.tab.active::after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:2.5px;border-radius:2px 2px 0 0;background:var(--accent)}
+.tab-icon{width:14px;height:14px;opacity:.5;transition:opacity .15s}
+.tab:hover .tab-icon{opacity:.8}
 .tab.active .tab-icon{opacity:1}
 
 /* View container */
@@ -694,8 +695,9 @@ html,body{
 .map-overlay{
   position:absolute;background:var(--overlay-bg);backdrop-filter:blur(8px);
   border:1px solid var(--border);padding:14px 16px;z-index:500;
+  font-family:'Plus Jakarta Sans',sans-serif;
 }
-.legend{top:16px;left:16px;min-width:200px;transition:all .2s ease}
+.legend{top:16px;left:16px;min-width:200px;transition:all .2s ease;z-index:800;border-radius:6px}
 .legend-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
 .legend-head .legend-title{margin-bottom:0}
 .legend.collapsed .legend-body{display:none}
@@ -709,7 +711,7 @@ html,body{
 }
 .legend-collapse-btn:hover{color:var(--text-bright);border-color:var(--border-bright);background:var(--panel)}
 .legend-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
-.legend-row{display:flex;align-items:center;gap:10px;font-size:11px;margin-bottom:6px;color:var(--text)}
+.legend-row{display:flex;align-items:center;gap:10px;font-size:11px;margin-bottom:6px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif}
 .legend-icon{width:18px;height:18px;flex-shrink:0}
 
 /* Period selector in sidebar */
@@ -2370,15 +2372,17 @@ html,body{
    pembangkit's small round dot so the two map types are visually separable. */
 .fasilitas-divicon{background:transparent;border:none}
 .fasilitas-marker{
-  width:36px;height:36px;border-radius:8px;
-  border:2px solid #ffffff;
+  width:32px;height:36px;
   display:flex;align-items:center;justify-content:center;
   transition:transform .15s ease;cursor:pointer;
+  filter:drop-shadow(0 0 1.5px rgba(0,0,0,.9)) drop-shadow(0 1px 3px rgba(0,0,0,.4));
 }
-.fasilitas-marker:hover{transform:scale(1.15);z-index:600!important}
+.fasilitas-marker:hover{transform:scale(1.25);z-index:600!important}
 .fasilitas-marker.selected{
-  transform:scale(1.2);z-index:601!important;
+  transform:scale(1.4);z-index:601!important;
+  filter:drop-shadow(0 0 1.5px rgba(0,0,0,.9)) drop-shadow(0 0 8px currentColor);
 }
+.fasilitas-marker svg{width:100%;height:100%}
 
 /* Tooltip on hover */
 .fasilitas-tooltip{
@@ -2618,7 +2622,7 @@ html,body{
   .shell{grid-template-rows:52px 42px 1fr}
   .topbar{padding:0 12px;gap:8px;position:sticky;top:0;z-index:1001}
   .brand{gap:8px}
-  .brand-logo{width:32px;height:32px;padding:0}
+  .brand-logo{width:30px;height:30px;padding:0}
   .brand-sub{display:none}
   .brand-title{font-size:11px;letter-spacing:.2px}
   .status-pill{display:none}
@@ -2668,11 +2672,12 @@ html,body{
     position:fixed!important;top:50%!important;left:0!important;
     transform:translateY(-50%)!important;z-index:850!important;
     background:var(--panel);border:1px solid var(--accent);border-left:none;
-    color:var(--accent);width:32px;height:64px;cursor:pointer;
+    color:var(--accent);width:36px;height:72px;cursor:pointer;
     display:flex!important;align-items:center;justify-content:center;
-    font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;line-height:1;
-    border-radius:0 6px 6px 0;padding:0;
+    font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;line-height:1;
+    border-radius:0 8px 8px 0;padding:0;
     box-shadow:var(--shadow-md);
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
   }
   /* When map detail panel is open (PLTU clicked), hide the sidebar toggle */
   .map-view.detail-open .sidebar-show-btn{display:none!important}
@@ -2705,9 +2710,13 @@ html,body{
   .trends-chart-wrap{height:110px}
 
   /* Map overlays positioning */
-  .legend{top:8px;left:8px;min-width:auto;padding:10px 12px;font-size:10px}
-  .legend.collapsed{padding:6px 10px}
+  .legend{top:auto;bottom:12px;left:8px;min-width:auto;padding:0;font-size:11px;z-index:1100;border-radius:6px;max-height:calc(100vh - 200px);overflow-y:auto}
+  .legend .legend-head{padding:8px 10px;margin-bottom:0;gap:6px}
+  .legend .legend-body{padding:0 10px 8px}
+  .legend.collapsed{padding:0}
+  .legend.collapsed .legend-head{padding:6px 10px}
   .legend-row{font-size:10px}
+  .legend-collapse-btn{width:28px;height:24px;font-size:11px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   .search-bar{top:8px;right:8px}
   .search-bar input{min-width:140px;font-size:11px;padding:8px 10px}
 
@@ -2789,7 +2798,7 @@ html,body{
 @media (max-width:400px){
   .topbar{padding:0 8px;gap:6px}
   .brand-title{font-size:10px}
-  .brand-logo{width:28px;height:28px;padding:0}
+  .brand-logo{width:24px;height:24px;padding:0}
   .tab{padding:0 10px;font-size:9px}
   .tab-icon{display:none}
   .summary-stats{grid-template-columns:1fr}
@@ -3469,6 +3478,10 @@ html,body{
 .mou-filter-btn.active{
   background:var(--accent);border-color:var(--accent);color:white;
 }
+.mou-year-btn{padding:5px 10px;font-size:9px;border-radius:4px}
+.mou-year-btn.active{background:#0F496E;border-color:#0F496E}
+.mou-year-btn:not(.active){opacity:.6}
+.mou-year-btn:hover{opacity:1}
 
 /* V52: Fasilitas editable inputs */
 .fas-edit-input{
@@ -3535,6 +3548,203 @@ html,body{
   font-weight:600;cursor:pointer;border-radius:3px;margin-top:8px;
 }
 .fas-add-field-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ===== V54: DESIGN SYSTEM ENHANCEMENTS ===== */
+
+/* Shadow elevation system */
+:root,:root[data-theme="light"]{
+  --shadow-xs:0 1px 2px rgba(15,73,110,.04);
+  --shadow-hover:0 4px 12px rgba(15,73,110,.12);
+  --shadow-lg:0 12px 32px rgba(15,73,110,.14);
+}
+:root[data-theme="dark"]{
+  --shadow-xs:0 1px 2px rgba(0,0,0,.3);
+  --shadow-hover:0 4px 12px rgba(0,0,0,.4);
+  --shadow-lg:0 12px 32px rgba(0,0,0,.55);
+}
+
+/* Skeleton loading */
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.skeleton{background:linear-gradient(90deg,var(--panel-3) 25%,var(--panel-2) 50%,var(--panel-3) 75%);background-size:800px 100%;animation:shimmer 1.5s ease-in-out infinite;border-radius:6px}
+.skeleton-line{height:14px;margin-bottom:10px;border-radius:4px}
+.skeleton-line.w60{width:60%}.skeleton-line.w80{width:80%}.skeleton-line.w40{width:40%}
+.skeleton-card{height:80px;border-radius:8px;margin-bottom:12px}
+.skeleton-chart{height:200px;border-radius:8px}
+.skeleton-map{height:100%;min-height:300px;border-radius:0}
+
+/* Micro-interactions: card hover lift */
+.summary-stat,.kpi,.kontrak-kpi,.pareto-card{
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+.summary-stat:hover,.kpi:hover,.kontrak-kpi:hover,.pareto-card:hover{
+  transform:translateY(-2px);box-shadow:var(--shadow-hover);
+}
+
+/* Color-coded tab indicators */
+.tab[data-tab="map"]::before,.tab-dropdown>.tab::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#0F496E;opacity:0;transition:opacity .2s}
+.tab[data-tab="realisasi"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#10b981;opacity:0;transition:opacity .2s}
+.tab[data-tab="bottleneck"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#f59e0b;opacity:0;transition:opacity .2s}
+.tab[data-tab="pareto"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#ef4444;opacity:0;transition:opacity .2s}
+.tab[data-tab="kontrak"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#8b5cf6;opacity:0;transition:opacity .2s}
+.tab[data-tab="mou-timeline"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#06b6d4;opacity:0;transition:opacity .2s}
+.tab[data-tab="usulan"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#ec4899;opacity:0;transition:opacity .2s}
+.tab[data-tab="berita"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#f97316;opacity:0;transition:opacity .2s}
+.tab.active::before,.tab:hover::before{opacity:1}
+/* Active bottom bar color matches indicator */
+.tab-dropdown>.tab.active::after,.tab[data-tab="map"].active::after{background:#0F496E!important}
+.tab[data-tab="realisasi"].active::after{background:#10b981!important}
+.tab[data-tab="bottleneck"].active::after{background:#f59e0b!important}
+.tab[data-tab="pareto"].active::after{background:#ef4444!important}
+.tab[data-tab="kontrak"].active::after{background:#8b5cf6!important}
+.tab[data-tab="mou-timeline"].active::after{background:#06b6d4!important}
+.tab[data-tab="usulan"].active::after{background:#ec4899!important}
+.tab[data-tab="berita"].active::after{background:#f97316!important}
+
+/* Better data tables */
+.monthly-table,.kontrak-table,.pareto-top-table,.yoy-table,.bn-table{border-collapse:separate;border-spacing:0;width:100%;font-family:'Plus Jakarta Sans',sans-serif}
+.monthly-table thead th,.kontrak-table thead th,.pareto-top-table thead th,.yoy-table thead th,.bn-table thead th{
+  position:sticky;top:0;z-index:2;background:var(--panel-3);font-weight:700;font-size:10px;
+  text-transform:uppercase;letter-spacing:.5px;color:var(--text-dim);padding:10px 8px;
+  border-bottom:2px solid var(--border);
+}
+.monthly-table tbody tr,.kontrak-table tbody tr,.pareto-top-table tbody tr,.yoy-table tbody tr,.bn-table tbody tr{
+  transition:background .1s;
+}
+.monthly-table tbody tr:nth-child(even),.kontrak-table tbody tr:nth-child(even),
+.pareto-top-table tbody tr:nth-child(even),.yoy-table tbody tr:nth-child(even),.bn-table tbody tr:nth-child(even){
+  background:var(--panel-2);
+}
+.monthly-table tbody tr:hover,.kontrak-table tbody tr:hover,.pareto-top-table tbody tr:hover,
+.yoy-table tbody tr:hover,.bn-table tbody tr:hover{
+  background:color-mix(in srgb, var(--accent) 8%, var(--panel));
+}
+
+/* Empty state */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:48px 24px;color:var(--text-dim);text-align:center;gap:12px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.empty-state-icon{font-size:40px;opacity:.4;margin-bottom:4px}
+.empty-state-title{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.2px}
+.empty-state-desc{font-size:11px;max-width:260px;line-height:1.5}
+
+/* Notification bell */
+.notif-btn{
+  background:transparent;border:none;color:var(--text-dim);cursor:pointer;
+  position:relative;padding:6px;border-radius:6px;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;
+}
+.notif-btn:hover{color:var(--text-bright);background:var(--panel-3)}
+.notif-badge{
+  position:absolute;top:2px;right:2px;min-width:15px;height:15px;
+  background:var(--danger);color:#fff;font-size:9px;font-weight:800;
+  border-radius:99px;display:flex;align-items:center;justify-content:center;
+  padding:0 4px;font-family:'Plus Jakarta Sans',sans-serif;
+  animation:notifPop .3s ease;
+}
+@keyframes notifPop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+.notif-badge:empty,.notif-badge[data-count="0"]{display:none}
+.notif-dropdown{
+  position:fixed;top:52px;right:8px;width:320px;max-height:400px;overflow-y:auto;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  box-shadow:var(--shadow-lg);z-index:5000;display:none;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.notif-dropdown.open{display:block}
+.notif-header{padding:12px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text-bright);text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center}
+.notif-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.notif-item:hover{background:var(--panel-2)}
+.notif-item:last-child{border-bottom:none}
+.notif-item-title{font-size:12px;font-weight:600;color:var(--text-bright);margin-bottom:2px}
+.notif-item-desc{font-size:10px;color:var(--text-dim);line-height:1.4}
+.notif-item-time{font-size:9px;color:var(--text-dim);margin-top:4px;opacity:.7}
+.notif-item.unread{border-left:3px solid var(--accent)}
+.notif-clear-btn{background:transparent;border:none;color:var(--accent);font-size:10px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
+
+/* Comparison mode (Pareto) */
+.compare-toggle{
+  background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;
+  padding:5px 12px;border-radius:4px;cursor:pointer;transition:all .15s;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.compare-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.compare-toggle.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.compare-container{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+@media(max-width:768px){.compare-container{grid-template-columns:1fr}}
+.compare-select{
+  background:var(--panel);border:1px solid var(--border);color:var(--text-bright);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;padding:6px 10px;
+  border-radius:4px;width:100%;
+}
+
+/* Keyboard shortcuts hint */
+.kbd{
+  display:inline-block;background:var(--panel-3);border:1px solid var(--border);
+  border-radius:3px;padding:1px 5px;font-size:10px;font-family:monospace;
+  color:var(--text-dim);vertical-align:middle;
+}
+
+/* Mobile-only elements: hidden on desktop */
+.mobile-bottom-nav{display:none}
+.mobile-more-menu{display:none}
+.mobile-more-backdrop{display:none}
+
+/* Mobile bottom nav */
+@media(max-width:768px){
+  .tabs{height:0!important;min-height:0!important;overflow:hidden!important;padding:0!important;border:none!important}
+  .shell{grid-template-rows:52px 0px 1fr!important}
+  .mobile-bottom-nav{
+    display:flex!important;position:fixed;bottom:0;left:0;right:0;z-index:2000;
+    background:var(--panel);border-top:1px solid var(--border);
+    box-shadow:0 -2px 12px rgba(0,0,0,.1);padding:0;
+    padding-bottom:env(safe-area-inset-bottom,0);
+  }
+  .mobile-nav-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:8px 2px 6px;gap:3px;background:transparent;border:none;cursor:pointer;
+    color:var(--text-dim);transition:color .15s;position:relative;
+    font-family:'Plus Jakarta Sans',sans-serif;
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  }
+  .mobile-nav-item svg{width:20px;height:20px;flex-shrink:0}
+  .mobile-nav-item span{font-size:9px;font-weight:600;letter-spacing:.3px;white-space:nowrap}
+  .mobile-nav-item.active{color:var(--accent)}
+  .mobile-nav-item.active::after{
+    content:"";position:absolute;top:0;left:20%;right:20%;height:2.5px;
+    background:var(--accent);border-radius:0 0 2px 2px;
+  }
+  /* More menu */
+  .mobile-more-menu{
+    position:fixed;bottom:56px;right:4px;z-index:2100;
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    box-shadow:var(--shadow-lg);display:none;min-width:180px;
+    padding:6px 0;
+    padding-bottom:calc(6px + env(safe-area-inset-bottom,0));
+  }
+  .mobile-more-menu.open{display:block}
+  .mobile-more-item{
+    display:flex;align-items:center;gap:10px;width:100%;padding:11px 16px;
+    background:transparent;border:none;cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:500;
+    color:var(--text);transition:background .1s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mobile-more-item:hover,.mobile-more-item:active{background:var(--panel-2)}
+  .mobile-more-item svg{width:16px;height:16px;opacity:.6;flex-shrink:0}
+  .mobile-more-item.active{color:var(--accent);font-weight:700}
+  .mobile-more-backdrop{position:fixed;inset:0;z-index:2050;display:none}
+  .mobile-more-backdrop.open{display:block}
+
+  /* Offset views for bottom nav */
+  .view{height:calc(100vh - 52px)!important;overflow:auto!important}
+  .view[data-view="map"],.view[data-view="pembangkit"],.view[data-view="fasilitas"],.view[data-view="bottleneck"]{overflow:hidden!important}
+  .sidebar{top:52px!important;bottom:56px!important}
+  #mobileBackdrop{bottom:56px!important}
+  .map-view .map-area{min-height:calc(100vh - 52px)!important;height:calc(100vh - 52px)!important}
+  .map-view #map,.pembangkit-view #pembangkit-map,.bn-view #bn-map{min-height:calc(100vh - 52px)!important;height:calc(100vh - 52px)!important}
+}
 </style>
 </head>
 <body>
@@ -3545,12 +3755,12 @@ html,body{
   <div class="brand">
     <a href="https://www.plnepi.co.id/" target="_blank" rel="noopener noreferrer" class="brand-logo-link" title="PT PLN Energi Primer Indonesia">
       <div class="brand-logo" id="brandLogo">
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
-        <rect x="4" y="4" width="92" height="92" rx="10" ry="10" fill="#FFD500"/>
-        <path d="M 58 16 L 32 52 L 46 52 L 40 84 L 70 48 L 56 48 L 62 16 Z" fill="#E60000"/>
-        <path d="M 18 60 Q 27 56 36 60 T 54 60 T 72 60 T 90 60" stroke="#1E5AA8" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-        <path d="M 18 70 Q 27 66 36 70 T 54 70 T 72 70 T 90 70" stroke="#1E5AA8" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-        <path d="M 18 80 Q 27 76 36 80 T 54 80 T 72 80 T 90 80" stroke="#1E5AA8" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+        <rect x="0.142" y="0.353" width="31.295" height="31.295" style="fill:#f7e82e"/>
+        <path d="m 6.451,11.694 c 0.839,-0.463 2.014,-0.828 2.955,-0.828 1.797,0 2.213,0.828 3.096,0.828 0.883,0 1.79,-0.828 3.423,-0.828 1.486,0 2.271,0.828 3.591,0.828 1.323,0 1.048,-0.828 2.91,-0.828 1.853,0 2.701,0.828 2.701,0.828 l 0,2.111 c 0,0 -0.989,-0.881 -2.544,-0.902 -1.543,-0.018 -1.502,0.902 -3.063,0.902 -1.562,0 -1.687,-0.902 -3.521,-0.902 -1.833,0 -2.11,0.902 -3.526,0.902 -1.42,0 -1.686,-0.939 -3.165,-0.92 -1.479,0.018 -2.857,0.92 -2.857,0.92 l 0,-2.111 z" style="fill:#28a8e0"/>
+        <path d="M 6.451,16.617 C 7.29,16.153 8.465,15.79 9.406,15.79 c 1.797,0 2.213,0.827 3.096,0.827 0.883,0 1.79,-0.827 3.423,-0.827 1.486,0 2.271,0.827 3.591,0.827 1.323,0 1.048,-0.827 2.91,-0.827 1.853,0 2.701,0.827 2.701,0.827 l 0,2.112 c 0,0 -0.989,-0.887 -2.544,-0.903 -1.543,-0.015 -1.502,0.903 -3.063,0.903 -1.562,0 -1.687,-0.903 -3.521,-0.903 -1.833,0 -2.11,0.903 -3.526,0.903 -1.42,0 -1.686,-0.937 -3.165,-0.918 -1.479,0.015 -2.857,0.918 -2.857,0.918 l 0,-2.112 z" style="fill:#28a8e0"/>
+        <path d="m 6.451,21.536 c 0.839,-0.466 2.014,-0.828 2.955,-0.828 1.797,0 2.213,0.828 3.096,0.828 0.883,0 1.79,-0.828 3.423,-0.828 1.486,0 2.271,0.828 3.591,0.828 1.323,0 1.048,-0.828 2.91,-0.828 1.853,0 2.701,0.828 2.701,0.828 l 0,2.118 c 0,0 -0.989,-0.888 -2.544,-0.907 -1.543,-0.016 -1.502,0.907 -3.063,0.907 -1.562,0 -1.687,-0.907 -3.521,-0.907 -1.833,0 -2.11,0.907 -3.526,0.907 -1.42,0 -1.686,-0.94 -3.165,-0.923 -1.479,0.016 -2.857,0.923 -2.857,0.923 l 0,-2.118 z" style="fill:#28a8e0"/>
+        <polygon points="14.904,28.364 17.273,16.461 8.856,20.163 13.775,4.534 17.782,4.534 13.112,15.369 21.423,12.007" style="fill:#e62a2b"/>
       </svg>
     </div>
     </a>
@@ -3579,6 +3789,14 @@ html,body{
     <button class="topbar-update-btn" id="topbarUpdateBtn" onclick="switchTab('update')" title="Update Data">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M8 2v8M5 5l3-3 3 3M2 12v2h12v-2"/></svg>
     </button>
+    <button class="notif-btn" id="notifBtn" title="Notifications">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="17" height="17"><path d="M10 13a2 2 0 1 1-4 0M2.5 11c1-1 1-3 1.2-5.5C4 3 5.8 1.5 8 1.5s4 1.5 4.3 4c.2 2.5.2 4.5 1.2 5.5H2.5z"/></svg>
+      <span class="notif-badge" id="notifBadge"></span>
+    </button>
+    <div class="notif-dropdown" id="notifDropdown">
+      <div class="notif-header"><span>Notifications</span><button class="notif-clear-btn" id="notifClearBtn">Clear all</button></div>
+      <div id="notifList"></div>
+    </div>
     <div class="datetime-display">
       <div class="datetime-date" id="topbarDate">—</div>
       <div class="datetime-time" id="topbarTime">—</div>
@@ -3636,6 +3854,57 @@ html,body{
   </button>
 </nav>
 
+<!-- V54: Mobile Bottom Navigation -->
+<div class="mobile-bottom-nav" style="display:none">
+  <button class="mobile-nav-item active" data-mob-tab="map" onclick="mobNav('map')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
+    <span>Map</span>
+  </button>
+  <button class="mobile-nav-item" data-mob-tab="realisasi" onclick="mobNav('realisasi')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V2M2 14h12M4 11l3-4 3 2 4-6"/></svg>
+    <span>Realisasi</span>
+  </button>
+  <button class="mobile-nav-item" data-mob-tab="bottleneck" onclick="mobNav('bottleneck')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v3m0 8v3M1 8h3m8 0h3M3.5 3.5l2 2m5 5l2 2M3.5 12.5l2-2m5-5l2-2"/></svg>
+    <span>Bottleneck</span>
+  </button>
+  <button class="mobile-nav-item" data-mob-tab="kontrak" onclick="mobNav('kontrak')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1h7l3 3v11H3zM10 1v3h3M5 7h6M5 10h6M5 13h4"/></svg>
+    <span>Kontrak</span>
+  </button>
+  <button class="mobile-nav-item" data-mob-tab="more" onclick="mobToggleMore()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+    <span>More</span>
+  </button>
+</div>
+<div class="mobile-more-backdrop" id="mobMoreBackdrop" onclick="mobCloseMore()"></div>
+<div class="mobile-more-menu" id="mobMoreMenu">
+  <button class="mobile-more-item" onclick="mobNav('pembangkit')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
+    Overview Pembangkit
+  </button>
+  <button class="mobile-more-item" onclick="mobNav('fasilitas')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
+    Fasilitas Produksi
+  </button>
+  <button class="mobile-more-item" onclick="mobNav('pareto')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V2M2 14h12M4 12V7M7 12V4M10 12V9M13 12V6"/></svg>
+    Pareto Loss
+  </button>
+  <button class="mobile-more-item" onclick="mobNav('mou-timeline')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12M2 7h10M2 11h8M2 15h6"/></svg>
+    Monitoring MoU
+  </button>
+  <button class="mobile-more-item" onclick="mobNav('usulan')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12v10H2zM2 6h12M5 8h6M5 10h4"/></svg>
+    Usulan Kontrak
+  </button>
+  <button class="mobile-more-item" onclick="mobNav('berita')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h10v10H2zM12 5h2v8a1 1 0 0 1-1 1H4M4 6h6M4 8h6M4 10h4"/></svg>
+    Berita
+  </button>
+</div>
+
 <!-- ====== TAB 1: MAP VIEW ====== -->
 <div class="view active" data-view="map">
   <div class="map-view">
@@ -3691,10 +3960,10 @@ html,body{
       <div id="map"></div>
       <button class="sidebar-show-btn" id="sidebarShowBtn" title="Show sidebar">▶</button>
 
-      <div class="map-overlay legend">
+      <div class="map-overlay legend collapsed">
         <div class="legend-head">
           <span class="legend-title">Genco Color Code</span>
-          <button class="legend-collapse-btn" id="legendCollapseBtn" title="Collapse">▲</button>
+          <button class="legend-collapse-btn" id="legendCollapseBtn" title="Collapse">▼</button>
         </div>
         <div class="legend-body">
           <div class="legend-row"><svg class="legend-icon" viewBox="0 0 28 32"><rect x="2" y="14" width="24" height="14" fill="#10b981"/><rect x="7" y="5" width="4" height="10" fill="#10b981"/><rect x="17" y="5" width="4" height="10" fill="#10b981"/></svg><span>PNP · Nusantara Power</span></div>
@@ -4076,6 +4345,21 @@ html,body{
           <option value="PIP">PIP</option>
           <option value="UIW">UIW</option>
         </select>
+        <button class="compare-toggle" id="paretoCompareBtn" title="Compare 2 PLTU side-by-side">⇔ Compare</button>
+      </div>
+    </div>
+
+    <!-- V54: Comparison panel (hidden by default) -->
+    <div id="paretoComparePanel" style="display:none;padding:0 24px">
+      <div class="compare-container">
+        <div>
+          <select class="compare-select" id="compareSelA"><option value="">— Select PLTU A —</option></select>
+          <canvas id="compareChartA" style="margin-top:8px"></canvas>
+        </div>
+        <div>
+          <select class="compare-select" id="compareSelB"><option value="">— Select PLTU B —</option></select>
+          <canvas id="compareChartB" style="margin-top:8px"></canvas>
+        </div>
       </div>
     </div>
 
@@ -4304,9 +4588,12 @@ html,body{
 <div class="view" data-view="mou-timeline">
   <div class="real-view">
     <div class="real-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <div>
         <div class="real-title">Monitoring MoU · Timeline</div>
         <div class="real-title-sub">Tracking progress program kerja dan milestone MoU</div>
+        <div id="mouYearToggle" style="display:flex;align-items:center;gap:6px;margin-top:8px"></div>
+      </div>
       </div>
     </div>
     <div id="mouTimelineContent"></div>
@@ -4854,6 +5141,10 @@ function initMainMap(){
     attribution:'', subdomains:'abcd', maxZoom:12, minZoom:3, pane:'shadowPane',
   }).addTo(map);
   markerLayer = L.layerGroup().addTo(map);
+  // Prevent Leaflet from capturing click/touch on overlays inside map-area
+  document.querySelectorAll('.map-overlay, .sidebar-show-btn, .trends-panel, .trends-show-btn').forEach(el => {
+    if (el) L.DomEvent.disableClickPropagation(el);
+  });
 }
 
 function refreshMarkers(){
@@ -4953,6 +5244,23 @@ function updateKPIs(){
   document.getElementById('kpi-real-pct').textContent = target ? `${(real/target*100).toFixed(1)}% OF TARGET` : '—';
   document.getElementById('kpi-do').innerHTML = fmt(doSum) + '<span class="kpi-unit">ton</span>';
   document.getElementById('kpi-gap').innerHTML = fmt(gap) + '<span class="kpi-unit">ton</span>';
+  // V54: Animate KPI counters
+  if (typeof animateValue === 'function'){
+    [['kpi-target',target],['kpi-real',real],['kpi-do',doSum],['kpi-gap',gap]].forEach(([id,val])=>{
+      const el = document.getElementById(id);
+      if(el && val > 0){
+        const unit = '<span class="kpi-unit">ton</span>';
+        el.textContent = '0';
+        const start = performance.now();
+        (function step(now){
+          const p = Math.min((now-start)/700,1);
+          const ease = 1-Math.pow(1-p,3);
+          el.innerHTML = fmt(Math.round(val*ease)) + unit;
+          if(p<1) requestAnimationFrame(step);
+        })(start);
+      }
+    });
+  }
   // V51: GCV national display — dynamic per year
   const gcvEl = document.getElementById('kpi-gcv');
   if (gcvEl){
@@ -5408,10 +5716,6 @@ function selectPlant(code){
         plugins:{
           legend:{ display:true, position:'bottom', labels:{ color:'#64748b', font:{size:9, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:10, boxHeight:10, padding:6 } },
           tooltip:{
-            backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1',
-            borderColor:'#1e2a38', borderWidth:1, padding:10,
-            titleFont:{family:"'Plus Jakarta Sans', sans-serif", size:11},
-            bodyFont:{family:"'Plus Jakarta Sans', sans-serif", size:10},
             callbacks:{ label: (ctx) => ctx.dataset.label + ': ' + fmtInt(ctx.parsed.y) + ' ton' }
           }
         },
@@ -5531,7 +5835,7 @@ function drawTrend(){
       interaction:{ mode:'index', intersect:false },
       plugins:{
         legend:{ display:true, position:'bottom', labels:{ color:'#64748b', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:14, boxHeight:2, padding:10 } },
-        tooltip:{ backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1', borderColor:'#1e2a38', borderWidth:1, titleFont:{family:"'Plus Jakarta Sans', sans-serif", size:11}, bodyFont:{family:"'Plus Jakarta Sans', sans-serif", size:10} }
+        tooltip:{}
       },
       scales:{
         x:{ grid:{ display:false }, ticks:{ color:'#64748b', font:{size:9, family:"'Plus Jakarta Sans', sans-serif"} } },
@@ -5924,6 +6228,21 @@ function renderRealView(){
       ${delta}
     </div>`;
   }).join('');
+  // V54: Animate summary stat values
+  statsEl.querySelectorAll('.summary-stat-value').forEach((el,i) => {
+    const val = stats[i].value;
+    if(val > 0){
+      const unit = ' <span style="font-size:11px;color:var(--text-dim)">ton</span>';
+      el.textContent = '0';
+      const start = performance.now();
+      (function step(now){
+        const p = Math.min((now-start)/700,1);
+        const ease = 1-Math.pow(1-p,3);
+        el.innerHTML = fmt(Math.round(val*ease)) + unit;
+        if(p<1) requestAnimationFrame(step);
+      })(start);
+    }
+  });
 
   // Plugin: draw values above each line point (theme-aware, color matches dataset)
   const trendValuesPlugin = {
@@ -5969,7 +6288,7 @@ function renderRealView(){
       layout:{ padding:{ top: 14 } },
       plugins:{
         legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:11, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:16, boxHeight:2, padding:16 } },
-        tooltip:{ backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1', borderColor:'#1e2a38', borderWidth:1, padding:12, titleFont:{family:"'Plus Jakarta Sans', sans-serif", size:11}, bodyFont:{family:"'Plus Jakarta Sans', sans-serif", size:11}, callbacks:{ label: c => c.dataset.label + ': ' + fmtInt(c.parsed.y) + ' ton' } }
+        tooltip:{ callbacks:{ label: c => c.dataset.label + ': ' + fmtInt(c.parsed.y) + ' ton' } }
       },
       scales:{
         x:{ grid:{ color:'#1a2530',drawBorder:false }, ticks:{ color:'#64748b', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"} } },
@@ -6022,7 +6341,7 @@ function renderRealView(){
       layout:{ padding:{ top: 22 } },
       plugins:{
         legend:{ display:false },
-        tooltip:{ backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1', borderColor:'#1e2a38', borderWidth:1, padding:10, titleFont:{family:"'Plus Jakarta Sans', sans-serif", size:11}, bodyFont:{family:"'Plus Jakarta Sans', sans-serif", size:11}, callbacks:{ label: c => fmtInt(c.parsed.y) + ' ton' } }
+        tooltip:{ callbacks:{ label: c => fmtInt(c.parsed.y) + ' ton' } }
       },
       scales:{
         x:{ grid:{ display:false }, ticks:{ color:'#cbd5e1', font:{size:11, family:"'Plus Jakarta Sans', sans-serif"} } },
@@ -6084,7 +6403,7 @@ function renderRealView(){
         layout: { padding: { right: showValues ? 70 : 12 } },
         plugins:{
           legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:14, boxHeight:2, padding:12 } },
-          tooltip:{ backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1', borderColor:'#1e2a38', borderWidth:1, padding:10, callbacks:{ label: c => `${c.dataset.label}: ${fmtInt(c.parsed.y)} ton` } }
+          tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${fmtInt(c.parsed.y)} ton` } }
         },
         scales:{
           x:{ grid:{ display:false }, ticks:{ color:'#64748b', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"} } },
@@ -6185,8 +6504,6 @@ function renderRealView(){
         plugins:{
           legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:12, boxHeight:12, padding:12 } },
           tooltip:{
-            backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1',
-            borderColor:'#1e2a38', borderWidth:1, padding:10,
             callbacks:{
               label: c => `${c.dataset.label}: ${fmtInt(c.parsed.x)} ton`,
               afterBody: (items) => {
@@ -6293,7 +6610,7 @@ function renderRealView(){
         responsive:true, maintainAspectRatio:false,
         plugins:{
           legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:12, boxHeight:12, padding:14 } },
-          tooltip:{ backgroundColor:'#0d141c', titleColor:'#f1f5f9', bodyColor:'#cbd5e1', borderColor:'#1e2a38', borderWidth:1, padding:10, callbacks:{ label: c => `${c.dataset.label}: ${fmtInt(c.parsed.y)} ton` } }
+          tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${fmtInt(c.parsed.y)} ton` } }
         },
         scales:{
           x:{ stacked:true, grid:{ display:false }, ticks:{ color:'#cbd5e1', font:{size:11, family:"'Plus Jakarta Sans', sans-serif"} } },
@@ -7208,6 +7525,25 @@ function renderParetoKpis(){
     card('Achievement', achievement.toFixed(1) + '%', '', achievement >= 100 ? 'Surplus' : (achievement >= 80 ? 'On track' : 'Under target'),
          achievement >= 100 ? '#10b981' : achievement >= 80 ? '#f59e0b' : '#ef4444'),
   ].join('');
+  // V54: Animate pareto KPI values
+  const numericVals = [agg.target, agg.real, agg.loss, achievement];
+  gridEl.querySelectorAll('.pareto-kpi-value').forEach((el,i) => {
+    const val = numericVals[i];
+    if(!val || val <= 0) return;
+    const origHTML = el.innerHTML;
+    const unitSpan = el.querySelector('.pareto-kpi-unit');
+    const unitHTML = unitSpan ? unitSpan.outerHTML : '';
+    const isPercent = i === 3;
+    el.textContent = '0';
+    const start = performance.now();
+    (function step(now){
+      const p = Math.min((now-start)/700,1);
+      const ease = 1-Math.pow(1-p,3);
+      const cur = val * ease;
+      el.innerHTML = (isPercent ? cur.toFixed(1)+'%' : fmtK(Math.round(cur))) + unitHTML;
+      if(p<1) requestAnimationFrame(step);
+    })(start);
+  });
 }
 
 // =====================================================
@@ -7340,11 +7676,6 @@ function renderParetoMainChart(){
       plugins: {
         legend: { labels: { color: textColor, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }, boxWidth: 12 } },
         tooltip: {
-          backgroundColor: isLightTheme ? '#FFFFFF' : '#0d141c',
-          titleColor: isLightTheme ? '#0f172a' : '#f1f5f9',
-          bodyColor: isLightTheme ? '#475569' : '#cbd5e1',
-          borderColor: isLightTheme ? '#e2e8f0' : '#1e2a38',
-          borderWidth: 1, padding: 10,
           callbacks: {
             title: items => {
               const code = sorted[items[0].dataIndex][0];
@@ -7670,6 +8001,23 @@ let usulanInit = false;
 let updateInit = false;
 let pembangkitInit = false;
 function switchTab(tab){
+  // V53: Identity gate for Update Data — check BEFORE view switch
+  if (tab === 'update'){
+    let userName = getUserName();
+    if (!userName || UPDATE_ADMIN_NAMES.indexOf(userName) < 0){
+      const input = window.prompt(
+        'Masukkan nama Anda untuk mengakses Update Data:\n\nHanya user yang telah terdaftar yang dapat mengakses.',
+        userName || ''
+      );
+      if (!input || !input.trim()) return; // cancelled — don't switch
+      const trimmed = input.trim();
+      if (UPDATE_ADMIN_NAMES.indexOf(trimmed) < 0){
+        alert('Nama "' + trimmed + '" tidak terdaftar.\n\nSilakan hubungi admin untuk mendapatkan akses.');
+        return; // denied — don't switch
+      }
+      setUserName(trimmed);
+    }
+  }
   state.tab = tab;
   document.querySelectorAll('.tab').forEach(b => {
     const isActive = b.dataset.tab === tab;
@@ -7690,14 +8038,28 @@ function switchTab(tab){
   if (topbarCalBtn) topbarCalBtn.classList.toggle('active', tab === 'calendar');
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === tab));
 
+  // V54: Show skeleton loading for tabs that haven't been initialized yet
+  if (tab === 'realisasi' && !realCharts.trend){
+    const rs = document.getElementById('real-summary');
+    if (rs) rs.innerHTML = skeletonHTML('cards');
+  }
+  if (tab === 'pareto' && !paretoCharts.main){
+    const pk = document.getElementById('paretoKpiGrid');
+    if (pk) pk.innerHTML = skeletonHTML('cards');
+  }
+  if (tab === 'kontrak' && !kontrakInit){
+    const kt = document.getElementById('kontrakTableWrap');
+    if (kt && !kt.innerHTML.trim()) kt.innerHTML = skeletonHTML('table');
+  }
+
   // Lazy init - MUST happen after view becomes visible so maps get proper dimensions
   if (tab === 'realisasi' && !realCharts.trend){
-    renderRealView();
-    // V46: Pie chart jenis biomassa moved here from Daftar Kontrak
-    wireKontrakJenisYearSel();
-    renderKontrakJenisPie();
-    // V47: Insights content moved here from standalone tab
-    if (typeof renderInsightsView === 'function') renderInsightsView();
+    setTimeout(() => {
+      renderRealView();
+      wireKontrakJenisYearSel();
+      renderKontrakJenisPie();
+      if (typeof renderInsightsView === 'function') renderInsightsView();
+    }, 30);
   }
   if (tab === 'rekap' && !rekapInit){
     buildRealFilters();
@@ -7736,7 +8098,6 @@ function switchTab(tab){
   if (tab === 'update'){
     try {
       bootUpdateTab();
-      // Always re-check auth on tab open (user might have changed name)
       if (!updateInit){
         wireUpdateTab();
         updateInit = true;
@@ -7797,7 +8158,7 @@ function switchTab(tab){
       }
     }));
   }
-  if (tab === 'pareto' && !paretoCharts.pareto) renderParetoView();
+  if (tab === 'pareto' && !paretoCharts.main) setTimeout(() => renderParetoView(), 30);
   // V47: Insights tab removed — content now inside realisasi tab.
   // Rendering handled above when realisasi tab opens.
   if (tab === 'berita'){
@@ -10709,6 +11070,11 @@ function initPembangkitMap(){
   L.tileLayer(baseUrl, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 12, minZoom: 3 }).addTo(pembangkitMap);
   L.tileLayer(labelsUrl, { attribution: '', subdomains: 'abcd', maxZoom: 12, minZoom: 3, pane: 'shadowPane' }).addTo(pembangkitMap);
   pembangkitMarkerLayer = L.layerGroup().addTo(pembangkitMap);
+  // Prevent Leaflet from capturing click/touch on overlays
+  const pembView = document.querySelector('.view[data-view="pembangkit"]');
+  if (pembView) pembView.querySelectorAll('.map-overlay, .sidebar-show-btn').forEach(el => {
+    L.DomEvent.disableClickPropagation(el);
+  });
   // Ensure map size is correctly computed after init (in case container was just made visible)
   setTimeout(() => { try { pembangkitMap.invalidateSize(); pembangkitMap.fitBounds(INDONESIA_BOUNDS); } catch(e){} }, 100);
 }
@@ -11077,13 +11443,28 @@ function buildFasilitasIconHtml(facility, selected){
   const isUS = facility.status === 'understudy';
   const isUSG = facility.status === 'understudy-green';
   const color = isOp ? 'var(--accent)' : isUC ? '#f59e0b' : isUSG ? '#10b981' : isUS ? '#8b5cf6' : '#64748b';
-  const ring = selected ? '0 0 0 4px rgba(255,199,44,0.35), 0 0 0 6px rgba(255,255,255,0.85)' : '0 2px 6px rgba(0,0,0,0.35)';
+  const resolvedColor = isOp ? '#0F496E' : isUC ? '#f59e0b' : isUSG ? '#10b981' : isUS ? '#8b5cf6' : '#64748b';
+  // V54: Fasilitas produksi icon (warehouse/production facility) for operational
   const iconSvg = isOp
-    ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"><path d="M3 21V9l6-4v4l6-4v4l6-4v16zM8 21v-5M14 21v-5"/></svg>'
+    ? '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="M2 20V10l5-3.5L12 10l5-3.5L22 10v10z" fill="' + resolvedColor + '" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/>'
+      + '<path d="M6 20v-4h3v4" stroke="#1a1a1a" stroke-width="0.8" fill="rgba(255,255,255,.35)"/>'
+      + '<path d="M11 20v-5h4v5" stroke="#1a1a1a" stroke-width="0.8" fill="rgba(255,255,255,.35)"/>'
+      + '<path d="M18 14.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0" fill="rgba(255,255,255,.5)"/>'
+      + '<path d="M2 20h20" stroke="#1a1a1a" stroke-width="1.2"/>'
+      + '</svg>'
     : (isUC
-    ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"><path d="M4 19h16L12 4z"/><path d="M12 10v4M12 16v.5"/></svg>'
-    : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"><circle cx="10" cy="10" r="6"/><path d="M14.5 14.5L20 20"/><path d="M10 7v6M7 10h6"/></svg>');
-  return '<div class="fasilitas-marker' + (selected ? ' selected' : '') + '" style="background:' + color + ';box-shadow:' + ring + '">'
+    ? '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="M4 19h16L12 5z" fill="' + resolvedColor + '" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/>'
+      + '<path d="M12 10.5v3.5" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/>'
+      + '<circle cx="12" cy="16" r="0.8" fill="#1a1a1a"/>'
+      + '</svg>'
+    : '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
+      + '<circle cx="10.5" cy="10.5" r="5.5" fill="' + resolvedColor + '" stroke="#1a1a1a" stroke-width="1.2"/>'
+      + '<path d="M15 15l4.5 4.5" stroke="#1a1a1a" stroke-width="1.8" stroke-linecap="round"/>'
+      + '<path d="M10.5 8v5M8 10.5h5" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>'
+      + '</svg>');
+  return '<div class="fasilitas-marker' + (selected ? ' selected' : '') + '" style="color:' + resolvedColor + '">'
     + iconSvg + '</div>';
 }
 
@@ -11906,12 +12287,39 @@ function renderMouTimeline(){
     if (m) prefixes.add(m[1].toUpperCase());
     else if (g.name.toUpperCase().includes('INTERNAL')) prefixes.add('INTERNAL');
   }
-  let filterHtml = '<div class="mou-filter-bar">';
+  let filterHtml = '<div class="mou-filter-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">';
   for (const p of prefixes){
     const isActive = (mouState.groupFilter || 'ALL') === p;
     filterHtml += '<button class="mou-filter-btn' + (isActive ? ' active' : '') + '" data-prefix="' + p + '">' + p + '</button>';
   }
   filterHtml += '</div>';
+
+  // V54: Render year toggle into header area
+  const yearToggleEl = document.getElementById('mouYearToggle');
+  if (yearToggleEl){
+    const show25 = mouState.yearStart <= 2025 && mouState.yearEnd >= 2025;
+    const show26 = mouState.yearStart <= 2026 && mouState.yearEnd >= 2026;
+    yearToggleEl.innerHTML = '<span style="font-size:9px;font-weight:700;color:var(--text-dim);letter-spacing:.5px">TAHUN:</span>' +
+      '<button class="mou-filter-btn mou-year-btn' + (show25 ? ' active' : '') + '" data-year="2025">2025</button>' +
+      '<button class="mou-filter-btn mou-year-btn' + (show26 ? ' active' : '') + '" data-year="2026">2026</button>';
+    yearToggleEl.querySelectorAll('.mou-year-btn').forEach(btn => {
+      btn.onclick = () => {
+        const yr = parseInt(btn.dataset.year);
+        const other = yr === 2025 ? 2026 : 2025;
+        const isOn = btn.classList.contains('active');
+        if (isOn){
+          const otherBtn = yearToggleEl.querySelector('.mou-year-btn[data-year="' + other + '"]');
+          if (!otherBtn || !otherBtn.classList.contains('active')) return;
+          mouState.yearStart = other;
+          mouState.yearEnd = other;
+        } else {
+          mouState.yearStart = Math.min(yr, mouState.yearStart);
+          mouState.yearEnd = Math.max(yr, mouState.yearEnd);
+        }
+        renderMouTimeline();
+      };
+    });
+  }
 
   // Filter groups
   const activeFilter = mouState.groupFilter || 'ALL';
@@ -11937,12 +12345,15 @@ function renderMouTimeline(){
     const isInternalEvent = g.name.toUpperCase().includes('INTERNAL EVENT') || g.name.toUpperCase().replace(/[\s]+/g,'').includes('MOU-NDA') || g.name.toUpperCase().includes('MOu-NDA') || g.name.toUpperCase().includes('MOU - NDA');
     if (isInternalEvent) _pastInternalEvent = true;
     const grpStyle = isInternalEvent ? 'background:#4b5563 !important' : (_pastInternalEvent ? '' : '');
-    const nameColor = _pastInternalEvent && !isInternalEvent ? 'color:#228B22' : '';
+    const nameColor = _pastInternalEvent && !isInternalEvent ? 'color:#0047AB' : '';
     const nameColorWhite = isInternalEvent ? 'color:white' : '';
     html += '<tr class="mou-grp-row" data-gid="' + g.id + '" style="' + grpStyle + '"><td colspan="' + totalCols + '" class="mou-fr" style="' + grpStyle + '">';
     html += '<span class="mou-grp-arrow" data-gid="' + g.id + '">&#x25B8;</span> ';
     html += '<span class="mou-grp-name" style="' + nameColor + nameColorWhite + '">' + escapeHtml(g.name) + '</span>';
-    html += ' <span class="mou-grp-badge">' + doneCount + '/' + (hasTasks ? g.tasks.length : 0) + ' (' + pct + '%)</span>';
+    // V54: Hide badge and add link for INTERNAL EVENT / MOU-NDA
+    if (!isInternalEvent){
+      html += ' <span class="mou-grp-badge">' + doneCount + '/' + (hasTasks ? g.tasks.length : 0) + ' (' + pct + '%)</span>';
+    }
     // V52.1: Drive link buttons — inline in group row
     const gLink = g.driveLink || '';
     if (gLink){
@@ -11951,7 +12362,7 @@ function renderMouTimeline(){
       html += '<button class="mou-link-pill edit" data-gid="' + g.id + '" title="Edit link"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 2l3 3L5 14H2v-3z"/></svg> Edit</button>';
       html += '<button class="mou-link-pill hapus" data-gid="' + g.id + '" title="Hapus link">× Hapus</button>';
       html += '</span>';
-    } else {
+    } else if (!isInternalEvent){
       html += ' <button class="mou-link-pill add" data-gid="' + g.id + '" title="Tambah link"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v10M3 8h10"/></svg> Add Link</button>';
     }
     html += '</td></tr>';
@@ -13217,6 +13628,9 @@ window.addEventListener('DOMContentLoaded', () => {
   refreshMarkers();
   updateKPIs();
   drawTrend();
+  // V54: Safety invalidateSize after mobile grid settles
+  setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+  setTimeout(() => { if (map) map.invalidateSize(); }, 500);
 
   document.querySelectorAll('.trends-toggle button').forEach(b => {
     b.onclick = () => {
@@ -13275,12 +13689,21 @@ window.addEventListener('DOMContentLoaded', () => {
   // Legend (Genco Color Code) collapse toggle
   const legendCollapseBtn = document.getElementById('legendCollapseBtn');
   if (legendCollapseBtn){
-    legendCollapseBtn.onclick = () => {
+    const toggleLegend = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
       const legend = document.querySelector('.legend');
       legend.classList.toggle('collapsed');
       legendCollapseBtn.textContent = legend.classList.contains('collapsed') ? '▼' : '▲';
     };
+    legendCollapseBtn.onclick = toggleLegend;
+    legendCollapseBtn.addEventListener('touchend', toggleLegend, {passive:false});
   }
+  // Prevent legend clicks from propagating to Leaflet map
+  document.querySelectorAll('.legend').forEach(el => {
+    el.addEventListener('click', e => e.stopPropagation());
+    el.addEventListener('touchstart', e => e.stopPropagation(), {passive:true});
+  });
 
   // Map Overview period filters (month + year)
   const mapMonthSel = document.getElementById('map-month-filter');
@@ -13391,29 +13814,48 @@ window.addEventListener('DOMContentLoaded', () => {
   const sidebarShowBtn = document.getElementById('sidebarShowBtn');
   if (sidebarCollapseBtn){
     sidebarCollapseBtn.onclick = () => {
-      document.querySelector('.map-view').classList.add('sidebar-collapsed');
+      const isMobile = window.matchMedia('(max-width:768px)').matches;
+      if (isMobile){
+        const activeView = document.querySelector('.view.active');
+        const sb = activeView ? activeView.querySelector('.sidebar') : document.querySelector('.sidebar');
+        if (sb) sb.classList.remove('mobile-open');
+        const backdrop = document.getElementById('mobileBackdrop');
+        if (backdrop) backdrop.classList.remove('show');
+        // Restore legend
+        const lg = document.querySelector('.legend');
+        if (lg) lg.style.display = '';
+      } else {
+        document.querySelector('.map-view').classList.add('sidebar-collapsed');
+      }
       setTimeout(() => { if (map) map.invalidateSize(); }, 260);
     };
   }
   if (sidebarShowBtn){
-    sidebarShowBtn.onclick = () => {
+    const openSidebar = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
       // Desktop: un-collapse sidebar.
       const mv = document.querySelector('.map-view');
       if (mv) mv.classList.remove('sidebar-collapsed');
       // Mobile (≤768px): open the sidebar drawer.
-      // We detect mobile via media query rather than viewport width to stay
-      // in sync with the CSS rules that style the drawer.
       const isMobile = window.matchMedia('(max-width:768px)').matches;
       if (isMobile){
-        const sb = getActiveSidebar ? getActiveSidebar() : document.querySelector('.sidebar');
+        // Find sidebar in the currently active view
+        const activeView = document.querySelector('.view.active');
+        const sb = activeView ? activeView.querySelector('.sidebar') : document.querySelector('.sidebar');
         if (sb){
           sb.classList.add('mobile-open');
           const backdrop = document.getElementById('mobileBackdrop');
           if (backdrop) backdrop.classList.add('show');
         }
+        // Hide legend so it doesn't overlap sidebar
+        const lg = document.querySelector('.legend');
+        if (lg) lg.style.display = 'none';
       }
       setTimeout(() => { if (map) map.invalidateSize(); }, 260);
     };
+    sidebarShowBtn.onclick = openSidebar;
+    sidebarShowBtn.addEventListener('touchend', openSidebar, {passive:false});
   }
 
   // ========= THEME TOGGLE =========
@@ -13491,6 +13933,22 @@ window.addEventListener('DOMContentLoaded', () => {
     if (Chart.defaults.plugins && Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels) {
       Chart.defaults.plugins.legend.labels.color = textColor;
     }
+    // V54: Global tooltip styling
+    const tooltipBg = isLightBg ? 'rgba(15,73,110,.95)' : 'rgba(15,20,28,.95)';
+    const tooltipBorder = isLightBg ? '#0F496E' : '#1e2a38';
+    Object.assign(Chart.defaults.plugins.tooltip, {
+      backgroundColor: tooltipBg,
+      titleColor: '#f1f5f9',
+      bodyColor: '#e2e8f0',
+      borderColor: tooltipBorder,
+      borderWidth: 1,
+      padding: 12,
+      cornerRadius: 8,
+      titleFont: { family: "'Plus Jakarta Sans',sans-serif", size: 12, weight: '700' },
+      bodyFont: { family: "'Plus Jakarta Sans',sans-serif", size: 11 },
+      displayColors: true,
+      boxPadding: 4,
+    });
   }
   // Apply initial theme to Chart.js defaults before any charts render
   applyChartThemeDefaults(initialTheme);
@@ -13544,6 +14002,9 @@ window.addEventListener('DOMContentLoaded', () => {
   function closeMobileSidebar(){
     document.querySelectorAll('.sidebar').forEach(s => s.classList.remove('mobile-open'));
     mobileBackdrop?.classList.remove('show');
+    // Restore legend visibility
+    const lg = document.querySelector('.legend');
+    if (lg) lg.style.display = '';
   }
   if (mobileBackdrop){
     mobileBackdrop.onclick = closeMobileSidebar;
@@ -14780,6 +15241,344 @@ function formatTimeAgo(date){
   return date.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
 }
 
+
+// ===== V54: DESIGN SYSTEM ENHANCEMENTS JS =====
+
+// --- Animated Number Counters ---
+function animateValue(el, end, duration, suffix){
+  if (!el || isNaN(end)) return;
+  suffix = suffix || '';
+  const start = 0;
+  const startTime = performance.now();
+  const dur = duration || 600;
+  function step(now){
+    const progress = Math.min((now - startTime) / dur, 1);
+    const ease = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+    const current = Math.round(start + (end - start) * ease);
+    el.textContent = fmtInt(current) + suffix;
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+function animateKpiValues(){
+  const ids = ['kpi-target','kpi-real','kpi-do','kpi-gap'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const raw = el.textContent.replace(/[^0-9.-]/g, '');
+    const num = parseFloat(raw);
+    if (!isNaN(num) && num > 0){
+      const unit = el.querySelector('.kpi-unit');
+      const unitText = unit ? unit.textContent : '';
+      animateValue(el, num, 700, '');
+      // Re-add unit after animation
+      setTimeout(() => {
+        el.innerHTML = fmtInt(num) + (unitText ? '<span class="kpi-unit">' + unitText + '</span>' : '');
+      }, 720);
+    }
+  });
+}
+// Hook into updateMapKPI
+const _origUpdateMapKPI = typeof updateMapKPI === 'function' ? updateMapKPI : null;
+
+// --- Notification Bell System ---
+const notifState = { items: [], unread: 0 };
+function notifAdd(title, desc, type){
+  notifState.items.unshift({ title, desc, type: type||'info', time: new Date(), read: false });
+  if (notifState.items.length > 20) notifState.items.pop();
+  notifState.unread = notifState.items.filter(n => !n.read).length;
+  notifRender();
+}
+function notifRender(){
+  const badge = document.getElementById('notifBadge');
+  const list = document.getElementById('notifList');
+  if (badge) badge.textContent = notifState.unread > 0 ? notifState.unread : '';
+  if (!list) return;
+  if (notifState.items.length === 0){
+    list.innerHTML = '<div class="empty-state" style="padding:24px"><div class="empty-state-icon">🔔</div><div class="empty-state-desc">No notifications yet</div></div>';
+    return;
+  }
+  list.innerHTML = notifState.items.map((n,i) => {
+    const ago = formatTimeAgo(n.time);
+    return '<div class="notif-item' + (n.read ? '' : ' unread') + '" data-idx="' + i + '">' +
+      '<div class="notif-item-title">' + n.title + '</div>' +
+      '<div class="notif-item-desc">' + n.desc + '</div>' +
+      '<div class="notif-item-time">' + ago + '</div></div>';
+  }).join('');
+  list.querySelectorAll('.notif-item').forEach(item => {
+    item.onclick = () => {
+      const idx = parseInt(item.dataset.idx);
+      notifState.items[idx].read = true;
+      notifState.unread = notifState.items.filter(n => !n.read).length;
+      notifRender();
+    };
+  });
+}
+(function initNotifBell(){
+  const btn = document.getElementById('notifBtn');
+  const dd = document.getElementById('notifDropdown');
+  const clearBtn = document.getElementById('notifClearBtn');
+  if (btn && dd){
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      dd.classList.toggle('open');
+    };
+    document.addEventListener('click', (e) => {
+      if (!dd.contains(e.target) && e.target !== btn) dd.classList.remove('open');
+    });
+  }
+  if (clearBtn){
+    clearBtn.onclick = () => {
+      notifState.items = [];
+      notifState.unread = 0;
+      notifRender();
+    };
+  }
+  // Generate initial notifications from data context
+  notifAdd('Dashboard Ready', 'All data loaded successfully', 'info');
+  // Listen for Supabase realtime changes — deferred to DOMContentLoaded
+  window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      if (typeof supabaseClient !== 'undefined' && supabaseClient){
+        try {
+          supabaseClient.channel('v54-notif')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'upload_log' }, payload => {
+              const rec = payload.new || {};
+              notifAdd('Data Updated', (rec.uploaded_by || 'Someone') + ' uploaded new data', 'upload');
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, payload => {
+              const rec = payload.new || {};
+              notifAdd('Calendar Event', (rec.title || 'New event') + ' on ' + (rec.date || ''), 'calendar');
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'mou_data' }, payload => {
+              notifAdd('MoU Updated', 'Timeline data has been updated', 'mou');
+            })
+            .subscribe();
+        } catch(e){ console.warn('Notif subscribe failed:', e); }
+      }
+    }, 2000); // wait for initSupabase() to complete
+  });
+  notifRender();
+})();
+
+// --- Comparison Mode (Pareto) ---
+const compareState = { active: false, chartA: null, chartB: null };
+(function initCompareMode(){
+  const btn = document.getElementById('paretoCompareBtn');
+  const panel = document.getElementById('paretoComparePanel');
+  if (!btn || !panel) return;
+  btn.onclick = () => {
+    compareState.active = !compareState.active;
+    btn.classList.toggle('active', compareState.active);
+    panel.style.display = compareState.active ? 'block' : 'none';
+    if (compareState.active) populateCompareSelects();
+  };
+  const selA = document.getElementById('compareSelA');
+  const selB = document.getElementById('compareSelB');
+  if (selA) selA.onchange = () => renderCompareChart('A');
+  if (selB) selB.onchange = () => renderCompareChart('B');
+})();
+function populateCompareSelects(){
+  const plants = (DATA && DATA.pareto && DATA.pareto.plants) ? DATA.pareto.plants : [];
+  ['compareSelA','compareSelB'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— Select PLTU —</option>' +
+      plants.map(p => '<option value="' + p.pltu + '">' + p.pltu + ' (' + p.company + ')</option>').join('');
+    if (cur) sel.value = cur;
+  });
+}
+function renderCompareChart(side){
+  const sel = document.getElementById('compareSel' + side);
+  const canvas = document.getElementById('compareChart' + side);
+  if (!sel || !canvas) return;
+  const key = 'chart' + side;
+  if (compareState[key]) { compareState[key].destroy(); compareState[key] = null; }
+  const pltuName = sel.value;
+  if (!pltuName) return;
+  const plants = DATA.pareto.plants;
+  const p = plants.find(x => x.pltu === pltuName);
+  if (!p || !p.monthly) return;
+  const labels = p.monthly.map(m => m.month);
+  const targets = p.monthly.map(m => m.target || 0);
+  const reals = p.monthly.map(m => m.real || 0);
+  compareState[key] = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Target', data: targets, backgroundColor: 'rgba(15,73,110,.25)', borderColor: '#0F496E', borderWidth: 1 },
+        { label: 'Realisasi', data: reals, backgroundColor: 'rgba(16,185,129,.4)', borderColor: '#10b981', borderWidth: 1 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: pltuName, font: { family: "'Plus Jakarta Sans',sans-serif", size: 13, weight: 700 }, color: getComputedStyle(document.documentElement).getPropertyValue('--text-bright').trim() },
+        tooltip: chartTooltipDefaults(),
+        legend: { labels: { font: { family: "'Plus Jakarta Sans',sans-serif", size: 10 } } }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { font: { family: "'Plus Jakarta Sans',sans-serif", size: 9 } }, grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--grid').trim() } },
+        x: { ticks: { font: { family: "'Plus Jakarta Sans',sans-serif", size: 9 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// --- Chart Tooltip Defaults ---
+function chartTooltipDefaults(){
+  return {
+    backgroundColor: 'rgba(15,20,28,.95)',
+    titleColor: '#f1f5f9',
+    bodyColor: '#cbd5e1',
+    borderColor: '#1e2a38',
+    borderWidth: 1,
+    padding: 12,
+    cornerRadius: 8,
+    titleFont: { family: "'Plus Jakarta Sans',sans-serif", size: 12, weight: 700 },
+    bodyFont: { family: "'Plus Jakarta Sans',sans-serif", size: 11 },
+    displayColors: true,
+    boxPadding: 4,
+    callbacks: {
+      label: function(ctx){
+        const val = ctx.parsed.y != null ? fmtInt(ctx.parsed.y) : ctx.formattedValue;
+        const label = ctx.dataset.label || '';
+        return ' ' + label + ': ' + val + ' ton';
+      }
+    }
+  };
+}
+
+// --- Keyboard Shortcuts ---
+document.addEventListener('keydown', function(e){
+  // Don't intercept when typing in input/textarea/select
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const key = e.key;
+  const shortcuts = {
+    '1': 'map', '2': 'realisasi', '3': 'bottleneck', '4': 'pareto',
+    '5': 'kontrak', '6': 'mou-timeline', '7': 'usulan', '8': 'berita'
+  };
+  if (shortcuts[key]){
+    e.preventDefault();
+    switchTab(shortcuts[key]);
+  }
+  if (key === '/' || key === 's'){
+    e.preventDefault();
+    const search = document.querySelector('.view.active .search-bar input') || document.getElementById('beritaSearchInput');
+    if (search) search.focus();
+  }
+  if (key === 'Escape'){
+    // Close any open panels/modals
+    document.querySelectorAll('.sidebar.mobile-open').forEach(s => s.classList.remove('mobile-open'));
+    const backdrop = document.getElementById('mobileBackdrop');
+    if (backdrop) backdrop.classList.remove('show');
+    const notifDd = document.getElementById('notifDropdown');
+    if (notifDd) notifDd.classList.remove('open');
+    mobCloseMore();
+    // Restore legend
+    const lg = document.querySelector('.legend');
+    if (lg) lg.style.display = '';
+  }
+});
+
+// --- Mobile Bottom Navigation ---
+function mobNav(tab){
+  mobCloseMore();
+  switchTab(tab);
+  // Update active state
+  document.querySelectorAll('.mobile-nav-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.mobTab === tab);
+  });
+  // If tab is in "More" menu, highlight the More button
+  const moreTabs1 = ['pareto','mou-timeline','usulan','berita','pembangkit','fasilitas'];
+  if (moreTabs1.includes(tab)){
+    document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
+    const moreBtn = document.querySelector('[data-mob-tab="more"]');
+    if (moreBtn) moreBtn.classList.add('active');
+    // Highlight in more menu
+    document.querySelectorAll('.mobile-more-item').forEach(item => {
+      item.classList.toggle('active', item.textContent.trim().toLowerCase().includes(tab.replace('-timeline','').replace('mou','mou')));
+    });
+  }
+}
+function mobToggleMore(){
+  const menu = document.getElementById('mobMoreMenu');
+  const bd = document.getElementById('mobMoreBackdrop');
+  if (menu) menu.classList.toggle('open');
+  if (bd) bd.classList.toggle('open');
+}
+function mobCloseMore(){
+  const menu = document.getElementById('mobMoreMenu');
+  const bd = document.getElementById('mobMoreBackdrop');
+  if (menu) menu.classList.remove('open');
+  if (bd) bd.classList.remove('open');
+}
+
+// Sync mobile nav with desktop tab switches
+const _origSwitchTab = switchTab;
+const _mobSyncTimeout = { t: null };
+window.addEventListener('DOMContentLoaded', () => {
+  // Observe tab changes and sync mobile nav
+  const observer = new MutationObserver(() => {
+    clearTimeout(_mobSyncTimeout.t);
+    _mobSyncTimeout.t = setTimeout(() => {
+      const active = document.querySelector('.view.active');
+      if (!active) return;
+      const tab = active.dataset.view;
+      document.querySelectorAll('.mobile-nav-item').forEach(b => {
+        const t = b.dataset.mobTab;
+        if (t === 'more') return;
+        b.classList.toggle('active', t === tab);
+      });
+      const moreTabs2 = ['pareto','mou-timeline','usulan','berita','pembangkit','fasilitas'];
+      if (moreTabs2.includes(tab)){
+        document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
+        const moreBtn = document.querySelector('[data-mob-tab="more"]');
+        if (moreBtn) moreBtn.classList.add('active');
+      }
+    }, 100);
+  });
+  const shell = document.querySelector('.shell');
+  if (shell) observer.observe(shell, { subtree: true, attributes: true, attributeFilter: ['class'] });
+});
+
+// --- Empty State Helper ---
+function emptyStateHTML(icon, title, desc){
+  return '<div class="empty-state"><div class="empty-state-icon">' + icon + '</div>' +
+    '<div class="empty-state-title">' + title + '</div>' +
+    '<div class="empty-state-desc">' + desc + '</div></div>';
+}
+
+// --- Skeleton Loading Helper ---
+function skeletonHTML(type){
+  if (type === 'cards'){
+    return '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">' +
+      '<div class="skeleton skeleton-card"></div>'.repeat(4) + '</div>';
+  }
+  if (type === 'chart'){
+    return '<div class="skeleton skeleton-chart"></div>';
+  }
+  if (type === 'table'){
+    return '<div style="padding:12px">' +
+      '<div class="skeleton skeleton-line w80"></div>'.repeat(6) + '</div>';
+  }
+  return '<div class="skeleton skeleton-line w60"></div>';
+}
+
+// Show skeleton on first load for key containers
+window.addEventListener('DOMContentLoaded', () => {
+  const realSummary = document.getElementById('real-summary');
+  if (realSummary && !realSummary.innerHTML.trim()){
+    realSummary.innerHTML = skeletonHTML('cards');
+  }
+  const paretoKpi = document.getElementById('paretoKpiGrid');
+  if (paretoKpi && !paretoKpi.innerHTML.trim()){
+    paretoKpi.innerHTML = skeletonHTML('cards');
+  }
+});
 
 
 
