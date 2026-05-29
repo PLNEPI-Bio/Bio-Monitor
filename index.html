@@ -1756,30 +1756,6 @@ html,body{
 .kontrak-pemasok-link{color:var(--accent);text-decoration:none;font-weight:500;transition:opacity .1s}
 .kontrak-pemasok-link:hover{opacity:.7;text-decoration:underline}
 
-/* V54: Kontrak search bar */
-.kontrak-search-wrap{
-  position:relative;margin-bottom:14px;display:flex;align-items:center;
-}
-.kontrak-search-icon{
-  position:absolute;left:14px;width:15px;height:15px;color:var(--text-dim);pointer-events:none;
-}
-.kontrak-search-input{
-  width:100%;box-sizing:border-box;background:var(--panel);
-  border:1px solid var(--border);border-radius:8px;
-  padding:11px 40px;color:var(--text-bright);
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;outline:none;
-  transition:border-color .15s;
-}
-.kontrak-search-input:focus{border-color:var(--accent)}
-.kontrak-search-input::placeholder{color:var(--text-dim)}
-.kontrak-search-clear{
-  position:absolute;right:10px;background:var(--panel-3);border:none;
-  color:var(--text-dim);cursor:pointer;width:24px;height:24px;border-radius:50%;
-  font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;
-  transition:all .12s;
-}
-.kontrak-search-clear:hover{color:var(--danger);background:rgba(239,68,68,.1)}
-
 /* V54: Autofit table to screen width */
 .view[data-view="kontrak"] .kontrak-table{table-layout:auto;width:100%}
 .view[data-view="kontrak"] .kontrak-table-wrap{width:100%;max-width:100%}
@@ -4694,13 +4670,6 @@ html,body{
       <!-- Summary card: aggregates for currently displayed contracts -->
       <div class="kontrak-summary" id="kontrak-summary"></div>
 
-      <!-- V54: Search bar -->
-      <div class="kontrak-search-wrap">
-        <svg class="kontrak-search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M11 11l4 4"/></svg>
-        <input type="text" id="kontrak-search" class="kontrak-search-input" placeholder="Cari nama mitra atau nomor kontrak..." autocomplete="off">
-        <button class="kontrak-search-clear" id="kontrak-search-clear" title="Clear" style="display:none">×</button>
-      </div>
-
       <div class="recap-scroll">
         <div id="kontrak-table"></div>
       </div>
@@ -5136,7 +5105,7 @@ const state = {
   bnSelected: null,
   bnSelectedPltu: null, // when user clicks a PLTU cluster on bn map
   realFilters: { year: 'all', month: 'all', genco: 'all', regional: 'all', pltu: 'all' },
-  kontrakFilters: { genco: 'all', pltu: 'all', mitra: 'all', jenis: 'all', tahun: 'all', bulan: 'all', search: '' },
+  kontrakFilters: { genco: 'all', pltu: 'all', mitra: 'all', jenis: 'all', tahun: 'all', bulan: 'all' },
   kontrakShowOldYears: false,
   kontrakOnlyActive: true,
   paretoShowLoss: true,
@@ -8397,7 +8366,7 @@ function switchTab(tab){
     if (pk) pk.innerHTML = skeletonHTML('cards');
   }
   if (tab === 'kontrak' && !kontrakInit){
-    const kt = document.getElementById('kontrakTableWrap');
+    const kt = document.getElementById('kontrak-table');
     if (kt && !kt.innerHTML.trim()) kt.innerHTML = skeletonHTML('table');
   }
 
@@ -8416,13 +8385,16 @@ function switchTab(tab){
     rekapInit = true;
   }
   if (tab === 'kontrak' && !kontrakInit){
-    try {
-      buildKontrakFilters();
-      renderKontrakTable();
-      kontrakInit = true;
-    } catch (e) {
-      console.error('Kontrak init failed:', e);
-    }
+    kontrakInit = true;
+    setTimeout(() => {
+      try {
+        buildKontrakFilters();
+        renderKontrakTable();
+      } catch (e) {
+        console.error('Kontrak init failed:', e);
+        kontrakInit = false;
+      }
+    }, 30);
   }
   if (tab === 'usulan'){
     // V51: Lock for non-admin users
@@ -8580,32 +8552,8 @@ function buildKontrakFilters(){
   buildKontrakPltuOptions();
   buildKontrakMitraOptions();
 
-  // V54: Search input
-  const searchInput = document.getElementById('kontrak-search');
-  const searchClear = document.getElementById('kontrak-search-clear');
-  if (searchInput && !searchInput.dataset.built){
-    searchInput.value = state.kontrakFilters.search || '';
-    let searchTimer = null;
-    searchInput.oninput = () => {
-      if (searchClear) searchClear.style.display = searchInput.value ? 'flex' : 'none';
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => {
-        state.kontrakFilters.search = searchInput.value;
-        renderKontrakTable();
-      }, 200);
-    };
-    searchInput.dataset.built = '1';
-  }
-  if (searchClear && !searchClear.dataset.built){
-    searchClear.onclick = () => {
-      searchInput.value = '';
-      state.kontrakFilters.search = '';
-      searchClear.style.display = 'none';
-      renderKontrakTable();
-      searchInput.focus();
-    };
-    searchClear.dataset.built = '1';
-  }
+  // Show old years checkbox
+  const chk = document.getElementById('kontrak-show-old-years');
   if (chk && !chk.dataset.built){
     chk.checked = state.kontrakShowOldYears;
     chk.onchange = () => {
@@ -8802,12 +8750,6 @@ function filteredContracts(){
     if (f.pltu !== 'all' && c.pltu !== f.pltu) return false;
     if (f.mitra !== 'all' && c.pemasok !== f.mitra) return false;
     if (f.jenis !== 'all' && c.jenis !== f.jenis) return false;
-    // V54: Search across pemasok name + nomor kontrak + PLTU
-    if (f.search && f.search.trim()){
-      const q = f.search.trim().toLowerCase();
-      const hay = ((c.pemasok || '') + ' ' + (c.kontrak || '') + ' ' + (c.pltu || '')).toLowerCase();
-      if (hay.indexOf(q) < 0) return false;
-    }
     return true;
   });
 }
