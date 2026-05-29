@@ -8397,15 +8397,21 @@ function switchTab(tab){
     }, 30);
   }
   if (tab === 'usulan'){
-    // V51: Lock for non-admin users
-    const userName = (typeof getUserName === 'function') ? getUserName() : '';
-    if (userName !== 'Maulana - Admin'){
-      const view = document.querySelector('.view[data-view="usulan"]');
-      if (view){
-        view.classList.add('active');
-        view.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:16px;color:var(--text-dim);font-family:Plus Jakarta Sans,sans-serif"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><div style="font-size:14px;font-weight:600">Tab ini dikunci</div><div style="font-size:11px">Hanya admin yang dapat mengakses Usulan Kontrak</div></div>';
+    // V55: Identity gate — allow admins + whitelisted names (flexible match)
+    let userName = getUserName();
+    if (!canAccessUsulan(userName)){
+      const input = window.prompt(
+        'Masukkan nama Anda untuk mengakses Usulan Kontrak:\n\nHanya user yang telah terdaftar yang dapat mengakses.',
+        userName || ''
+      );
+      if (!input || !input.trim()) return; // cancelled — don't switch
+      const trimmed = input.trim();
+      if (!canAccessUsulan(trimmed)){
+        alert('Nama "' + trimmed + '" tidak terdaftar.\n\nSilakan hubungi admin untuk mendapatkan akses.');
+        return;
       }
-      return;
+      setUserName(trimmed);
+      userName = trimmed;
     }
     if (!usulanInit){
     try {
@@ -9477,6 +9483,21 @@ function getUserName(){
 }
 function setUserName(name){
   try { localStorage.setItem(USULAN_USER_KEY, name); } catch(e){}
+}
+
+// V55: Flexible access check for Usulan Kontrak.
+// Allows admins (exact) + whitelisted first names (partial, case-insensitive).
+const USULAN_ALLOWED_NAMES = ['erfan', 'febri', 'yoga', 'aidah'];
+function canAccessUsulan(name){
+  if (!name) return false;
+  const n = name.toLowerCase().trim();
+  if (n === 'maulana - admin') return true;
+  if (UPDATE_ADMIN_NAMES.indexOf(name) >= 0) return true; // existing admins still allowed
+  // Match if any allowed name appears as a whole word in the input
+  return USULAN_ALLOWED_NAMES.some(allowed => {
+    const re = new RegExp('(^|[^a-z])' + allowed + '([^a-z]|$)', 'i');
+    return re.test(n);
+  });
 }
 
 // ---------- Sync status UI ----------
