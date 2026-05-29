@@ -236,29 +236,34 @@ html,body{
 .mou-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top}
 .mou-table tr:hover td{background:var(--panel-2)}
 .mou-status{
-  display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;
-  letter-spacing:.5px;text-transform:uppercase;
+  display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;
+  font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  transition:transform .1s;
 }
+.mou-status:hover{transform:scale(1.05)}
 .mou-status.done{background:rgba(16,185,129,.15);color:#10b981}
+.mou-status.done::before{content:"●";font-size:7px}
 .mou-status.pending{background:rgba(245,158,11,.15);color:#f59e0b}
+.mou-status.pending::before{content:"●";font-size:7px}
 .mou-status.planning{background:rgba(59,130,246,.15);color:#3b82f6}
+.mou-status.planning::before{content:"●";font-size:7px}
 .mou-status.empty{background:var(--panel-3);color:var(--text-dim)}
 
-/* V50.2: Timeline — single table with CSS sticky freeze pane */
+/* V50.2: Timeline — single table with CSS sticky freeze pane (V54 redesign) */
 .mou-tl-wrap{
-  overflow:auto;max-height:calc(100vh - 180px);border:1px solid var(--border);
-  border-radius:3px;position:relative;
+  overflow:auto;max-height:calc(100vh - 220px);border:1px solid var(--border);
+  border-radius:10px;position:relative;background:var(--panel);
 }
 .mou-tbl{border-collapse:separate;border-spacing:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px}
 .mou-tbl thead{position:sticky;top:0;z-index:10}
 .mou-hdr-month th{
   background:#0F496E;color:white;text-align:center;
-  font-size:8px;font-weight:700;letter-spacing:1px;padding:5px 2px;
-  border-left:1px solid rgba(255,255,255,.2);border-bottom:0;
+  font-size:8px;font-weight:700;letter-spacing:1px;padding:7px 2px;
+  border-left:1px solid rgba(255,255,255,.18);border-bottom:0;
 }
 .mou-hdr-week th{
-  background:#3b82f6;color:white;text-align:center;
-  font-size:8px;font-weight:700;padding:4px 2px;
+  background:#2563eb;color:white;text-align:center;
+  font-size:8px;font-weight:600;padding:5px 2px;
   border-bottom:1px solid var(--border);
 }
 /* Sticky frozen columns */
@@ -272,25 +277,26 @@ html,body{
 .mou-fr-status{left:455px;width:80px;min-width:80px}
 .mou-fr-ket{left:535px;width:140px;min-width:140px;border-right:1px solid var(--border)}
 /* Cell styles */
-.mou-tbl td,.mou-tbl th{padding:6px 6px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;box-sizing:border-box}
-.mou-tbl tr.mou-task-row:hover td{background:rgba(128,128,128,.08)}
-.mou-tbl tr.mou-task-row:hover .mou-fr{background:rgba(128,128,128,.08)}
+.mou-tbl td,.mou-tbl th{padding:8px 8px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;box-sizing:border-box}
+.mou-tbl tr.mou-task-row{transition:background .1s}
+.mou-tbl tr.mou-task-row:hover td{background:rgba(128,128,128,.07)}
+.mou-tbl tr.mou-task-row:hover .mou-fr{background:rgba(128,128,128,.07)}
 .mou-tbl tr.mou-task-row:hover .mou-wk-cell.filled{background:var(--mou-month-fill, var(--accent));opacity:.85}
 .mou-td-no{text-align:center;color:var(--text-dim);font-weight:600}
-.mou-td-output{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;font-weight:500}
+.mou-td-output{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;font-weight:500;color:var(--text-bright)}
 .mou-td-pic{font-size:9px}
 .mou-td-due{text-align:center;white-space:nowrap;font-size:9px}
 .mou-td-status{text-align:center}
 .mou-td-ket{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;font-size:9px;color:var(--text-dim)}
 /* Group rows */
 .mou-grp-row td{
-  background:var(--panel-3) !important;padding:8px 10px !important;
+  background:var(--panel-3) !important;padding:10px 12px !important;
   border-top:2px solid var(--accent);font-weight:700;
   position:sticky;left:0;z-index:6;
 }
-.mou-grp-arrow{display:inline-block;width:14px;cursor:pointer;user-select:none;font-size:12px;color:var(--accent)}
-.mou-grp-name{font-size:11px;color:var(--text-bright)}
-.mou-grp-badge{font-size:9px;font-weight:600;color:var(--text-dim);background:var(--panel-2);padding:2px 8px;border-radius:10px;margin-left:8px}
+.mou-grp-arrow{display:inline-block;width:16px;cursor:pointer;user-select:none;font-size:11px;color:var(--accent);transition:transform .15s}
+.mou-grp-name{font-size:11px;color:var(--text-bright);font-weight:700}
+.mou-grp-badge{font-size:9px;font-weight:600;color:var(--text-dim);background:var(--panel-2);padding:3px 9px;border-radius:20px;margin-left:8px}
 /* Week cells */
 .mou-wk-hdr{width:20px;min-width:20px;max-width:20px;font-size:7px}
 .mou-month-hdr{font-size:8px;font-weight:700;letter-spacing:1px;color:white !important}
@@ -974,6 +980,22 @@ html,body{
   content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);
   box-shadow:0 0 8px rgba(16,185,129,.5);
 }
+/* V54: Terrain toggle button — same size/style as Monthly Trend, placed beside it */
+.terrain-toggle-btn{
+  position:absolute;bottom:16px;left:188px;z-index:500;
+  background:var(--panel);border:1px solid var(--border-bright);
+  color:var(--text);cursor:pointer;font-size:10px;line-height:1;
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif;
+  letter-spacing:1.5px;text-transform:uppercase;font-weight:600;
+  border-radius:4px;
+}
+.terrain-toggle-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--panel-3)}
+.terrain-toggle-btn.active{color:#fff;background:var(--accent);border-color:var(--accent)}
+.terrain-toggle-btn svg{flex-shrink:0}
+@media(max-width:768px){
+  .terrain-toggle-btn{bottom:12px;left:auto;right:8px;padding:8px 10px;font-size:9px}
+}
 
 /* Popup */
 .plant-popup{padding:12px 14px;min-width:220px;max-width:280px}
@@ -1530,12 +1552,12 @@ html,body{
 .pareto-month-filter-wrap select:hover,.pareto-month-filter-wrap select:focus{border-color:var(--accent);color:var(--text-bright)}
 
 /* ===== REAL RECAP TABLE ===== */
-.real-recap-wrap{background:var(--panel);border:1px solid var(--border);padding:20px}
+.real-recap-wrap{background:var(--panel);border:1px solid var(--border);padding:20px;box-sizing:border-box;border-radius:8px}
 .real-recap-wrap h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
 .real-recap-wrap h3::before{content:"";display:inline-block;width:10px;height:1px;background:var(--accent);margin-right:8px;vertical-align:middle}
 .real-recap-wrap h3 .recap-count{font-size:10px;color:var(--accent);letter-spacing:1.5px}
-.real-recap-filters{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-.real-recap-filter{display:flex;flex-direction:column;gap:4px;min-width:140px}
+.real-recap-filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.real-recap-filter{display:flex;flex-direction:column;gap:4px}
 .real-recap-filter label{
   font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
   letter-spacing:1.5px;text-transform:uppercase;
@@ -1549,7 +1571,7 @@ html,body{
 }
 .real-recap-filter select:hover,.real-recap-filter select:focus{border-color:var(--accent);color:var(--text-bright)}
 
-.recap-scroll{overflow:auto;max-height:600px;border:1px solid var(--border)}
+.recap-scroll{overflow-x:auto;overflow-y:auto;max-height:600px;border:1px solid var(--border);border-radius:6px;-webkit-overflow-scrolling:touch}
 .recap-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px}
 .recap-table th{
   text-align:center;padding:8px 6px;color:var(--text-dim);font-weight:500;
@@ -1579,36 +1601,37 @@ html,body{
 
 /* Kontrak summary card: 4 KPI cells above table */
 .kontrak-summary{
-  display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;
-  margin-bottom:16px;
+  display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;margin-bottom:18px;
 }
 .kontrak-summary-cell{
-  background:var(--panel-3);border:1px solid var(--border);border-left:3px solid var(--accent);
-  padding:14px 16px;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  padding:16px 18px;position:relative;overflow:hidden;
+  transition:transform .15s,box-shadow .15s;
 }
-.kontrak-summary-cell.danger{border-left-color:var(--danger)}
-.kontrak-summary-cell.warn{border-left-color:var(--warn)}
-.kontrak-summary-cell.info{border-left-color:#3b82f6}
+.kontrak-summary-cell:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
+.kontrak-summary-cell::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0;background:var(--accent);
+}
+.kontrak-summary-cell.danger::before{background:var(--danger)}
+.kontrak-summary-cell.warn::before{background:var(--warn)}
+.kontrak-summary-cell.info::before{background:#3b82f6}
 .kontrak-summary-label{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;letter-spacing:1.5px;
-  text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin-bottom:8px;
 }
 .kontrak-summary-value{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-weight:700;
-  color:var(--text-bright);font-variant-numeric:tabular-nums;line-height:1.2;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;
+  color:var(--text-bright);letter-spacing:-.5px;line-height:1.1;font-variant-numeric:tabular-nums;
 }
-.kontrak-summary-value .unit{font-size:10px;color:var(--text-dim);font-weight:400;margin-left:4px}
+.kontrak-summary-value .unit{font-size:11px;color:var(--text-dim);font-weight:400;margin-left:4px}
 .kontrak-summary-sub{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
-  margin-top:4px;letter-spacing:.5px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);margin-top:8px;line-height:1.4;
 }
-/* V46: Clickable KPI cards for Vol and Sisa */
-.kontrak-summary-clickable{cursor:pointer;transition:all .15s ease}
-.kontrak-summary-clickable:hover{
-  border-color:var(--accent);background:var(--panel-2);
-  box-shadow:0 2px 8px rgba(0,0,0,.12);transform:translateY(-1px);
-}
+.kontrak-summary-clickable{cursor:pointer}
+.kontrak-summary-clickable:hover{border-color:var(--accent)}
 .kontrak-summary-clickable u{text-decoration-color:var(--accent);opacity:.7}
+.kontrak-progress{height:6px;background:var(--panel-3);border-radius:3px;margin-top:10px;overflow:hidden}
+.kontrak-progress-bar{height:100%;border-radius:3px;transition:width .6s ease;background:linear-gradient(90deg,var(--accent),#10b981)}
 @media (max-width: 960px){
   .kontrak-summary{grid-template-columns:repeat(2, 1fr)}
 }
@@ -1654,95 +1677,208 @@ html,body{
   .kontrak-jenis-chart-grid{grid-template-columns:1fr}
 }
 
-.kontrak-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;table-layout:auto}
-.kontrak-table th{
-  text-align:left;padding:5px 5px;color:var(--text-dim);font-weight:600;
-  background:var(--panel-3);border-bottom:1px solid var(--border);font-size:8px;letter-spacing:.6px;
-  text-transform:uppercase;position:sticky;top:0;z-index:2;white-space:nowrap;
+/* ===== Kontrak Mitra tab (V54 redesign) ===== */
+.kontrak-toggle-row{
+  margin-bottom:14px;padding:10px 16px;background:var(--panel);
+  border:1px solid var(--border);border-radius:8px;
+  display:flex;flex-wrap:wrap;gap:16px;align-items:center;
 }
-.kontrak-table th.year-header{background:rgba(16,185,129,.08);color:var(--accent);border-left:1px solid var(--border)}
-.kontrak-table th.old-year{background:rgba(100,116,139,.1);color:var(--text-dim)}
-.kontrak-table td{padding:4px 5px;border-bottom:1px solid var(--border);color:var(--text);font-size:9px;vertical-align:top}
-.kontrak-table td.wrap{white-space:normal;max-width:150px;line-height:1.3;overflow:hidden;text-overflow:ellipsis}
-.kontrak-table td.num{text-align:right;padding-right:6px;color:var(--text-bright);font-variant-numeric:tabular-nums;white-space:nowrap}
-.kontrak-table td.num.dim{color:var(--text-dim);opacity:.55}
-.kontrak-table td.year-real{background:rgba(16,185,129,.03);text-align:right;padding-right:6px;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500}
-.kontrak-table td.year-real.zero{color:var(--text-dim);opacity:.5;font-weight:400}
-.kontrak-table td.old-year-cell{background:rgba(100,116,139,.04);color:var(--text-dim)}
-.kontrak-table tr:hover td{background:rgba(30,42,56,.35)}
-.kontrak-table tr:hover td.year-real{background:rgba(16,185,129,.07)}
-
-.kontrak-pct-badge{
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:3px 8px;min-width:54px;
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;
-  background:rgba(16,185,129,.12);color:var(--accent);border-radius:3px;
+.kontrak-toggle{
+  display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--text);user-select:none;
 }
-.kontrak-pct-badge.low{background:rgba(239,68,68,.12);color:var(--danger)}
-.kontrak-pct-badge.mid{background:rgba(245,158,11,.12);color:var(--warn)}
-.kontrak-pct-badge.high{background:rgba(16,185,129,.12);color:var(--accent)}
-.kontrak-pct-badge.over{background:rgba(168,85,247,.15);color:var(--purple)}
-
-.kontrak-genco-pill{
-  display:inline-block;font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;
-  padding:2px 6px;border:1px solid;letter-spacing:1px;text-transform:uppercase;font-weight:700;
-}
-
-.kontrak-jenis-pill{
-  display:inline-block;font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;
-  padding:2px 6px;background:var(--panel-3);color:var(--text);border:1px solid var(--border);
-  letter-spacing:.5px;text-transform:none;font-weight:500;
-}
-
-.kontrak-date{font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);letter-spacing:.3px;white-space:nowrap}
-.kontrak-amandemen-text{font-size:9px;color:var(--text);line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.kontrak-amandemen-text.none{color:var(--text-dim);opacity:.5;font-style:italic}
-
-
-/* ===== Kontrak Mitra tab ===== */
-.kontrak-toggle-row{margin-bottom:12px;padding:10px 12px;background:var(--panel-3);border-left:2px solid var(--accent)}
-.kontrak-toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text);letter-spacing:1px;text-transform:uppercase;user-select:none}
 .kontrak-toggle input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
 
-.kontrak-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px}
+.kontrak-table{width:100%;border-collapse:separate;border-spacing:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px}
 .kontrak-table th{
-  text-align:center;padding:8px 6px;color:var(--text-dim);font-weight:500;
-  background:var(--panel-3);border-bottom:1px solid var(--border);font-size:9px;letter-spacing:1px;
-  text-transform:uppercase;white-space:nowrap;
+  text-align:left;padding:10px 10px;color:var(--text-dim);font-weight:700;
+  background:var(--panel-3);border-bottom:2px solid var(--border);font-size:9px;letter-spacing:.8px;
+  text-transform:uppercase;white-space:nowrap;position:sticky;top:0;z-index:2;
 }
-.kontrak-table th.year-header{background:rgba(16,185,129,.08);color:var(--accent);padding:6px 8px;border-left:1px solid var(--border)}
-.kontrak-table th.old-year{background:rgba(100,116,139,.1);color:var(--text-dim)}
-.kontrak-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text);font-size:10px;vertical-align:top}
-.kontrak-table td.wrap{white-space:normal;min-width:120px;max-width:220px;line-height:1.35}
-.kontrak-table td.num{text-align:right;padding-right:10px;color:var(--text-bright);font-variant-numeric:tabular-nums;white-space:nowrap}
-.kontrak-table td.year-real{background:rgba(16,185,129,.03);text-align:right;padding-right:10px;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500}
+.kontrak-table th.year-header{background:rgba(15,73,110,.08);color:var(--accent);padding:10px;border-left:1px solid var(--border)}
+.kontrak-table th.old-year{background:rgba(100,116,139,.06);color:var(--text-dim)}
+.kontrak-table td{
+  padding:10px 10px;border-bottom:1px solid var(--border);color:var(--text);
+  font-size:11px;vertical-align:middle;transition:background .1s;
+}
+.kontrak-table td.wrap{white-space:normal;min-width:100px;max-width:200px;line-height:1.4}
+.kontrak-table td.num{text-align:right;padding-right:12px;color:var(--text-bright);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500}
+.kontrak-table td.num.dim{color:var(--text-dim);opacity:.55}
+.kontrak-table td.year-real{
+  background:rgba(15,73,110,.03);text-align:right;padding-right:12px;
+  color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;
+}
 .kontrak-table td.year-real.zero{color:var(--text-dim);opacity:.5;font-weight:400}
-.kontrak-table td.old-year-cell{background:rgba(100,116,139,.04);color:var(--text-dim)}
-.kontrak-table tr:hover td{background:rgba(30,42,56,.35)}
+.kontrak-table td.old-year-cell{background:rgba(100,116,139,.03);color:var(--text-dim)}
+.kontrak-table tbody tr{transition:background .1s}
+.kontrak-table tbody tr:nth-child(even) td{background:var(--panel-2)}
+.kontrak-table tbody tr:hover td{background:color-mix(in srgb, var(--accent) 6%, var(--panel))}
+.kontrak-table tbody tr:hover td.year-real{background:rgba(15,73,110,.08)}
+.kontrak-table tfoot td{
+  font-weight:700;background:var(--panel-3)!important;border-top:2px solid var(--border);
+  padding:10px;color:var(--text-bright);font-size:11px;
+}
 
 .kontrak-pct-badge{
   display:inline-flex;align-items:center;justify-content:center;
-  padding:3px 8px;min-width:54px;
+  padding:4px 10px;min-width:56px;
   font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;
-  background:rgba(16,185,129,.12);color:var(--accent);border-radius:3px;
+  border-radius:20px;letter-spacing:.2px;
 }
 .kontrak-pct-badge.low{background:rgba(239,68,68,.12);color:var(--danger)}
 .kontrak-pct-badge.mid{background:rgba(245,158,11,.12);color:var(--warn)}
-.kontrak-pct-badge.high{background:rgba(16,185,129,.12);color:var(--accent)}
-.kontrak-pct-badge.over{background:rgba(168,85,247,.15);color:var(--purple)}
+.kontrak-pct-badge.high{background:rgba(16,185,129,.12);color:#10b981}
+.kontrak-pct-badge.over{background:rgba(139,92,246,.12);color:#8b5cf6}
 
 .kontrak-genco-pill{
-  display:inline-block;font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;
-  padding:2px 6px;border:1px solid;letter-spacing:1px;text-transform:uppercase;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;
+  padding:3px 8px;border:1.5px solid;letter-spacing:1px;text-transform:uppercase;
+  font-weight:700;border-radius:4px;min-width:36px;
 }
 .kontrak-jenis-pill{
-  display:inline-block;font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;
-  padding:2px 6px;background:var(--panel-3);color:var(--text);border:1px solid var(--border);
-  letter-spacing:.5px;text-transform:none;font-weight:500;
+  display:inline-block;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  padding:3px 8px;background:var(--panel-3);color:var(--text);border:1px solid var(--border);
+  border-radius:4px;font-weight:500;white-space:nowrap;
 }
-.kontrak-date{font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);letter-spacing:.3px;white-space:nowrap}
-.kontrak-amandemen-text{font-size:9px;color:var(--text);line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.kontrak-date{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);white-space:nowrap}
+.kontrak-amandemen-text{font-size:10px;color:var(--text);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .kontrak-amandemen-text.none{color:var(--text-dim);opacity:.5;font-style:italic}
+.kontrak-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:6px}
+.view[data-view="kontrak"]{overflow-x:hidden;max-width:100vw}
+.view[data-view="kontrak"] .real-view{overflow-x:hidden;overflow-y:auto;max-width:100%;box-sizing:border-box}
+.view[data-view="kontrak"] .real-recap-wrap{overflow:visible;max-width:100%;box-sizing:border-box}
+.view[data-view="kontrak"] .recap-scroll{border:none;border-radius:6px;overflow:visible}
+.view[data-view="kontrak"] .kontrak-table-wrap{border:1px solid var(--border);border-radius:6px;overflow-x:auto;overflow-y:visible}
+.view[data-view="kontrak"] .kontrak-summary{overflow:hidden;box-sizing:border-box}
+.view[data-view="kontrak"] .kontrak-toggle-row{box-sizing:border-box}
+.view[data-view="kontrak"] .real-recap-filters{box-sizing:border-box}
+.kontrak-pemasok-link{color:var(--accent);text-decoration:none;font-weight:500;transition:opacity .1s}
+.kontrak-pemasok-link:hover{opacity:.7;text-decoration:underline}
+
+/* V54: Kontrak search bar */
+.kontrak-search-wrap{
+  position:relative;margin-bottom:14px;display:flex;align-items:center;
+}
+.kontrak-search-icon{
+  position:absolute;left:14px;width:15px;height:15px;color:var(--text-dim);pointer-events:none;
+}
+.kontrak-search-input{
+  width:100%;box-sizing:border-box;background:var(--panel);
+  border:1px solid var(--border);border-radius:8px;
+  padding:11px 40px;color:var(--text-bright);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;outline:none;
+  transition:border-color .15s;
+}
+.kontrak-search-input:focus{border-color:var(--accent)}
+.kontrak-search-input::placeholder{color:var(--text-dim)}
+.kontrak-search-clear{
+  position:absolute;right:10px;background:var(--panel-3);border:none;
+  color:var(--text-dim);cursor:pointer;width:24px;height:24px;border-radius:50%;
+  font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;
+  transition:all .12s;
+}
+.kontrak-search-clear:hover{color:var(--danger);background:rgba(239,68,68,.1)}
+
+/* V54: Autofit table to screen width */
+.view[data-view="kontrak"] .kontrak-table{table-layout:auto;width:100%}
+.view[data-view="kontrak"] .kontrak-table-wrap{width:100%;max-width:100%}
+/* Desktop: hide mobile-only filter toggle */
+.kontrak-filter-toggle{display:none}
+
+/* V54: Mobile card layout for kontrak */
+.kontrak-cards{display:none}
+@media(max-width:768px){
+  .kontrak-table-wrap{display:none}
+  .kontrak-cards{display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
+  .kontrak-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:14px;font-family:'Plus Jakarta Sans',sans-serif;
+    transition:box-shadow .15s,transform .1s;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  }
+  .kontrak-card:active{box-shadow:var(--shadow-hover);transform:scale(.985)}
+  .kontrak-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px}
+  .kontrak-card-pltu{font-size:13px;font-weight:700;color:var(--text-bright);line-height:1.2}
+  .kontrak-card-mitra{font-size:11px;color:var(--text-dim);margin-top:2px}
+  .kontrak-card-genco{flex-shrink:0}
+  .kontrak-card-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;
+    font-size:11px;color:var(--text);
+  }
+  .kontrak-card-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+  .kontrak-card-label{color:var(--text-dim);font-size:10px;font-weight:600;letter-spacing:.3px}
+  .kontrak-card-val{font-weight:600;color:var(--text-bright);font-variant-numeric:tabular-nums;text-align:right}
+  .kontrak-card-footer{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-top:10px;padding-top:8px;border-top:1px solid var(--border);
+    font-size:10px;
+  }
+  .kontrak-card-dates{color:var(--text-dim)}
+  .kontrak-card-expand{
+    background:transparent;border:1px solid var(--border);color:var(--text-dim);
+    font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:600;
+    padding:4px 10px;border-radius:4px;cursor:pointer;transition:all .12s;
+  }
+  .kontrak-card-expand:hover{border-color:var(--accent);color:var(--accent)}
+  .kontrak-card-detail{
+    display:none;margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);
+    font-size:10px;color:var(--text-dim);line-height:1.6;
+  }
+  .kontrak-card-detail.open{display:block}
+  .kontrak-cards-total{
+    background:var(--panel-3);border:1px solid var(--border);border-radius:10px;
+    padding:12px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
+    display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;
+    font-weight:600;color:var(--text-bright);
+  }
+  .kontrak-cards-total .kontrak-card-label{font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+  /* Compact filters on mobile */
+  .real-recap-filters{grid-template-columns:1fr 1fr 1fr!important;gap:6px!important}
+  .real-recap-filter label{font-size:8px!important;letter-spacing:.5px!important}
+  .real-recap-filter select{padding:5px 6px!important;font-size:10px!important}
+  .kontrak-toggle-row{flex-direction:column;gap:8px;padding:8px 10px;margin-bottom:8px!important;border-radius:6px}
+  .kontrak-toggle{font-size:10px}
+  .kontrak-summary{grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px!important}
+  .kontrak-summary-cell{padding:10px 12px;border-radius:8px}
+  .kontrak-summary-cell::before{height:2px}
+  .kontrak-summary-value{font-size:15px}
+  .kontrak-summary-label{font-size:8px;margin-bottom:4px;letter-spacing:.8px}
+  .kontrak-summary-sub{font-size:8px;margin-top:4px}
+  .kontrak-progress{margin-top:6px;height:4px}
+  /* Remove fixed height scroll box for card layout */
+  .view[data-view="kontrak"]{height:calc(100vh - 52px)!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}
+  .view[data-view="kontrak"] .recap-scroll{max-height:none;border:none;overflow:visible}
+  .view[data-view="kontrak"] .kontrak-table-wrap{display:none}
+  .view[data-view="kontrak"] .real-view{padding:10px 8px;gap:8px;height:auto!important;overflow:visible!important;display:block}
+  .view[data-view="kontrak"] .real-recap-wrap{padding:10px 8px;margin-bottom:0;overflow:visible!important;height:auto}
+  .view[data-view="kontrak"] .real-header{margin-bottom:0}
+  .view[data-view="kontrak"] .real-title{font-size:16px}
+  .view[data-view="kontrak"] .real-title-sub{font-size:9px;letter-spacing:1px;margin-top:2px}
+  .view[data-view="kontrak"] .real-recap-wrap h3{font-size:9px;margin-bottom:8px}
+  .view[data-view="kontrak"] .real-recap-filters{margin-bottom:8px}
+  /* Collapsible filter section */
+  .kontrak-filter-toggle{
+    display:flex!important;align-items:center;justify-content:space-between;
+    padding:8px 10px;background:var(--panel-3);border:1px solid var(--border);
+    border-radius:6px;margin-bottom:8px;cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;
+    color:var(--text-dim);letter-spacing:.5px;text-transform:uppercase;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .kontrak-filter-toggle .arrow{transition:transform .2s;font-size:12px}
+  .kontrak-filter-toggle.collapsed .arrow{transform:rotate(-90deg)}
+  .kontrak-filter-body.collapsed{display:none!important}
+  /* Card spacing */
+  .kontrak-card{padding:12px;border-radius:8px}
+  .kontrak-card-pltu{font-size:12px}
+  .kontrak-card-mitra{font-size:10px}
+  .kontrak-card-grid{gap:4px 12px;font-size:10px}
+  .kontrak-card-label{font-size:9px}
+  .kontrak-card-footer{margin-top:8px;padding-top:6px;font-size:9px}
+  .kontrak-cards{gap:8px}
+  .kontrak-cards-total{padding:10px 12px;font-size:10px;border-radius:8px;gap:4px 12px}
+}
 
 /* ===== Usulan Kontrak tab ===== */
 
@@ -2472,6 +2608,58 @@ html,body{
   overflow-y:auto;padding:60px 24px;
 }
 .pemasok-modal-backdrop.open{display:flex}
+
+/* V54: Pareto category breakdown popup */
+.pareto-cat-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  z-index:9000;display:none;align-items:flex-start;justify-content:center;
+  overflow-y:auto;padding:60px 20px;
+}
+.pareto-cat-backdrop.open{display:flex}
+.pareto-cat-modal{
+  background:var(--bg);border:1px solid var(--border-bright);border-radius:12px;
+  width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.5);
+  overflow:hidden;font-family:'Plus Jakarta Sans',sans-serif;
+}
+.pareto-cat-head{
+  padding:18px 22px;border-bottom:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:flex-start;gap:14px;
+}
+.pareto-cat-eyebrow{font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;font-weight:700}
+.pareto-cat-title{font-size:17px;font-weight:700;color:var(--text-bright);line-height:1.25}
+.pareto-cat-sub{font-size:11px;color:var(--text-dim);margin-top:6px}
+.pareto-cat-close{
+  background:var(--panel-3);border:1px solid var(--border);color:var(--text);
+  cursor:pointer;font-size:16px;width:30px;height:30px;border-radius:6px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.pareto-cat-close:hover{color:var(--danger);border-color:var(--danger)}
+.pareto-cat-body{padding:8px 0;max-height:60vh;overflow-y:auto}
+.pareto-cat-row{
+  display:flex;align-items:center;gap:12px;padding:11px 22px;
+  border-bottom:1px solid var(--border);transition:background .1s;
+}
+.pareto-cat-row:last-child{border-bottom:none}
+.pareto-cat-row:hover{background:var(--panel-2)}
+.pareto-cat-rank{
+  font-size:11px;font-weight:700;color:var(--text-dim);width:22px;flex-shrink:0;text-align:center;
+}
+.pareto-cat-pltu{flex:1;min-width:0}
+.pareto-cat-pltu-name{font-size:12px;font-weight:600;color:var(--text-bright);line-height:1.2}
+.pareto-cat-pltu-genco{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.pareto-cat-val{text-align:right;flex-shrink:0}
+.pareto-cat-val-num{font-size:13px;font-weight:700;color:var(--text-bright);font-variant-numeric:tabular-nums}
+.pareto-cat-val-pct{font-size:10px;color:var(--text-dim);margin-top:2px}
+.pareto-cat-bar{height:4px;border-radius:2px;margin-top:5px;background:var(--panel-3);overflow:hidden;min-width:60px}
+.pareto-cat-bar-fill{height:100%;border-radius:2px;transition:width .4s ease}
+.pareto-cat-foot{
+  padding:14px 22px;border-top:1px solid var(--border);background:var(--panel-2);
+  display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--text-bright);
+}
+@media(max-width:768px){
+  .pareto-cat-backdrop{padding:30px 14px}
+  .pareto-cat-modal{max-width:100%}
+}
 .pemasok-modal{
   background:var(--bg);border:1px solid var(--border-bright);
   width:100%;max-width:1100px;
@@ -2548,7 +2736,11 @@ html,body{
 }
 
 @media (max-width: 720px){
-  .pemasok-modal-backdrop{padding:20px 8px}
+  .pemasok-modal-backdrop{padding:0;align-items:flex-end}
+  .pemasok-modal{
+    width:100%!important;max-width:100%!important;
+    max-height:90vh!important;border-radius:16px 16px 0 0!important;
+  }
   .pemasok-contract-head{grid-template-columns:repeat(2, 1fr)}
   .pemasok-modal-body{padding:14px}
   .pemasok-contract-info{grid-template-columns:1fr}
@@ -2747,12 +2939,12 @@ html,body{
   .bn-view{grid-template-columns:1fr!important}
   .bn-view.bn-detail-open{grid-template-columns:1fr!important}
   .bn-list{
-    position:fixed;top:100px;bottom:0;left:0;right:0;max-height:none;z-index:900;
+    position:fixed;top:52px;bottom:56px;left:0;right:0;max-height:none;z-index:900;
     border-left:none;border-top:1px solid var(--border);
-    /* Hidden by default, slides up when opened */
     transform:translateY(100%);transition:transform .25s ease;
     box-shadow:var(--shadow-md);border-radius:14px 14px 0 0;
-    overflow:hidden;
+    overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
   }
   /* Show ONLY when user explicitly opens it via class */
   .bn-view.bn-list-open .bn-list{transform:translateY(0)}
@@ -2765,11 +2957,11 @@ html,body{
   .bn-list-header::before{content:none}
 
   .bn-pltu-panel{
-    position:fixed;top:100px;bottom:0;left:0;right:0;max-height:none;z-index:950;
+    position:fixed;top:52px;bottom:56px;left:0;right:0;max-height:none;z-index:950;
     border-left:none;border-top:1px solid var(--border);
     transform:translateY(100%);transition:transform .25s ease;
     box-shadow:var(--shadow-md);border-radius:14px 14px 0 0;
-    display:flex!important;
+    display:flex!important;overflow-y:auto;-webkit-overflow-scrolling:touch;
   }
   .bn-view.bn-detail-open .bn-pltu-panel{transform:translateY(0);opacity:1;pointer-events:auto}
 
@@ -3466,21 +3658,21 @@ html,body{
 
 /* V52: MoU group filter bar */
 .mou-filter-bar{
-  display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:8px 0;
+  display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;padding:0;
 }
 .mou-filter-btn{
-  background:var(--panel);border:1px solid var(--border);color:var(--text);
-  padding:5px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
-  font-weight:600;letter-spacing:.5px;cursor:pointer;border-radius:3px;
+  background:var(--panel);border:1px solid var(--border);color:var(--text-dim);
+  padding:6px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  font-weight:600;letter-spacing:.5px;cursor:pointer;border-radius:20px;
   transition:all .12s;
 }
 .mou-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
 .mou-filter-btn.active{
   background:var(--accent);border-color:var(--accent);color:white;
 }
-.mou-year-btn{padding:5px 10px;font-size:9px;border-radius:4px}
-.mou-year-btn.active{background:#0F496E;border-color:#0F496E}
-.mou-year-btn:not(.active){opacity:.6}
+.mou-year-btn{padding:6px 12px;font-size:9px;border-radius:20px}
+.mou-year-btn.active{background:#0F496E;border-color:#0F496E;color:white}
+.mou-year-btn:not(.active){opacity:.55}
 .mou-year-btn:hover{opacity:1}
 
 /* V52: Fasilitas editable inputs */
@@ -3534,7 +3726,26 @@ html,body{
 .mou-link-pill.add{background:transparent;border:1px solid var(--border);color:var(--text-dim);margin-left:8px;vertical-align:middle}
 .mou-link-pill.add:hover{border-color:var(--accent);color:var(--accent)}
 
-/* V53: Fasilitas custom field editor */
+/* V54: MoU legend + hint bar */
+.mou-legend-bar{
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+  padding:10px 14px;margin-bottom:12px;background:var(--panel);
+  border:1px solid var(--border);border-radius:8px;
+}
+.mou-legend-group{display:flex;gap:16px;flex-wrap:wrap}
+.mou-legend-item{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;color:var(--text);
+}
+.mou-legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.mou-legend-hint{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);
+}
+@media(max-width:768px){
+  .mou-legend-hint{display:none}
+}
+
+/* V54: Fasilitas custom field editor */
 .fas-custom-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
 .fas-cf-del{
   background:transparent;border:1px solid var(--danger);color:var(--danger);
@@ -3989,6 +4200,10 @@ html,body{
         <div class="trends-chart-wrap"><canvas id="trendChart"></canvas></div>
       </div>
       <button class="trends-show-btn" id="trendsShowBtn" title="Show monthly trend chart">Monthly Trend</button>
+      <button class="terrain-toggle-btn" id="btnTerrain" title="Toggle terrain view">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M1 13l4-6 3 4 2-3 5 5H1z"/></svg>
+        Terrain
+      </button>
     </div>
 
     <aside class="detail-panel" id="detail-panel">
@@ -4479,6 +4694,13 @@ html,body{
       <!-- Summary card: aggregates for currently displayed contracts -->
       <div class="kontrak-summary" id="kontrak-summary"></div>
 
+      <!-- V54: Search bar -->
+      <div class="kontrak-search-wrap">
+        <svg class="kontrak-search-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M11 11l4 4"/></svg>
+        <input type="text" id="kontrak-search" class="kontrak-search-input" placeholder="Cari nama mitra atau nomor kontrak..." autocomplete="off">
+        <button class="kontrak-search-clear" id="kontrak-search-clear" title="Clear" style="display:none">×</button>
+      </div>
+
       <div class="recap-scroll">
         <div id="kontrak-table"></div>
       </div>
@@ -4841,6 +5063,22 @@ html,body{
   </div>
 </div>
 
+<!-- V54: Pareto Category Breakdown Popup -->
+<div class="pareto-cat-backdrop" id="paretoCatBackdrop">
+  <div class="pareto-cat-modal" id="paretoCatModal">
+    <div class="pareto-cat-head">
+      <div>
+        <div class="pareto-cat-eyebrow" id="paretoCatEyebrow">Kontribusi Loss per Kategori</div>
+        <div class="pareto-cat-title" id="paretoCatTitle">—</div>
+        <div class="pareto-cat-sub" id="paretoCatSub"></div>
+      </div>
+      <button class="pareto-cat-close" id="paretoCatClose" title="Close">×</button>
+    </div>
+    <div class="pareto-cat-body" id="paretoCatBody"></div>
+    <div class="pareto-cat-foot" id="paretoCatFoot"></div>
+  </div>
+</div>
+
 <!-- V46: Kontrak Aktif Breakdown Modal -->
 <div class="pemasok-modal-backdrop" id="kontrakBreakdownBackdrop">
   <div class="pemasok-modal" id="kontrakBreakdownModal" style="max-width:900px">
@@ -4898,7 +5136,7 @@ const state = {
   bnSelected: null,
   bnSelectedPltu: null, // when user clicks a PLTU cluster on bn map
   realFilters: { year: 'all', month: 'all', genco: 'all', regional: 'all', pltu: 'all' },
-  kontrakFilters: { genco: 'all', pltu: 'all', mitra: 'all', jenis: 'all', tahun: 'all', bulan: 'all' },
+  kontrakFilters: { genco: 'all', pltu: 'all', mitra: 'all', jenis: 'all', tahun: 'all', bulan: 'all', search: '' },
   kontrakShowOldYears: false,
   kontrakOnlyActive: true,
   paretoShowLoss: true,
@@ -7652,6 +7890,15 @@ function renderParetoMainChart(){
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      onClick: (evt, elements) => {
+        if (!elements || !elements.length) return;
+        const idx = elements[0].index;
+        if (idx == null || !sorted[idx]) return;
+        openParetoCatModal(sorted[idx][0]);
+      },
+      onHover: (evt, elements) => {
+        if (evt.native && evt.native.target) evt.native.target.style.cursor = (elements && elements.length) ? 'pointer' : 'default';
+      },
       scales: {
         x: {
           ticks: { color: textColor, font: { size: 11, weight: 'bold', family: "'Plus Jakarta Sans', sans-serif" } },
@@ -7694,6 +7941,108 @@ function renderParetoMainChart(){
     }
   });
 }
+
+// =====================================================
+// V54: Pareto category breakdown popup — shows which PLTUs
+// contribute to a given loss category for the current period/genco filter
+// =====================================================
+function getCatBreakdownByPlant(catCode){
+  const plants = getFilteredPlants();
+  const isYtd = paretoState.monthSel === 'ytd';
+  const monthIdx = isYtd ? -1 : parseInt(paretoState.monthSel, 10);
+  const rows = [];
+  for (const p of plants){
+    let val = 0;
+    if (isYtd){
+      if (p.ytd && p.ytd.breakdown){
+        val = p.ytd.breakdown[catCode] || 0;
+      } else {
+        const lastIdx = (DATA.pareto && typeof DATA.pareto.last_data_month_idx === 'number') ? DATA.pareto.last_data_month_idx : 3;
+        for (let m = 0; m <= lastIdx; m++){
+          const mo = p.monthly && p.monthly[m];
+          if (mo && mo.breakdown) val += mo.breakdown[catCode] || 0;
+        }
+      }
+    } else {
+      const mo = p.monthly && p.monthly[monthIdx];
+      if (mo && mo.breakdown) val = mo.breakdown[catCode] || 0;
+    }
+    if (val > 0){
+      rows.push({ pltu: p.pltu, genco: p.genco, company: p.company, value: val });
+    }
+  }
+  rows.sort((a, b) => b.value - a.value);
+  return rows;
+}
+
+function openParetoCatModal(catCode){
+  const cats = (DATA.pareto && DATA.pareto.categories) || {};
+  const catName = cats[catCode] || catCode;
+  const catColor = CAT_COLORS[catCode] || '#64748b';
+  const rows = getCatBreakdownByPlant(catCode);
+  const total = rows.reduce((s, r) => s + r.value, 0);
+
+  const eyebrowEl = document.getElementById('paretoCatEyebrow');
+  const titleEl = document.getElementById('paretoCatTitle');
+  const subEl = document.getElementById('paretoCatSub');
+  const bodyEl = document.getElementById('paretoCatBody');
+  const footEl = document.getElementById('paretoCatFoot');
+  if (!bodyEl) return;
+
+  if (eyebrowEl){ eyebrowEl.textContent = catCode.toUpperCase(); eyebrowEl.style.color = catColor; }
+  if (titleEl) titleEl.textContent = catName;
+  if (subEl) subEl.textContent = periodLabel() + ' · ' + gencoLabel() + ' · ' + rows.length + ' PLTU berkontribusi';
+
+  const gencoColor = g => g === 'PNP' ? '#10b981' : g === 'PIP' ? '#f59e0b' : g === 'UIW' ? '#3b82f6' : '#64748b';
+  const maxVal = rows.length ? rows[0].value : 1;
+
+  if (rows.length === 0){
+    bodyEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✓</div><div class="empty-state-title">Tidak ada loss</div><div class="empty-state-desc">Tidak ada PLTU yang berkontribusi pada kategori ini di periode terpilih.</div></div>';
+    if (footEl) footEl.style.display = 'none';
+  } else {
+    bodyEl.innerHTML = rows.map((r, i) => {
+      const pct = total > 0 ? (r.value / total * 100) : 0;
+      const barPct = maxVal > 0 ? (r.value / maxVal * 100) : 0;
+      return '<div class="pareto-cat-row">' +
+        '<div class="pareto-cat-rank">' + (i+1) + '</div>' +
+        '<div class="pareto-cat-pltu">' +
+          '<div class="pareto-cat-pltu-name">' + escapeHtml(r.pltu) + '</div>' +
+          '<div class="pareto-cat-pltu-genco" style="color:' + gencoColor(r.genco) + '">' + (r.genco || '—') + (r.company ? ' · ' + escapeHtml(r.company) : '') + '</div>' +
+          '<div class="pareto-cat-bar"><div class="pareto-cat-bar-fill" style="width:' + barPct + '%;background:' + catColor + '"></div></div>' +
+        '</div>' +
+        '<div class="pareto-cat-val">' +
+          '<div class="pareto-cat-val-num">' + fmtK(r.value) + '</div>' +
+          '<div class="pareto-cat-val-pct">' + pct.toFixed(1) + '%</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    if (footEl){
+      footEl.style.display = 'flex';
+      footEl.innerHTML = '<span>Total Loss ' + catCode.toUpperCase() + '</span><span>' + fmtK(total) + ' ton</span>';
+    }
+  }
+
+  const backdrop = document.getElementById('paretoCatBackdrop');
+  if (backdrop) backdrop.classList.add('open');
+}
+
+function closeParetoCatModal(){
+  const backdrop = document.getElementById('paretoCatBackdrop');
+  if (backdrop) backdrop.classList.remove('open');
+}
+
+(function initParetoCatModal(){
+  const closeBtn = document.getElementById('paretoCatClose');
+  const backdrop = document.getElementById('paretoCatBackdrop');
+  if (closeBtn) closeBtn.onclick = closeParetoCatModal;
+  if (backdrop) backdrop.onclick = (e) => { if (e.target === backdrop) closeParetoCatModal(); };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape'){
+      const bd = document.getElementById('paretoCatBackdrop');
+      if (bd && bd.classList.contains('open')) closeParetoCatModal();
+    }
+  });
+})();
 
 // =====================================================
 // Matrix: plants × months. Dominant category cell color.
@@ -8231,8 +8580,32 @@ function buildKontrakFilters(){
   buildKontrakPltuOptions();
   buildKontrakMitraOptions();
 
-  // Show old years checkbox
-  const chk = document.getElementById('kontrak-show-old-years');
+  // V54: Search input
+  const searchInput = document.getElementById('kontrak-search');
+  const searchClear = document.getElementById('kontrak-search-clear');
+  if (searchInput && !searchInput.dataset.built){
+    searchInput.value = state.kontrakFilters.search || '';
+    let searchTimer = null;
+    searchInput.oninput = () => {
+      if (searchClear) searchClear.style.display = searchInput.value ? 'flex' : 'none';
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        state.kontrakFilters.search = searchInput.value;
+        renderKontrakTable();
+      }, 200);
+    };
+    searchInput.dataset.built = '1';
+  }
+  if (searchClear && !searchClear.dataset.built){
+    searchClear.onclick = () => {
+      searchInput.value = '';
+      state.kontrakFilters.search = '';
+      searchClear.style.display = 'none';
+      renderKontrakTable();
+      searchInput.focus();
+    };
+    searchClear.dataset.built = '1';
+  }
   if (chk && !chk.dataset.built){
     chk.checked = state.kontrakShowOldYears;
     chk.onchange = () => {
@@ -8292,6 +8665,35 @@ function buildKontrakFilters(){
       }
     });
     window._pemasokEscBound = true;
+  }
+
+  // V54: Mobile collapsible filters
+  if (window.matchMedia('(max-width:768px)').matches){
+    const kontrakView = document.querySelector('.view[data-view="kontrak"]');
+    if (kontrakView && !kontrakView.dataset.filterCollapse){
+      const filtersEl = kontrakView.querySelector('.real-recap-filters');
+      const toggleRow = kontrakView.querySelector('.kontrak-toggle-row');
+      if (filtersEl && !filtersEl.previousElementSibling?.classList?.contains('kontrak-filter-toggle')){
+        const toggleBtn = document.createElement('div');
+        toggleBtn.className = 'kontrak-filter-toggle';
+        toggleBtn.innerHTML = '<span>⚙ Filter & Options</span><span class="arrow">▼</span>';
+        // Wrap filters + toggle row in a body div
+        const body = document.createElement('div');
+        body.className = 'kontrak-filter-body';
+        filtersEl.parentNode.insertBefore(toggleBtn, filtersEl);
+        filtersEl.parentNode.insertBefore(body, filtersEl);
+        body.appendChild(filtersEl);
+        if (toggleRow) body.appendChild(toggleRow);
+        // Start collapsed
+        toggleBtn.classList.add('collapsed');
+        body.classList.add('collapsed');
+        toggleBtn.onclick = () => {
+          toggleBtn.classList.toggle('collapsed');
+          body.classList.toggle('collapsed');
+        };
+      }
+      kontrakView.dataset.filterCollapse = '1';
+    }
   }
 }
 
@@ -8400,8 +8802,12 @@ function filteredContracts(){
     if (f.pltu !== 'all' && c.pltu !== f.pltu) return false;
     if (f.mitra !== 'all' && c.pemasok !== f.mitra) return false;
     if (f.jenis !== 'all' && c.jenis !== f.jenis) return false;
-    // Note: tahun/bulan filter no longer hides rows. Instead, it changes the
-    // realisasi values displayed in the year columns (cumulative through period).
+    // V54: Search across pemasok name + nomor kontrak + PLTU
+    if (f.search && f.search.trim()){
+      const q = f.search.trim().toLowerCase();
+      const hay = ((c.pemasok || '') + ' ' + (c.kontrak || '') + ' ' + (c.pltu || '')).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
     return true;
   });
 }
@@ -8618,6 +9024,7 @@ function renderKontrakSummary(){
       '<div class="kontrak-summary-label">Overall Realisasi</div>' +
       '<div class="kontrak-summary-value">' + overallPct.toFixed(1) + '%</div>' +
       '<div class="kontrak-summary-sub">' + fmtInt(totalActiveReal) + ' / ' + fmtInt(totalActiveVol) + ' MT</div>' +
+      '<div class="kontrak-progress"><div class="kontrak-progress-bar" style="width:' + Math.min(overallPct, 100) + '%"></div></div>' +
     '</div>';
 }
 
@@ -8870,7 +9277,7 @@ function renderKontrakTable(){
   renderKontrakSummary();
 
   if (contracts.length === 0){
-    container.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-dim);font-family:Plus Jakarta Sans,sans-serif;font-size:11px;letter-spacing:1px">No contracts match the current filters.</div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-title">No contracts found</div><div class="empty-state-desc">Try adjusting the filters above to see matching contracts.</div></div>';
     return;
   }
 
@@ -8982,7 +9389,90 @@ function renderKontrakTable(){
   footer += '<td></td>';
   footer += '</tr></tfoot>';
 
-  container.innerHTML = '<table class="kontrak-table">' + header + '<tbody>' + rowParts.join('') + '</tbody>' + footer + '</table>';
+  container.innerHTML = '<div class="kontrak-table-wrap"><table class="kontrak-table">' + header + '<tbody>' + rowParts.join('') + '</tbody>' + footer + '</table></div>' + buildKontrakCards(contracts, yearsToShow, monthFilterApplied, monthFilterIdx, totalVol, totalSisa, totalAllReal, avgPct, totalRealByYear);
+  // Wire card expand buttons
+  container.querySelectorAll('.kontrak-card-expand').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const detail = btn.closest('.kontrak-card').querySelector('.kontrak-card-detail');
+      if (detail){
+        detail.classList.toggle('open');
+        btn.textContent = detail.classList.contains('open') ? '▲ Less' : '▼ More';
+      }
+    };
+  });
+  // Wire card tap → pemasok popup on mobile
+  container.querySelectorAll('.kontrak-card[data-pemasok]').forEach(card => {
+    card.onclick = (e) => {
+      // Don't trigger if clicking expand button
+      if (e.target.closest('.kontrak-card-expand')) return;
+      const pemasok = (card.dataset.pemasok || '').replace(/&#39;/g, "'");
+      const pltu = card.dataset.pltu || '';
+      if (pemasok) openPemasokModal(pemasok, pltu);
+    };
+  });
+}
+
+function buildKontrakCards(contracts, yearsToShow, monthFilterApplied, monthFilterIdx, totalVol, totalSisa, totalAllReal, avgPct, totalRealByYear){
+  let html = '<div class="kontrak-cards">';
+  for (let ci = 0; ci < contracts.length; ci++){
+    const c = contracts[ci];
+    const gcColor = c.genco === 'PNP' ? '#10b981' : c.genco === 'PIP' ? '#f59e0b' : c.genco === 'UIW' ? '#3b82f6' : '#64748b';
+    const displayedTotalReal = getFilteredRealisasiForContract(c);
+    const vol = c.vol_mt || 0;
+    const sisa = vol - displayedTotalReal;
+    const pct = vol > 0 ? (displayedTotalReal / vol * 100) : 0;
+    const pctClass = pctBadgeClass(pct);
+    const sisaColor = sisa < 0 ? 'var(--danger)' : sisa < vol * 0.1 ? 'var(--warn)' : 'var(--text-bright)';
+
+    html += '<div class="kontrak-card" data-pemasok="' + escapeHtml((c.pemasok||'').replace(/'/g,"&#39;")) + '" data-pltu="' + escapeHtml(c.pltu) + '">';
+    html += '<div class="kontrak-card-head">';
+    html += '<div><div class="kontrak-card-pltu">' + escapeHtml(c.pltu) + '</div>';
+    html += '<div class="kontrak-card-mitra"><span style="color:var(--accent);font-weight:500">' + escapeHtml(c.pemasok) + '</span> <span style="font-size:9px;opacity:.5">tap for details</span></div></div>';
+    html += '<div class="kontrak-card-genco"><span class="kontrak-genco-pill" style="color:' + gcColor + ';border-color:' + gcColor + '40">' + c.genco + '</span></div>';
+    html += '</div>';
+
+    html += '<div class="kontrak-card-grid">';
+    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Volume</span><span class="kontrak-card-val">' + fmtInt(vol) + ' MT</span></div>';
+    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Sisa</span><span class="kontrak-card-val" style="color:' + sisaColor + '">' + fmtInt(sisa) + ' MT</span></div>';
+    // Show realisasi per year
+    for (let j = 0; j < yearsToShow.length; j++){
+      const y = yearsToShow[j];
+      const v = monthFilterApplied ? getCumulativeRealisasi(c, y, monthFilterIdx) : ((c.realisasi_total && c.realisasi_total[y]) || 0);
+      html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Real ' + y + '</span><span class="kontrak-card-val" style="color:' + (v > 0 ? 'var(--accent)' : 'var(--text-dim)') + '">' + (v ? fmtInt(v) : '—') + '</span></div>';
+    }
+    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Achievement</span><span class="kontrak-pct-badge ' + pctClass + '" style="font-size:10px;padding:2px 8px">' + pct.toFixed(1) + '%</span></div>';
+    html += '</div>';
+
+    html += '<div class="kontrak-card-footer">';
+    html += '<span class="kontrak-card-dates">' + fmtKontrakDate(c.awal) + ' → ' + fmtKontrakDate(c.akhir) + '</span>';
+    html += '<button class="kontrak-card-expand">▼ More</button>';
+    html += '</div>';
+
+    // Expandable detail
+    html += '<div class="kontrak-card-detail">';
+    if (c.jenis) html += '<div><b>Jenis:</b> ' + escapeHtml(c.jenis) + '</div>';
+    if (c.kontrak) html += '<div><b>No. Kontrak:</b> ' + escapeHtml(c.kontrak) + '</div>';
+    if (c.amandemen) html += '<div><b>Amandemen:</b> ' + escapeHtml(c.amandemen) + '</div>';
+    html += '</div>';
+
+    html += '</div>';
+  }
+
+  // Total card
+  html += '<div class="kontrak-cards-total">';
+  html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Total (' + contracts.length + ')</span></div><div></div>';
+  html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Volume</span><span class="kontrak-card-val">' + fmtInt(totalVol) + ' MT</span></div>';
+  html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Sisa</span><span class="kontrak-card-val">' + fmtInt(totalSisa) + ' MT</span></div>';
+  for (let j = 0; j < yearsToShow.length; j++){
+    const y = yearsToShow[j];
+    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Real ' + y + '</span><span class="kontrak-card-val" style="color:var(--accent)">' + fmtInt(totalRealByYear[y]) + '</span></div>';
+  }
+  html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Avg %</span><span class="kontrak-card-val">' + avgPct.toFixed(1) + '%</span></div>';
+  html += '</div>';
+
+  html += '</div>';
+  return html;
 }
 
 // ========= USULAN KONTRAK (Supabase-synced) =========
@@ -12329,7 +12819,16 @@ function renderMouTimeline(){
     return prefix === activeFilter;
   });
 
-  let html = filterHtml + '<div class="mou-tl-wrap"><table class="mou-tbl"><thead>';
+  let html = filterHtml +
+    '<div class="mou-legend-bar">' +
+      '<div class="mou-legend-group">' +
+        '<span class="mou-legend-item"><span class="mou-legend-dot" style="background:#10b981"></span>Done</span>' +
+        '<span class="mou-legend-item"><span class="mou-legend-dot" style="background:#f59e0b"></span>Pending</span>' +
+        '<span class="mou-legend-item"><span class="mou-legend-dot" style="background:#3b82f6"></span>Planning</span>' +
+      '</div>' +
+      '<div class="mou-legend-hint">💡 Klik status untuk ubah · klik sel minggu untuk tandai · klik nama grup untuk buka/tutup</div>' +
+    '</div>' +
+    '<div class="mou-tl-wrap"><table class="mou-tbl"><thead>';
   html += '<tr class="mou-hdr-month"><th class="mou-fr mou-fr1 mou-fr-merged" rowspan="2">#</th><th class="mou-fr mou-fr2 mou-fr-merged" rowspan="2">Output</th><th class="mou-fr mou-fr3 mou-fr-merged" rowspan="2">PIC</th><th class="mou-fr mou-fr4 mou-fr-merged" rowspan="2">Due Date</th><th class="mou-fr mou-fr-status mou-fr-merged" rowspan="2">Status</th><th class="mou-fr mou-fr-ket mou-fr-merged" rowspan="2">Keterangan</th>' + monthHeaders + '</tr>';
   html += '<tr class="mou-hdr-week">' + weekHeaders + '</tr>';
   html += '</thead><tbody>';
@@ -13685,6 +14184,44 @@ window.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => { if (trendChart) trendChart.resize(); }, 50);
     };
   }
+
+  // Legend (Genco Color Code) collapse toggle
+
+  // ========= V54: MAP ENHANCEMENT FEATURES =========
+
+  // --- Performance Filter ---
+
+  // --- Terrain Layer Toggle ---
+  let terrainLayer = null;
+  let baseTileLayers = [];
+  const btnTerrain = document.getElementById('btnTerrain');
+  if (btnTerrain && map){
+    L.DomEvent.disableClickPropagation(btnTerrain);
+    btnTerrain.onclick = () => {
+      const isActive = btnTerrain.classList.toggle('active');
+      if (isActive){
+        // Store current base layers and remove them
+        map.eachLayer(l => {
+          if (l._url && l._url.includes('cartocdn')){
+            baseTileLayers.push(l);
+            map.removeLayer(l);
+          }
+        });
+        // Add terrain tiles
+        terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenTopoMap', maxZoom: 12, minZoom: 3,
+        }).addTo(map);
+        if (markerLayer) markerLayer.bringToFront();
+      } else {
+        if (terrainLayer){ map.removeLayer(terrainLayer); terrainLayer = null; }
+        baseTileLayers.forEach(l => l.addTo(map));
+        baseTileLayers = [];
+        if (markerLayer) markerLayer.bringToFront();
+      }
+    };
+  }
+
+  // ========= END V54 MAP FEATURES =========
 
   // Legend (Genco Color Code) collapse toggle
   const legendCollapseBtn = document.getElementById('legendCollapseBtn');
