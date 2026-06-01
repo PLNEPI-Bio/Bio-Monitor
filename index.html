@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biomassa Dashboard — PLTU PLN Group 2026</title>
+<title>Bioenergy Dashboard — PLTU PLN Group 2026</title>
 
 <!-- ===== SEO / Social media preview meta tags =====
      When this URL is shared on WhatsApp, Twitter, Facebook, LinkedIn, Slack, etc.,
@@ -1007,8 +1007,8 @@ html,body{
 /* ===== TAB 2: REALISASI VIEW ===== */
 .real-view{display:grid;grid-template-rows:auto 1fr;height:100%;overflow-y:auto;padding:20px 24px;gap:20px;background:var(--bg)}
 .real-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
-.real-title{font-size:20px;font-weight:700;color:var(--text-bright);letter-spacing:-.3px}
-.real-title-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.real-title{font-size:22px;font-weight:700;color:var(--text-bright);letter-spacing:-.4px}
+.real-title-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-top:5px}
 .real-year-toggle{display:flex;border:1px solid var(--border);background:var(--panel)}
 .real-year-toggle button{
   background:transparent;border:none;color:var(--text-dim);padding:8px 16px;
@@ -1020,9 +1020,10 @@ html,body{
 .real-year-toggle button:hover{color:var(--text)}
 
 .real-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
-.real-card{background:var(--panel);border:1px solid var(--border);padding:20px;position:relative}
-.real-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;font-weight:500}
-.real-card h3::before{content:"";display:inline-block;width:10px;height:1px;background:var(--accent);margin-right:8px;vertical-align:middle}
+.real-card{background:var(--panel);border:1px solid var(--border);padding:20px;position:relative;border-radius:12px;transition:box-shadow .2s}
+.real-card:hover{box-shadow:var(--shadow-xs)}
+.real-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;font-weight:700;display:flex;align-items:center}
+.real-card h3::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--accent);margin-right:9px;vertical-align:middle}
 
 /* Card head row: title + inline toggle.
    V33: padding-right reserves space for the absolutely-positioned download
@@ -1057,11 +1058,17 @@ html,body{
 .chart-download-btn.downloading{color:var(--accent);border-color:var(--accent);pointer-events:none}
 
 .summary-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.summary-stat{background:var(--panel-3);border:1px solid var(--border);padding:14px}
-.summary-stat-label{font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
-.summary-stat-value{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:var(--text-bright);letter-spacing:-.5px}
-.summary-stat-delta{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;margin-top:4px}
-.summary-stat-delta.up{color:var(--accent)}
+.summary-stat{
+  background:var(--panel);border:1px solid var(--border);padding:16px 18px;
+  border-radius:10px;position:relative;overflow:hidden;
+  transition:transform .15s,box-shadow .15s;
+}
+.summary-stat::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--stat-accent,var(--accent));border-radius:10px 10px 0 0}
+.summary-stat:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
+.summary-stat-label{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;font-weight:600}
+.summary-stat-value{font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:700;color:var(--text-bright);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.summary-stat-delta{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;margin-top:6px;font-weight:600}
+.summary-stat-delta.up{color:#10b981}
 .summary-stat-delta.down{color:var(--danger)}
 
 .chart-wrap{position:relative;width:100%}
@@ -1505,7 +1512,7 @@ html,body{
 .chart-card-head h3{flex-shrink:0;min-width:0}
 .chart-toggle-group{
   display:flex;flex-wrap:wrap;gap:6px 14px;
-  padding:6px 10px;background:var(--panel-3);border-left:2px solid var(--accent);
+  padding:7px 12px;background:var(--panel-3);border:1px solid var(--border);border-radius:8px;
   margin-left:auto;margin-right:14px;
 }
 .chart-toggle{
@@ -1552,9 +1559,9 @@ html,body{
 .pareto-month-filter-wrap select:hover,.pareto-month-filter-wrap select:focus{border-color:var(--accent);color:var(--text-bright)}
 
 /* ===== REAL RECAP TABLE ===== */
-.real-recap-wrap{background:var(--panel);border:1px solid var(--border);padding:20px;box-sizing:border-box;border-radius:8px}
-.real-recap-wrap h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
-.real-recap-wrap h3::before{content:"";display:inline-block;width:10px;height:1px;background:var(--accent);margin-right:8px;vertical-align:middle}
+.real-recap-wrap{background:var(--panel);border:1px solid var(--border);padding:20px;box-sizing:border-box;border-radius:12px}
+.real-recap-wrap h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.real-recap-wrap h3::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--accent);margin-right:9px;vertical-align:middle}
 .real-recap-wrap h3 .recap-count{font-size:10px;color:var(--accent);letter-spacing:1.5px}
 .real-recap-filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px}
 .real-recap-filter{display:flex;flex-direction:column;gap:4px}
@@ -3197,7 +3204,7 @@ html,body{
 }
 
 /* Realisasi tab: PLTU filter card (V26: dropdown layout) */
-.real-pltu-filter-card{padding:18px 22px}
+.real-pltu-filter-card{padding:18px 22px;border-radius:12px}
 .real-pltu-filter-head{
   margin-bottom:14px;
 }
@@ -3223,11 +3230,11 @@ html,body{
 }
 .real-filter-select{
   background:var(--panel-2);border:1px solid var(--border);color:var(--text);
-  padding:9px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
-  cursor:pointer;outline:none;letter-spacing:.5px;border-radius:2px;
-  appearance:none;
+  padding:10px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
+  cursor:pointer;outline:none;letter-spacing:.3px;border-radius:8px;
+  appearance:none;transition:border-color .15s;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none'/></svg>");
-  background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;
 }
 .real-filter-select:hover,.real-filter-select:focus{border-color:var(--accent)}
 .real-pltu-filter-summary{
@@ -3849,6 +3856,58 @@ html,body{
 .notif-item.unread{border-left:3px solid var(--accent)}
 .notif-clear-btn{background:transparent;border:none;color:var(--accent);font-size:10px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
 
+/* V55: Login / user menu */
+.topbar-login-btn{
+  display:flex;align-items:center;gap:7px;background:var(--panel);
+  border:1px solid var(--border);color:var(--text);cursor:pointer;
+  padding:7px 12px;border-radius:8px;transition:all .15s;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;
+}
+.topbar-login-btn:hover{border-color:var(--accent);color:var(--accent)}
+.topbar-login-btn.logged-in{background:var(--panel-3)}
+.login-avatar{
+  width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
+  flex-shrink:0;text-transform:uppercase;
+}
+.login-label{white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.login-dropdown{
+  position:fixed;top:52px;right:8px;width:240px;
+  background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  box-shadow:var(--shadow-lg);z-index:5500;display:none;overflow:hidden;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.login-dropdown.open{display:block}
+.login-dd-header{
+  display:flex;align-items:center;gap:12px;padding:16px;
+  border-bottom:1px solid var(--border);background:var(--panel-2);
+}
+.login-dd-avatar{
+  width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;
+  flex-shrink:0;text-transform:uppercase;
+}
+.login-dd-info{min-width:0;flex:1}
+.login-dd-name{font-size:13px;font-weight:700;color:var(--text-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.login-dd-role{font-size:10px;color:var(--text-dim);margin-top:2px}
+.login-dd-role.admin{color:#10b981;font-weight:600}
+.login-dd-actions{padding:6px}
+.login-dd-btn{
+  display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;
+  background:transparent;border:none;cursor:pointer;border-radius:6px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:500;
+  color:var(--text);transition:background .12s;text-align:left;
+}
+.login-dd-btn:hover{background:var(--panel-2)}
+.login-dd-btn svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.login-dd-btn.danger{color:var(--danger)}
+.login-dd-btn.danger:hover{background:rgba(239,68,68,.08)}
+.login-dd-btn.primary{color:var(--accent)}
+@media(max-width:768px){
+  .login-label{display:none}
+  .topbar-login-btn{padding:7px 9px}
+}
+
 /* Comparison mode (Pareto) */
 .compare-toggle{
   background:transparent;border:1px solid var(--border);color:var(--text-dim);
@@ -3976,6 +4035,22 @@ html,body{
     <button class="topbar-update-btn" id="topbarUpdateBtn" onclick="switchTab('update')" title="Update Data">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M8 2v8M5 5l3-3 3 3M2 12v2h12v-2"/></svg>
     </button>
+    <!-- V55: Login / user menu -->
+    <button class="topbar-login-btn" id="topbarLoginBtn" title="Login">
+      <svg class="login-icon-out" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="15" height="15"><path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3M10 11l3-3-3-3M13 8H6"/></svg>
+      <span class="login-avatar" id="loginAvatar" style="display:none"></span>
+      <span class="login-label" id="loginLabel">Login</span>
+    </button>
+    <div class="login-dropdown" id="loginDropdown">
+      <div class="login-dd-header" id="loginDdHeader">
+        <div class="login-dd-avatar" id="loginDdAvatar">?</div>
+        <div class="login-dd-info">
+          <div class="login-dd-name" id="loginDdName">Belum login</div>
+          <div class="login-dd-role" id="loginDdRole">Akses terbatas</div>
+        </div>
+      </div>
+      <div class="login-dd-actions" id="loginDdActions"></div>
+    </div>
     <button class="notif-btn" id="notifBtn" title="Notifications">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="17" height="17"><path d="M10 13a2 2 0 1 1-4 0M2.5 11c1-1 1-3 1.2-5.5C4 3 5.8 1.5 8 1.5s4 1.5 4.3 4c.2 2.5.2 4.5 1.2 5.5H2.5z"/></svg>
       <span class="notif-badge" id="notifBadge"></span>
@@ -5451,19 +5526,20 @@ function updateKPIs(){
   document.getElementById('kpi-real-pct').textContent = target ? `${(real/target*100).toFixed(1)}% OF TARGET` : '—';
   document.getElementById('kpi-do').innerHTML = fmt(doSum) + '<span class="kpi-unit">ton</span>';
   document.getElementById('kpi-gap').innerHTML = fmt(gap) + '<span class="kpi-unit">ton</span>';
-  // V54: Animate KPI counters
-  if (typeof animateValue === 'function'){
+  // V54/V55: Animate KPI counters ONLY on first render (avoid flicker on every filter change)
+  if (!window._kpiAnimatedOnce && typeof animateValue === 'function'){
+    window._kpiAnimatedOnce = true;
     [['kpi-target',target],['kpi-real',real],['kpi-do',doSum],['kpi-gap',gap]].forEach(([id,val])=>{
       const el = document.getElementById(id);
       if(el && val > 0){
         const unit = '<span class="kpi-unit">ton</span>';
-        el.textContent = '0';
         const start = performance.now();
         (function step(now){
           const p = Math.min((now-start)/700,1);
           const ease = 1-Math.pow(1-p,3);
           el.innerHTML = fmt(Math.round(val*ease)) + unit;
           if(p<1) requestAnimationFrame(step);
+          else el.innerHTML = fmt(val) + unit;
         })(start);
       }
     });
@@ -6429,27 +6505,35 @@ function renderRealView(){
       const d = ((s.value - s.prev)/s.prev*100);
       delta = `<div class="summary-stat-delta ${d>0?'up':'down'}">${d>0?'▲':'▼'} ${Math.abs(d).toFixed(1)}% vs prev year</div>`;
     }
-    return `<div class="summary-stat" style="border-left:2px solid ${s.color}">
+    return `<div class="summary-stat" style="--stat-accent:${s.color}">
       <div class="summary-stat-label">${s.label}</div>
       <div class="summary-stat-value">${fmt(s.value)} <span style="font-size:11px;color:var(--text-dim)">ton</span></div>
       ${delta}
     </div>`;
   }).join('');
-  // V54: Animate summary stat values
-  statsEl.querySelectorAll('.summary-stat-value').forEach((el,i) => {
-    const val = stats[i].value;
-    if(val > 0){
-      const unit = ' <span style="font-size:11px;color:var(--text-dim)">ton</span>';
-      el.textContent = '0';
-      const start = performance.now();
-      (function step(now){
-        const p = Math.min((now-start)/700,1);
-        const ease = 1-Math.pow(1-p,3);
-        el.innerHTML = fmt(Math.round(val*ease)) + unit;
-        if(p<1) requestAnimationFrame(step);
-      })(start);
-    }
+  // Color each card's top accent bar
+  statsEl.querySelectorAll('.summary-stat').forEach((card,i) => {
+    if (stats[i] && stats[i].color) card.style.setProperty('--stat-accent', stats[i].color);
   });
+  // V54/V55: Animate summary stat values ONLY once (avoid flicker on re-render)
+  if (!window._realStatsAnimatedOnce){
+    window._realStatsAnimatedOnce = true;
+    statsEl.querySelectorAll('.summary-stat-value').forEach((el,i) => {
+      const val = stats[i].value;
+      if(val > 0){
+        const unit = ' <span style="font-size:11px;color:var(--text-dim)">ton</span>';
+        el.textContent = '0';
+        const start = performance.now();
+        (function step(now){
+          const p = Math.min((now-start)/700,1);
+          const ease = 1-Math.pow(1-p,3);
+          el.innerHTML = fmt(Math.round(val*ease)) + unit;
+          if(p<1) requestAnimationFrame(step);
+          else el.innerHTML = fmt(val) + unit;
+        })(start);
+      }
+    });
+  }
 
   // Plugin: draw values above each line point (theme-aware, color matches dataset)
   const trendValuesPlugin = {
@@ -7732,25 +7816,29 @@ function renderParetoKpis(){
     card('Achievement', achievement.toFixed(1) + '%', '', achievement >= 100 ? 'Surplus' : (achievement >= 80 ? 'On track' : 'Under target'),
          achievement >= 100 ? '#10b981' : achievement >= 80 ? '#f59e0b' : '#ef4444'),
   ].join('');
-  // V54: Animate pareto KPI values
-  const numericVals = [agg.target, agg.real, agg.loss, achievement];
-  gridEl.querySelectorAll('.pareto-kpi-value').forEach((el,i) => {
-    const val = numericVals[i];
-    if(!val || val <= 0) return;
-    const origHTML = el.innerHTML;
-    const unitSpan = el.querySelector('.pareto-kpi-unit');
-    const unitHTML = unitSpan ? unitSpan.outerHTML : '';
-    const isPercent = i === 3;
-    el.textContent = '0';
-    const start = performance.now();
-    (function step(now){
-      const p = Math.min((now-start)/700,1);
-      const ease = 1-Math.pow(1-p,3);
-      const cur = val * ease;
-      el.innerHTML = (isPercent ? cur.toFixed(1)+'%' : fmtK(Math.round(cur))) + unitHTML;
-      if(p<1) requestAnimationFrame(step);
-    })(start);
-  });
+  // V54/V55: Animate pareto KPI values ONLY once (avoid flicker on filter change)
+  if (!window._paretoKpiAnimatedOnce){
+    window._paretoKpiAnimatedOnce = true;
+    const numericVals = [agg.target, agg.real, agg.loss, achievement];
+    gridEl.querySelectorAll('.pareto-kpi-value').forEach((el,i) => {
+      const val = numericVals[i];
+      if(!val || val <= 0) return;
+      const unitSpan = el.querySelector('.pareto-kpi-unit');
+      const unitHTML = unitSpan ? unitSpan.outerHTML : '';
+      const isPercent = i === 3;
+      const finalHTML = (isPercent ? val.toFixed(1)+'%' : fmtK(val)) + unitHTML;
+      el.textContent = '0';
+      const start = performance.now();
+      (function step(now){
+        const p = Math.min((now-start)/700,1);
+        const ease = 1-Math.pow(1-p,3);
+        const cur = val * ease;
+        el.innerHTML = (isPercent ? cur.toFixed(1)+'%' : fmtK(Math.round(cur))) + unitHTML;
+        if(p<1) requestAnimationFrame(step);
+        else el.innerHTML = finalHTML;
+      })(start);
+    });
+  }
 }
 
 // =====================================================
@@ -8319,21 +8407,22 @@ let usulanInit = false;
 let updateInit = false;
 let pembangkitInit = false;
 function switchTab(tab){
-  // V53: Identity gate for Update Data — check BEFORE view switch
+  // V53/V55: Identity gate for Update Data — check BEFORE view switch
   if (tab === 'update'){
     let userName = getUserName();
-    if (!userName || UPDATE_ADMIN_NAMES.indexOf(userName) < 0){
+    if (!canAccessUpdate(userName)){
       const input = window.prompt(
         'Masukkan nama Anda untuk mengakses Update Data:\n\nHanya user yang telah terdaftar yang dapat mengakses.',
         userName || ''
       );
       if (!input || !input.trim()) return; // cancelled — don't switch
       const trimmed = input.trim();
-      if (UPDATE_ADMIN_NAMES.indexOf(trimmed) < 0){
+      if (!canAccessUpdate(trimmed)){
         alert('Nama "' + trimmed + '" tidak terdaftar.\n\nSilakan hubungi admin untuk mendapatkan akses.');
         return; // denied — don't switch
       }
       setUserName(trimmed);
+      if (typeof renderLoginUI === 'function') renderLoginUI();
     }
   }
   state.tab = tab;
@@ -8412,6 +8501,7 @@ function switchTab(tab){
       }
       setUserName(trimmed);
       userName = trimmed;
+      if (typeof renderLoginUI === 'function') renderLoginUI();
     }
     if (!usulanInit){
     try {
@@ -8429,6 +8519,9 @@ function switchTab(tab){
         wireUpdateTab();
         updateInit = true;
       }
+      // V55: Always re-check revert availability when entering the tab
+      // (Supabase may not have been ready on first wire)
+      if (typeof checkRevertAvailable === 'function') setTimeout(checkRevertAvailable, 200);
     } catch (e) {
       console.error('Update tab init failed:', e);
     }
@@ -9478,6 +9571,9 @@ function loadUsulanQueue(){
 function saveUsulanQueue(q){
   try { localStorage.setItem(USULAN_QUEUE_KEY, JSON.stringify(q)); } catch(e){}
 }
+// Authorized admin names — case-sensitive, must match localStorage user name
+const UPDATE_ADMIN_NAMES = ['Maulana - Admin', 'Namira - Upload', 'Isna - Upload', 'Mahmut - Upload'];
+
 function getUserName(){
   try { return localStorage.getItem(USULAN_USER_KEY) || ''; } catch(e){ return ''; }
 }
@@ -9499,6 +9595,124 @@ function canAccessUsulan(name){
     return re.test(n);
   });
 }
+
+// =====================================================
+// V55: Centralized Login System
+// Drives access to Update Data, Usulan Kontrak, and future locked content.
+// =====================================================
+function isLoggedIn(){ return !!getUserName(); }
+function canAccessUpdate(name){
+  return !!name && UPDATE_ADMIN_NAMES.indexOf(name) >= 0;
+}
+// Roles for display purposes
+function userRole(name){
+  if (!name) return '';
+  if (canAccessUpdate(name)) return 'Admin / Upload';
+  if (canAccessUsulan(name)) return 'Usulan Kontrak';
+  return 'Akses umum';
+}
+function isAdminRole(name){
+  return canAccessUpdate(name) || canAccessUsulan(name);
+}
+function userInitials(name){
+  if (!name) return '?';
+  const clean = name.split(' - ')[0].trim();
+  const parts = clean.split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return clean.slice(0, 2).toUpperCase();
+}
+
+// Prompt the user to log in (set identity). Returns the name or '' if cancelled.
+function promptLogin(prefill){
+  const input = window.prompt(
+    'Masukkan nama Anda untuk login:\n\nLogin diperlukan untuk mengakses Update Data, Usulan Kontrak, dan konten terkunci lainnya.',
+    prefill || ''
+  );
+  if (!input || !input.trim()) return '';
+  const name = input.trim();
+  setUserName(name);
+  renderLoginUI();
+  return name;
+}
+
+function logoutUser(){
+  try { localStorage.removeItem(USULAN_USER_KEY); } catch(e){}
+  renderLoginUI();
+  // If currently on a locked tab, bounce to map
+  if (state.tab === 'update' || state.tab === 'usulan'){
+    switchTab('map');
+  }
+}
+
+function renderLoginUI(){
+  const name = getUserName();
+  const btn = document.getElementById('topbarLoginBtn');
+  const avatar = document.getElementById('loginAvatar');
+  const label = document.getElementById('loginLabel');
+  const iconOut = btn ? btn.querySelector('.login-icon-out') : null;
+  const ddName = document.getElementById('loginDdName');
+  const ddRole = document.getElementById('loginDdRole');
+  const ddAvatar = document.getElementById('loginDdAvatar');
+  const ddActions = document.getElementById('loginDdActions');
+
+  if (name){
+    if (btn) btn.classList.add('logged-in');
+    if (iconOut) iconOut.style.display = 'none';
+    if (avatar){ avatar.style.display = 'flex'; avatar.textContent = userInitials(name); }
+    if (label) label.textContent = name.split(' - ')[0];
+    if (ddName) ddName.textContent = name;
+    if (ddRole){ ddRole.textContent = userRole(name); ddRole.classList.toggle('admin', isAdminRole(name)); }
+    if (ddAvatar) ddAvatar.textContent = userInitials(name);
+    if (ddActions){
+      ddActions.innerHTML =
+        '<button class="login-dd-btn" id="loginDdSwitch"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8a6 6 0 0 1 10-4.5L14 5M14 8a6 6 0 0 1-10 4.5L2 11M14 2v3h-3M2 14v-3h3"/></svg> Ganti User</button>' +
+        '<button class="login-dd-btn danger" id="loginDdLogout"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3M10 11l3-3-3-3M13 8H6"/></svg> Logout</button>';
+      const sw = document.getElementById('loginDdSwitch');
+      const lo = document.getElementById('loginDdLogout');
+      if (sw) sw.onclick = () => { closeLoginDropdown(); promptLogin(name); };
+      if (lo) lo.onclick = () => { closeLoginDropdown(); logoutUser(); };
+    }
+  } else {
+    if (btn) btn.classList.remove('logged-in');
+    if (iconOut) iconOut.style.display = '';
+    if (avatar) avatar.style.display = 'none';
+    if (label) label.textContent = 'Login';
+    if (ddName) ddName.textContent = 'Belum login';
+    if (ddRole){ ddRole.textContent = 'Akses terbatas'; ddRole.classList.remove('admin'); }
+    if (ddAvatar) ddAvatar.textContent = '?';
+    if (ddActions){
+      ddActions.innerHTML =
+        '<button class="login-dd-btn primary" id="loginDdLogin"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-3M6 11l3-3-3-3M9 8H2"/></svg> Login</button>';
+      const li = document.getElementById('loginDdLogin');
+      if (li) li.onclick = () => { closeLoginDropdown(); promptLogin(); };
+    }
+  }
+}
+
+function toggleLoginDropdown(){
+  const dd = document.getElementById('loginDropdown');
+  if (dd) dd.classList.toggle('open');
+}
+function closeLoginDropdown(){
+  const dd = document.getElementById('loginDropdown');
+  if (dd) dd.classList.remove('open');
+}
+
+function initLoginUI(){
+  const btn = document.getElementById('topbarLoginBtn');
+  const dd = document.getElementById('loginDropdown');
+  if (btn){
+    btn.onclick = (e) => { e.stopPropagation(); toggleLoginDropdown(); };
+  }
+  document.addEventListener('click', (e) => {
+    if (dd && !dd.contains(e.target) && e.target !== btn && !(btn && btn.contains(e.target))){
+      dd.classList.remove('open');
+    }
+  });
+  renderLoginUI();
+}
+// Defer so all top-level consts (UPDATE_ADMIN_NAMES etc.) are initialized first
+setTimeout(initLoginUI, 0);
 
 // ---------- Sync status UI ----------
 function setSyncStatus(status, extra){
@@ -10622,9 +10836,6 @@ async function deleteCustomUsulan(usulanNo){
 // UPDATE DATA TAB — Excel upload + Supabase sync
 // ============================================================
 
-// Authorized admin names — case-sensitive, must match localStorage user name
-const UPDATE_ADMIN_NAMES = ['Maulana - Admin', 'Namira - Upload', 'Isna - Upload', 'Mahmut - Upload'];
-
 // Module state
 let updateFiles = { prod: null, kontrak: null, pareto: null, mou: null }; // V43: added pareto, V50: added mou
 let updateProcessing = false;
@@ -11010,22 +11221,35 @@ function wireUpdateTab(){
 }
 
 // V51: Check if backup row (id=2) exists in dashboard_data
-async function checkRevertAvailable(){
+async function checkRevertAvailable(retry){
   const btn = document.getElementById('updateRevertBtn');
   if (!btn) return;
-  btn.disabled = true;
-  if (!supabaseClient) return;
+  // If Supabase client not ready yet, retry shortly (up to a few times)
+  if (!supabaseClient){
+    btn.disabled = true;
+    const attempts = (retry || 0);
+    if (attempts < 5){
+      setTimeout(() => checkRevertAvailable(attempts + 1), 600);
+    }
+    return;
+  }
   try {
-    const { data } = await supabaseClient
+    const { data, error } = await supabaseClient
       .from('dashboard_data')
       .select('uploaded_by, uploaded_at, source_filename, data_summary')
       .eq('id', 2).maybeSingle();
-    if (data){
+    if (!error && data){
       btn.disabled = false;
       const when = data.uploaded_at ? new Date(data.uploaded_at).toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '?';
       btn.title = 'Revert ke: ' + (data.source_filename || '') + ' (uploaded ' + when + ' by ' + (data.uploaded_by || '?') + ')';
+    } else {
+      btn.disabled = true;
+      btn.title = 'Belum ada backup. Revert tersedia setelah Anda melakukan upload data baru.';
     }
-  } catch(e){ /* no backup */ }
+  } catch(e){
+    btn.disabled = true;
+    btn.title = 'Belum ada backup untuk di-revert.';
+  }
 }
 
 // V51: Revert to backup data
