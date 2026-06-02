@@ -4820,6 +4820,7 @@ html,body{
         <select id="beritaTopicFilter" class="berita-filter-select">
           <option value="all">Semua Topik</option>
           <option value="plnepi">PLN EPI</option>
+          <option value="hokkop">Hokkop Situngkir</option>
           <option value="biomassa">Biomassa & Cofiring</option>
           <option value="bioenergi">Bioenergi</option>
           <option value="pltu">PLTU</option>
@@ -15831,10 +15832,22 @@ function renderBeritaFeed(){
   const f = beritaState.filter;
   const now = Date.now();
   const filtered = beritaState.articles.filter(a => {
-    // Topic
+    // Topic — match against article text directly (don't rely on server topics)
     if (f.topic !== 'all'){
-      const topics = a.topics || [];
-      if (!topics.includes(f.topic)) return false;
+      const txt = ((a.title||'') + ' ' + (a.snippet||'')).toLowerCase();
+      const TOPIC_KEYWORDS = {
+        plnepi: ['pln energi primer', 'pln epi', 'epi'],
+        hokkop: ['hokkop'],
+        biomassa: ['biomassa', 'biomass', 'cofiring'],
+        bioenergi: ['bioenergi', 'bioenergy'],
+        pltu: ['pltu'],
+      };
+      const kws = TOPIC_KEYWORDS[f.topic] || [];
+      const topicMatch = kws.some(kw => {
+        const words = kw.split(/\s+/);
+        return words.length === 1 ? txt.includes(kw) : words.every(w => txt.includes(w));
+      });
+      if (!topicMatch) return false;
     }
     // Date
     if (f.date !== 'all' && a.publishedAt){
@@ -15849,10 +15862,21 @@ function renderBeritaFeed(){
       const haystack = ((a.title||'') + ' ' + (a.snippet||'') + ' ' + (a.source||'')).toLowerCase();
       if (!haystack.includes(f.search)) return false;
     }
-    // V52: Keyword relevance filter — article must contain at least 1 of these keywords
-    const BERITA_KEYWORDS = ['pln energi primer', 'pln epi', 'hokkop situngkir', 'biomassa', 'cofiring', 'bioenergi', 'bioenergy', 'biomass'];
+    // V56: Keyword relevance filter — article must contain at least 1 keyword.
+    // Single-word keywords use substring match. Multi-word keywords match if
+    // ALL their words appear anywhere (any order) — so "PT EPI PLN" still matches "pln epi".
+    const BERITA_KEYWORDS = [
+      'pln energi primer', 'pln epi', 'hokkop situngkir', 'hokkop',
+      'biomassa', 'cofiring', 'bioenergi', 'bioenergy', 'biomass',
+      'direktur bioenergi', 'direktur biomassa'
+    ];
     const h = ((a.title||'') + ' ' + (a.snippet||'')).toLowerCase();
-    const matchCount = BERITA_KEYWORDS.filter(kw => h.includes(kw)).length;
+    const matchCount = BERITA_KEYWORDS.filter(kw => {
+      const words = kw.split(/\s+/);
+      if (words.length === 1) return h.includes(kw);
+      // Multi-word: every word must be present somewhere (order-independent)
+      return words.every(w => h.includes(w));
+    }).length;
     if (matchCount === 0) return false;
     return true;
   });
