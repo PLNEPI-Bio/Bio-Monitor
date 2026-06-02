@@ -114,7 +114,7 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{
-  height:100%;
+  height:100%;width:100%;margin:0;
   font-family:'Plus Jakarta Sans',-apple-system,'Segoe UI',sans-serif;
   background:var(--bg);color:var(--text);overflow:hidden;
   transition:background-color .2s,color .2s;
@@ -579,9 +579,14 @@ html,body{
   display:flex;background:var(--panel-2);border-bottom:1px solid var(--border);
   padding:0 12px;gap:2px;align-items:stretch;
   position:relative;z-index:1000;
+  overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+  -webkit-overflow-scrolling:touch;scroll-behavior:smooth;
 }
-/* V49.2: No overflow-x/y on .tabs — dropdowns need to render below the bar.
-   With dropdown consolidation (10 tabs → 7), horizontal scroll is no longer needed. */
+.tabs::-webkit-scrollbar{height:4px}
+.tabs::-webkit-scrollbar-track{background:transparent}
+.tabs::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.tabs::-webkit-scrollbar-thumb:hover{background:var(--border-bright)}
 .tab{
   background:transparent;border:none;
   color:var(--text-dim);padding:0 14px;cursor:pointer;
@@ -3775,7 +3780,9 @@ html,body{
 }
 
 /* Color-coded tab indicators */
-.tab[data-tab="map"]::before,.tab-dropdown>.tab::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#0F496E;opacity:0;transition:opacity .2s}
+.tab[data-tab="map"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#0F496E;opacity:0;transition:opacity .2s}
+.tab[data-tab="pembangkit"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#0ea5e9;opacity:0;transition:opacity .2s}
+.tab[data-tab="fasilitas"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#14b8a6;opacity:0;transition:opacity .2s}
 .tab[data-tab="realisasi"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#10b981;opacity:0;transition:opacity .2s}
 .tab[data-tab="bottleneck"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#f59e0b;opacity:0;transition:opacity .2s}
 .tab[data-tab="pareto"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#ef4444;opacity:0;transition:opacity .2s}
@@ -3785,7 +3792,9 @@ html,body{
 .tab[data-tab="berita"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#f97316;opacity:0;transition:opacity .2s}
 .tab.active::before,.tab:hover::before{opacity:1}
 /* Active bottom bar color matches indicator */
-.tab-dropdown>.tab.active::after,.tab[data-tab="map"].active::after{background:#0F496E!important}
+.tab[data-tab="map"].active::after{background:#0F496E!important}
+.tab[data-tab="pembangkit"].active::after{background:#0ea5e9!important}
+.tab[data-tab="fasilitas"].active::after{background:#14b8a6!important}
 .tab[data-tab="realisasi"].active::after{background:#10b981!important}
 .tab[data-tab="bottleneck"].active::after{background:#f59e0b!important}
 .tab[data-tab="pareto"].active::after{background:#ef4444!important}
@@ -4074,18 +4083,18 @@ html,body{
 
 <!-- Tab navigation (V49: dropdown menus for Maps + MoU) -->
 <nav class="tabs">
-  <!-- Map Monitoring dropdown: 3 map tabs -->
-  <div class="tab-dropdown">
-    <button class="tab active" data-tab="map">
-      <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3zM5 2v12M11 4v12"/></svg>
-      MAP MONITORING ▾
-    </button>
-    <div class="tab-dropdown-menu">
-      <button class="tab-dropdown-item" data-tab="map">Map Cofiring Bio PLTU</button>
-      <button class="tab-dropdown-item" data-tab="pembangkit">Map Overview Pembangkit</button>
-      <button class="tab-dropdown-item" data-tab="fasilitas">Map Fasilitas Produksi</button>
-    </div>
-  </div>
+  <button class="tab active" data-tab="map">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3zM5 2v12M11 4v12"/></svg>
+    MAP COFIRING
+  </button>
+  <button class="tab" data-tab="pembangkit">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 14V6l4-2v3l4-2v3l4-2v8zM4 14v-3M8 14v-3M12 14v-3"/></svg>
+    OVERVIEW PEMBANGKIT
+  </button>
+  <button class="tab" data-tab="fasilitas">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V7l5-3 5 3v7M6 14v-3h3v3M13 7l1 1v6"/></svg>
+    FASILITAS PRODUKSI
+  </button>
   <button class="tab" data-tab="realisasi">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V2M2 14h12M4 11l3-4 3 2 4-6"/></svg>
     REALISASI 2023–2026
@@ -4820,7 +4829,6 @@ html,body{
         <select id="beritaTopicFilter" class="berita-filter-select">
           <option value="all">Semua Topik</option>
           <option value="plnepi">PLN EPI</option>
-          <option value="hokkop">Hokkop Situngkir</option>
           <option value="biomassa">Biomassa & Cofiring</option>
           <option value="bioenergi">Bioenergi</option>
           <option value="pltu">PLTU</option>
@@ -8428,16 +8436,13 @@ function switchTab(tab){
   }
   state.tab = tab;
   document.querySelectorAll('.tab').forEach(b => {
-    const isActive = b.dataset.tab === tab;
-    const dropdown = b.closest('.tab-dropdown');
-    if (dropdown){
-      const items = dropdown.querySelectorAll('.tab-dropdown-item');
-      const childMatch = Array.from(items).some(i => i.dataset.tab === tab);
-      b.classList.toggle('active', isActive || childMatch);
-    } else {
-      b.classList.toggle('active', isActive);
-    }
+    b.classList.toggle('active', b.dataset.tab === tab);
   });
+  // Scroll the active tab into view in the horizontal tab bar
+  const activeTabBtn = document.querySelector('.tab.active');
+  if (activeTabBtn && activeTabBtn.scrollIntoView){
+    activeTabBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
   // V47: Update Data button moved to header — toggle its active state too
   const topbarUpdateBtn = document.getElementById('topbarUpdateBtn');
   if (topbarUpdateBtn) topbarUpdateBtn.classList.toggle('active', tab === 'update');
@@ -14258,57 +14263,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Tabs — V49.2: dropdown parent buttons toggle dropdown instead of switchTab
   document.querySelectorAll('.tab').forEach(b => {
-    const isDropdownParent = b.parentElement && b.parentElement.classList.contains('tab-dropdown');
-    if (isDropdownParent){
-      b.onclick = (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        const dd = b.parentElement;
-        const wasOpen = dd.classList.contains('open');
-        document.querySelectorAll('.tab-dropdown.open').forEach(d => d.classList.remove('open'));
-        if (!wasOpen){
-          dd.classList.add('open');
-          // Position the dropdown menu below the button (needed for fixed positioning on mobile)
-          const menu = dd.querySelector('.tab-dropdown-menu');
-          if (menu){
-            const rect = b.getBoundingClientRect();
-            menu.style.position = 'fixed';
-            menu.style.top = rect.bottom + 'px';
-            menu.style.left = Math.max(0, rect.left) + 'px';
-          }
-        }
-      };
-    } else {
-      b.onclick = () => switchTab(b.dataset.tab);
-    }
-  });
-  // V49: Wire dropdown menu items — click navigates + closes menu
-  document.querySelectorAll('.tab-dropdown-item').forEach(item => {
-    item.onclick = (e) => {
-      e.stopPropagation();
-      document.querySelectorAll('.tab-dropdown.open').forEach(d => d.classList.remove('open'));
-      switchTab(item.dataset.tab);
-    };
-  });
-  // Close dropdown when clicking anywhere else
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.tab-dropdown')){
-      document.querySelectorAll('.tab-dropdown.open').forEach(d => d.classList.remove('open'));
-    }
+    b.onclick = () => switchTab(b.dataset.tab);
   });
   // V49.2: Position dropdown on hover too (for desktop)
-  document.querySelectorAll('.tab-dropdown').forEach(dd => {
-    dd.addEventListener('mouseenter', () => {
-      const btn = dd.querySelector('.tab');
-      const menu = dd.querySelector('.tab-dropdown-menu');
-      if (btn && menu){
-        const rect = btn.getBoundingClientRect();
-        menu.style.top = rect.bottom + 'px';
-        menu.style.left = Math.max(0, rect.left) + 'px';
-      }
-    });
-  });
-
   // Map tab
   initMainMap();
   buildFilters();
@@ -15832,22 +15789,10 @@ function renderBeritaFeed(){
   const f = beritaState.filter;
   const now = Date.now();
   const filtered = beritaState.articles.filter(a => {
-    // Topic — match against article text directly (don't rely on server topics)
+    // Topic
     if (f.topic !== 'all'){
-      const txt = ((a.title||'') + ' ' + (a.snippet||'')).toLowerCase();
-      const TOPIC_KEYWORDS = {
-        plnepi: ['pln energi primer', 'pln epi', 'epi'],
-        hokkop: ['hokkop'],
-        biomassa: ['biomassa', 'biomass', 'cofiring'],
-        bioenergi: ['bioenergi', 'bioenergy'],
-        pltu: ['pltu'],
-      };
-      const kws = TOPIC_KEYWORDS[f.topic] || [];
-      const topicMatch = kws.some(kw => {
-        const words = kw.split(/\s+/);
-        return words.length === 1 ? txt.includes(kw) : words.every(w => txt.includes(w));
-      });
-      if (!topicMatch) return false;
+      const topics = a.topics || [];
+      if (!topics.includes(f.topic)) return false;
     }
     // Date
     if (f.date !== 'all' && a.publishedAt){
@@ -15862,21 +15807,10 @@ function renderBeritaFeed(){
       const haystack = ((a.title||'') + ' ' + (a.snippet||'') + ' ' + (a.source||'')).toLowerCase();
       if (!haystack.includes(f.search)) return false;
     }
-    // V56: Keyword relevance filter — article must contain at least 1 keyword.
-    // Single-word keywords use substring match. Multi-word keywords match if
-    // ALL their words appear anywhere (any order) — so "PT EPI PLN" still matches "pln epi".
-    const BERITA_KEYWORDS = [
-      'pln energi primer', 'pln epi', 'hokkop situngkir', 'hokkop',
-      'biomassa', 'cofiring', 'bioenergi', 'bioenergy', 'biomass',
-      'direktur bioenergi', 'direktur biomassa'
-    ];
+    // V52: Keyword relevance filter — article must contain at least 1 of these keywords
+    const BERITA_KEYWORDS = ['pln energi primer', 'pln epi', 'hokkop situngkir', 'biomassa', 'cofiring', 'bioenergi', 'bioenergy', 'biomass'];
     const h = ((a.title||'') + ' ' + (a.snippet||'')).toLowerCase();
-    const matchCount = BERITA_KEYWORDS.filter(kw => {
-      const words = kw.split(/\s+/);
-      if (words.length === 1) return h.includes(kw);
-      // Multi-word: every word must be present somewhere (order-independent)
-      return words.every(w => h.includes(w));
-    }).length;
+    const matchCount = BERITA_KEYWORDS.filter(kw => h.includes(kw)).length;
     if (matchCount === 0) return false;
     return true;
   });
