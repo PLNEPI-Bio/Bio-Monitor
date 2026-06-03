@@ -10936,6 +10936,17 @@ function applyDashboardData(newData, meta){
       DATA[k] = newData[k];
     }
   });
+  // Patch hardcoded coordinates that may be stale in Supabase data
+  const COORD_OVERRIDES = {
+    'Tarahan':        { lat: -5.468, lon: 105.322 },
+    'Pangkalan Susu': { lat:  4.078, lon:  98.290 },
+  };
+  if (DATA.plants && Array.isArray(DATA.plants)){
+    DATA.plants.forEach(p => {
+      const ov = COORD_OVERRIDES[p.name];
+      if (ov){ p.lat = ov.lat; p.lon = ov.lon; }
+    });
+  }
   // V27: backfill missing historical_target/historical_do on plants from older uploads.
   // Supabase may have plant records that pre-date the V26 parser update. Without these
   // fields, the National Overview shows 0 for past-year Target/DO.
