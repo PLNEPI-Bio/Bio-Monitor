@@ -2401,13 +2401,13 @@ html,body{
 /* JENIS filters: pill-style chips with color tag */
 .pembangkit-filter-group.jenis-group .pembangkit-filter-item{
   display:flex;align-items:center;gap:9px;
-  padding:8px 11px;
+  padding:9px 12px;
   background:var(--panel-3);
   border:1px solid var(--border);
   border-left:3px solid transparent;
   font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
   cursor:pointer;transition:all .12s ease;
-  user-select:none;border-radius:2px;
+  user-select:none;border-radius:7px;
 }
 .pembangkit-filter-group.jenis-group .pembangkit-filter-item:hover{
   background:var(--panel);border-left-color:var(--text-dim);
@@ -2422,14 +2422,20 @@ html,body{
 .pembangkit-filter-group.operator-group{
   background:var(--panel-3);
   border:1px solid var(--border);
-  padding:4px;border-radius:2px;
+  padding:5px;border-radius:8px;
+  max-height:300px;overflow-y:auto;gap:2px;
 }
+.pembangkit-filter-group.operator-group::-webkit-scrollbar{width:6px}
+.pembangkit-filter-group.operator-group::-webkit-scrollbar-thumb{
+  background:var(--border-bright);border-radius:3px;
+}
+.pembangkit-filter-group.operator-group::-webkit-scrollbar-track{background:transparent}
 .pembangkit-filter-group.operator-group .pembangkit-filter-item{
   display:flex;align-items:center;gap:8px;
-  padding:5px 8px;
+  padding:6px 9px;
   font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
   cursor:pointer;transition:background .12s;
-  user-select:none;border-radius:2px;
+  user-select:none;border-radius:5px;
 }
 .pembangkit-filter-group.operator-group .pembangkit-filter-item:hover{
   background:var(--panel);
@@ -2481,21 +2487,57 @@ html,body{
   display:flex;align-items:center;justify-content:space-between;
   margin-bottom:6px;
 }
-.pembangkit-filter-header-actions{
-  display:flex;gap:4px;
-}
 .pembangkit-filter-mini-btn{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;
-  background:transparent;border:1px solid var(--border);color:var(--text-dim);
-  padding:2px 7px;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;
-  border-radius:2px;transition:all .12s;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;font-weight:600;
+  background:var(--panel-3);border:none;border-right:1px solid var(--border);
+  color:var(--text-dim);padding:3px 10px;cursor:pointer;letter-spacing:.5px;
+  text-transform:uppercase;transition:all .12s;
 }
+.pembangkit-filter-mini-btn:last-child{border-right:none}
 .pembangkit-filter-mini-btn:hover{
-  color:var(--accent);border-color:var(--accent);
+  color:var(--accent);background:var(--panel);
 }
 .pembangkit-filter-summary{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:8px;color:var(--text-dim);
-  margin-top:6px;letter-spacing:.5px;text-align:right;
+  display:flex;align-items:baseline;gap:7px;
+  background:linear-gradient(135deg, var(--panel) 0%, var(--panel-3) 100%);
+  border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:8px;padding:12px 14px;margin-top:0;
+  font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:0;text-align:left;
+}
+.pembangkit-filter-summary .ps-num{
+  font-size:24px;font-weight:800;color:var(--accent);
+  font-variant-numeric:tabular-nums;line-height:1;
+}
+.pembangkit-filter-summary .ps-sep{color:var(--text-dim);font-size:15px;font-weight:300}
+.pembangkit-filter-summary .ps-tot{
+  font-size:15px;font-weight:600;color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+.pembangkit-filter-summary .ps-lbl{
+  font-size:8px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;
+  margin-left:auto;align-self:center;text-align:right;line-height:1.25;max-width:64px;
+}
+
+/* ===== Pembangkit sidebar — polished layout ===== */
+.pembangkit-view .sidebar{padding:18px 15px}
+.pembangkit-view .sidebar-section{margin-bottom:18px}
+.pembangkit-view .sidebar-section:last-child{margin-bottom:0}
+.sidebar-hero{padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:18px}
+.sidebar-eyebrow{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:8px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--accent);display:inline-flex;align-items:center;gap:7px;margin-bottom:9px;
+}
+.sidebar-eyebrow::before{content:"";width:14px;height:2px;border-radius:1px;background:var(--accent);opacity:.8}
+.sidebar-title{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:17px;font-weight:700;line-height:1.25;letter-spacing:-.2px;
+  color:var(--text-bright);margin:0 0 14px;
+}
+
+/* Segmented All / None control */
+.pembangkit-filter-header-actions{
+  display:flex;gap:0;border:1px solid var(--border);border-radius:5px;overflow:hidden;
 }
 
 /* POME heatmap legend (Gas Power Plant submenu) */
@@ -4348,7 +4390,7 @@ html,body{
   <div class="map-view pembangkit-view">
     <aside class="sidebar" id="pembangkitSidebar">
       <button class="sidebar-collapse-btn" id="pembangkitSidebarCollapseBtn" title="Hide sidebar">◀</button>
-      <div class="sidebar-section">
+      <div class="sidebar-section sidebar-hero">
         <div class="sidebar-eyebrow">Filter Pembangkit</div>
         <h2 class="sidebar-title" id="pembangkitSidebarTitle">Map Overview <span style="color:var(--accent)">Pembangkit</span></h2>
         <div class="pembangkit-filter-summary" id="pembangkitFilterSummary">—</div>
@@ -12150,7 +12192,10 @@ function renderPembangkitFilters(){
       totalCat++;
       if (pembangkitMatchesFilter(p)) visible++;
     }
-    summary.textContent = visible + ' / ' + totalCat + ' lokasi';
+    summary.innerHTML = '<span class="ps-num">' + visible + '</span>'
+      + '<span class="ps-sep">/</span>'
+      + '<span class="ps-tot">' + totalCat + '</span>'
+      + '<span class="ps-lbl">lokasi ditampilkan</span>';
   }
 }
 
