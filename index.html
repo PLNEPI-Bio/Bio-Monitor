@@ -12097,19 +12097,20 @@ function updatePembangkitHeatmap(){
         _applyPomeHeatFilter();
       };
     }
-    // Show panel only when sidebar is collapsed AND no detail/other window is open
+    // On mobile: hide when sidebar drawer is open or a detail/more window is open
+    // On desktop: hide only when detail panel is open
     if (panel){
-      const sidebar = document.getElementById('pembangkitSidebar');
-      const desktopCollapsed = sidebar && sidebar.style.display === 'none';
-      const mobileOpen = sidebar && sidebar.classList.contains('mobile-open');
-      const isMobile = window.matchMedia('(max-width:768px)').matches;
-      const sidebarVisible = isMobile ? mobileOpen : !desktopCollapsed;
-      // Hide when a detail panel or the mobile "More" menu is open (it would cover the content)
       const mv = document.querySelector('.map-view.pembangkit-view');
       const detailOpen = mv && mv.classList.contains('detail-open');
-      const moreMenu = document.getElementById('mobMoreMenu');
-      const moreOpen = moreMenu && (moreMenu.classList.contains('open') || moreMenu.classList.contains('show'));
-      const hide = sidebarVisible || detailOpen || moreOpen;
+      const isMobile = window.matchMedia('(max-width:768px)').matches;
+      let hide = detailOpen;
+      if (isMobile){
+        const sidebar = document.getElementById('pembangkitSidebar');
+        const mobileOpen = sidebar && sidebar.classList.contains('mobile-open');
+        const moreMenu = document.getElementById('mobMoreMenu');
+        const moreOpen = moreMenu && moreMenu.classList.contains('open');
+        hide = hide || mobileOpen || moreOpen;
+      }
       panel.style.display = hide ? 'none' : 'block';
     }
     _applyPomeHeatFilter();
