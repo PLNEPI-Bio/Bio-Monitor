@@ -12097,19 +12097,20 @@ function updatePembangkitHeatmap(){
         _applyPomeHeatFilter();
       };
     }
-    // Show panel only when sidebar is collapsed (hidden)
+    // Show panel only when sidebar is collapsed AND no detail/other window is open
     if (panel){
       const sidebar = document.getElementById('pembangkitSidebar');
-      const sidebarHidden = sidebar && (sidebar.style.display === 'none' || !sidebar.classList.contains('mobile-open') && window.matchMedia('(max-width:768px)').matches);
       const desktopCollapsed = sidebar && sidebar.style.display === 'none';
       const mobileOpen = sidebar && sidebar.classList.contains('mobile-open');
-      let sidebarVisible;
-      if (window.matchMedia('(max-width:768px)').matches){
-        sidebarVisible = mobileOpen;
-      } else {
-        sidebarVisible = !desktopCollapsed;
-      }
-      panel.style.display = sidebarVisible ? 'none' : 'block';
+      const isMobile = window.matchMedia('(max-width:768px)').matches;
+      const sidebarVisible = isMobile ? mobileOpen : !desktopCollapsed;
+      // Hide when a detail panel or the mobile "More" menu is open (it would cover the content)
+      const mv = document.querySelector('.map-view.pembangkit-view');
+      const detailOpen = mv && mv.classList.contains('detail-open');
+      const moreMenu = document.getElementById('mobMoreMenu');
+      const moreOpen = moreMenu && (moreMenu.classList.contains('open') || moreMenu.classList.contains('show'));
+      const hide = sidebarVisible || detailOpen || moreOpen;
+      panel.style.display = hide ? 'none' : 'block';
     }
     _applyPomeHeatFilter();
   } else {
@@ -12308,6 +12309,7 @@ function renderPembangkitMarkers(){
       const mv = document.querySelector('.map-view.pembangkit-view');
       if (mv) mv.classList.add('detail-open');
       renderPembangkitDetail(p);
+      updatePembangkitHeatmap(); // hide POME panel while detail is open
       renderPembangkitMarkers(); // re-render to update selected highlight
       // Resize map after panel opens (grid column changed)
       setTimeout(() => { if (pembangkitMap) pembangkitMap.invalidateSize(); }, 260);
@@ -12401,6 +12403,7 @@ function closePembangkitDetail(){
   pembangkitSelected = null;
   const panel = document.getElementById('pembangkitDetailPanel');
   if (panel) panel.innerHTML = '';
+  updatePembangkitHeatmap(); // restore POME panel after detail closes
   renderPembangkitMarkers(); // remove selected highlight
   setTimeout(() => { if (pembangkitMap) pembangkitMap.invalidateSize(); }, 260);
 }
@@ -16635,6 +16638,7 @@ function mobToggleMore(){
   const bd = document.getElementById('mobMoreBackdrop');
   if (menu) menu.classList.toggle('open');
   if (bd) bd.classList.toggle('open');
+  if (typeof updatePembangkitHeatmap === 'function') updatePembangkitHeatmap();
 }
 function mobCloseMore(){
   const menu = document.getElementById('mobMoreMenu');
@@ -16643,6 +16647,7 @@ function mobCloseMore(){
   if (bd) bd.classList.remove('open');
   const grp = document.getElementById('mobPembangkitGroup');
   if (grp) grp.classList.remove('expanded');
+  if (typeof updatePembangkitHeatmap === 'function') updatePembangkitHeatmap();
 }
 
 // Sync mobile nav with desktop tab switches
