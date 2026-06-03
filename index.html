@@ -602,6 +602,30 @@ html,body{
 .tab:hover .tab-icon{opacity:.8}
 .tab.active .tab-icon{opacity:1}
 
+/* Pembangkit tab dropdown (jenis sub-menu) */
+.tab-caret{font-size:9px;margin-left:2px;opacity:.7;transition:transform .15s}
+.tab-dd-trigger.dd-open .tab-caret{transform:rotate(180deg)}
+.tab-dd-menu{
+  position:fixed;z-index:3000;display:none;min-width:200px;
+  background:var(--panel-2);border:1px solid var(--border);
+  border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.35);
+  padding:6px;overflow:hidden;
+}
+.tab-dd-menu.open{display:block}
+.tab-dd-item{
+  display:flex;align-items:center;gap:9px;width:100%;
+  background:transparent;border:none;cursor:pointer;
+  padding:9px 12px;border-radius:7px;text-align:left;
+  font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;font-size:12px;
+  color:var(--text);letter-spacing:.2px;transition:background .12s;
+}
+.tab-dd-item:hover{background:var(--panel-3)}
+.tab-dd-item.active{background:rgba(14,165,233,.14);color:var(--text-bright)}
+.tab-dd-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.tab-dd-item .tab-dd-count{margin-left:auto;font-size:10px;font-weight:700;color:var(--text-dim)}
+.tab-dd-item.active .tab-dd-count{color:var(--accent-2)}
+.tab-dd-divider{height:1px;background:var(--border);margin:5px 4px}
+
 /* View container */
 .view{display:none;height:100%;overflow:hidden}
 .view.active{display:block}
@@ -4087,9 +4111,10 @@ html,body{
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3zM5 2v12M11 4v12"/></svg>
     MAP COFIRING
   </button>
-  <button class="tab" data-tab="pembangkit">
+  <button class="tab tab-dd-trigger" data-tab="pembangkit" id="pembangkitTabTrigger">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 14V6l4-2v3l4-2v3l4-2v8zM4 14v-3M8 14v-3M12 14v-3"/></svg>
-    OVERVIEW PEMBANGKIT
+    <span id="pembangkitTabLabel">OVERVIEW PEMBANGKIT</span>
+    <span class="tab-caret">▾</span>
   </button>
   <button class="tab" data-tab="fasilitas">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V7l5-3 5 3v7M6 14v-3h3v3M13 7l1 1v6"/></svg>
@@ -4124,6 +4149,8 @@ html,body{
     BERITA
   </button>
 </nav>
+<!-- Pembangkit jenis dropdown menu (fixed-position to escape tab-bar overflow) -->
+<div class="tab-dd-menu" id="pembangkitDropdownMenu"></div>
 
 <!-- V54: Mobile Bottom Navigation -->
 <div class="mobile-bottom-nav" style="display:none">
@@ -4283,21 +4310,11 @@ html,body{
       <button class="sidebar-collapse-btn" id="pembangkitSidebarCollapseBtn" title="Hide sidebar">◀</button>
       <div class="sidebar-section">
         <div class="sidebar-eyebrow">Filter Pembangkit</div>
-        <h2 class="sidebar-title">Map Overview <span style="color:var(--accent)">Pembangkit</span></h2>
+        <h2 class="sidebar-title" id="pembangkitSidebarTitle">Map Overview <span style="color:var(--accent)">Pembangkit</span></h2>
         <div class="pembangkit-filter-summary" id="pembangkitFilterSummary">—</div>
       </div>
 
-      <!-- Filter: Jenis -->
-      <div class="sidebar-section">
-        <div class="pembangkit-filter-header">
-          <div class="sidebar-eyebrow">Jenis</div>
-          <div class="pembangkit-filter-header-actions">
-            <button class="pembangkit-filter-mini-btn" data-target="jenis" data-action="all">All</button>
-            <button class="pembangkit-filter-mini-btn" data-target="jenis" data-action="none">None</button>
-          </div>
-        </div>
-        <div class="pembangkit-filter-group jenis-group" id="pembangkitFilterJenis"></div>
-      </div>
+      <!-- Filter: Jenis dipindah ke dropdown menu utama (tab Pembangkit ▾) -->
 
       <!-- Filter: Operator -->
       <div class="sidebar-section">
@@ -11695,9 +11712,110 @@ let pembangkitFilters = {
 };
 let pembangkitSelected = null;
 let pembangkitLegendCollapsed = false;
+let pembangkitJenisSel = 'all';   // dropdown sub-menu selection: 'all' | 'PLTU' | ...
 
 function getPembangkitColor(jenis){
   return PEMBANGKIT_JENIS_COLORS[jenis] || PEMBANGKIT_JENIS_DEFAULT_COLOR;
+}
+
+// ===== Pembangkit jenis dropdown (top-nav sub-menu) =====
+function applyPembangkitJenisSel(){
+  const data = (DATA && DATA.pembangkit) || [];
+  const all = new Set();
+  data.forEach(p => { if (p.jenis) all.add(p.jenis); });
+  if (pembangkitJenisSel !== 'all' && all.has(pembangkitJenisSel)){
+    pembangkitFilters.jenis = new Set([pembangkitJenisSel]);
+  } else {
+    pembangkitJenisSel = 'all';
+    pembangkitFilters.jenis = all;
+  }
+}
+
+function updatePembangkitLabels(){
+  const lbl = document.getElementById('pembangkitTabLabel');
+  if (lbl) lbl.textContent = (pembangkitJenisSel === 'all') ? 'OVERVIEW PEMBANGKIT' : ('PEMBANGKIT · ' + pembangkitJenisSel);
+  const t = document.getElementById('pembangkitSidebarTitle');
+  if (t) t.innerHTML = (pembangkitJenisSel === 'all')
+    ? 'Map Overview <span style="color:var(--accent)">Pembangkit</span>'
+    : ('Overview <span style="color:var(--accent)">' + escapeHtml(pembangkitJenisSel) + '</span>');
+}
+
+function buildPembangkitDropdown(){
+  const menu = document.getElementById('pembangkitDropdownMenu');
+  if (!menu) return;
+  const data = (DATA && DATA.pembangkit) || [];
+  const counts = {}; let total = 0;
+  for (const p of data){ if (p.jenis){ counts[p.jenis] = (counts[p.jenis] || 0) + 1; total++; } }
+  const list = Object.keys(counts).sort();
+  const item = (val, label, count, color) => {
+    const active = (pembangkitJenisSel === val);
+    const dot = color
+      ? '<span class="tab-dd-dot" style="background:' + color + '"></span>'
+      : '<span class="tab-dd-dot" style="background:linear-gradient(135deg,#0ea5e9,#10b981)"></span>';
+    return '<button class="tab-dd-item' + (active ? ' active' : '') + '" data-jenis="' + escapeHtml(val) + '">' +
+      dot + '<span>' + escapeHtml(label) + '</span><span class="tab-dd-count">' + count + '</span></button>';
+  };
+  let html = item('all', 'Semua Jenis', total, null) + '<div class="tab-dd-divider"></div>';
+  for (const j of list){ html += item(j, j, counts[j], getPembangkitColor(j)); }
+  menu.innerHTML = html;
+  menu.querySelectorAll('.tab-dd-item').forEach(it => {
+    it.onclick = () => selectPembangkitJenis(it.getAttribute('data-jenis'));
+  });
+}
+
+function selectPembangkitJenis(j){
+  pembangkitJenisSel = j;
+  closePembangkitDropdown();
+  if (typeof mobCloseMore === 'function') mobCloseMore();
+  const wasInit = pembangkitInit;
+  switchTab('pembangkit');           // boots tab if needed (boot applies the selection)
+  if (wasInit){
+    applyPembangkitJenisSel();
+    pembangkitSelected = null;
+    const mv = document.querySelector('.map-view.pembangkit-view');
+    if (mv) mv.classList.remove('detail-open');
+    const dp = document.getElementById('pembangkitDetailPanel');
+    if (dp) dp.innerHTML = '';
+    renderPembangkitFilters();
+    renderPembangkitMarkers();
+    if (pembangkitMap) setTimeout(() => { try { pembangkitMap.invalidateSize(); } catch(e){} }, 260);
+  }
+  updatePembangkitLabels();
+  buildPembangkitDropdown();
+}
+
+function togglePembangkitDropdown(){
+  const menu = document.getElementById('pembangkitDropdownMenu');
+  const trig = document.getElementById('pembangkitTabTrigger');
+  if (!menu || !trig) return;
+  if (menu.classList.contains('open')){ closePembangkitDropdown(); return; }
+  buildPembangkitDropdown();
+  const r = trig.getBoundingClientRect();
+  const mw = 210;
+  let left = r.left;
+  if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+  menu.style.top = (r.bottom + 2) + 'px';
+  menu.style.left = Math.max(8, left) + 'px';
+  menu.style.minWidth = Math.max(mw, r.width) + 'px';
+  menu.classList.add('open');
+  trig.classList.add('dd-open');
+  setTimeout(() => { document.addEventListener('click', pembDdOutside); }, 0);
+}
+
+function pembDdOutside(e){
+  const menu = document.getElementById('pembangkitDropdownMenu');
+  const trig = document.getElementById('pembangkitTabTrigger');
+  if (menu && !menu.contains(e.target) && trig && !trig.contains(e.target)){
+    closePembangkitDropdown();
+  }
+}
+
+function closePembangkitDropdown(){
+  const menu = document.getElementById('pembangkitDropdownMenu');
+  const trig = document.getElementById('pembangkitTabTrigger');
+  if (menu) menu.classList.remove('open');
+  if (trig) trig.classList.remove('dd-open');
+  document.removeEventListener('click', pembDdOutside);
 }
 
 function bootPembangkitTab(){
@@ -11708,19 +11826,13 @@ function bootPembangkitTab(){
     return;
   }
   // Build filter sets initialized with ALL values active by default.
-  // After data refresh: ensure any NEW jenis/operator from upload is also active by default.
-  const allJenis = new Set();
+  // After data refresh: ensure any NEW operator from upload is also active by default.
+  // Jenis is driven by the top-nav dropdown selection (pembangkitJenisSel).
   const allOperator = new Set();
   for (const p of data){
-    if (p.jenis) allJenis.add(p.jenis);
     if (p.unit_induk) allOperator.add(p.unit_induk);
   }
-  if (pembangkitFilters.jenis.size === 0){
-    pembangkitFilters.jenis = new Set(allJenis);
-  } else {
-    // Add any new categories that didn't exist before (so they show up by default after upload)
-    allJenis.forEach(j => { if (!pembangkitFilters.jenis.has(j)) pembangkitFilters.jenis.add(j); });
-  }
+  applyPembangkitJenisSel();
   if (pembangkitFilters.operator.size === 0){
     pembangkitFilters.operator = new Set(allOperator);
   } else {
@@ -11731,6 +11843,8 @@ function bootPembangkitTab(){
   renderPembangkitFilters();
   renderPembangkitMarkers();
   wirePembangkitSidebarCollapse();
+  buildPembangkitDropdown();
+  updatePembangkitLabels();
 }
 
 function initPembangkitMap(){
@@ -14262,10 +14376,20 @@ window.addEventListener('DOMContentLoaded', () => {
     enrichPlantsHistorical(DATA.plants);
   }
 
-  // Tabs — simple click to switch
+  // Tabs — simple click to switch (pembangkit trigger opens jenis dropdown instead)
   document.querySelectorAll('.tab').forEach(b => {
-    b.onclick = () => switchTab(b.dataset.tab);
+    if (b.classList.contains('tab-dd-trigger')){
+      b.onclick = (e) => { e.stopPropagation(); togglePembangkitDropdown(); };
+    } else {
+      b.onclick = () => switchTab(b.dataset.tab);
+    }
   });
+  // Build pembangkit jenis dropdown now that DATA is loaded; close on Esc/scroll/resize
+  if (typeof buildPembangkitDropdown === 'function') buildPembangkitDropdown();
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePembangkitDropdown(); });
+  window.addEventListener('resize', () => closePembangkitDropdown());
+  const _ddTabsBar = document.querySelector('.tabs');
+  if (_ddTabsBar) _ddTabsBar.addEventListener('scroll', () => closePembangkitDropdown());
   // Mouse wheel scrolls the tab bar horizontally
   const tabsBar = document.querySelector('.tabs');
   if (tabsBar){
