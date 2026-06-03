@@ -11923,7 +11923,7 @@ function renderPembangkitFilters(){
   for (const p of data){
     if (!inCat(p)) continue;
     operatorTotal[p.unit_induk] = (operatorTotal[p.unit_induk] || 0) + 1;
-    const opPass = pembangkitFilters.operator.size === 0 || pembangkitFilters.operator.has(p.unit_induk);
+    const opPass = pembangkitFilters.operator.has(p.unit_induk);
     if (opPass) jenisCounts[p.jenis] = (jenisCounts[p.jenis] || 0) + 1;
     const jenisPass = pembangkitFilters.jenis.has(p.jenis);
     if (jenisPass) operatorCounts[p.unit_induk] = (operatorCounts[p.unit_induk] || 0) + 1;
@@ -12022,7 +12022,8 @@ function pembangkitMatchesFilter(p){
   // Jenis whitelist applies in every scope. For "Semua" it starts full (all jenis);
   // toggling a chip off removes that jenis. Empty whitelist → nothing shown.
   if (!pembangkitFilters.jenis.has(p.jenis)) return false;
-  if (pembangkitFilters.operator.size > 0 && !pembangkitFilters.operator.has(p.unit_induk)) return false;
+  // Empty operator whitelist → nothing shown (None deselects all).
+  if (!pembangkitFilters.operator.has(p.unit_induk)) return false;
   return true;
 }
 
