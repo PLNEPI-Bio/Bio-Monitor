@@ -136,7 +136,7 @@ html,body{
   display:flex;align-items:center;justify-content:space-between;
   padding:0 20px;border-bottom:1px solid var(--border);
   background:linear-gradient(180deg,var(--panel-2) 0%,var(--bg) 100%);
-  position:relative;z-index:1000;
+  position:relative;z-index:2000;
   gap:16px;overflow:hidden;
 }
 .topbar::after{content:"";position:absolute;bottom:-1px;left:0;right:0;height:1px;
@@ -4829,6 +4829,7 @@ html,body{
         <select id="beritaTopicFilter" class="berita-filter-select">
           <option value="all">Semua Topik</option>
           <option value="plnepi">PLN EPI</option>
+          <option value="hokkop">Hokkop Situngkir</option>
           <option value="biomassa">Biomassa & Cofiring</option>
           <option value="bioenergi">Bioenergi</option>
           <option value="pltu">PLTU</option>
@@ -14261,11 +14262,24 @@ window.addEventListener('DOMContentLoaded', () => {
     enrichPlantsHistorical(DATA.plants);
   }
 
-  // Tabs — V49.2: dropdown parent buttons toggle dropdown instead of switchTab
+  // Tabs — simple click to switch
   document.querySelectorAll('.tab').forEach(b => {
     b.onclick = () => switchTab(b.dataset.tab);
   });
-  // V49.2: Position dropdown on hover too (for desktop)
+  // Mouse wheel scrolls the tab bar horizontally
+  const tabsBar = document.querySelector('.tabs');
+  if (tabsBar){
+    tabsBar.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)){
+        // Only hijack vertical wheel if there is something to scroll horizontally
+        if (tabsBar.scrollWidth > tabsBar.clientWidth){
+          e.preventDefault();
+          tabsBar.scrollLeft += e.deltaY;
+        }
+      }
+    }, { passive: false });
+  }
+
   // Map tab
   initMainMap();
   buildFilters();
@@ -15789,10 +15803,22 @@ function renderBeritaFeed(){
   const f = beritaState.filter;
   const now = Date.now();
   const filtered = beritaState.articles.filter(a => {
-    // Topic
+    // Topic — match against article text directly (don't rely on server topics)
     if (f.topic !== 'all'){
-      const topics = a.topics || [];
-      if (!topics.includes(f.topic)) return false;
+      const txt = ((a.title||'') + ' ' + (a.snippet||'')).toLowerCase();
+      const TOPIC_KEYWORDS = {
+        plnepi: ['pln energi primer', 'pln epi'],
+        hokkop: ['hokkop'],
+        biomassa: ['biomassa', 'biomass', 'cofiring', 'co-firing'],
+        bioenergi: ['bioenergi', 'bioenergy'],
+        pltu: ['pltu'],
+      };
+      const kws = TOPIC_KEYWORDS[f.topic] || [];
+      const topicMatch = kws.some(kw => {
+        const words = kw.split(/\s+/);
+        return words.length === 1 ? txt.includes(kw) : words.every(w => txt.includes(w));
+      });
+      if (!topicMatch) return false;
     }
     // Date
     if (f.date !== 'all' && a.publishedAt){
@@ -15807,10 +15833,17 @@ function renderBeritaFeed(){
       const haystack = ((a.title||'') + ' ' + (a.snippet||'') + ' ' + (a.source||'')).toLowerCase();
       if (!haystack.includes(f.search)) return false;
     }
-    // V52: Keyword relevance filter — article must contain at least 1 of these keywords
-    const BERITA_KEYWORDS = ['pln energi primer', 'pln epi', 'hokkop situngkir', 'biomassa', 'cofiring', 'bioenergi', 'bioenergy', 'biomass'];
+    // V56: Keyword relevance filter — multi-word matches in any order
+    const BERITA_KEYWORDS = [
+      'pln energi primer', 'pln epi', 'hokkop situngkir', 'hokkop',
+      'biomassa', 'cofiring', 'bioenergi', 'bioenergy', 'biomass',
+      'direktur bioenergi', 'direktur biomassa'
+    ];
     const h = ((a.title||'') + ' ' + (a.snippet||'')).toLowerCase();
-    const matchCount = BERITA_KEYWORDS.filter(kw => h.includes(kw)).length;
+    const matchCount = BERITA_KEYWORDS.filter(kw => {
+      const words = kw.split(/\s+/);
+      return words.length === 1 ? h.includes(kw) : words.every(w => h.includes(w));
+    }).length;
     if (matchCount === 0) return false;
     return true;
   });
