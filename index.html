@@ -12375,10 +12375,11 @@ function wirePembangkitSidebarCollapse(){
       const backdrop = document.getElementById('mobileBackdrop');
       if (backdrop) backdrop.classList.remove('show');
     } else {
-      sidebar.style.display = 'none';
+      // Keep the sidebar as a grid item (hidden via .sidebar-collapsed CSS, NOT
+      // display:none) so the map-area stays in its 1fr column instead of shifting.
       showBtn.style.display = 'block';
       const mv2 = document.querySelector('.map-view.pembangkit-view');
-      if (mv2) mv2.style.gridTemplateColumns = '0px 1fr 0px';
+      if (mv2) mv2.classList.add('sidebar-collapsed');
       setTimeout(() => { if (pembangkitMap) pembangkitMap.invalidateSize(); }, 100);
     }
     updatePembangkitHeatmap();
@@ -12390,10 +12391,9 @@ function wirePembangkitSidebarCollapse(){
       const backdrop = document.getElementById('mobileBackdrop');
       if (backdrop) backdrop.classList.add('show');
     } else {
-      sidebar.style.display = '';
       showBtn.style.display = 'none';
       const mv2 = document.querySelector('.map-view.pembangkit-view');
-      if (mv2) mv2.style.gridTemplateColumns = '';
+      if (mv2) mv2.classList.remove('sidebar-collapsed');
       setTimeout(() => { if (pembangkitMap) pembangkitMap.invalidateSize(); }, 100);
     }
     updatePembangkitHeatmap();
