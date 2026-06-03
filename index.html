@@ -12377,6 +12377,8 @@ function wirePembangkitSidebarCollapse(){
     } else {
       sidebar.style.display = 'none';
       showBtn.style.display = 'block';
+      const mv2 = document.querySelector('.map-view.pembangkit-view');
+      if (mv2) mv2.classList.add('sidebar-collapsed');
       setTimeout(() => { if (pembangkitMap) pembangkitMap.invalidateSize(); }, 50);
     }
     updatePembangkitHeatmap();
@@ -12390,6 +12392,8 @@ function wirePembangkitSidebarCollapse(){
     } else {
       sidebar.style.display = '';
       showBtn.style.display = 'none';
+      const mv2 = document.querySelector('.map-view.pembangkit-view');
+      if (mv2) mv2.classList.remove('sidebar-collapsed');
       setTimeout(() => { if (pembangkitMap) pembangkitMap.invalidateSize(); }, 50);
     }
     updatePembangkitHeatmap();
