@@ -4314,7 +4314,17 @@ html,body{
         <div class="pembangkit-filter-summary" id="pembangkitFilterSummary">—</div>
       </div>
 
-      <!-- Filter: Jenis dipindah ke dropdown menu utama (tab Pembangkit ▾) -->
+      <!-- Filter: Jenis — sub-filter perbandingan (muncul untuk kategori Gas) -->
+      <div class="sidebar-section" id="pembangkitFilterJenisSection" style="display:none">
+        <div class="pembangkit-filter-header">
+          <div class="sidebar-eyebrow" id="pembangkitFilterJenisLabel">Bandingkan Jenis</div>
+          <div class="pembangkit-filter-header-actions">
+            <button class="pembangkit-filter-mini-btn" data-target="jenis" data-action="all">All</button>
+            <button class="pembangkit-filter-mini-btn" data-target="jenis" data-action="none">None</button>
+          </div>
+        </div>
+        <div class="pembangkit-filter-group jenis-group" id="pembangkitFilterJenis"></div>
+      </div>
 
       <!-- Filter: Operator -->
       <div class="sidebar-section">
@@ -11699,6 +11709,7 @@ const PEMBANGKIT_JENIS_COLORS = {
   'PLTGU': '#3b82f6',  // blue
   'PLTG': '#f59e0b',   // amber
   'PLTMG': '#a855f7',  // purple
+  'PLTD': '#10b981',   // green (diesel)
 };
 const PEMBANGKIT_JENIS_DEFAULT_COLOR = '#64748b';  // slate
 
@@ -11712,41 +11723,67 @@ let pembangkitFilters = {
 };
 let pembangkitSelected = null;
 let pembangkitLegendCollapsed = false;
-let pembangkitJenisSel = 'all';   // dropdown sub-menu selection: 'all' | 'PLTU' | ...
+let pembangkitJenisSel = 'all';   // dropdown selection: 'all' | 'coal' | 'gas' | 'diesel'
+
+// Power-plant categories — display grouping layered over raw `jenis` from Update Data.
+// match() decides which jenis belong to each category, so new uploads map automatically.
+const PEMBANGKIT_CATEGORIES = [
+  { id:'coal',   label:'Coal Power Plant',  color:'#0F496E', match:(j)=> j === 'PLTU' },
+  { id:'gas',    label:'Gas Power Plant',   color:'#0ea5e9', match:(j)=> ['PLTG','PLTGU','PLTMG'].includes(j) },
+  { id:'diesel', label:'Diesel Powerplant', color:'#f59e0b', match:(j)=> /^PLTD/.test(j) || /DIESEL/i.test(j) },
+];
+const PEMBANGKIT_CAT_NONE = '\u0000__NONE__';  // sentinel: category selected but no matching jenis yet
+function pembangkitCatById(id){ return PEMBANGKIT_CATEGORIES.find(c => c.id === id) || null; }
+function pembangkitCatOf(jenis){ const c = PEMBANGKIT_CATEGORIES.find(c => c.match(jenis || '')); return c ? c.id : 'other'; }
+function pembangkitMarkerColor(jenis){ const c = pembangkitCatById(pembangkitCatOf(jenis)); return c ? c.color : PEMBANGKIT_JENIS_DEFAULT_COLOR; }
 
 function getPembangkitColor(jenis){
   return PEMBANGKIT_JENIS_COLORS[jenis] || PEMBANGKIT_JENIS_DEFAULT_COLOR;
 }
 
-// ===== Pembangkit jenis dropdown (top-nav sub-menu) =====
+// ===== Pembangkit category dropdown (top-nav sub-menu) =====
 function applyPembangkitJenisSel(){
   const data = (DATA && DATA.pembangkit) || [];
   const all = new Set();
   data.forEach(p => { if (p.jenis) all.add(p.jenis); });
-  if (pembangkitJenisSel !== 'all' && all.has(pembangkitJenisSel)){
-    pembangkitFilters.jenis = new Set([pembangkitJenisSel]);
-  } else {
-    pembangkitJenisSel = 'all';
+  if (pembangkitJenisSel === 'all'){
     pembangkitFilters.jenis = all;
+  } else {
+    const cat = pembangkitCatById(pembangkitJenisSel);
+    if (!cat){ pembangkitJenisSel = 'all'; pembangkitFilters.jenis = all; }
+    else {
+      const sel = new Set();
+      all.forEach(j => { if (cat.match(j)) sel.add(j); });
+      // Empty (e.g. Diesel before its data is uploaded) → sentinel so map shows 0 points, not all.
+      pembangkitFilters.jenis = (sel.size > 0) ? sel : new Set([PEMBANGKIT_CAT_NONE]);
+    }
   }
+  // Reset operator filter to all operators present within the selected category (fresh per switch)
+  const ops = new Set();
+  data.forEach(p => {
+    if (pembangkitJenisSel === 'all' || pembangkitCatOf(p.jenis) === pembangkitJenisSel){
+      if (p.unit_induk) ops.add(p.unit_induk);
+    }
+  });
+  pembangkitFilters.operator = ops;
 }
 
 function updatePembangkitLabels(){
+  const cat = pembangkitCatById(pembangkitJenisSel);
   const lbl = document.getElementById('pembangkitTabLabel');
-  if (lbl) lbl.textContent = (pembangkitJenisSel === 'all') ? 'OVERVIEW PEMBANGKIT' : ('PEMBANGKIT · ' + pembangkitJenisSel);
+  if (lbl) lbl.textContent = cat ? cat.label.toUpperCase() : 'OVERVIEW PEMBANGKIT';
   const t = document.getElementById('pembangkitSidebarTitle');
-  if (t) t.innerHTML = (pembangkitJenisSel === 'all')
-    ? 'Map Overview <span style="color:var(--accent)">Pembangkit</span>'
-    : ('Overview <span style="color:var(--accent)">' + escapeHtml(pembangkitJenisSel) + '</span>');
+  if (t) t.innerHTML = cat
+    ? ('Map <span style="color:var(--accent)">' + escapeHtml(cat.label) + '</span>')
+    : 'Map Overview <span style="color:var(--accent)">Pembangkit</span>';
 }
 
 function buildPembangkitDropdown(){
   const menu = document.getElementById('pembangkitDropdownMenu');
   if (!menu) return;
   const data = (DATA && DATA.pembangkit) || [];
-  const counts = {}; let total = 0;
-  for (const p of data){ if (p.jenis){ counts[p.jenis] = (counts[p.jenis] || 0) + 1; total++; } }
-  const list = Object.keys(counts).sort();
+  const catCount = {}; let total = 0;
+  for (const p of data){ if (p.jenis){ total++; const c = pembangkitCatOf(p.jenis); catCount[c] = (catCount[c] || 0) + 1; } }
   const item = (val, label, count, color) => {
     const active = (pembangkitJenisSel === val);
     const dot = color
@@ -11755,8 +11792,8 @@ function buildPembangkitDropdown(){
     return '<button class="tab-dd-item' + (active ? ' active' : '') + '" data-jenis="' + escapeHtml(val) + '">' +
       dot + '<span>' + escapeHtml(label) + '</span><span class="tab-dd-count">' + count + '</span></button>';
   };
-  let html = item('all', 'Semua Jenis', total, null) + '<div class="tab-dd-divider"></div>';
-  for (const j of list){ html += item(j, j, counts[j], getPembangkitColor(j)); }
+  let html = item('all', 'Semua Pembangkit', total, null) + '<div class="tab-dd-divider"></div>';
+  for (const c of PEMBANGKIT_CATEGORIES){ html += item(c.id, c.label, (catCount[c.id] || 0), c.color); }
   menu.innerHTML = html;
   menu.querySelectorAll('.tab-dd-item').forEach(it => {
     it.onclick = () => selectPembangkitJenis(it.getAttribute('data-jenis'));
@@ -11825,19 +11862,8 @@ function bootPembangkitTab(){
     if (el) el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-dim);font-family:Plus Jakarta Sans,sans-serif;font-size:11px">Data pembangkit tidak tersedia. Upload Excel dengan sheet "Data KIT" di tab Update Data.</div>';
     return;
   }
-  // Build filter sets initialized with ALL values active by default.
-  // After data refresh: ensure any NEW operator from upload is also active by default.
-  // Jenis is driven by the top-nav dropdown selection (pembangkitJenisSel).
-  const allOperator = new Set();
-  for (const p of data){
-    if (p.unit_induk) allOperator.add(p.unit_induk);
-  }
+  // Jenis & operator filters are derived from the active category selection.
   applyPembangkitJenisSel();
-  if (pembangkitFilters.operator.size === 0){
-    pembangkitFilters.operator = new Set(allOperator);
-  } else {
-    allOperator.forEach(o => { if (!pembangkitFilters.operator.has(o)) pembangkitFilters.operator.add(o); });
-  }
 
   initPembangkitMap();
   renderPembangkitFilters();
@@ -11879,65 +11905,68 @@ function initPembangkitMap(){
 
 function renderPembangkitFilters(){
   const data = (DATA && DATA.pembangkit) || [];
+  const cat = pembangkitJenisSel; // 'all' | 'coal' | 'gas' | 'diesel'
+  const inCat = (p) => (cat === 'all') ? true : (pembangkitCatOf(p.jenis) === cat);
 
-  // V47: Dynamic counts — each filter dimension shows how many plants
-  // match the OTHER dimension's active filters. This way toggling "PLTU"
-  // updates operator counts to show only PLTU-type plants per operator.
-  const jenisCounts = {};       // count per jenis, filtered by active operators
-  const operatorCounts = {};    // count per operator, filtered by active jenis
-  const jenisTotal = {};        // total (unfiltered) per jenis
-  const operatorTotal = {};     // total (unfiltered) per operator
+  // Jenis present within the current category (drives the compare sub-filter)
+  const catJenisSet = new Set();
+  data.forEach(p => { if (inCat(p) && p.jenis) catJenisSet.add(p.jenis); });
+  const catJenisList = Array.from(catJenisSet).sort();
+  // Show the jenis sub-filter whenever the active scope groups >1 jenis
+  // (i.e. "Semua Pembangkit" = 4 jenis, and "Gas Power Plant" = 3 sub-jenis).
+  const showJenisFilter = catJenisList.length > 1;
 
+  // Counts — scoped to the active category. Cross-filtered between jenis ↔ operator.
+  const jenisCounts = {};
+  const operatorCounts = {};
+  const operatorTotal = {};
   for (const p of data){
-    // Unfiltered totals (always show these if other dimension has no selections)
-    jenisTotal[p.jenis] = (jenisTotal[p.jenis] || 0) + 1;
+    if (!inCat(p)) continue;
     operatorTotal[p.unit_induk] = (operatorTotal[p.unit_induk] || 0) + 1;
-
-    // Cross-filtered: jenis count only if operator filter passes
     const opPass = pembangkitFilters.operator.size === 0 || pembangkitFilters.operator.has(p.unit_induk);
-    if (opPass){
-      jenisCounts[p.jenis] = (jenisCounts[p.jenis] || 0) + 1;
-    }
-    // Cross-filtered: operator count only if jenis filter passes
-    const jenisPass = pembangkitFilters.jenis.size === 0 || pembangkitFilters.jenis.has(p.jenis);
-    if (jenisPass){
-      operatorCounts[p.unit_induk] = (operatorCounts[p.unit_induk] || 0) + 1;
-    }
+    if (opPass) jenisCounts[p.jenis] = (jenisCounts[p.jenis] || 0) + 1;
+    const jenisPass = pembangkitFilters.jenis.has(p.jenis);
+    if (jenisPass) operatorCounts[p.unit_induk] = (operatorCounts[p.unit_induk] || 0) + 1;
   }
-
-  const jenisList = Object.keys(jenisTotal).sort();
-  // Sort operators by dynamic count desc, ties alphabetical
   const operatorList = Object.keys(operatorTotal).sort((a, b) => {
     const d = (operatorCounts[b] || 0) - (operatorCounts[a] || 0);
     return d !== 0 ? d : a.localeCompare(b);
   });
 
-  // Render jenis chips
+  // ---- Compare-jenis sub-filter (Gas) ----
+  const jenisSection = document.getElementById('pembangkitFilterJenisSection');
+  const jenisLabel = document.getElementById('pembangkitFilterJenisLabel');
   const jenisEl = document.getElementById('pembangkitFilterJenis');
+  if (jenisSection) jenisSection.style.display = showJenisFilter ? '' : 'none';
   if (jenisEl){
-    let html = '';
-    for (const j of jenisList){
-      const active = pembangkitFilters.jenis.has(j);
-      html += '<div class="pembangkit-filter-item' + (active ? ' active' : '') + '" data-jenis="' + escapeHtml(j) + '">' +
-        '<span class="pembangkit-filter-checkbox"></span>' +
-        '<span class="pembangkit-filter-color" style="background:' + getPembangkitColor(j) + '"></span>' +
-        '<span class="pembangkit-filter-name">' + escapeHtml(j) + '</span>' +
-        '<span class="pembangkit-filter-count">' + (jenisCounts[j] || 0) + '</span>' +
-        '</div>';
+    if (showJenisFilter){
+      if (jenisLabel) jenisLabel.textContent = (cat === 'all') ? 'Jenis Pembangkit' : 'Bandingkan Jenis';
+      let html = '';
+      for (const j of catJenisList){
+        const active = pembangkitFilters.jenis.has(j);
+        html += '<div class="pembangkit-filter-item' + (active ? ' active' : '') + '" data-jenis="' + escapeHtml(j) + '">' +
+          '<span class="pembangkit-filter-checkbox"></span>' +
+          '<span class="pembangkit-filter-color" style="background:' + getPembangkitColor(j) + '"></span>' +
+          '<span class="pembangkit-filter-name">' + escapeHtml(j) + '</span>' +
+          '<span class="pembangkit-filter-count">' + (jenisCounts[j] || 0) + '</span>' +
+          '</div>';
+      }
+      jenisEl.innerHTML = html;
+      jenisEl.querySelectorAll('.pembangkit-filter-item').forEach(item => {
+        item.onclick = () => {
+          const j = item.getAttribute('data-jenis');
+          if (pembangkitFilters.jenis.has(j)) pembangkitFilters.jenis.delete(j);
+          else pembangkitFilters.jenis.add(j);
+          renderPembangkitFilters();
+          renderPembangkitMarkers();
+        };
+      });
+    } else {
+      jenisEl.innerHTML = '';
     }
-    jenisEl.innerHTML = html;
-    jenisEl.querySelectorAll('.pembangkit-filter-item').forEach(item => {
-      item.onclick = () => {
-        const j = item.getAttribute('data-jenis');
-        if (pembangkitFilters.jenis.has(j)) pembangkitFilters.jenis.delete(j);
-        else pembangkitFilters.jenis.add(j);
-        renderPembangkitFilters();
-        renderPembangkitMarkers();
-      };
-    });
   }
 
-  // Render operator rows
+  // ---- Operator rows (scoped to category) ----
   const opEl = document.getElementById('pembangkitFilterOperator');
   if (opEl){
     let html = '';
@@ -11961,39 +11990,38 @@ function renderPembangkitFilters(){
     });
   }
 
-  // Wire mini-buttons (All / None) - per group
+  // ---- Mini buttons (All / None) — re-bound each render (scope changes per category) ----
   document.querySelectorAll('.pembangkit-filter-mini-btn').forEach(btn => {
-    if (btn.dataset.built === '1') return;
     btn.onclick = () => {
       const target = btn.getAttribute('data-target');
       const action = btn.getAttribute('data-action');
       if (target === 'jenis'){
-        pembangkitFilters.jenis = (action === 'all') ? new Set(jenisList) : new Set();
+        pembangkitFilters.jenis = (action === 'all') ? new Set(catJenisList) : new Set();
       } else if (target === 'operator'){
         pembangkitFilters.operator = (action === 'all') ? new Set(operatorList) : new Set();
       }
       renderPembangkitFilters();
       renderPembangkitMarkers();
     };
-    btn.dataset.built = '1';
   });
 
-  // Update summary text
+  // ---- Summary ----
   const summary = document.getElementById('pembangkitFilterSummary');
   if (summary){
-    // Count matching pembangkit
-    let visible = 0;
+    let visible = 0, totalCat = 0;
     for (const p of data){
-      if (pembangkitFilters.jenis.size > 0 && !pembangkitFilters.jenis.has(p.jenis)) continue;
-      if (pembangkitFilters.operator.size > 0 && !pembangkitFilters.operator.has(p.unit_induk)) continue;
-      visible++;
+      if (!inCat(p)) continue;
+      totalCat++;
+      if (pembangkitMatchesFilter(p)) visible++;
     }
-    summary.textContent = visible + ' / ' + data.length + ' lokasi';
+    summary.textContent = visible + ' / ' + totalCat + ' lokasi';
   }
 }
 
 function pembangkitMatchesFilter(p){
-  if (pembangkitFilters.jenis.size > 0 && !pembangkitFilters.jenis.has(p.jenis)) return false;
+  // Jenis whitelist applies in every scope. For "Semua" it starts full (all jenis);
+  // toggling a chip off removes that jenis. Empty whitelist → nothing shown.
+  if (!pembangkitFilters.jenis.has(p.jenis)) return false;
   if (pembangkitFilters.operator.size > 0 && !pembangkitFilters.operator.has(p.unit_induk)) return false;
   return true;
 }
@@ -12010,7 +12038,10 @@ function renderPembangkitMarkers(){
     if (!pembangkitMatchesFilter(p)) continue;
     if (!p.lat || !p.lon) continue;
     if (Math.abs(p.lat) < 0.01 && Math.abs(p.lon) < 0.01) continue;  // Bad coords
-    const color = getPembangkitColor(p.jenis);
+    // When the jenis sub-filter is shown (Semua / Gas), color markers per jenis so
+    // they match the filter chips; otherwise use the category color.
+    const _byJenis = (pembangkitJenisSel === 'all' || pembangkitJenisSel === 'gas');
+    const color = _byJenis ? getPembangkitColor(p.jenis) : pembangkitMarkerColor(p.jenis);
     const isSelected = (pembangkitSelected === p.no);
     const icon = L.divIcon({
       className: '',
@@ -12042,7 +12073,7 @@ function renderPembangkitMarkers(){
 function renderPembangkitDetail(p){
   const panel = document.getElementById('pembangkitDetailPanel');
   if (!panel) return;
-  const color = getPembangkitColor(p.jenis);
+  const color = pembangkitMarkerColor(p.jenis);
   let html = '<div class="pembangkit-detail-content">';
   html += '<div class="pembangkit-detail-head">';
   html += '<button class="detail-close-btn" onclick="closePembangkitDetail()" title="Close">×</button>';
