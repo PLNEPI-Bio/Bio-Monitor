@@ -5560,7 +5560,7 @@ function updateKPIs(){
   });
   document.getElementById('kpi-target').innerHTML = fmt(target) + '<span class="kpi-unit">ton</span>';
   document.getElementById('kpi-real').innerHTML = fmt(real) + '<span class="kpi-unit">ton</span>';
-  document.getElementById('kpi-real-pct').textContent = target ? `${(real/target*100).toFixed(1)}% OF TARGET` : '—';
+  document.getElementById('kpi-real-pct').textContent = target ? `${(real/target*100).toFixed(1)}% OF TARGET FGD` : '—';
   document.getElementById('kpi-do').innerHTML = fmt(doSum) + '<span class="kpi-unit">ton</span>';
   document.getElementById('kpi-gap').innerHTML = fmt(gap) + '<span class="kpi-unit">ton</span>';
   // V54/V55: Animate KPI counters ONLY on first render (avoid flicker on every filter change)
@@ -14762,7 +14762,7 @@ window.addEventListener('DOMContentLoaded', () => {
       applyChartThemeDefaults(next);
       // Re-render Realisasi and Pareto if those views have been initialized
       if (realCharts.trend) { try { renderRealView(); } catch(e){ console.error(e); } }
-      if (paretoCharts.pareto) { try { renderParetoView(); } catch(e){ console.error(e); } }
+      if (paretoCharts.main) { try { renderParetoView(); } catch(e){ console.error(e); } }
     };
   }
 
