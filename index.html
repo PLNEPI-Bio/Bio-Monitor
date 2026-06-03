@@ -4095,6 +4095,33 @@ html,body{
   .mobile-more-item:hover,.mobile-more-item:active{background:var(--panel-2)}
   .mobile-more-item svg{width:16px;height:16px;opacity:.6;flex-shrink:0}
   .mobile-more-item.active{color:var(--accent);font-weight:700}
+  /* Pembangkit expandable sub-menu (Coal / Gas / Diesel) */
+  .mob-more-caret{width:13px!important;height:13px!important;transition:transform .18s ease}
+  .mobile-more-group.expanded .mob-more-caret{transform:rotate(180deg)}
+  .mobile-more-sub{
+    display:none;flex-direction:column;
+    background:var(--panel-2);border-top:1px solid var(--border);
+    margin:2px 0;
+  }
+  .mobile-more-group.expanded .mobile-more-sub{display:flex}
+  .mobile-more-subitem{
+    display:flex;align-items:center;gap:9px;width:100%;padding:10px 16px 10px 22px;
+    background:transparent;border:none;cursor:pointer;
+    font-family:'Plus Jakarta Sans',sans-serif;font-size:11.5px;font-weight:500;
+    color:var(--text);transition:background .1s;-webkit-tap-highlight-color:transparent;
+  }
+  .mobile-more-subitem:active{background:var(--panel-3)}
+  .mobile-more-subitem.active{color:var(--accent);font-weight:700}
+  .mobile-more-subitem .mms-dot{
+    width:10px;height:10px;border-radius:50%;flex-shrink:0;
+    box-shadow:0 0 0 2px var(--panel-2);
+  }
+  .mobile-more-subitem .mms-count{
+    margin-left:auto;font-size:9px;color:var(--text-dim);
+    font-variant-numeric:tabular-nums;background:var(--panel-3);
+    padding:1px 7px;border-radius:8px;min-width:22px;text-align:center;
+  }
+  .mobile-more-subitem.active .mms-count{color:var(--accent);background:rgba(15,73,110,.12)}
   .mobile-more-backdrop{position:fixed;inset:0;z-index:2050;display:none}
   .mobile-more-backdrop.open{display:block}
 
@@ -4259,10 +4286,14 @@ html,body{
 </div>
 <div class="mobile-more-backdrop" id="mobMoreBackdrop" onclick="mobCloseMore()"></div>
 <div class="mobile-more-menu" id="mobMoreMenu">
-  <button class="mobile-more-item" onclick="mobNav('pembangkit')">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
-    Overview Pembangkit
-  </button>
+  <div class="mobile-more-group" id="mobPembangkitGroup">
+    <button class="mobile-more-item mobile-more-parent" onclick="mobTogglePembangkitSub()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
+      <span style="flex:1;text-align:left">Overview Pembangkit</span>
+      <svg class="mob-more-caret" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
+    </button>
+    <div class="mobile-more-sub" id="mobPembangkitSub"></div>
+  </div>
   <button class="mobile-more-item" onclick="mobNav('fasilitas')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
     Fasilitas Produksi
@@ -11891,6 +11922,36 @@ function buildPembangkitDropdown(){
   menu.querySelectorAll('.tab-dd-item').forEach(it => {
     it.onclick = () => selectPembangkitJenis(it.getAttribute('data-jenis'));
   });
+  // Keep the mobile "More" sub-menu in sync
+  if (typeof buildMobilePembangkitSub === 'function') buildMobilePembangkitSub();
+}
+
+// Build the mobile "Overview Pembangkit" expandable sub-menu (Semua / Coal / Gas / Diesel)
+function buildMobilePembangkitSub(){
+  const sub = document.getElementById('mobPembangkitSub');
+  if (!sub) return;
+  const data = (DATA && DATA.pembangkit) || [];
+  const catCount = {}; let total = 0;
+  for (const p of data){ if (p.jenis){ total++; const c = pembangkitCatOf(p.jenis); catCount[c] = (catCount[c] || 0) + 1; } }
+  const item = (val, label, count, color) => {
+    const active = (pembangkitJenisSel === val);
+    const dot = '<span class="mms-dot" style="background:' + (color || 'linear-gradient(135deg,#0ea5e9,#10b981)') + '"></span>';
+    return '<button class="mobile-more-subitem' + (active ? ' active' : '') + '" data-jenis="' + escapeHtml(val) + '">' +
+      dot + '<span>' + escapeHtml(label) + '</span><span class="mms-count">' + count + '</span></button>';
+  };
+  let html = item('all', 'Semua Pembangkit', total, null);
+  for (const c of PEMBANGKIT_CATEGORIES){ html += item(c.id, c.label, (catCount[c.id] || 0), c.color); }
+  sub.innerHTML = html;
+  sub.querySelectorAll('.mobile-more-subitem').forEach(it => {
+    it.onclick = () => selectPembangkitJenis(it.getAttribute('data-jenis'));
+  });
+}
+
+function mobTogglePembangkitSub(){
+  const grp = document.getElementById('mobPembangkitGroup');
+  if (!grp) return;
+  buildMobilePembangkitSub();
+  grp.classList.toggle('expanded');
 }
 
 function selectPembangkitJenis(j){
@@ -16569,6 +16630,8 @@ function mobCloseMore(){
   const bd = document.getElementById('mobMoreBackdrop');
   if (menu) menu.classList.remove('open');
   if (bd) bd.classList.remove('open');
+  const grp = document.getElementById('mobPembangkitGroup');
+  if (grp) grp.classList.remove('expanded');
 }
 
 // Sync mobile nav with desktop tab switches
