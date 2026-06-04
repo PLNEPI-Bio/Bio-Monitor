@@ -1970,6 +1970,39 @@ html,body{
 .usulan-legend-swatch.complete{background:rgba(16,185,129,.25);border-color:var(--accent)}
 .usulan-legend-swatch.progress{background:rgba(245,158,11,.18);border-color:var(--warn)}
 .usulan-legend-swatch.pending{background:var(--panel-2);border-color:var(--border)}
+/* ── Usulan filter bar ── */
+.usulan-filter-bar{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  padding:10px 14px;margin-bottom:10px;
+  background:var(--panel-2);border:1px solid var(--border);border-radius:6px;
+}
+.usulan-filter-bar label{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;letter-spacing:.6px;
+  text-transform:uppercase;color:var(--text-dim);margin-right:2px;
+}
+.usulan-filter-search{
+  flex:1;min-width:140px;max-width:220px;
+  padding:5px 9px;border-radius:4px;border:1px solid var(--border);
+  background:var(--panel-3);color:var(--text);font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;
+  outline:none;
+}
+.usulan-filter-search:focus{border-color:var(--accent)}
+.usulan-filter-select{
+  padding:5px 9px;border-radius:4px;border:1px solid var(--border);
+  background:var(--panel-3);color:var(--text);font-size:11px;font-family:'Plus Jakarta Sans',sans-serif;
+  outline:none;cursor:pointer;
+}
+.usulan-filter-select:focus{border-color:var(--accent)}
+.usulan-filter-clear{
+  margin-left:auto;padding:4px 10px;font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;
+  border:1px solid var(--border);border-radius:4px;background:transparent;
+  color:var(--text-dim);cursor:pointer;letter-spacing:.4px;
+}
+.usulan-filter-clear:hover{border-color:var(--accent);color:var(--accent)}
+.usulan-filter-count{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);
+  letter-spacing:.4px;white-space:nowrap;
+}
 .usulan-reset-btn{
   background:var(--panel);border:1px solid var(--border-bright);color:var(--text-dim);
   cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
@@ -5004,6 +5037,27 @@ html,body{
           <button class="usulan-reset-btn" id="usulan-reset-btn" title="Reset semua tahap ke kondisi awal Excel (bersih)">↺ Reset all to default</button>
           <button class="usulan-reset-btn" id="usulan-download-btn" title="Unduh tabel Usulan Kontrak ke Excel" style="color:var(--accent);border-color:var(--accent)">⬇ Unduh Excel</button>
         </div>
+      </div>
+      <div class="usulan-filter-bar" id="usulan-filter-bar">
+        <label>Cari PLTU</label>
+        <input type="text" class="usulan-filter-search" id="uf-search" placeholder="Nama PLTU…" autocomplete="off">
+        <label>Regional</label>
+        <select class="usulan-filter-select" id="uf-regional"><option value="">Semua</option></select>
+        <label>Biomassa</label>
+        <select class="usulan-filter-select" id="uf-jenis"><option value="">Semua</option></select>
+        <label>Metode</label>
+        <select class="usulan-filter-select" id="uf-metode">
+          <option value="">Semua</option><option value="tender">Tender</option><option value="spot">Spot</option>
+        </select>
+        <label>Status</label>
+        <select class="usulan-filter-select" id="uf-status">
+          <option value="">Semua</option>
+          <option value="complete">Complete</option>
+          <option value="progress">In Progress</option>
+          <option value="pending">Belum Dimulai</option>
+        </select>
+        <span class="usulan-filter-count" id="uf-count"></span>
+        <button class="usulan-filter-clear" id="uf-clear">✕ Reset Filter</button>
       </div>
       <div class="recap-scroll">
         <div id="usulan-table"></div>
@@ -9746,6 +9800,7 @@ let usulanRemoteState = {};   // { [usulan_no]: { tor, rks, pengumuman, aanwijzi
 let usulanCustomRows = [];    // Custom user-added rows: [{ no, regional, pltu, jenis, volume, metode, tahap, is_custom: true }]
 let usulanDeletedNos = new Set(); // usulan_no values that were soft-deleted on server
 let usulanQueue = [];         // pending updates: [{ usulan_no, tahap_key, value, updated_by, ts }]
+let usulanFilter = { search: '', regional: '', jenis: '', metode: '', status: '' };
 let supabaseClient = null;
 let supabaseChannel = null;
 let usulanSyncStatus = 'connecting'; // connecting | online | syncing | offline | error
@@ -10327,6 +10382,42 @@ function renderUsulanTable(){
   // Sort by no for stable display
   merged.sort((a, b) => a.no - b.no);
 
+  // Populate dynamic filter dropdowns (Regional, Jenis) from current merged data
+  const ufRegional = document.getElementById('uf-regional');
+  const ufJenis = document.getElementById('uf-jenis');
+  if (ufRegional && ufJenis){
+    const regionals = [...new Set(merged.map(u => (getEffectiveRow(u).regional || '').trim()).filter(Boolean))].sort();
+    const jenisSet = [...new Set(merged.map(u => (getEffectiveRow(u).jenis || '').trim()).filter(Boolean))].sort();
+    const savedReg = ufRegional.value;
+    const savedJenis = ufJenis.value;
+    ufRegional.innerHTML = '<option value="">Semua</option>' + regionals.map(v => '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + '</option>').join('');
+    ufJenis.innerHTML = '<option value="">Semua</option>' + jenisSet.map(v => '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + '</option>').join('');
+    if (savedReg) ufRegional.value = savedReg;
+    if (savedJenis) ufJenis.value = savedJenis;
+  }
+
+  const totalAll = merged.length;
+
+  // Apply filters
+  const fSearch = usulanFilter.search.toLowerCase().trim();
+  const fRegional = usulanFilter.regional;
+  const fJenis = usulanFilter.jenis;
+  const fMetode = usulanFilter.metode.toLowerCase();
+  const fStatus = usulanFilter.status;
+  if (fSearch || fRegional || fJenis || fMetode || fStatus){
+    merged = merged.filter(u => {
+      const eff = getEffectiveRow(u);
+      const tahap = getEffectiveTahap(u);
+      const cls = classifyUsulan(tahap);
+      if (fSearch && !(eff.pltu || '').toLowerCase().includes(fSearch)) return false;
+      if (fRegional && (eff.regional || '').trim() !== fRegional) return false;
+      if (fJenis && (eff.jenis || '').trim() !== fJenis) return false;
+      if (fMetode && (eff.metode || '').toLowerCase() !== fMetode) return false;
+      if (fStatus && cls.cls !== fStatus) return false;
+      return true;
+    });
+  }
+
   const cntEl = document.getElementById('usulan-count');
   if (cntEl){
     const customCount = merged.filter(u => u.is_custom).length;
@@ -10335,6 +10426,12 @@ function renderUsulanTable(){
     } else {
       cntEl.textContent = merged.length + ' usulan';
     }
+  }
+
+  const ufCount = document.getElementById('uf-count');
+  if (ufCount){
+    const isFiltered = fSearch || fRegional || fJenis || fMetode || fStatus;
+    ufCount.textContent = isFiltered ? (merged.length + ' / ' + totalAll + ' ditampilkan') : '';
   }
 
   if (merged.length === 0){
@@ -10601,6 +10698,33 @@ function renderUsulanTable(){
   if (changeNameBtn && !changeNameBtn.dataset.built){
     changeNameBtn.onclick = () => { promptUserName(false); };
     changeNameBtn.dataset.built = '1';
+  }
+
+  // Wire filter controls (one-time)
+  const ufBar = document.getElementById('usulan-filter-bar');
+  if (ufBar && !ufBar.dataset.built){
+    ufBar.dataset.built = '1';
+    function applyFilter(){
+      usulanFilter.search   = (document.getElementById('uf-search') || {}).value || '';
+      usulanFilter.regional = (document.getElementById('uf-regional') || {}).value || '';
+      usulanFilter.jenis    = (document.getElementById('uf-jenis') || {}).value || '';
+      usulanFilter.metode   = (document.getElementById('uf-metode') || {}).value || '';
+      usulanFilter.status   = (document.getElementById('uf-status') || {}).value || '';
+      renderUsulanTable();
+    }
+    ['uf-search','uf-regional','uf-jenis','uf-metode','uf-status'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(id === 'uf-search' ? 'input' : 'change', applyFilter);
+    });
+    const clearBtn = document.getElementById('uf-clear');
+    if (clearBtn) clearBtn.onclick = () => {
+      ['uf-search','uf-regional','uf-jenis','uf-metode','uf-status'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      usulanFilter = { search: '', regional: '', jenis: '', metode: '', status: '' };
+      renderUsulanTable();
+    };
   }
 }
 
