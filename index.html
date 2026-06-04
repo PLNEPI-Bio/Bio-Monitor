@@ -11416,7 +11416,13 @@ async function checkRevertAvailable(retry){
       .from('dashboard_data')
       .select('uploaded_by, uploaded_at, source_filename, data_summary')
       .eq('id', 2).maybeSingle();
-    if (!error && data){
+    if (error){
+      console.warn('[Revert] checkRevertAvailable query error:', error);
+      btn.disabled = true;
+      btn.title = 'Gagal cek backup: ' + (error.message || 'unknown');
+      return;
+    }
+    if (data){
       btn.disabled = false;
       const when = data.uploaded_at ? new Date(data.uploaded_at).toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '?';
       btn.title = 'Revert ke: ' + (data.source_filename || '') + ' (uploaded ' + when + ' by ' + (data.uploaded_by || '?') + ')';
@@ -11425,6 +11431,7 @@ async function checkRevertAvailable(retry){
       btn.title = 'Belum ada backup. Revert tersedia setelah Anda melakukan upload data baru.';
     }
   } catch(e){
+    console.warn('[Revert] checkRevertAvailable exception:', e);
     btn.disabled = true;
     btn.title = 'Belum ada backup untuk di-revert.';
   }
@@ -11775,7 +11782,7 @@ async function doProcessAndUpload(){
         .select('data, uploaded_by, uploaded_at, source_filename, data_summary')
         .eq('id', 1).single();
       if (currentRow && currentRow.data){
-        await supabaseClient.from('dashboard_data').upsert({
+        const { error: bkUpsertErr } = await supabaseClient.from('dashboard_data').upsert({
           id: 2,
           data: currentRow.data,
           uploaded_by: currentRow.uploaded_by || '',
@@ -11783,7 +11790,13 @@ async function doProcessAndUpload(){
           source_filename: currentRow.source_filename || '',
           data_summary: 'BACKUP: ' + (currentRow.data_summary || ''),
         }, { onConflict: 'id' });
-        updateLog('  ✓ Backup saved (revert available)', 'dim');
+        if (bkUpsertErr){
+          updateLog('  ⚠ Backup gagal: ' + bkUpsertErr.message, 'warn');
+        } else {
+          updateLog('  ✓ Backup saved (revert available)', 'dim');
+        }
+      } else {
+        updateLog('  ⚠ Tidak ada data lama untuk di-backup (revert tidak tersedia)', 'warn');
       }
     } catch(bkErr){
       console.warn('[Update] Backup failed (non-critical):', bkErr);
@@ -11829,9 +11842,10 @@ async function doProcessAndUpload(){
     // Apply locally (realtime will broadcast to others)
     applyDashboardData(newDataset, { uploaded_by: userName, uploaded_at: new Date().toISOString(), source_filename: sourceFiles.join(' + ') });
     updateLog('✓ <b>Done.</b> All connected users now see the updated data.', 'success');
-    // Reload history and re-check revert availability now that backup exists
+    // Reload history and re-check revert availability now that backup exists.
+    // Small delay so the freshly-written id=2 row is visible to the read query.
     loadUpdateHistory();
-    checkRevertAvailable();
+    setTimeout(checkRevertAvailable, 400);
     // Clear file selections
     document.getElementById('updateClearBtn').click();
   } catch(e){
