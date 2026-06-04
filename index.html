@@ -10721,8 +10721,9 @@ async function renumberLegacyCustomUsulan(){
 }
 
 // ---------- Download Usulan to Excel ----------
-// Export as an HTML table saved with .xls extension — Excel parses this into
-// proper, separate cells (plain TSV gets dumped into a single column).
+// Build a real .xlsx workbook via SheetJS so Excel opens it without the
+// "file format and extension don't match" warning, and each field lands
+// in its own cell.
 function downloadUsulanExcel(){
   const excelUsulan = (DATA && DATA.usulan) || [];
   const excelNos = new Set(excelUsulan.map(u => u.no));
@@ -10736,36 +10737,28 @@ function downloadUsulanExcel(){
   if (!rows.length){ alert('Tidak ada data untuk diunduh.'); return; }
 
   const headers = ['No', 'PLTU', 'Regional', 'Jenis Biomassa', 'Volume (MT)', 'Metode', 'TOR', 'RKS/HPE', 'Pengumuman', 'Aanwijzing', 'Kontrak', 'Status', 'Keterangan'];
-  let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">'
-    + '<head><meta charset="utf-8"></head><body><table border="1"><thead><tr>';
-  headers.forEach(h => { html += '<th style="background:#1f3a5f;color:#fff;font-weight:bold">' + escapeHtml(h) + '</th>'; });
-  html += '</tr></thead><tbody>';
+  const aoa = [headers];
   rows.forEach(u => {
     const eff = getEffectiveRow(u);
     const tahap = getEffectiveTahap(u);
     const tahapVals = USULAN_TAHAP_KEYS.map(k => tahap[k] ? '✓' : '');
     const done = tahapVals.filter(v => v).length;
-    html += '<tr>';
-    html += '<td>' + u.no + '</td>';
-    html += '<td>' + escapeHtml(eff.pltu || '') + '</td>';
-    html += '<td>' + escapeHtml(eff.regional || '') + '</td>';
-    html += '<td>' + escapeHtml(eff.jenis || '') + '</td>';
-    html += '<td>' + (eff.volume || 0) + '</td>';
-    html += '<td>' + escapeHtml(eff.metode || '') + '</td>';
-    tahapVals.forEach(v => { html += '<td style="text-align:center">' + v + '</td>'; });
-    html += '<td>' + done + '/5 tahap</td>';
-    html += '<td>' + escapeHtml(eff.keterangan || '') + '</td>';
-    html += '</tr>';
+    aoa.push([
+      u.no, eff.pltu || '', eff.regional || '', eff.jenis || '',
+      Number(eff.volume) || 0, eff.metode || '',
+      ...tahapVals, done + '/5 tahap', eff.keterangan || '',
+    ]);
   });
-  html += '</tbody></table></body></html>';
 
-  const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'Usulan_Kontrak_' + new Date().toISOString().slice(0,10) + '.xls';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Column widths for readability
+  ws['!cols'] = [
+    { wch: 5 }, { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 11 }, { wch: 9 },
+    { wch: 6 }, { wch: 8 }, { wch: 11 }, { wch: 11 }, { wch: 8 }, { wch: 10 }, { wch: 30 },
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Usulan Kontrak');
+  XLSX.writeFile(wb, 'Usulan_Kontrak_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
 // ---------- Add Usulan modal ----------
