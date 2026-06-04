@@ -10408,12 +10408,15 @@ function renderUsulanTable(){
     merged = merged.filter(u => {
       const eff = getEffectiveRow(u);
       const tahap = getEffectiveTahap(u);
-      const cls = classifyUsulan(tahap);
       if (fSearch && !(eff.pltu || '').toLowerCase().includes(fSearch)) return false;
       if (fRegional && (eff.regional || '').trim() !== fRegional) return false;
       if (fJenis && (eff.jenis || '').trim() !== fJenis) return false;
       if (fMetode && (eff.metode || '').toLowerCase() !== fMetode) return false;
-      if (fStatus && cls.cls !== fStatus) return false;
+      if (fStatus){
+        const checked = USULAN_TAHAP_KEYS.filter(k => tahap[k]).length;
+        const statusKey = checked === 0 ? 'pending' : (checked === USULAN_TAHAP_KEYS.length ? 'complete' : 'progress');
+        if (statusKey !== fStatus) return false;
+      }
       return true;
     });
   }
