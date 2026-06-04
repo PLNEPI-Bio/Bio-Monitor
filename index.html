@@ -10605,9 +10605,82 @@ async function bootUsulan(){
     dlBtn.dataset.built = '1';
     dlBtn.onclick = downloadUsulanExcel;
   }
+
+  // One-time migration: pull legacy custom rows parked at no>=1000 down to
+  // sequential numbers right after the last existing entry.
+  renumberLegacyCustomUsulan();
+}
+
+// Renumber custom usulan rows that were created at no>=1000 (old scheme) to
+// follow immediately after the highest non-legacy `no`.
+async function renumberLegacyCustomUsulan(){
+  if (!supabaseClient || !navigator.onLine) return;
+  const legacy = [];
+  Object.keys(usulanRemoteState).forEach(k => {
+    const n = parseInt(k, 10);
+    if (!isNaN(n) && n >= 1000) legacy.push(n);
+  });
+  if (!legacy.length) return;
+  legacy.sort((a, b) => a - b);
+
+  // Highest existing number below 1000 (Excel rows + already-migrated customs)
+  let maxNo = 0;
+  ((DATA && DATA.usulan) || []).forEach(u => { if (u.no < 1000 && u.no > maxNo) maxNo = u.no; });
+  Object.keys(usulanRemoteState).forEach(k => { const n = parseInt(k, 10); if (!isNaN(n) && n < 1000 && n > maxNo) maxNo = n; });
+  let nextNo = maxNo + 1;
+  const userName = getUserName() || 'Anonymous';
+  const takenBelow = (n) => usulanRemoteState[n] || ((DATA && DATA.usulan) || []).some(u => u.no === n);
+
+  let changed = false;
+  for (const oldNo of legacy){
+    while (takenBelow(nextNo)) nextNo++;
+    const src = usulanRemoteState[oldNo] || {};
+    const newPayload = {
+      usulan_no: nextNo,
+      regional: src.regional || '', pltu: src.pltu || '', jenis: src.jenis || '',
+      volume: src.volume || 0, metode: src.metode || '',
+      tor: !!src.tor, rks: !!src.rks, pengumuman: !!src.pengumuman,
+      aanwijzing: !!src.aanwijzing, kontrak: !!src.kontrak,
+      keterangan: src.keterangan || '',
+      is_custom: true, is_deleted: false,
+      created_by: src.created_by || userName, created_at: src.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(), updated_by: userName,
+    };
+    try {
+      const { error: insErr } = await supabaseClient.from('usulan_tahap').upsert(newPayload, { onConflict: 'usulan_no' });
+      if (insErr){ console.error('[Usulan] Renumber insert failed for #' + oldNo, insErr); continue; }
+      // Soft-delete the old high-numbered row
+      await supabaseClient.from('usulan_tahap').upsert({
+        usulan_no: oldNo, is_deleted: true, is_custom: true,
+        updated_at: new Date().toISOString(), updated_by: userName,
+      }, { onConflict: 'usulan_no' });
+
+      // Update in-memory state
+      usulanRemoteState[nextNo] = { ...src, is_custom: true };
+      delete usulanRemoteState[oldNo];
+      usulanCustomRows = usulanCustomRows.filter(c => c.no !== oldNo);
+      usulanCustomRows.push({
+        no: nextNo, regional: src.regional || '', pltu: src.pltu || '',
+        jenis: src.jenis || '', volume: src.volume || 0, metode: src.metode || '',
+        tahap: { tor: !!src.tor, rks: !!src.rks, pengumuman: !!src.pengumuman, aanwijzing: !!src.aanwijzing, kontrak: !!src.kontrak },
+        is_custom: true,
+      });
+      usulanDeletedNos.add(oldNo);
+      changed = true;
+      nextNo++;
+    } catch(e){
+      console.error('[Usulan] Renumber failed for #' + oldNo, e);
+    }
+  }
+  if (changed){
+    saveUsulanCache({ state: usulanRemoteState, customRows: usulanCustomRows, deletedNos: Array.from(usulanDeletedNos) });
+    renderUsulanTable();
+  }
 }
 
 // ---------- Download Usulan to Excel ----------
+// Export as an HTML table saved with .xls extension — Excel parses this into
+// proper, separate cells (plain TSV gets dumped into a single column).
 function downloadUsulanExcel(){
   const excelUsulan = (DATA && DATA.usulan) || [];
   const excelNos = new Set(excelUsulan.map(u => u.no));
@@ -10619,21 +10692,32 @@ function downloadUsulanExcel(){
   rows = rows.filter(u => !usulanDeletedNos.has(u.no));
   rows.sort((a, b) => a.no - b.no);
   if (!rows.length){ alert('Tidak ada data untuk diunduh.'); return; }
-  const TAHAP = ['TOR', 'RKS/HPE', 'Pengumuman', 'Aanwijzing', 'Kontrak'];
-  const headers = ['No', 'PLTU', 'Regional', 'Jenis Biomassa', 'Volume (MT)', 'Metode', ...TAHAP, 'Status', 'Keterangan'];
-  const tsv = [headers.join('\t')];
+
+  const headers = ['No', 'PLTU', 'Regional', 'Jenis Biomassa', 'Volume (MT)', 'Metode', 'TOR', 'RKS/HPE', 'Pengumuman', 'Aanwijzing', 'Kontrak', 'Status', 'Keterangan'];
+  let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">'
+    + '<head><meta charset="utf-8"></head><body><table border="1"><thead><tr>';
+  headers.forEach(h => { html += '<th style="background:#1f3a5f;color:#fff;font-weight:bold">' + escapeHtml(h) + '</th>'; });
+  html += '</tr></thead><tbody>';
   rows.forEach(u => {
-    const remote = usulanRemoteState[u.no] || {};
-    const tahapVals = ['tor','rks','pengumuman','aanwijzing','kontrak'].map(k => {
-      const v = (remote[k] !== undefined) ? remote[k] : !!u[k];
-      return v ? '✓' : '';
-    });
-    const done = tahapVals.filter(v => v === '✓').length;
-    const status = done + '/5 tahap';
-    const notes = remote.notes || u.notes || '';
-    tsv.push([u.no, u.pltu || '', u.regional || '', u.jenis || '', u.volume || '', u.metode || '', ...tahapVals, status, notes].join('\t'));
+    const eff = getEffectiveRow(u);
+    const tahap = getEffectiveTahap(u);
+    const tahapVals = USULAN_TAHAP_KEYS.map(k => tahap[k] ? '✓' : '');
+    const done = tahapVals.filter(v => v).length;
+    html += '<tr>';
+    html += '<td>' + u.no + '</td>';
+    html += '<td>' + escapeHtml(eff.pltu || '') + '</td>';
+    html += '<td>' + escapeHtml(eff.regional || '') + '</td>';
+    html += '<td>' + escapeHtml(eff.jenis || '') + '</td>';
+    html += '<td>' + (eff.volume || 0) + '</td>';
+    html += '<td>' + escapeHtml(eff.metode || '') + '</td>';
+    tahapVals.forEach(v => { html += '<td style="text-align:center">' + v + '</td>'; });
+    html += '<td>' + done + '/5 tahap</td>';
+    html += '<td>' + escapeHtml(eff.keterangan || '') + '</td>';
+    html += '</tr>';
   });
-  const blob = new Blob(['﻿' + tsv.join('\n')], { type: 'text/tab-separated-values;charset=utf-8' });
+  html += '</tbody></table></body></html>';
+
+  const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
