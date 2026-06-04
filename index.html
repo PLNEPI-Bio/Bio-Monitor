@@ -44,6 +44,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- xlsx-js-style: SheetJS fork that adds cell styling (fills, borders, fonts) for nicer Excel exports -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>/* ======= Biomassa Monitoring Dashboard v2 ======= */
 
 /* LIGHT THEME (default) — PLN EPI corporate identity from plnepi.co.id
@@ -10756,6 +10758,44 @@ function downloadUsulanExcel(){
     { wch: 5 }, { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 11 }, { wch: 9 },
     { wch: 6 }, { wch: 8 }, { wch: 11 }, { wch: 11 }, { wch: 8 }, { wch: 10 }, { wch: 30 },
   ];
+  ws['!rows'] = [{ hpt: 22 }]; // taller header row
+
+  const thin = { style: 'thin', color: { rgb: 'CCD3DA' } };
+  const borderAll = { top: thin, bottom: thin, left: thin, right: thin };
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r; R <= range.e.r; R++){
+    for (let C = range.s.c; C <= range.e.c; C++){
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[addr];
+      if (!cell) continue;
+      if (R === 0){
+        // Header row
+        cell.s = {
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          fill: { fgColor: { rgb: '1F3A5F' } },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          border: borderAll,
+        };
+      } else {
+        // Data rows: zebra striping + alignment per column
+        const isEven = (R % 2 === 0);
+        // Columns: 0=No, 1=PLTU, 2=Regional, 3=Jenis, 4=Volume, 5=Metode,
+        //          6-10=tahap (✓), 11=Status, 12=Keterangan
+        const center = (C === 0 || (C >= 5 && C <= 11));
+        const right = (C === 4);
+        cell.s = {
+          font: { sz: 10, color: { rgb: (C >= 6 && C <= 10) ? '0E9F6E' : '1F2937' }, bold: (C >= 6 && C <= 10) },
+          fill: { fgColor: { rgb: isEven ? 'F4F7FA' : 'FFFFFF' } },
+          alignment: { horizontal: right ? 'right' : (center ? 'center' : 'left'), vertical: 'center' },
+          border: borderAll,
+        };
+      }
+    }
+  }
+  // Freeze the header row
+  ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' };
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Usulan Kontrak');
   XLSX.writeFile(wb, 'Usulan_Kontrak_' + new Date().toISOString().slice(0,10) + '.xlsx');
