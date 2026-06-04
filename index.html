@@ -3955,6 +3955,48 @@ html,body{
   animation:notifPop .3s ease;
 }
 @keyframes notifPop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+@keyframes toastSlideIn{0%{transform:translateX(120%);opacity:0}100%{transform:translateX(0);opacity:1}}
+@keyframes toastSlideOut{0%{transform:translateX(0);opacity:1}100%{transform:translateX(120%);opacity:0}}
+#updateAppliedBanner{
+  position:fixed;top:60px;right:16px;z-index:9999;
+  background:var(--panel-2);border:1px solid var(--accent);border-left:3px solid var(--accent);
+  border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.35);
+  font-family:'Plus Jakarta Sans',sans-serif;min-width:260px;max-width:340px;
+  animation:toastSlideIn .3s cubic-bezier(.22,1,.36,1) forwards;
+}
+#updateAppliedBanner.toast-out{animation:toastSlideOut .3s ease forwards}
+.toast-head{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px 6px;
+}
+.toast-icon{font-size:13px;flex-shrink:0}
+.toast-title{
+  flex:1;font-size:11px;font-weight:700;color:var(--accent);
+  letter-spacing:.4px;text-transform:uppercase;
+}
+.toast-close{
+  background:none;border:none;color:var(--text-dim);cursor:pointer;
+  font-size:15px;line-height:1;padding:0 2px;
+}
+.toast-close:hover{color:var(--text-bright)}
+.toast-body{padding:0 12px 8px;font-size:11px;color:var(--text);line-height:1.5}
+.toast-by{color:var(--text-dim);font-size:10px;margin-top:2px}
+.toast-changes{
+  margin-top:6px;padding-top:6px;border-top:1px solid var(--border);
+  display:flex;flex-wrap:wrap;gap:4px;
+}
+.toast-chip{
+  font-size:9px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;
+  padding:2px 6px;border-radius:3px;
+  background:rgba(var(--accent-rgb,16,185,129),.12);color:var(--accent);border:1px solid var(--border);
+}
+.toast-progress{
+  height:2px;background:var(--border);border-radius:0 0 6px 6px;overflow:hidden;
+}
+.toast-progress-bar{
+  height:100%;background:var(--accent);
+  transition:width linear;
+}
 .notif-badge:empty,.notif-badge[data-count="0"]{display:none}
 .notif-dropdown{
   position:fixed;top:52px;right:8px;width:320px;max-height:400px;overflow-y:auto;
@@ -11177,7 +11219,7 @@ function subscribeUpdateDataRealtime(){
         const r = payload.new;
         if (!r || !r.data) return;
         // Apply new data
-        applyDashboardData(r.data, { uploaded_by: r.uploaded_by, uploaded_at: r.uploaded_at, source_filename: r.source_filename });
+        applyDashboardData(r.data, { uploaded_by: r.uploaded_by, uploaded_at: r.uploaded_at, source_filename: r.source_filename, data_summary: r.data_summary });
       }
     )
     .subscribe();
@@ -11339,23 +11381,81 @@ function rerenderActiveTab(){
 }
 
 function showDataAppliedBanner(meta){
-  // Brief toast at top-right
   const existing = document.getElementById('updateAppliedBanner');
   if (existing) existing.remove();
+
+  const by = (meta && meta.uploaded_by) ? meta.uploaded_by : 'Sistem';
+  const file = (meta && meta.source_filename) ? meta.source_filename : '';
+  const summary = (meta && meta.data_summary) ? meta.data_summary : '';
+  const when = (meta && meta.uploaded_at)
+    ? new Date(meta.uploaded_at).toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+    : '';
+
+  // Parse summary string into change chips: "51 plants · 364 bn · …"
+  const chips = [];
+  const chipMap = [
+    [/(\d+)\s*plant/i,      'Plants'],
+    [/(\d+)\s*bottleneck/i, 'Bottleneck'],
+    [/(\d+)\s*kontrak/i,    'Kontrak'],
+    [/(\d+)\s*pembangkit/i, 'Pembangkit'],
+    [/(\d+)\s*pareto/i,     'Pareto'],
+    [/(\d+)\s*gcv/i,        'GCV'],
+    [/(\d+)\s*mou/i,        'MoU'],
+  ];
+  chipMap.forEach(([re, label]) => {
+    const m = summary.match(re);
+    if (m) chips.push(m[1] + ' ' + label);
+  });
+  // Detect REVERT
+  const isRevert = /^REVERT/i.test(file) || /REVERTED/i.test(summary);
+  if (isRevert) chips.unshift('Revert');
+
+  const chipsHtml = chips.length
+    ? '<div class="toast-changes">' + chips.map(c => '<span class="toast-chip">' + escapeHtml(c) + '</span>').join('') + '</div>'
+    : '';
+
+  const fileHtml = file && !isRevert
+    ? '<div class="toast-by">📄 ' + escapeHtml(file.replace('BACKUP: ','')) + (when ? ' · ' + when : '') + '</div>'
+    : (when ? '<div class="toast-by">⏱ ' + when + '</div>' : '');
+
   const banner = document.createElement('div');
   banner.id = 'updateAppliedBanner';
-  banner.style.cssText = 'position:fixed;top:60px;right:16px;background:var(--accent);color:#0a0e14;font-family:Plus Jakarta Sans,sans-serif;font-size:11px;font-weight:700;padding:10px 16px;border-radius:4px;letter-spacing:.5px;box-shadow:0 6px 20px rgba(0,0,0,.4);z-index:9999;animation:slideInRight .3s ease;';
-  let label = '✓ Dashboard data updated';
-  if (meta && meta.uploaded_by){
-    label += ' by ' + meta.uploaded_by;
-  }
-  banner.textContent = label;
+  banner.innerHTML =
+    '<div class="toast-head">' +
+      '<span class="toast-icon">✓</span>' +
+      '<span class="toast-title">Data ' + (isRevert ? 'Reverted' : 'Updated') + '</span>' +
+      '<button class="toast-close" id="toastCloseBtn" title="Tutup">×</button>' +
+    '</div>' +
+    '<div class="toast-body">' +
+      '<div>Diperbarui oleh <strong>' + escapeHtml(by) + '</strong></div>' +
+      fileHtml + chipsHtml +
+    '</div>' +
+    '<div class="toast-progress"><div class="toast-progress-bar" id="toastProgressBar" style="width:100%"></div></div>';
+
   document.body.appendChild(banner);
-  setTimeout(() => {
-    banner.style.transition = 'opacity .4s';
-    banner.style.opacity = '0';
-    setTimeout(() => banner.remove(), 500);
-  }, 3500);
+
+  const DURATION = 4000;
+  let start = null;
+  let rafId = null;
+  const bar = document.getElementById('toastProgressBar');
+
+  function tick(ts){
+    if (!start) start = ts;
+    const pct = Math.max(0, 100 - (ts - start) / DURATION * 100);
+    if (bar) bar.style.width = pct + '%';
+    if (pct > 0) rafId = requestAnimationFrame(tick);
+    else dismiss();
+  }
+  rafId = requestAnimationFrame(tick);
+
+  function dismiss(){
+    if (rafId) cancelAnimationFrame(rafId);
+    banner.classList.add('toast-out');
+    setTimeout(() => { if (banner.parentNode) banner.remove(); }, 300);
+  }
+
+  const closeBtn = document.getElementById('toastCloseBtn');
+  if (closeBtn) closeBtn.onclick = dismiss;
 }
 
 // ---------- Update Data tab UI ----------
