@@ -11829,8 +11829,9 @@ async function doProcessAndUpload(){
     // Apply locally (realtime will broadcast to others)
     applyDashboardData(newDataset, { uploaded_by: userName, uploaded_at: new Date().toISOString(), source_filename: sourceFiles.join(' + ') });
     updateLog('✓ <b>Done.</b> All connected users now see the updated data.', 'success');
-    // Reload history
+    // Reload history and re-check revert availability now that backup exists
     loadUpdateHistory();
+    checkRevertAvailable();
     // Clear file selections
     document.getElementById('updateClearBtn').click();
   } catch(e){
