@@ -5632,9 +5632,9 @@ function plantPeriodTotals(p){
 
   if (year === '2026'){
     if (month === 'all'){
-      // V57: Gap = Target − Realisasi, accumulated only up to the last month that
+      // V57: Gap = Realisasi − Target, accumulated only up to the last month that
       // has realisasi data. Months not yet input are excluded so the gap reflects
-      // target-vs-real for the same elapsed period (Target/Realisasi KPIs stay full-year).
+      // real-vs-target for the same elapsed period (Target/Realisasi KPIs stay full-year).
       const cutoff = last2026RealMonth();
       let tCut = 0, rCut = 0;
       for (let m = 0; m <= cutoff; m++){
@@ -5645,7 +5645,7 @@ function plantPeriodTotals(p){
         target: p.target_2026_total,
         do_sum: p.do_2026_total,
         real: p.real_2026_total,
-        gap: tCut - rCut,
+        gap: rCut - tCut,
         pct: p.real_pct,
       };
     } else {
@@ -5653,8 +5653,8 @@ function plantPeriodTotals(p){
       const t = (p.target_2026[mi] || 0);
       const d = (p.do_2026[mi] || 0);
       const r = (p.real_2026[mi] || 0);
-      // V57: Gap = Target − Realisasi for the selected month.
-      return { target: t, do_sum: d, real: r, gap: t - r, pct: t ? r/t : 0 };
+      // V57: Gap = Realisasi − Target for the selected month.
+      return { target: t, do_sum: d, real: r, gap: r - t, pct: t ? r/t : 0 };
     }
   } else {
     // V27: past years now use historical_target (2023 distributed from 1.08M,
