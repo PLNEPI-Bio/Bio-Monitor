@@ -5815,6 +5815,13 @@ function updateKPIs(){
     doSum += t.do_sum;
     gap += t.gap;
   });
+  // V58: bump a generation token on every call so any counter animation still
+  // in flight from an earlier call knows it is stale and must stop. Without this,
+  // the first-render animation (which captures the old values in its closure)
+  // keeps firing for 700ms and overwrites the cells back to the stale numbers if
+  // fresh data (e.g. async Supabase load) arrives mid-animation — the value would
+  // only correct itself on the next updateKPIs (e.g. a filter toggle).
+  const kpiGen = (window._kpiAnimGen = (window._kpiAnimGen || 0) + 1);
   document.getElementById('kpi-target').innerHTML = fmt(target) + '<span class="kpi-unit">ton</span>';
   document.getElementById('kpi-real').innerHTML = fmt(real) + '<span class="kpi-unit">ton</span>';
   document.getElementById('kpi-real-pct').textContent = target ? `${(real/target*100).toFixed(1)}% OF TARGET FGD` : '—';
@@ -5829,6 +5836,8 @@ function updateKPIs(){
         const unit = '<span class="kpi-unit">ton</span>';
         const start = performance.now();
         (function step(now){
+          // A newer updateKPIs ran (fresh data): stop and leave its values intact.
+          if (kpiGen !== window._kpiAnimGen) return;
           const p = Math.min((now-start)/700,1);
           const ease = 1-Math.pow(1-p,3);
           el.innerHTML = fmt(Math.round(val*ease)) + unit;
