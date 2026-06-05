@@ -5610,17 +5610,42 @@ function enrichPlantsHistorical(plants){
  * - If year === '2026' and month specified (index 0-11): use that single month.
  * - If year !== '2026': use historical_real (target/DO not available for past years → 0).
  */
+// V57: index (0..11) of the last 2026 month that has realisasi data nationally.
+// "Has data" = national sum of realisasi for that month is > 0 (months not yet
+// input stay at 0). Returns -1 when no realisasi has been entered at all.
+// Used to accumulate the gap only over the elapsed/reported period so it compares
+// Target vs Realisasi on the same number of months (e.g. data up to May → Jan..May).
+function last2026RealMonth(){
+  const plants = (DATA && DATA.plants) ? DATA.plants : [];
+  let last = -1;
+  for (let m = 0; m < 12; m++){
+    let sum = 0;
+    for (const p of plants){ sum += (p.real_2026 && p.real_2026[m]) || 0; }
+    if (sum > 0) last = m;
+  }
+  return last;
+}
+
 function plantPeriodTotals(p){
   const year = state.mapPeriod.year;
   const month = state.mapPeriod.month; // 'all' or 0..11
 
   if (year === '2026'){
     if (month === 'all'){
+      // V57: Gap = Realisasi − Target, accumulated only up to the last month that
+      // has realisasi data. Months not yet input are excluded so the gap reflects
+      // real-vs-target for the same elapsed period (Target/Realisasi KPIs stay full-year).
+      const cutoff = last2026RealMonth();
+      let tCut = 0, rCut = 0;
+      for (let m = 0; m <= cutoff; m++){
+        tCut += (p.target_2026[m] || 0);
+        rCut += (p.real_2026[m] || 0);
+      }
       return {
         target: p.target_2026_total,
         do_sum: p.do_2026_total,
         real: p.real_2026_total,
-        gap: p.gap_akm,
+        gap: rCut - tCut,
         pct: p.real_pct,
       };
     } else {
@@ -5628,8 +5653,8 @@ function plantPeriodTotals(p){
       const t = (p.target_2026[mi] || 0);
       const d = (p.do_2026[mi] || 0);
       const r = (p.real_2026[mi] || 0);
-      const g = (p.gap_2026[mi] || 0);
-      return { target: t, do_sum: d, real: r, gap: g, pct: t ? r/t : 0 };
+      // V57: Gap = Realisasi − Target for the selected month.
+      return { target: t, do_sum: d, real: r, gap: r - t, pct: t ? r/t : 0 };
     }
   } else {
     // V27: past years now use historical_target (2023 distributed from 1.08M,
