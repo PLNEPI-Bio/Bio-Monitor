@@ -3750,6 +3750,29 @@ html,body{
 }
 .berita-card:hover::before{height:4px}
 
+/* V62) Thumbnail — real photo (cover) or publisher logo/favicon (contain) */
+.berita-card-thumb{
+  position:relative;width:100%;height:140px;
+  overflow:hidden;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--panel-2);border-bottom:1px solid var(--border);
+}
+.berita-card-thumb img{display:block;border:0}
+.berita-card-thumb.has-photo img{width:100%;height:100%;object-fit:cover}
+.berita-card-thumb.has-logo img{
+  width:auto;height:auto;max-width:72px;max-height:72px;object-fit:contain;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.12));
+}
+.berita-thumb-fallback{
+  display:none;align-items:center;justify-content:center;
+  width:64px;height:64px;border-radius:14px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:30px;color:#fff;
+}
+.berita-card-thumb.no-thumb img,
+.berita-card-thumb.thumb-failed img{display:none}
+.berita-card-thumb.no-thumb .berita-thumb-fallback,
+.berita-card-thumb.thumb-failed .berita-thumb-fallback{display:flex}
+
 /* 1) Source bar (top): publisher + time-ago */
 .berita-card-source-bar{
   display:flex;justify-content:space-between;align-items:center;gap:8px;
@@ -3836,6 +3859,7 @@ html,body{
   .berita-header{flex-direction:column;align-items:flex-start}
   .berita-card-title{font-size:13px}
   .berita-card-snippet{font-size:11px;-webkit-line-clamp:2}
+  .berita-card-thumb{height:120px}
 }
 
 /* Tablet: 2 columns explicit */
@@ -17147,7 +17171,7 @@ function updatePresenceUI(){
 // printed by the dashboard if fetch fails).
 
 const BERITA_ENDPOINT = SUPABASE_URL + '/functions/v1/news-feed';
-const BERITA_CACHE_KEY = 'biomassa-berita-cache-v1';
+const BERITA_CACHE_KEY = 'biomassa-berita-cache-v2'; // v2: articles now include sourceUrl/image for thumbnails
 const BERITA_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes - matches server cache
 
 let beritaState = {
@@ -17368,8 +17392,23 @@ function renderBeritaCard(a, index){
   //   4. Footer (topic tags + arrow)
   const accentClass = sourceAccentClass(a.source);
 
+  // V62: thumbnail — use a real article image when available, otherwise fall back
+  // to the publisher logo (favicon) so every card shows a recognizable thumbnail.
+  const domain = beritaSourceDomain(a);
+  const photo = (a.image || '').trim();
+  const fav = domain ? ('https://www.google.com/s2/favicons?sz=128&domain=' + encodeURIComponent(domain)) : '';
+  const thumbSrc = photo || fav;
+  const thumbClass = photo ? 'has-photo' : (thumbSrc ? 'has-logo' : 'no-thumb');
+  const initial = escapeHtml(((a.source || '?').trim().charAt(0) || '?').toUpperCase());
+  const thumbHtml = `
+      <div class="berita-card-thumb ${thumbClass}">
+        ${thumbSrc ? `<img src="${escapeHtml(thumbSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-fav="${escapeHtml(fav)}" onerror="beritaThumbErr(this)">` : ''}
+        <span class="berita-thumb-fallback" style="background:var(--card-accent)">${initial}</span>
+      </div>`;
+
   return `
     <a class="berita-card ${accentClass}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+      ${thumbHtml}
       <div class="berita-card-source-bar">
         <span class="berita-card-source">${source}</span>
         <span class="berita-card-time">${escapeHtml(timeAgo)}</span>
@@ -17394,6 +17433,32 @@ function sourceAccentClass(source){
     h = ((h << 5) - h + source.charCodeAt(i)) | 0;
   }
   return 'accent-' + (Math.abs(h) % 5);
+}
+
+// V62: resolve the publisher domain for an article (for the logo/favicon thumbnail).
+// Prefers the feed's sourceUrl; falls back to the article URL when it's a real
+// publisher link (Google News redirect URLs are ignored).
+function beritaSourceDomain(a){
+  let u = (a && a.sourceUrl) ? a.sourceUrl : '';
+  if (!u && a && a.url && !/(^|\.)news\.google\.com/i.test(a.url)) u = a.url;
+  if (!u) return '';
+  try {
+    const d = new URL(/^https?:\/\//i.test(u) ? u : 'https://' + u);
+    return d.hostname.replace(/^www\./, '');
+  } catch(e){ return ''; }
+}
+
+// V62: thumbnail error handler — if a real article image fails, retry with the
+// publisher favicon; if that also fails, show the source-initial placeholder.
+function beritaThumbErr(img){
+  const fav = img.getAttribute('data-fav') || '';
+  const wrap = img.closest('.berita-card-thumb');
+  if (fav && img.src !== fav){
+    img.src = fav;
+    if (wrap){ wrap.classList.remove('has-photo'); wrap.classList.add('has-logo'); }
+    return;
+  }
+  if (wrap) wrap.classList.add('thumb-failed');
 }
 
 // V36: strip HTML tags + decode entities from text that may have leaked
