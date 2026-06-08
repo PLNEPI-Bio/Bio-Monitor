@@ -1055,6 +1055,8 @@ html,body{
 
 .real-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
 .real-card{background:var(--panel);border:1px solid var(--border);padding:20px;position:relative;border-radius:12px;transition:box-shadow .2s}
+/* V60: section divider above the "Komposisi Jenis Biomassa" chart */
+.real-section-divider{border:0;border-top:1px solid var(--border);margin:8px 0}
 .real-card:hover{box-shadow:var(--shadow-xs)}
 .real-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;font-weight:700;display:flex;align-items:center}
 .real-card h3::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--accent);margin-right:9px;vertical-align:middle}
@@ -4612,7 +4614,7 @@ html,body{
       <div class="real-pltu-filter-head">
         <div>
           <h3 style="margin-bottom:0">Filter</h3>
-          <div class="real-pltu-filter-sub">Pengaruhi chart Multi-Year Comparison, Annual Total, dan Cumulative Realisasi</div>
+          <div class="real-pltu-filter-sub">Pengaruhi chart Multi-Year Comparison, Annual Total, Cumulative Realisasi, dan Contribution by Genco</div>
         </div>
       </div>
       <div class="real-filter-row">
@@ -4697,6 +4699,7 @@ html,body{
     </div>
 
     <!-- V46: Pie chart — Komposisi Jenis Biomassa (moved from Daftar Kontrak) -->
+    <hr class="real-section-divider">
     <div class="real-card">
       <div class="kontrak-jenis-chart-head">
         <h3 style="margin:0">Komposisi Jenis Biomassa (Realisasi)</h3>
@@ -7167,12 +7170,12 @@ function renderRealView(){
     ach26Toggle.onchange = () => buildAchievementRanking('2026', 'realTopChart26', 'top26', ach26Toggle.checked);
   }
 
-  // Genco breakdown per year
+  // Genco breakdown per year — respects the Wilayah/PLTU filter (uses filteredPlants).
   const gencos = ['PNP','PIP','UIW','UIK'];
   const yearGencoTotals = {};
   ['2023','2024','2025','2026'].forEach(y => {
     yearGencoTotals[y] = Object.fromEntries(gencos.map(g => [g, 0]));
-    DATA.plants.forEach(p => {
+    filteredPlants.forEach(p => {
       const t = (p.historical_real[y]||[]).reduce((a,b)=>a+b,0);
       if (yearGencoTotals[y][p.genco] !== undefined) yearGencoTotals[y][p.genco] += t;
     });
