@@ -4558,9 +4558,9 @@ html,body{
       <div id="pomeHeatPanel" class="pome-heat-panel" style="display:none">
         <div class="phl-title">
           <span>Potensi POME (biogas)</span>
-          <button id="pomeHeatToggleBtn" class="phl-switch" role="switch" aria-checked="true" title="Tampilkan / sembunyikan heatmap POME"><span class="phl-switch-knob"></span></button>
+          <button id="pomeHeatToggleBtn" class="phl-switch" role="switch" aria-checked="false" title="Tampilkan / sembunyikan heatmap POME"><span class="phl-switch-knob"></span></button>
         </div>
-        <div id="pomeHeatBody">
+        <div id="pomeHeatBody" style="display:none">
           <div class="phl-bar"></div>
           <div class="phl-scale"><span>Rendah</span><span>Tinggi</span></div>
           <div class="phl-controls">
@@ -12546,8 +12546,8 @@ const POME_HEAT_DATA = [[4.5978,97.9019,0.82],[2.0516,100.2512,0.82],[0.3525,102
 let pembangkitHeatLayer = null;
 const pomeHeatState = { minPome: 0, intensity: 0.6 };
 let _pomeSlidersBound = false;
-// V59: user toggle for the POME heatmap + slider panel (show/hide). Default on.
-let pomeHeatVisible = true;
+// V59: user toggle for the POME heatmap + slider panel (show/hide). Default off.
+let pomeHeatVisible = false;
 let _pomeTogglesBound = false;
 
 function _applyPomeHeatFilter(){
