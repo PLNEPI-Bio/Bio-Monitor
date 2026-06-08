@@ -1294,6 +1294,80 @@ html,body{
   text-transform:uppercase;margin-bottom:4px;
 }
 .bn-record-text{font-size:11px;line-height:1.5;color:var(--text);white-space:pre-wrap}
+.bn-evidence-link{color:var(--accent);text-decoration:none;word-break:break-all}
+.bn-evidence-link:hover{text-decoration:underline}
+
+/* V61: Bottleneck add/edit affordances */
+.bn-add-btn{
+  margin-top:10px;width:100%;padding:8px 12px;border-radius:6px;cursor:pointer;
+  background:var(--accent);color:#fff;border:1px solid var(--accent);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.4px;
+  transition:filter .15s;
+}
+.bn-add-btn:hover{filter:brightness(1.08)}
+.bn-record-edit{
+  margin-left:auto;background:none;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:5px;padding:2px 8px;font-size:9px;font-weight:700;letter-spacing:.4px;
+  cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;
+}
+.bn-record-edit:hover{color:var(--accent);border-color:var(--accent)}
+.bn-record-badges{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+/* Bottleneck form modal */
+.bn-form-backdrop{
+  position:fixed;inset:0;z-index:5000;display:none;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(2px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.bn-form-backdrop.open{display:flex}
+.bn-form-modal{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  width:560px;max-width:100%;max-height:90vh;display:flex;flex-direction:column;
+  box-shadow:0 12px 40px rgba(0,0,0,.4);font-family:'Plus Jakarta Sans',sans-serif;
+}
+.bn-form-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px;border-bottom:1px solid var(--border);
+}
+.bn-form-title{font-size:13px;font-weight:700;color:var(--text-bright)}
+.bn-form-close{
+  background:none;border:none;color:var(--text-dim);font-size:20px;line-height:1;
+  cursor:pointer;padding:0 4px;
+}
+.bn-form-close:hover{color:var(--text-bright)}
+.bn-form-body{padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.bn-form-row{display:flex;gap:12px}
+.bn-form-row .bn-form-field{flex:1;min-width:0}
+.bn-form-field{display:flex;flex-direction:column;gap:4px}
+.bn-form-field label{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-dim)}
+.bn-form-req{color:var(--danger)}
+.bn-form-field input,.bn-form-field select,.bn-form-field textarea{
+  background:var(--panel-2);border:1px solid var(--border);border-radius:6px;
+  padding:8px 10px;color:var(--text);font-size:12px;font-family:inherit;width:100%;
+  resize:vertical;
+}
+.bn-form-field input:focus,.bn-form-field select:focus,.bn-form-field textarea:focus{
+  outline:none;border-color:var(--accent);
+}
+.bn-form-complete{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text);cursor:pointer}
+.bn-form-complete input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.bn-form-error{color:var(--danger);font-size:11px;min-height:14px}
+.bn-form-actions{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:14px 18px;border-top:1px solid var(--border);
+}
+.bn-form-actions-right{display:flex;gap:10px;margin-left:auto}
+.bn-form-btn{
+  padding:8px 16px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;
+  letter-spacing:.4px;border:1px solid var(--border);background:var(--panel-2);color:var(--text);
+  font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;
+}
+.bn-form-btn:hover{border-color:var(--accent);color:var(--accent)}
+.bn-form-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.bn-form-btn.primary:hover{filter:brightness(1.08);color:#fff}
+.bn-form-btn.primary:disabled{opacity:.6;cursor:default;filter:none}
+.bn-form-btn.danger{border-color:var(--danger);color:var(--danger);background:transparent}
+.bn-form-btn.danger:hover{background:rgba(239,68,68,.1)}
 
 .bn-cluster{
   background:var(--danger);color:white;border-radius:50%;
@@ -4858,6 +4932,81 @@ html,body{
       </div>
     </aside>
   </div>
+
+  <!-- V61: Add/Edit Bottleneck modal -->
+  <div class="bn-form-backdrop" id="bnFormBackdrop">
+    <div class="bn-form-modal" role="dialog" aria-modal="true">
+      <div class="bn-form-head">
+        <div class="bn-form-title" id="bnFormTitle">Tambah Bottleneck</div>
+        <button class="bn-form-close" id="bnFormClose" title="Tutup">×</button>
+      </div>
+      <div class="bn-form-body">
+        <div class="bn-form-field">
+          <label>Bottleneck <span class="bn-form-req">*</span></label>
+          <textarea id="bnFormBottleneck" rows="3" placeholder="Deskripsi bottleneck…"></textarea>
+        </div>
+        <div class="bn-form-row">
+          <div class="bn-form-field">
+            <label>Bulan Bottleneck <span class="bn-form-req">*</span></label>
+            <select id="bnFormBulan">
+              <option value="">— Pilih bulan —</option>
+              <option value="January">January</option>
+              <option value="February">February</option>
+              <option value="March">March</option>
+              <option value="April">April</option>
+              <option value="May">May</option>
+              <option value="June">June</option>
+              <option value="July">July</option>
+              <option value="August">August</option>
+              <option value="September">September</option>
+              <option value="October">October</option>
+              <option value="November">November</option>
+              <option value="December">December</option>
+            </select>
+          </div>
+          <div class="bn-form-field">
+            <label>Informant <span class="bn-form-req">*</span></label>
+            <select id="bnFormSumber">
+              <option value="">— Pilih informant —</option>
+              <option value="PLN EPI">PLN EPI</option>
+              <option value="PLTU">PLTU</option>
+              <option value="Mitra">Mitra</option>
+            </select>
+          </div>
+        </div>
+        <div class="bn-form-field">
+          <label>Action Plan</label>
+          <textarea id="bnFormActionPlan" rows="2" placeholder="Rencana aksi mitigasi…"></textarea>
+        </div>
+        <div class="bn-form-field">
+          <label>Progress</label>
+          <textarea id="bnFormProgress" rows="2" placeholder="Progress terkini…"></textarea>
+        </div>
+        <div class="bn-form-row">
+          <div class="bn-form-field">
+            <label>PIC</label>
+            <input type="text" id="bnFormPic" placeholder="Penanggung jawab">
+          </div>
+          <div class="bn-form-field">
+            <label>Link Eviden</label>
+            <input type="url" id="bnFormLinkEviden" placeholder="https://…">
+          </div>
+        </div>
+        <label class="bn-form-complete" id="bnFormCompleteRow" style="display:none">
+          <input type="checkbox" id="bnFormComplete">
+          <span>Tandai sebagai <b>Complete</b> (bottleneck sudah selesai)</span>
+        </label>
+        <div class="bn-form-error" id="bnFormError"></div>
+      </div>
+      <div class="bn-form-actions">
+        <button class="bn-form-btn danger" id="bnFormDelete" style="display:none">Hapus</button>
+        <div class="bn-form-actions-right">
+          <button class="bn-form-btn" id="bnFormCancel">Batal</button>
+          <button class="bn-form-btn primary" id="bnFormSubmit">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ====== TAB 4: PARETO LOSS VIEW (V44 — rewritten from scratch) ====== -->
@@ -7668,14 +7817,17 @@ function showBnPltuEmpty(p){
         <span class="detail-tag">${p.boiler}</span>
         <span class="detail-tag">${p.regional}</span>
       </div>
+      <button class="bn-add-btn" id="bnAddBtnEmpty">+ Tambah Bottleneck</button>
     </div>
     <div class="bn-pltu-body">
       <div class="empty-state" style="padding:40px 20px">
         <div class="empty-state-icon" style="color:var(--accent);border-color:rgba(16,185,129,.3)">✓</div>
         <h3 style="color:var(--accent)">No bottlenecks</h3>
-        <p>No bottleneck records match the current filters for this PLTU. Try changing the month or source filter.</p>
+        <p>Belum ada bottleneck untuk PLTU ini (atau tidak cocok dengan filter aktif). Klik <b>+ Tambah Bottleneck</b> untuk menambahkan.</p>
       </div>
     </div>`;
+  const addBtnEmpty = panelEl.querySelector('#bnAddBtnEmpty');
+  if (addBtnEmpty) addBtnEmpty.onclick = () => openBnForm('add', p.name);
   setTimeout(() => { if (bnMap) bnMap.invalidateSize(); }, 260);
 }
 
@@ -7743,6 +7895,7 @@ function renderBnPltuDetailPanel(){
         ${plantData ? `<span class="detail-tag">${plantData.boiler}</span>` : ''}
         ${plantData ? `<span class="detail-tag">${plantData.regional}</span>` : ''}
       </div>
+      <button class="bn-add-btn" id="bnAddBtn">+ Tambah Bottleneck</button>
       <div class="bn-detail-keyword-filter">
         <div class="bn-keyword-filter-label">Filter by Keyword Category</div>
         <div class="bn-keyword-filter-buttons">
@@ -7768,6 +7921,7 @@ function renderBnPltuDetailPanel(){
                 <span class="bn-badge month">${monthShort}</span>
                 <span class="bn-badge ${srcClass}">${b.sumber || '—'}</span>
                 ${b.complete ? '<span class="bn-badge complete">✓ COMPLETE</span>' : ''}
+                ${b.id != null ? `<button class="bn-record-edit" data-bn-id="${b.id}" title="Edit bottleneck">✎ Edit</button>` : ''}
               </div>
             </div>
             ${b.bottleneck ? `
@@ -7795,6 +7949,11 @@ function renderBnPltuDetailPanel(){
                 <div class="bn-record-label">PIC</div>
                 <div class="bn-record-text">${b.pic}</div>
               </div>` : ''}
+            ${b.link_eviden ? `
+              <div class="bn-record-section">
+                <div class="bn-record-label">Link Eviden</div>
+                <div class="bn-record-text"><a href="${escapeHtml(b.link_eviden)}" target="_blank" rel="noopener noreferrer" class="bn-evidence-link">${escapeHtml(b.link_eviden)}</a></div>
+              </div>` : ''}
           </div>`;
       }).join('')}
     </div>
@@ -7811,6 +7970,12 @@ function renderBnPltuDetailPanel(){
       }
       renderBnPltuDetailPanel();
     };
+  });
+  // V61: wire add + per-record edit buttons
+  const addBtn = panelEl.querySelector('#bnAddBtn');
+  if (addBtn) addBtn.onclick = () => openBnForm('add', cl.pltu);
+  panelEl.querySelectorAll('[data-bn-id]').forEach(btn => {
+    btn.onclick = () => openBnForm('edit', cl.pltu, parseInt(btn.getAttribute('data-bn-id'), 10));
   });
 }
 
@@ -7924,6 +8089,304 @@ function showBnDetailByIdx(idx){
     clusters[key].items.push(bb);
   });
   if (clusters[b.pltu]) showBnPltuDetail(clusters[b.pltu]);
+}
+
+// ===== V61: Bottleneck CRUD + Supabase realtime sync =====
+function _bnPlantCoords(pltuName){
+  const p = (DATA.plants || []).find(x => x.name === pltuName);
+  if (!p) return { lat: null, lon: null };
+  return { lat: (p.lat !== undefined ? p.lat : null), lon: (p.lon !== undefined ? p.lon : null) };
+}
+
+// Map a server row to the legacy bottleneck object shape used by all renderers.
+function _bnRowToLegacy(row){
+  return {
+    id: row.id,
+    pltu: row.pltu || '',
+    bulan: row.bulan || '',
+    sumber: row.sumber || '',
+    bottleneck: row.bottleneck || '',
+    action_plan: row.action_plan || '',
+    progress: row.progress || '',
+    pic: row.pic || '',
+    link_eviden: row.link_eviden || '',
+    informant: row.informant || '',
+    contact_person: row.contact_person || '',
+    evaluasi: row.evaluasi || '',
+    complete: !!row.complete,
+    lat: (row.lat !== null && row.lat !== undefined) ? row.lat : null,
+    lon: (row.lon !== null && row.lon !== undefined) ? row.lon : null,
+  };
+}
+
+// Replace DATA.bottlenecks with the server rows and refresh the bottleneck tab.
+function applyBnRows(rows){
+  bnRemoteRows = (rows || []).filter(r => !r.is_deleted);
+  DATA.bottlenecks = bnRemoteRows.map(_bnRowToLegacy);
+  bnSupabaseLoaded = true;
+  if (state.tab === 'bottleneck' && bnMap){
+    refreshBnMap();
+    renderBnList();
+    if (state.bnSelectedPltu){
+      const items = DATA.bottlenecks.filter(b => b.pltu === state.bnSelectedPltu);
+      const plantData = DATA.plants.find(p => p.name === state.bnSelectedPltu);
+      if (items.length){
+        const lat = items[0].lat || (plantData && plantData.lat);
+        const lon = items[0].lon || (plantData && plantData.lon);
+        _bnDetailCluster = { pltu: state.bnSelectedPltu, lat, lon, items };
+        renderBnPltuDetailPanel();
+      } else if (plantData){
+        showBnPltuEmpty(plantData);
+      }
+    }
+  }
+}
+
+async function fetchBottlenecksFromServer(){
+  if (!supabaseClient) return false;
+  try {
+    const { data, error } = await supabaseClient
+      .from('bottleneck_entries').select('*').order('id', { ascending: true });
+    if (error){ console.error('[BN] fetch error', error); return false; }
+    applyBnRows(data || []);
+    return true;
+  } catch(e){ console.error('[BN] fetch failed', e); return false; }
+}
+
+// One-time migration: if the server table is empty, seed it from the legacy
+// (Excel/dashboard_data) bottlenecks so existing records become editable + synced.
+async function seedBottlenecksIfEmpty(){
+  if (_bnSeedAttempted || !supabaseClient) return;
+  _bnSeedAttempted = true;
+  try {
+    const { count, error } = await supabaseClient
+      .from('bottleneck_entries').select('id', { count: 'exact', head: true });
+    if (error){ console.error('[BN] seed count error', error); return; }
+    if (count && count > 0) return; // already seeded by someone
+    const legacy = (DATA.bottlenecks || []).filter(b => b && (b.pltu || b.bottleneck));
+    if (legacy.length === 0) return;
+    const userName = (getUserName && getUserName()) || 'Import';
+    const rows = legacy.map(b => {
+      const co = _bnPlantCoords(b.pltu);
+      return {
+        pltu: b.pltu || '', bulan: b.bulan || '', sumber: b.sumber || '',
+        bottleneck: b.bottleneck || '', action_plan: b.action_plan || '',
+        progress: b.progress || '', pic: b.pic || '', link_eviden: b.link_eviden || '',
+        informant: b.informant || b.sumber || '', contact_person: b.contact_person || '',
+        evaluasi: b.evaluasi || '', complete: !!b.complete,
+        lat: (b.lat != null ? b.lat : co.lat), lon: (b.lon != null ? b.lon : co.lon),
+        is_deleted: false, created_by: userName, updated_by: userName,
+      };
+    });
+    for (let i = 0; i < rows.length; i += 100){
+      const { error: insErr } = await supabaseClient
+        .from('bottleneck_entries').insert(rows.slice(i, i + 100));
+      if (insErr){ console.error('[BN] seed insert error', insErr); break; }
+    }
+    await fetchBottlenecksFromServer();
+  } catch(e){ console.error('[BN] seed failed', e); }
+}
+
+function subscribeBottlenecksRealtime(){
+  if (!supabaseClient) return;
+  if (bnChannel){ try { supabaseClient.removeChannel(bnChannel); } catch(e){} }
+  bnChannel = supabaseClient
+    .channel('bottleneck-entries-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bottleneck_entries' },
+      () => { fetchBottlenecksFromServer(); })
+    .subscribe();
+}
+
+let _bnSyncInit = false;
+async function initBottleneckSync(){
+  if (_bnSyncInit) return;
+  _bnSyncInit = true;
+  initSupabase();
+  if (!supabaseClient || !navigator.onLine) return; // stay on embedded data offline
+  const ok = await fetchBottlenecksFromServer();
+  if (ok && bnRemoteRows.length === 0) await seedBottlenecksIfEmpty();
+  subscribeBottlenecksRealtime();
+}
+
+async function pushBottleneckInsert(rec){
+  if (!supabaseClient){ alert('Koneksi internet diperlukan untuk menyimpan bottleneck.'); return false; }
+  const userName = (getUserName && getUserName()) || 'Anonymous';
+  const co = _bnPlantCoords(rec.pltu);
+  const payload = {
+    pltu: rec.pltu || '', bulan: rec.bulan || '', sumber: rec.sumber || '',
+    bottleneck: rec.bottleneck || '', action_plan: rec.action_plan || '',
+    progress: rec.progress || '', pic: rec.pic || '', link_eviden: rec.link_eviden || '',
+    informant: rec.sumber || '', complete: !!rec.complete,
+    lat: co.lat, lon: co.lon, is_deleted: false,
+    created_by: userName, updated_by: userName,
+  };
+  try {
+    const { error } = await supabaseClient.from('bottleneck_entries').insert(payload);
+    if (error){ console.error('[BN] insert error', error); alert('Gagal menyimpan: ' + error.message); return false; }
+    await fetchBottlenecksFromServer();
+    return true;
+  } catch(e){ console.error(e); return false; }
+}
+
+async function pushBottleneckUpdate(id, rec){
+  if (!supabaseClient){ alert('Koneksi internet diperlukan untuk menyimpan perubahan.'); return false; }
+  const userName = (getUserName && getUserName()) || 'Anonymous';
+  const payload = {
+    bulan: rec.bulan || '', sumber: rec.sumber || '', informant: rec.sumber || '',
+    bottleneck: rec.bottleneck || '', action_plan: rec.action_plan || '',
+    progress: rec.progress || '', pic: rec.pic || '', link_eviden: rec.link_eviden || '',
+    complete: !!rec.complete, updated_by: userName, updated_at: new Date().toISOString(),
+  };
+  try {
+    const { error } = await supabaseClient.from('bottleneck_entries').update(payload).eq('id', id);
+    if (error){ console.error('[BN] update error', error); alert('Gagal menyimpan: ' + error.message); return false; }
+    await fetchBottlenecksFromServer();
+    return true;
+  } catch(e){ console.error(e); return false; }
+}
+
+async function pushBottleneckDelete(id){
+  if (!supabaseClient){ alert('Koneksi internet diperlukan untuk menghapus.'); return false; }
+  try {
+    const { error } = await supabaseClient.from('bottleneck_entries').delete().eq('id', id);
+    if (error){ console.error('[BN] delete error', error); alert('Gagal menghapus: ' + error.message); return false; }
+    await fetchBottlenecksFromServer();
+    return true;
+  } catch(e){ console.error(e); return false; }
+}
+
+// ---------- Bottleneck add/edit modal ----------
+function bnEnsureName(){
+  let name = (getUserName && getUserName()) || '';
+  if (!name){
+    const input = window.prompt('Masukkan nama Anda (untuk mencatat siapa yang menambah/mengubah bottleneck):', '');
+    if (input && input.trim()){ name = input.trim(); setUserName(name); if (typeof renderLoginUI === 'function') renderLoginUI(); }
+  }
+  return name;
+}
+
+function openBnForm(mode, pltu, id){
+  if (!bnSupabaseLoaded && !supabaseClient){
+    alert('Sinkronisasi bottleneck belum siap. Periksa koneksi internet lalu coba lagi.');
+    return;
+  }
+  if (!bnEnsureName()) return; // need an identity for attribution
+  _bnFormCtx = { mode, pltu, id: id || null };
+  const backdrop = document.getElementById('bnFormBackdrop');
+  const titleEl = document.getElementById('bnFormTitle');
+  const f = (idn) => document.getElementById(idn);
+  // Reset/populate
+  let rec = { bulan:'', sumber:'', bottleneck:'', action_plan:'', progress:'', pic:'', link_eviden:'', complete:false };
+  if (mode === 'edit' && id != null){
+    const found = (DATA.bottlenecks || []).find(b => b.id === id);
+    if (found) rec = found;
+  }
+  if (titleEl) titleEl.textContent = (mode === 'edit' ? 'Edit Bottleneck' : 'Tambah Bottleneck') + ' · ' + pltu;
+  f('bnFormBulan').value = rec.bulan || '';
+  f('bnFormSumber').value = rec.sumber || '';
+  f('bnFormBottleneck').value = rec.bottleneck || '';
+  f('bnFormActionPlan').value = rec.action_plan || '';
+  f('bnFormProgress').value = rec.progress || '';
+  f('bnFormPic').value = rec.pic || '';
+  f('bnFormLinkEviden').value = rec.link_eviden || '';
+  const completeRow = f('bnFormCompleteRow');
+  const completeChk = f('bnFormComplete');
+  if (completeChk) completeChk.checked = !!rec.complete;
+  // Complete toggle only shown when editing existing records
+  if (completeRow) completeRow.style.display = (mode === 'edit') ? 'flex' : 'none';
+  const errEl = f('bnFormError'); if (errEl) errEl.textContent = '';
+  const delBtn = f('bnFormDelete'); if (delBtn) delBtn.style.display = (mode === 'edit') ? 'inline-flex' : 'none';
+  if (backdrop) backdrop.classList.add('open');
+}
+
+function closeBnForm(){
+  const backdrop = document.getElementById('bnFormBackdrop');
+  if (backdrop) backdrop.classList.remove('open');
+  _bnFormCtx = null;
+}
+
+async function submitBnForm(){
+  if (!_bnFormCtx) return;
+  const f = (idn) => document.getElementById(idn);
+  const errEl = f('bnFormError');
+  const rec = {
+    pltu: _bnFormCtx.pltu,
+    bulan: f('bnFormBulan').value,
+    sumber: f('bnFormSumber').value,
+    bottleneck: (f('bnFormBottleneck').value || '').trim(),
+    action_plan: (f('bnFormActionPlan').value || '').trim(),
+    progress: (f('bnFormProgress').value || '').trim(),
+    pic: (f('bnFormPic').value || '').trim(),
+    link_eviden: (f('bnFormLinkEviden').value || '').trim(),
+    complete: f('bnFormComplete') ? f('bnFormComplete').checked : false,
+  };
+  if (!rec.bottleneck){ if (errEl) errEl.textContent = 'Deskripsi Bottleneck wajib diisi.'; return; }
+  if (!rec.bulan){ if (errEl) errEl.textContent = 'Bulan Bottleneck wajib dipilih.'; return; }
+  if (!rec.sumber){ if (errEl) errEl.textContent = 'Informant wajib dipilih.'; return; }
+  const submitBtn = f('bnFormSubmit');
+  if (submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan…'; }
+  let ok;
+  if (_bnFormCtx.mode === 'edit' && _bnFormCtx.id != null){
+    ok = await pushBottleneckUpdate(_bnFormCtx.id, rec);
+  } else {
+    ok = await pushBottleneckInsert(rec);
+  }
+  if (submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Simpan'; }
+  if (ok){
+    const pltu = _bnFormCtx.pltu;
+    closeBnForm();
+    // Re-open the PLTU detail so the user sees the updated list
+    const items = (DATA.bottlenecks || []).filter(b => b.pltu === pltu);
+    const plantData = DATA.plants.find(p => p.name === pltu);
+    if (items.length){
+      const lat = items[0].lat || (plantData && plantData.lat);
+      const lon = items[0].lon || (plantData && plantData.lon);
+      showBnPltuDetail({ pltu, lat, lon, items });
+    } else if (plantData){
+      showBnPltuEmpty(plantData);
+    }
+  }
+}
+
+async function deleteBnRecord(id){
+  if (id == null) return;
+  if (!confirm('Hapus bottleneck ini?\n\nTindakan ini menghapus dari server dan terlihat oleh semua user.')) return;
+  const ctxPltu = _bnFormCtx ? _bnFormCtx.pltu : null;
+  const ok = await pushBottleneckDelete(id);
+  if (ok){
+    closeBnForm();
+    if (ctxPltu){
+      const items = (DATA.bottlenecks || []).filter(b => b.pltu === ctxPltu);
+      const plantData = DATA.plants.find(p => p.name === ctxPltu);
+      if (items.length){
+        const lat = items[0].lat || (plantData && plantData.lat);
+        const lon = items[0].lon || (plantData && plantData.lon);
+        showBnPltuDetail({ pltu: ctxPltu, lat, lon, items });
+      } else if (plantData){
+        showBnPltuEmpty(plantData);
+      }
+    }
+  }
+}
+
+let _bnFormWired = false;
+function wireBnForm(){
+  if (_bnFormWired) return;
+  const backdrop = document.getElementById('bnFormBackdrop');
+  if (!backdrop) return;
+  _bnFormWired = true;
+  const closeBtn = document.getElementById('bnFormClose');
+  const cancelBtn = document.getElementById('bnFormCancel');
+  const submitBtn = document.getElementById('bnFormSubmit');
+  const delBtn = document.getElementById('bnFormDelete');
+  if (closeBtn) closeBtn.onclick = closeBnForm;
+  if (cancelBtn) cancelBtn.onclick = closeBnForm;
+  if (submitBtn) submitBtn.onclick = submitBnForm;
+  if (delBtn) delBtn.onclick = () => { if (_bnFormCtx && _bnFormCtx.id != null) deleteBnRecord(_bnFormCtx.id); };
+  backdrop.onclick = (e) => { if (e.target === backdrop) closeBnForm(); };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && backdrop.classList.contains('open')) closeBnForm();
+  });
 }
 
 // ========= TAB 4: PARETO LOSS VIEW (V44 — rewritten from scratch) =========
@@ -8894,6 +9357,8 @@ function switchTab(tab){
     calRender(); // refresh on re-entry
   }
   if (tab === 'bottleneck'){
+    wireBnForm();
+    initBottleneckSync(); // V61: load + sync bottleneck entries from Supabase
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (!bnMap){
         initBnMap();
@@ -9868,6 +10333,17 @@ let supabaseClient = null;
 let supabaseChannel = null;
 let usulanSyncStatus = 'connecting'; // connecting | online | syncing | offline | error
 let usulanInitialLoadDone = false;
+
+// ========= BOTTLENECK ENTRIES (Supabase-synced) =========
+// V61: bottlenecks are now created/edited directly on the site and synced to all
+// users via the `bottleneck_entries` table (mirrors the usulan realtime pattern).
+const BN_SUMBER_OPTIONS = ['PLN EPI', 'PLTU', 'Mitra'];
+const BN_MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let bnRemoteRows = [];          // server rows (non-deleted), each with numeric id
+let bnSupabaseLoaded = false;   // true once server rows have populated DATA.bottlenecks
+let bnChannel = null;
+let _bnSeedAttempted = false;
+let _bnFormCtx = null;          // { mode:'add'|'edit', pltu, id? }
 
 // ---------- localStorage helpers ----------
 function loadUsulanCache(){
@@ -11497,6 +11973,9 @@ function applyDashboardData(newData, meta){
   // Replace top-level DATA fields by mutation (since DATA is const)
   // V16: include 'pembangkit' so Data KIT data refreshes too
   ['plants', 'monthly', 'bottlenecks', 'pareto', 'contracts', 'pembangkit', 'gcv', 'gcv_national'].forEach(k => {
+    // V61: once the live bottleneck sync has loaded from `bottleneck_entries`,
+    // never let a dashboard_data payload overwrite the live bottleneck list.
+    if (k === 'bottlenecks' && bnSupabaseLoaded) return;
     if (newData[k] !== undefined){
       DATA[k] = newData[k];
     }
@@ -11770,7 +12249,6 @@ function refreshUpdateStatusCard(){
   const cells = [
     { label: 'Plants', value: (DATA.plants || []).length },
     { label: 'Pembangkit', value: (DATA.pembangkit || []).length },
-    { label: 'Bottlenecks', value: (DATA.bottlenecks || []).length },
     { label: 'Contracts', value: (DATA.contracts || []).length },
     { label: 'Usulan', value: (DATA.usulan || []).length },
     { label: 'Pareto plants', value: ((DATA.pareto || {}).plants || []).length },
@@ -12121,7 +12599,8 @@ function openConfirmDialog(){
   const fields = [
     { key: 'plants', label: 'Plants', source: 'prod' },
     { key: 'monthly', label: 'Monthly trend', source: 'prod', getCount: (d) => d.monthly && d.monthly.length },
-    { key: 'bottlenecks', label: 'Bottlenecks', source: 'prod' },
+    // V61: bottlenecks are no longer part of the Excel upload — they are entered
+    // directly on the site (Bottlenecks tab) and synced via Supabase.
     // V43: pareto sourced from its own file now, not from prod
     { key: 'pareto', label: 'Pareto plants', source: 'pareto', getCount: (d) => (d.pareto && d.pareto.plants) ? d.pareto.plants.length : 0 },
     { key: 'pembangkit', label: 'Pembangkit (Data KIT)', source: 'prod' },
@@ -12186,7 +12665,9 @@ async function doProcessAndUpload(){
   const newDataset = {
     plants: prodUploaded ? _pick(prodData.plants, DATA.plants) : (DATA.plants || []),
     monthly: prodUploaded ? _pick(prodData.monthly, DATA.monthly) : (DATA.monthly || []),
-    bottlenecks: prodUploaded ? _pick(prodData.bottlenecks, DATA.bottlenecks) : (DATA.bottlenecks || []),
+    // V61: bottlenecks are managed via the Supabase `bottleneck_entries` table now;
+    // uploads never change them — just preserve whatever is current as a backup.
+    bottlenecks: DATA.bottlenecks || [],
     // V43: pareto now comes from its own dedicated file. Prod file no longer touches pareto.
     pareto: paretoUploaded ? _pickPareto(paretoData.pareto, DATA.pareto) : (DATA.pareto || { categories: [], plants: [] }),
     pembangkit: prodUploaded ? _pick(prodData.pembangkit, DATA.pembangkit) : (DATA.pembangkit || []),
@@ -12199,8 +12680,6 @@ async function doProcessAndUpload(){
   if (prodUploaded){
     if (!prodData.plants || prodData.plants.length === 0)
       updateLog('  ⚠ Parsed plants is empty - keeping existing ' + (DATA.plants || []).length + ' plants', 'warn');
-    if (!prodData.bottlenecks || prodData.bottlenecks.length === 0)
-      updateLog('  ⚠ Parsed bottlenecks is empty - keeping existing ' + (DATA.bottlenecks || []).length + ' bottlenecks', 'warn');
     if (!prodData.pembangkit || prodData.pembangkit.length === 0)
       updateLog('  ⚠ Parsed pembangkit is empty - keeping existing ' + (DATA.pembangkit || []).length + ' pembangkit', 'warn');
   }
@@ -15639,6 +16118,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       // Subscribe to realtime updates (so all users see uploads instantly)
       subscribeUpdateDataRealtime();
+      // V61: load + sync bottlenecks from Supabase (after dashboard_data has set the
+      // legacy baseline, which is the seed source if the table is still empty).
+      initBottleneckSync();
     }).catch(e => {
       console.warn('[Update] Initial server load failed:', e);
     });
