@@ -16206,6 +16206,14 @@ function computeAlerts(){
       if (p.real_2026 && p.real_2026[m] > 0 && m > curMonth) curMonth = m;
     }
   }
+  // V60: Exclude the current (incomplete) calendar month from the anomaly feed so
+  // partial mid-month uploads don't trigger false "drop to 0" alerts. The latest
+  // analyzed month is the previous calendar month (e.g. in June → analyze up to May).
+  const _now = new Date();
+  if (_now.getFullYear() === 2026){
+    const lastComplete = _now.getMonth() - 1; // previous calendar month index
+    curMonth = lastComplete < 0 ? 0 : Math.min(curMonth, lastComplete);
+  }
 
   // === 1. PLTU dengan realisasi drop >40% MoM (critical) ===
   for (const p of plants){
