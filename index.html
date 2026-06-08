@@ -5352,12 +5352,18 @@ html,body{
     <div class="usulan-modal-body">
       <div class="usulan-form-grid">
         <div class="usulan-form-field">
-          <label for="usulanFormRegional">Regional</label>
-          <input type="text" id="usulanFormRegional" placeholder="e.g. Sumatera, Kalimantan, Sulmapana">
+          <label for="usulanFormRegional">PLTU</label>
+          <input type="text" id="usulanFormRegional" placeholder="Nama PLTU">
         </div>
         <div class="usulan-form-field">
-          <label for="usulanFormPltu">PLTU</label>
-          <input type="text" id="usulanFormPltu" placeholder="Nama PLTU">
+          <label for="usulanFormPltu">Regional</label>
+          <select id="usulanFormPltu">
+            <option value="">-- Pilih regional --</option>
+            <option value="SUMATERA">Sumatera</option>
+            <option value="JAWA">Jawa</option>
+            <option value="KALIMANTAN">Kalimantan</option>
+            <option value="SULMAPANA">Sulmapana</option>
+          </select>
         </div>
         <div class="usulan-form-field">
           <label for="usulanFormJenis">Jenis Biomassa</label>
@@ -10476,7 +10482,8 @@ function renderUsulanTable(){
   const ufRegional = document.getElementById('uf-regional');
   const ufJenis = document.getElementById('uf-jenis');
   if (ufRegional && ufJenis){
-    const regionals = [...new Set(merged.map(u => (getEffectiveRow(u).regional || '').trim()).filter(Boolean))].sort();
+    // Regional dropdown is populated from the `pltu` field, which holds the Regional value (see modal).
+    const regionals = [...new Set(merged.map(u => (getEffectiveRow(u).pltu || '').trim()).filter(Boolean))].sort();
     const jenisSet = [...new Set(merged.map(u => (getEffectiveRow(u).jenis || '').trim()).filter(Boolean))].sort();
     const savedReg = ufRegional.value;
     const savedJenis = ufJenis.value;
@@ -10498,8 +10505,9 @@ function renderUsulanTable(){
     merged = merged.filter(u => {
       const eff = getEffectiveRow(u);
       const tahap = getEffectiveTahap(u);
-      if (fSearch && !(eff.pltu || '').toLowerCase().includes(fSearch)) return false;
-      if (fRegional && (eff.regional || '').trim() !== fRegional) return false;
+      // "Cari PLTU" matches the PLTU name (stored in `regional`); Regional filter matches `pltu`.
+      if (fSearch && !(eff.regional || '').toLowerCase().includes(fSearch)) return false;
+      if (fRegional && (eff.pltu || '').trim() !== fRegional) return false;
       if (fJenis && (eff.jenis || '').trim() !== fJenis) return false;
       if (fMetode && (eff.metode || '').toLowerCase() !== fMetode) return false;
       if (fStatus){
@@ -10974,7 +10982,8 @@ function downloadUsulanExcel(){
     const tahapVals = USULAN_TAHAP_KEYS.map(k => tahap[k] ? '✓' : '');
     const done = tahapVals.filter(v => v).length;
     aoa.push([
-      u.no, eff.pltu || '', eff.regional || '', eff.jenis || '',
+      // PLTU column = `regional` field; Regional column = `pltu` field (see modal labels)
+      u.no, eff.regional || '', eff.pltu || '', eff.jenis || '',
       Number(eff.volume) || 0, eff.metode || '',
       ...tahapVals, done + '/5 tahap', eff.keterangan || '',
     ]);
@@ -11071,6 +11080,7 @@ function openUsulanModal(){
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  setUsulanRegionalSelect(''); // clear Regional dropdown + any leftover temp option
   // Update title + button text
   const titleEl = document.getElementById('usulanModalTitle');
   if (titleEl) titleEl.textContent = 'Tambah Usulan Baru';
@@ -11092,6 +11102,25 @@ function closeUsulanModal(){
   document.body.style.overflow = '';
 }
 
+// Set the Regional <select> (id usulanFormPltu) to a value, appending a temporary
+// option first if the value isn't one of the predefined regions, so editing an
+// existing row never silently drops a non-standard Regional value.
+function setUsulanRegionalSelect(val){
+  const sel = document.getElementById('usulanFormPltu');
+  if (!sel) return;
+  // Drop any temp option appended on a previous edit
+  Array.from(sel.querySelectorAll('option[data-temp="1"]')).forEach(o => o.remove());
+  val = val || '';
+  if (val && !Array.from(sel.options).some(o => o.value === val)){
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = val;
+    opt.dataset.temp = '1';
+    sel.appendChild(opt);
+  }
+  sel.value = val;
+}
+
 function openUsulanEditModal(usulanNo){
   if (isUsulanViewOnly(getUserName())) return; // V59: view-only guard
   usulanFormMode = { mode: 'edit', usulanNo: usulanNo };
@@ -11108,7 +11137,9 @@ function openUsulanEditModal(usulanNo){
   const eff = getEffectiveRow(baseRow);
   // Pre-fill form
   document.getElementById('usulanFormRegional').value = eff.regional || '';
-  document.getElementById('usulanFormPltu').value = eff.pltu || '';
+  // Regional dropdown (usulanFormPltu holds the Regional value): preserve any
+  // legacy/unknown value by adding it as an option so it isn't lost on save.
+  setUsulanRegionalSelect(eff.pltu || '');
   document.getElementById('usulanFormJenis').value = eff.jenis || '';
   document.getElementById('usulanFormVolume').value = (eff.volume === 0 || eff.volume) ? eff.volume : '';
   document.getElementById('usulanFormMetode').value = eff.metode || '';
@@ -11140,7 +11171,10 @@ async function submitUsulanForm(){
   errEl.textContent = '';
 
   // Validation
-  if (!pltu){ errEl.textContent = 'PLTU wajib diisi.'; return; }
+  // NOTE: field IDs are kept stable for data binding — usulanFormRegional holds the
+  // PLTU name and usulanFormPltu holds the Regional value (see modal labels).
+  if (!regional){ errEl.textContent = 'PLTU wajib diisi.'; return; }
+  if (!pltu){ errEl.textContent = 'Regional wajib dipilih.'; return; }
   if (!jenis){ errEl.textContent = 'Jenis biomassa wajib diisi.'; return; }
   if (isNaN(volume) || volume < 0){ errEl.textContent = 'Volume harus angka ≥ 0.'; return; }
 
