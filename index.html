@@ -2596,21 +2596,20 @@ html,body{
   color:var(--text-bright);margin-bottom:6px;text-transform:uppercase;
   display:flex;align-items:center;justify-content:space-between;gap:8px;
 }
-.pome-heat-panel .phl-toggle{
-  background:none;border:none;color:var(--text-dim);cursor:pointer;
-  font-size:12px;line-height:1;padding:0;margin:0;flex-shrink:0;
+/* V59: ON/OFF toggle switch for the POME heatmap + sliders */
+.pome-heat-panel .phl-switch{
+  position:relative;width:34px;height:18px;flex-shrink:0;
+  border:1px solid var(--border);border-radius:9px;background:var(--border);
+  cursor:pointer;padding:0;transition:background .15s,border-color .15s;
 }
-.pome-heat-panel .phl-toggle:hover{color:var(--text-bright)}
-/* Floating chip to re-show the POME heatmap after it's been hidden */
-.pome-show-btn{
-  position:absolute;top:10px;right:10px;z-index:1000;
-  background:var(--panel-2);border:1px solid var(--border);border-radius:6px;
-  padding:7px 11px;font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
-  color:var(--text-bright);cursor:pointer;
-  box-shadow:0 2px 10px rgba(0,0,0,.25);pointer-events:auto;
+.pome-heat-panel .phl-switch[aria-checked="true"]{background:var(--accent);border-color:var(--accent)}
+.pome-heat-panel .phl-switch-knob{
+  position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:50%;
+  background:#fff;transition:left .15s;box-shadow:0 1px 2px rgba(0,0,0,.4);
 }
-.pome-show-btn:hover{border-color:var(--accent)}
+.pome-heat-panel .phl-switch[aria-checked="true"] .phl-switch-knob{left:17px}
+.pome-heat-panel.heat-off{min-width:0}
+.pome-heat-panel.heat-off .phl-title{margin-bottom:0}
 .pome-heat-panel .phl-bar{
   height:8px;border-radius:4px;
   background:linear-gradient(90deg,#0ea5e9 0%,#22c55e 35%,#eab308 70%,#ef4444 100%);
@@ -4557,22 +4556,26 @@ html,body{
       <div id="pembangkit-map"></div>
       <button class="sidebar-show-btn" id="pembangkitSidebarShowBtn" title="Show sidebar" style="display:none">▶</button>
       <div id="pomeHeatPanel" class="pome-heat-panel" style="display:none">
-        <div class="phl-title">Potensi POME (biogas)<button id="pomeHeatCollapseBtn" class="phl-toggle" title="Sembunyikan heatmap POME">✕</button></div>
-        <div class="phl-bar"></div>
-        <div class="phl-scale"><span>Rendah</span><span>Tinggi</span></div>
-        <div class="phl-controls">
-          <div class="phl-row">
-            <label class="phl-label">Min POME<span id="phl-min-val" class="phl-val">≥ 0.0 t/h</span></label>
-            <input type="range" id="phl-min" class="phl-slider" min="0" max="3.8" step="0.1" value="0">
-          </div>
-          <div class="phl-row">
-            <label class="phl-label">Intensitas<span id="phl-int-val" class="phl-val">60%</span></label>
-            <input type="range" id="phl-int" class="phl-slider" min="1" max="10" step="1" value="6">
-          </div>
+        <div class="phl-title">
+          <span>Potensi POME (biogas)</span>
+          <button id="pomeHeatToggleBtn" class="phl-switch" role="switch" aria-checked="true" title="Tampilkan / sembunyikan heatmap POME"><span class="phl-switch-knob"></span></button>
         </div>
-        <div id="phl-count" class="phl-sub">782 pabrik ditampilkan · Ditjen EBTKE</div>
+        <div id="pomeHeatBody">
+          <div class="phl-bar"></div>
+          <div class="phl-scale"><span>Rendah</span><span>Tinggi</span></div>
+          <div class="phl-controls">
+            <div class="phl-row">
+              <label class="phl-label">Min POME<span id="phl-min-val" class="phl-val">≥ 0.0 t/h</span></label>
+              <input type="range" id="phl-min" class="phl-slider" min="0" max="3.8" step="0.1" value="0">
+            </div>
+            <div class="phl-row">
+              <label class="phl-label">Intensitas<span id="phl-int-val" class="phl-val">60%</span></label>
+              <input type="range" id="phl-int" class="phl-slider" min="1" max="10" step="1" value="6">
+            </div>
+          </div>
+          <div id="phl-count" class="phl-sub">782 pabrik ditampilkan · Ditjen EBTKE</div>
+        </div>
       </div>
-      <button id="pomeHeatShowBtn" class="pome-show-btn" style="display:none" title="Tampilkan heatmap POME">🔥 Potensi POME</button>
     </div>
 
     <!-- Right detail panel (hidden by default until a marker is clicked) -->
@@ -12558,28 +12561,37 @@ function _applyPomeHeatFilter(){
   if (countEl) countEl.textContent = filtered.length + ' pabrik ditampilkan';
 }
 
-// Show the POME heatmap only on the Gas Power Plant submenu; remove it otherwise.
-// V59: a toggle (✕ on the panel / "Potensi POME" chip) lets the user show/hide
-// the heatmap layer + slider panel. Panel is also auto-suppressed while a detail
-// panel or mobile drawer is open.
+// Show the POME panel only on the Gas Power Plant submenu; remove it otherwise.
+// V59: an always-visible ON/OFF switch in the panel header lets the user show/hide
+// the heatmap layer + sliders. When OFF the panel collapses to just its header
+// (so the switch stays reachable). Panel is auto-suppressed while a detail panel
+// or mobile drawer is open.
 function updatePembangkitHeatmap(){
   if (!pembangkitMap || typeof L.heatLayer !== 'function') return;
   const onGas = (pembangkitJenisSel === 'gas');
   const panel = document.getElementById('pomeHeatPanel');
-  const showBtn = document.getElementById('pomeHeatShowBtn');
+  const toggleBtn = document.getElementById('pomeHeatToggleBtn');
+  const body = document.getElementById('pomeHeatBody');
 
-  // Bind the show/hide toggle buttons once.
+  // Bind the toggle switch once + the sliders once.
   if (!_pomeTogglesBound){
     _pomeTogglesBound = true;
-    const collapseBtn = document.getElementById('pomeHeatCollapseBtn');
-    if (collapseBtn){
-      if (L.DomEvent) L.DomEvent.disableClickPropagation(collapseBtn);
-      collapseBtn.onclick = (e) => { e.stopPropagation(); pomeHeatVisible = false; updatePembangkitHeatmap(); };
+    if (toggleBtn){
+      if (L.DomEvent) L.DomEvent.disableClickPropagation(toggleBtn);
+      toggleBtn.onclick = (e) => { e.stopPropagation(); pomeHeatVisible = !pomeHeatVisible; updatePembangkitHeatmap(); };
     }
-    if (showBtn){
-      if (L.DomEvent) L.DomEvent.disableClickPropagation(showBtn);
-      showBtn.onclick = (e) => { e.stopPropagation(); pomeHeatVisible = true; updatePembangkitHeatmap(); };
-    }
+    const sliderMin = document.getElementById('phl-min');
+    const sliderInt = document.getElementById('phl-int');
+    if (sliderMin) sliderMin.oninput = () => {
+      pomeHeatState.minPome = parseFloat(sliderMin.value);
+      document.getElementById('phl-min-val').textContent = '≥ ' + pomeHeatState.minPome.toFixed(1) + ' t/h';
+      _applyPomeHeatFilter();
+    };
+    if (sliderInt) sliderInt.oninput = () => {
+      pomeHeatState.intensity = parseInt(sliderInt.value) / 10;
+      document.getElementById('phl-int-val').textContent = (pomeHeatState.intensity * 100).toFixed(0) + '%';
+      _applyPomeHeatFilter();
+    };
   }
 
   // Off the Gas submenu: tear everything down.
@@ -12588,12 +12600,11 @@ function updatePembangkitHeatmap(){
       pembangkitMap.removeLayer(pembangkitHeatLayer);
     }
     if (panel) panel.style.display = 'none';
-    if (showBtn) showBtn.style.display = 'none';
     return;
   }
 
-  // On the Gas submenu — suppress overlay UI while a detail panel or mobile
-  // drawer/more-menu is open (heatmap layer itself follows the user toggle).
+  // On the Gas submenu — suppress the panel while a detail panel or mobile
+  // drawer/more-menu is open.
   const mv = document.querySelector('.map-view.pembangkit-view');
   const detailOpen = mv && mv.classList.contains('detail-open');
   const isMobile = window.matchMedia('(max-width:768px)').matches;
@@ -12606,6 +12617,12 @@ function updatePembangkitHeatmap(){
     suppress = suppress || mobileOpen || moreOpen;
   }
 
+  // Panel (with its switch) is always shown on the Gas submenu unless suppressed.
+  if (panel) panel.style.display = suppress ? 'none' : 'block';
+  if (toggleBtn) toggleBtn.setAttribute('aria-checked', String(pomeHeatVisible));
+  if (panel) panel.classList.toggle('heat-off', !pomeHeatVisible);
+  if (body) body.style.display = pomeHeatVisible ? 'block' : 'none';
+
   if (pomeHeatVisible){
     if (!pembangkitHeatLayer){
       pembangkitHeatLayer = L.heatLayer(POME_HEAT_DATA, {
@@ -12615,31 +12632,11 @@ function updatePembangkitHeatmap(){
       });
     }
     if (!pembangkitMap.hasLayer(pembangkitHeatLayer)) pembangkitHeatLayer.addTo(pembangkitMap);
-    if (panel && !_pomeSlidersBound){
-      _pomeSlidersBound = true;
-      const sliderMin = document.getElementById('phl-min');
-      const sliderInt = document.getElementById('phl-int');
-      if (sliderMin) sliderMin.oninput = () => {
-        pomeHeatState.minPome = parseFloat(sliderMin.value);
-        document.getElementById('phl-min-val').textContent = '≥ ' + pomeHeatState.minPome.toFixed(1) + ' t/h';
-        _applyPomeHeatFilter();
-      };
-      if (sliderInt) sliderInt.oninput = () => {
-        pomeHeatState.intensity = parseInt(sliderInt.value) / 10;
-        document.getElementById('phl-int-val').textContent = (pomeHeatState.intensity * 100).toFixed(0) + '%';
-        _applyPomeHeatFilter();
-      };
-    }
-    if (panel) panel.style.display = suppress ? 'none' : 'block';
-    if (showBtn) showBtn.style.display = 'none';
     _applyPomeHeatFilter();
   } else {
-    // Hidden via toggle: remove heatmap layer + panel, offer the "show" chip.
     if (pembangkitHeatLayer && pembangkitMap.hasLayer(pembangkitHeatLayer)){
       pembangkitMap.removeLayer(pembangkitHeatLayer);
     }
-    if (panel) panel.style.display = 'none';
-    if (showBtn) showBtn.style.display = suppress ? 'none' : 'block';
   }
 }
 
