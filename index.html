@@ -2044,6 +2044,10 @@ html,body{
   position:relative;
 }
 .tahap-checkbox:hover{border-color:var(--accent);background:rgba(16,185,129,.08)}
+/* V59: view-only — checkboxes are read-only indicators, not interactive */
+.tahap-checkbox:disabled{cursor:default;opacity:.85}
+.tahap-checkbox:disabled:hover{border-color:var(--border-bright);background:transparent}
+.tahap-checkbox.checked:disabled:hover{border-color:var(--accent);background:var(--accent)}
 .tahap-checkbox.checked{
   background:var(--accent);border-color:var(--accent);
 }
@@ -2590,7 +2594,23 @@ html,body{
 .pome-heat-panel .phl-title{
   font-size:10px;font-weight:700;letter-spacing:.4px;
   color:var(--text-bright);margin-bottom:6px;text-transform:uppercase;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
 }
+.pome-heat-panel .phl-toggle{
+  background:none;border:none;color:var(--text-dim);cursor:pointer;
+  font-size:12px;line-height:1;padding:0;margin:0;flex-shrink:0;
+}
+.pome-heat-panel .phl-toggle:hover{color:var(--text-bright)}
+/* Floating chip to re-show the POME heatmap after it's been hidden */
+.pome-show-btn{
+  position:absolute;top:10px;right:10px;z-index:1000;
+  background:var(--panel-2);border:1px solid var(--border);border-radius:6px;
+  padding:7px 11px;font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--text-bright);cursor:pointer;
+  box-shadow:0 2px 10px rgba(0,0,0,.25);pointer-events:auto;
+}
+.pome-show-btn:hover{border-color:var(--accent)}
 .pome-heat-panel .phl-bar{
   height:8px;border-radius:4px;
   background:linear-gradient(90deg,#0ea5e9 0%,#22c55e 35%,#eab308 70%,#ef4444 100%);
@@ -4537,7 +4557,7 @@ html,body{
       <div id="pembangkit-map"></div>
       <button class="sidebar-show-btn" id="pembangkitSidebarShowBtn" title="Show sidebar" style="display:none">▶</button>
       <div id="pomeHeatPanel" class="pome-heat-panel" style="display:none">
-        <div class="phl-title">Potensi POME (biogas)</div>
+        <div class="phl-title">Potensi POME (biogas)<button id="pomeHeatCollapseBtn" class="phl-toggle" title="Sembunyikan heatmap POME">✕</button></div>
         <div class="phl-bar"></div>
         <div class="phl-scale"><span>Rendah</span><span>Tinggi</span></div>
         <div class="phl-controls">
@@ -4552,6 +4572,7 @@ html,body{
         </div>
         <div id="phl-count" class="phl-sub">782 pabrik ditampilkan · Ditjen EBTKE</div>
       </div>
+      <button id="pomeHeatShowBtn" class="pome-show-btn" style="display:none" title="Tampilkan heatmap POME">🔥 Potensi POME</button>
     </div>
 
     <!-- Right detail panel (hidden by default until a marker is clicked) -->
@@ -9876,16 +9897,33 @@ function setUserName(name){
 // V55: Flexible access check for Usulan Kontrak.
 // Allows admins (exact) + whitelisted first names (partial, case-insensitive).
 const USULAN_ALLOWED_NAMES = ['erfan', 'febri', 'yoga', 'aidah'];
-function canAccessUsulan(name){
+// V59: view-only users — can open Usulan Kontrak but cannot edit/add/delete.
+const USULAN_VIEWONLY_NAMES = ['hokkop'];
+// Match if any name in `list` appears as a whole word in `name` (case-insensitive).
+function _usulanNameMatches(name, list){
+  const n = (name || '').toLowerCase().trim();
+  if (!n) return false;
+  return list.some(allowed => {
+    const re = new RegExp('(^|[^a-z])' + allowed + '([^a-z]|$)', 'i');
+    return re.test(n);
+  });
+}
+// Users allowed to MODIFY usulan data (admins + edit whitelist).
+function canEditUsulan(name){
   if (!name) return false;
   const n = name.toLowerCase().trim();
   if (n === 'maulana - admin') return true;
   if (UPDATE_ADMIN_NAMES.indexOf(name) >= 0) return true; // existing admins still allowed
-  // Match if any allowed name appears as a whole word in the input
-  return USULAN_ALLOWED_NAMES.some(allowed => {
-    const re = new RegExp('(^|[^a-z])' + allowed + '([^a-z]|$)', 'i');
-    return re.test(n);
-  });
+  return _usulanNameMatches(name, USULAN_ALLOWED_NAMES);
+}
+// View-only applies only when the user isn't already an editor/admin.
+function isUsulanViewOnly(name){
+  if (!name || canEditUsulan(name)) return false;
+  return _usulanNameMatches(name, USULAN_VIEWONLY_NAMES);
+}
+// Users allowed to OPEN the tab = editors + view-only users.
+function canAccessUsulan(name){
+  return canEditUsulan(name) || _usulanNameMatches(name, USULAN_VIEWONLY_NAMES);
 }
 
 // =====================================================
@@ -9900,6 +9938,7 @@ function canAccessUpdate(name){
 function userRole(name){
   if (!name) return '';
   if (canAccessUpdate(name)) return 'Admin / Upload';
+  if (isUsulanViewOnly(name)) return 'Usulan Kontrak (View Only)';
   if (canAccessUsulan(name)) return 'Usulan Kontrak';
   return 'Akses umum';
 }
@@ -10392,6 +10431,15 @@ function fmtUpdatedAt(iso){
 function renderUsulanTable(){
   const container = document.getElementById('usulan-table');
   if (!container) return;
+  // V59: view-only users see data but no edit affordances.
+  const viewOnly = isUsulanViewOnly(getUserName());
+  // Hide mutation controls and relabel the identity chip for view-only users.
+  const _addBtn = document.getElementById('usulan-add-btn');
+  if (_addBtn) _addBtn.style.display = viewOnly ? 'none' : '';
+  const _resetBtn = document.getElementById('usulan-reset-btn');
+  if (_resetBtn) _resetBtn.style.display = viewOnly ? 'none' : '';
+  const _userLabel = document.querySelector('.usulan-user-label');
+  if (_userLabel) _userLabel.textContent = viewOnly ? 'Viewing as:' : 'Editing as:';
   const excelUsulan = (DATA && DATA.usulan) || [];
 
   // Merge: Excel-defined usulan + user-added custom rows from Supabase
@@ -10510,28 +10558,34 @@ function renderUsulanTable(){
       const checked = tahap[tk];
       row += '<td class="center">';
       row += '<button class="tahap-checkbox' + (checked ? ' checked' : '') +
-        '" data-tahap="' + tk + '" title="Click to toggle ' + USULAN_TAHAP_LABELS[k] + '" aria-pressed="' + checked + '"></button>';
+        '" data-tahap="' + tk + '"' + (viewOnly ? ' disabled' : '') +
+        ' title="' + (viewOnly ? USULAN_TAHAP_LABELS[k] : 'Click to toggle ' + USULAN_TAHAP_LABELS[k]) + '" aria-pressed="' + checked + '"></button>';
       row += '</td>';
     }
     row += '<td class="center"><span class="usulan-progress-pill ' + cls.pillCls + '">' + cls.label + '</span></td>';
-    // Keterangan (editable textarea, auto-saves on blur)
+    // Keterangan (editable textarea, auto-saves on blur; read-only for view-only users)
     row += '<td class="usulan-keterangan-cell">';
-    row += '<textarea class="usulan-keterangan-input" data-keterangan="1" placeholder="Tulis catatan..." rows="1">' +
+    row += '<textarea class="usulan-keterangan-input" data-keterangan="1"' + (viewOnly ? ' readonly' : '') +
+      ' placeholder="' + (viewOnly ? '—' : 'Tulis catatan...') + '" rows="1">' +
       escapeHtml(eff.keterangan || '') + '</textarea>';
     row += '</td>';
-    // Action menu cell (3-dot trigger)
-    row += '<td class="usulan-action-cell center">';
-    row += '<button class="usulan-action-trigger" data-action="menu" title="Edit / Hapus" aria-haspopup="true" aria-expanded="false">⋯</button>';
-    row += '<div class="usulan-action-menu" data-menu="1">';
-    row += '<button class="usulan-action-menu-item" data-action="edit">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
-      ' Edit Data</button>';
-    row += '<div class="usulan-action-menu-divider"></div>';
-    row += '<button class="usulan-action-menu-item danger" data-action="delete">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>' +
-      ' Hapus</button>';
-    row += '</div>';
-    row += '</td>';
+    // Action menu cell (3-dot trigger) — omitted entirely for view-only users
+    if (viewOnly){
+      row += '<td class="usulan-action-cell center"></td>';
+    } else {
+      row += '<td class="usulan-action-cell center">';
+      row += '<button class="usulan-action-trigger" data-action="menu" title="Edit / Hapus" aria-haspopup="true" aria-expanded="false">⋯</button>';
+      row += '<div class="usulan-action-menu" data-menu="1">';
+      row += '<button class="usulan-action-menu-item" data-action="edit">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+        ' Edit Data</button>';
+      row += '<div class="usulan-action-menu-divider"></div>';
+      row += '<button class="usulan-action-menu-item danger" data-action="delete">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>' +
+        ' Hapus</button>';
+      row += '</div>';
+      row += '</td>';
+    }
     row += '</tr>';
     rowParts.push(row);
   }
@@ -10541,6 +10595,8 @@ function renderUsulanTable(){
   // Wire checkbox click delegation + action menu
   if (!container.dataset.handlerBuilt){
     container.addEventListener('click', async (e) => {
+      // V59: view-only users cannot mutate anything via the table.
+      if (isUsulanViewOnly(getUserName())) return;
       const target = e.target;
       // Handle 3-dot menu trigger
       const menuTrigger = target && target.closest && target.closest('.usulan-action-trigger');
@@ -10638,6 +10694,8 @@ function renderUsulanTable(){
 
     // Auto-grow textareas (basic) and save Keterangan on blur or after typing pause
     container.addEventListener('focusout', async (e) => {
+      // V59: view-only users cannot save keterangan edits.
+      if (isUsulanViewOnly(getUserName())) return;
       const ta = e.target && e.target.closest && e.target.closest('.usulan-keterangan-input');
       if (!ta) return;
       const tr = ta.closest('tr');
@@ -10686,6 +10744,7 @@ function renderUsulanTable(){
   const resetBtn = document.getElementById('usulan-reset-btn');
   if (resetBtn && !resetBtn.dataset.built){
     resetBtn.onclick = async () => {
+      if (isUsulanViewOnly(getUserName())) return; // V59: view-only guard
       const ok = confirm('Reset SEMUA tahap administrasi (untuk semua user) ke kondisi awal Excel?\n\n⚠️ Tindakan ini akan mengubah data di server dan terlihat oleh semua user lain.');
       if (!ok) return;
       const userName = getUserName() || 'Anonymous';
@@ -10963,7 +11022,7 @@ function wireUsulanAddModal(){
   if (!addBtn || !backdrop || !closeBtn || !cancelBtn || !submitBtn) return;
   if (addBtn.dataset.built === '1') return;
 
-  addBtn.onclick = () => openUsulanModal();
+  addBtn.onclick = () => { if (isUsulanViewOnly(getUserName())) return; openUsulanModal(); }; // V59: view-only guard
   closeBtn.onclick = () => closeUsulanModal();
   cancelBtn.onclick = () => closeUsulanModal();
   backdrop.onclick = (e) => { if (e.target === backdrop) closeUsulanModal(); };
@@ -11017,6 +11076,7 @@ function closeUsulanModal(){
 }
 
 function openUsulanEditModal(usulanNo){
+  if (isUsulanViewOnly(getUserName())) return; // V59: view-only guard
   usulanFormMode = { mode: 'edit', usulanNo: usulanNo };
   const backdrop = document.getElementById('usulanModalBackdrop');
   if (!backdrop) return;
@@ -11051,6 +11111,7 @@ function openUsulanEditModal(usulanNo){
 }
 
 async function submitUsulanForm(){
+  if (isUsulanViewOnly(getUserName())) return; // V59: view-only guard
   const regional = (document.getElementById('usulanFormRegional').value || '').trim();
   const pltu = (document.getElementById('usulanFormPltu').value || '').trim();
   const jenis = (document.getElementById('usulanFormJenis').value || '').trim();
@@ -11302,6 +11363,7 @@ function closeAllUsulanMenus(){
 }
 
 async function deleteCustomUsulan(usulanNo){
+  if (isUsulanViewOnly(getUserName())) return; // V59: view-only guard
   if (!supabaseClient){
     alert('Koneksi internet diperlukan untuk menghapus usulan.');
     return;
@@ -12481,6 +12543,9 @@ const POME_HEAT_DATA = [[4.5978,97.9019,0.82],[2.0516,100.2512,0.82],[0.3525,102
 let pembangkitHeatLayer = null;
 const pomeHeatState = { minPome: 0, intensity: 0.6 };
 let _pomeSlidersBound = false;
+// V59: user toggle for the POME heatmap + slider panel (show/hide). Default on.
+let pomeHeatVisible = true;
+let _pomeTogglesBound = false;
 
 function _applyPomeHeatFilter(){
   if (!pembangkitHeatLayer || !pembangkitMap.hasLayer(pembangkitHeatLayer)) return;
@@ -12494,12 +12559,54 @@ function _applyPomeHeatFilter(){
 }
 
 // Show the POME heatmap only on the Gas Power Plant submenu; remove it otherwise.
-// Panel is hidden when the left sidebar is visible (not collapsed).
+// V59: a toggle (✕ on the panel / "Potensi POME" chip) lets the user show/hide
+// the heatmap layer + slider panel. Panel is also auto-suppressed while a detail
+// panel or mobile drawer is open.
 function updatePembangkitHeatmap(){
   if (!pembangkitMap || typeof L.heatLayer !== 'function') return;
-  const showHeat = (pembangkitJenisSel === 'gas');
+  const onGas = (pembangkitJenisSel === 'gas');
   const panel = document.getElementById('pomeHeatPanel');
-  if (showHeat){
+  const showBtn = document.getElementById('pomeHeatShowBtn');
+
+  // Bind the show/hide toggle buttons once.
+  if (!_pomeTogglesBound){
+    _pomeTogglesBound = true;
+    const collapseBtn = document.getElementById('pomeHeatCollapseBtn');
+    if (collapseBtn){
+      if (L.DomEvent) L.DomEvent.disableClickPropagation(collapseBtn);
+      collapseBtn.onclick = (e) => { e.stopPropagation(); pomeHeatVisible = false; updatePembangkitHeatmap(); };
+    }
+    if (showBtn){
+      if (L.DomEvent) L.DomEvent.disableClickPropagation(showBtn);
+      showBtn.onclick = (e) => { e.stopPropagation(); pomeHeatVisible = true; updatePembangkitHeatmap(); };
+    }
+  }
+
+  // Off the Gas submenu: tear everything down.
+  if (!onGas){
+    if (pembangkitHeatLayer && pembangkitMap.hasLayer(pembangkitHeatLayer)){
+      pembangkitMap.removeLayer(pembangkitHeatLayer);
+    }
+    if (panel) panel.style.display = 'none';
+    if (showBtn) showBtn.style.display = 'none';
+    return;
+  }
+
+  // On the Gas submenu — suppress overlay UI while a detail panel or mobile
+  // drawer/more-menu is open (heatmap layer itself follows the user toggle).
+  const mv = document.querySelector('.map-view.pembangkit-view');
+  const detailOpen = mv && mv.classList.contains('detail-open');
+  const isMobile = window.matchMedia('(max-width:768px)').matches;
+  let suppress = detailOpen;
+  if (isMobile){
+    const sidebar = document.getElementById('pembangkitSidebar');
+    const mobileOpen = sidebar && sidebar.classList.contains('mobile-open');
+    const moreMenu = document.getElementById('mobMoreMenu');
+    const moreOpen = moreMenu && moreMenu.classList.contains('open');
+    suppress = suppress || mobileOpen || moreOpen;
+  }
+
+  if (pomeHeatVisible){
     if (!pembangkitHeatLayer){
       pembangkitHeatLayer = L.heatLayer(POME_HEAT_DATA, {
         radius: 22, blur: 18, maxZoom: 9, max: 4.2,
@@ -12523,28 +12630,16 @@ function updatePembangkitHeatmap(){
         _applyPomeHeatFilter();
       };
     }
-    // On mobile: hide when sidebar drawer is open or a detail/more window is open
-    // On desktop: hide only when detail panel is open
-    if (panel){
-      const mv = document.querySelector('.map-view.pembangkit-view');
-      const detailOpen = mv && mv.classList.contains('detail-open');
-      const isMobile = window.matchMedia('(max-width:768px)').matches;
-      let hide = detailOpen;
-      if (isMobile){
-        const sidebar = document.getElementById('pembangkitSidebar');
-        const mobileOpen = sidebar && sidebar.classList.contains('mobile-open');
-        const moreMenu = document.getElementById('mobMoreMenu');
-        const moreOpen = moreMenu && moreMenu.classList.contains('open');
-        hide = hide || mobileOpen || moreOpen;
-      }
-      panel.style.display = hide ? 'none' : 'block';
-    }
+    if (panel) panel.style.display = suppress ? 'none' : 'block';
+    if (showBtn) showBtn.style.display = 'none';
     _applyPomeHeatFilter();
   } else {
+    // Hidden via toggle: remove heatmap layer + panel, offer the "show" chip.
     if (pembangkitHeatLayer && pembangkitMap.hasLayer(pembangkitHeatLayer)){
       pembangkitMap.removeLayer(pembangkitHeatLayer);
     }
     if (panel) panel.style.display = 'none';
+    if (showBtn) showBtn.style.display = suppress ? 'none' : 'block';
   }
 }
 
