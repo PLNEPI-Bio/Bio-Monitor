@@ -12675,11 +12675,17 @@ function clearLog(){
 
 async function handleFileSelect(kind, file){
   if (!file) return;
-  // V43: zone/filename id lookups updated to include pareto
-  const zoneId = kind === 'prod' ? 'uploadZoneProd' : kind === 'kontrak' ? 'uploadZoneKontrak' : 'uploadZonePareto';
-  const filenameId = kind === 'prod' ? 'filenameProd' : kind === 'kontrak' ? 'filenameKontrak' : 'filenamePareto';
+  // V63: map each kind to its zone/filename element. Previously this used a
+  // ternary that had no 'mou' case, so MoU files were wrongly shown in the
+  // Pareto zone (the file was still parsed into the correct slot, but the UI
+  // and confirm dialog were misleading).
+  const ZONE_IDS = { prod: 'uploadZoneProd', kontrak: 'uploadZoneKontrak', pareto: 'uploadZonePareto', mou: 'uploadZoneMou' };
+  const FILENAME_IDS = { prod: 'filenameProd', kontrak: 'filenameKontrak', pareto: 'filenamePareto', mou: 'filenameMou' };
+  const zoneId = ZONE_IDS[kind];
+  const filenameId = FILENAME_IDS[kind];
   const zone = document.getElementById(zoneId);
   const filenameEl = document.getElementById(filenameId);
+  if (!zone || !filenameEl){ console.error('[Update] Unknown upload kind:', kind); return; }
   filenameEl.textContent = file.name + ' · ' + (file.size / 1024).toFixed(0) + ' KB';
   zone.classList.add('has-file');
   updateFiles[kind] = { file: file, name: file.name, parsedData: null };
@@ -12774,6 +12780,29 @@ function openConfirmDialog(){
     const diff = newCount - oldCount;
     const diffStr = diff > 0 ? ('<span style="color:var(--accent)">+' + diff + '</span>') : (diff < 0 ? ('<span style="color:var(--warn)">' + diff + '</span>') : '<span style="color:var(--text-dim)">no change</span>');
     rows += '<tr><td>' + f.label + '</td><td class="num">' + oldCount + '</td><td class="num">' + newCount + ' (' + diffStr + ')</td></tr>';
+  }
+  // V63: Monitoring MoU has a different shape (timeline groups+tasks, busdev
+  // programs) and is saved to its own table — summarise it explicitly so the
+  // user can confirm an MoU upload will actually take effect.
+  {
+    const mouCounts = (m) => {
+      const tl = (m && m.timeline) || [];
+      const tasks = tl.reduce((s, g) => s + ((g.tasks && g.tasks.length) || 0), 0);
+      return { tasks, programs: ((m && m.busdev) || []).length };
+    };
+    const curMou = (typeof mouState !== 'undefined' && mouState.loaded)
+      ? mouState : (DATA.mou || {});
+    const cur = mouCounts(curMou);
+    const mouSrc = updateFiles.mou;
+    if (mouSrc && mouSrc.parsedData && mouSrc.parsedData.mou){
+      const nw = mouCounts(mouSrc.parsedData.mou);
+      const fmt = (o, n) => { const d = n - o; const s = d > 0 ? '<span style="color:var(--accent)">+' + d + '</span>' : (d < 0 ? '<span style="color:var(--warn)">' + d + '</span>' : '<span style="color:var(--text-dim)">no change</span>'); return n + ' (' + s + ')'; };
+      rows += '<tr><td>MoU · Timeline (tasks)</td><td class="num">' + cur.tasks + '</td><td class="num">' + fmt(cur.tasks, nw.tasks) + '</td></tr>';
+      rows += '<tr><td>MoU · Busdev (program)</td><td class="num">' + cur.programs + '</td><td class="num">' + fmt(cur.programs, nw.programs) + '</td></tr>';
+    } else {
+      rows += '<tr><td>MoU · Timeline (tasks)</td><td class="num" style="color:var(--text-dim)">' + cur.tasks + '</td><td class="num" style="color:var(--text-dim)">unchanged</td></tr>';
+      rows += '<tr><td>MoU · Busdev (program)</td><td class="num" style="color:var(--text-dim)">' + cur.programs + '</td><td class="num" style="color:var(--text-dim)">unchanged</td></tr>';
+    }
   }
   body.innerHTML =
     '<div>Berikut adalah ringkasan perubahan yang akan diterapkan:</div>' +
