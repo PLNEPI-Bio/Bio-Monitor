@@ -5087,9 +5087,9 @@ html,body{
             </select>
           </div>
           <div class="bn-form-field">
-            <label>Informant <span class="bn-form-req">*</span></label>
+            <label>Sumber Bottleneck <span class="bn-form-req">*</span></label>
             <select id="bnFormSumber">
-              <option value="">— Pilih informant —</option>
+              <option value="">— Pilih sumber bottleneck —</option>
               <option value="PLN EPI">PLN EPI</option>
               <option value="PLTU">PLTU</option>
               <option value="Mitra">Mitra</option>
@@ -8450,7 +8450,7 @@ async function submitBnForm(){
   };
   if (!rec.bottleneck){ if (errEl) errEl.textContent = 'Deskripsi Bottleneck wajib diisi.'; return; }
   if (!rec.bulan){ if (errEl) errEl.textContent = 'Bulan Bottleneck wajib dipilih.'; return; }
-  if (!rec.sumber){ if (errEl) errEl.textContent = 'Informant wajib dipilih.'; return; }
+  if (!rec.sumber){ if (errEl) errEl.textContent = 'Sumber Bottleneck wajib dipilih.'; return; }
   const submitBtn = f('bnFormSubmit');
   if (submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan…'; }
   let ok;
