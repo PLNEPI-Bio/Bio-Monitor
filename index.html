@@ -49,6 +49,40 @@
 <!-- xlsx-js-style: SheetJS fork that adds cell styling (fills, borders, fonts) for nicer Excel exports -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>/* ======= Biomassa Monitoring Dashboard v2 ======= */
+/* ===== V63: Password gate overlay ===== */
+.auth-gate{
+  position:fixed; inset:0; z-index:2147483647;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  background:linear-gradient(135deg,#0F496E 0%,#0a3350 58%,#062236 100%);
+  font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+.auth-gate.hidden{display:none}
+.auth-card{
+  width:100%; max-width:360px; background:#fff; border-radius:16px;
+  padding:34px 30px; box-shadow:0 24px 60px rgba(0,0,0,.35); text-align:center;
+}
+.auth-logo{font-weight:800;font-size:30px;letter-spacing:-.5px;color:#0F496E;margin-bottom:18px}
+.auth-logo span{color:#FFC72C;margin-left:3px}
+.auth-title{font-size:18px;font-weight:700;color:#0f2740;margin-bottom:4px}
+.auth-sub{font-size:12.5px;color:#5a6b7b;margin-bottom:22px;line-height:1.5}
+.auth-input{
+  width:100%; box-sizing:border-box; padding:12px 14px; font-size:14px;
+  border:1.5px solid #d6dee6; border-radius:9px; outline:none;
+  transition:border-color .15s; font-family:inherit; color:#0f2740;
+}
+.auth-input:focus{border-color:#0F496E}
+.auth-btn{
+  width:100%; box-sizing:border-box; margin-top:12px; padding:12px 14px;
+  font-size:14px; font-weight:700; letter-spacing:.3px; color:#fff; cursor:pointer;
+  background:#0F496E; border:none; border-radius:9px; transition:filter .15s;
+  font-family:inherit;
+}
+.auth-btn:hover{filter:brightness(1.1)}
+.auth-btn:active{transform:translateY(1px)}
+.auth-error{min-height:18px;margin-top:12px;font-size:12px;color:#d33;font-weight:600}
+.auth-card.shake{animation:authShake .4s}
+@keyframes authShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+body.gate-locked{overflow:hidden}
 
 /* LIGHT THEME (default) — PLN EPI corporate identity from plnepi.co.id
    Brand palette extracted from logo:
@@ -4338,6 +4372,70 @@ html,body{
 </style>
 </head>
 <body>
+<!-- ===== V63: Password gate (shown before any content is visible) ===== -->
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <div class="auth-logo">PLN<span>EPI</span></div>
+    <div class="auth-title">Biomassa Monitoring</div>
+    <div class="auth-sub">Masukkan password untuk mengakses dashboard</div>
+    <form id="authForm" autocomplete="off">
+      <input type="password" id="authInput" class="auth-input" placeholder="Password" autocomplete="current-password" aria-label="Password">
+      <button type="submit" class="auth-btn" id="authBtn">Masuk</button>
+    </form>
+    <div class="auth-error" id="authError"></div>
+  </div>
+</div>
+<script>
+// V63: client-side password gate. The password itself is NEVER stored (not in
+// localStorage, sessionStorage, or the source) — only its SHA-256 hash is kept
+// here, and we compare hashes. A session-only boolean flag avoids re-prompting
+// on reloads within the same tab.
+(function(){
+  var GATE_HASH = "87f8b970c387e44a359ff70f89f1cb09d1b8e3ab47583be1b8fb167a68660b90";
+  var SESSION_FLAG = "bioGateOk";
+  var gate  = document.getElementById('authGate');
+  var form  = document.getElementById('authForm');
+  var input = document.getElementById('authInput');
+  var errEl = document.getElementById('authError');
+  var card  = gate ? gate.querySelector('.auth-card') : null;
+  if (!gate || !form) return;
+
+  function unlock(){
+    try { sessionStorage.setItem(SESSION_FLAG, '1'); } catch(e){}
+    gate.classList.add('hidden');
+    document.body.classList.remove('gate-locked');
+  }
+  function fail(msg){
+    errEl.textContent = msg || 'Password salah. Coba lagi.';
+    if (card){ card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+    if (input){ input.select(); }
+  }
+
+  // Unlocked already in this tab session? (boolean flag only — never the password)
+  var already = false;
+  try { already = sessionStorage.getItem(SESSION_FLAG) === '1'; } catch(e){}
+  if (already){ gate.classList.add('hidden'); return; }
+
+  document.body.classList.add('gate-locked');
+  setTimeout(function(){ if (input) input.focus(); }, 60);
+
+  async function sha256Hex(str){
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var val = input ? input.value : '';
+    if (!val){ fail('Masukkan password.'); return; }
+    if (!(window.crypto && crypto.subtle)){ fail('Browser tidak didukung.'); return; }
+    sha256Hex(val).then(function(h){
+      if (h === GATE_HASH){ errEl.textContent = ''; unlock(); }
+      else { fail(); }
+    }).catch(function(){ fail('Terjadi kesalahan. Coba lagi.'); });
+  });
+})();
+</script>
 <div class="shell">
 
 <!-- Top bar -->
