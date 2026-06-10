@@ -1211,6 +1211,17 @@ html,body{
   background-repeat:no-repeat;background-position:right 8px center;padding-right:26px;
 }
 .bn-month-filter-wrap select:hover,.bn-month-filter-wrap select:focus{border-color:var(--accent);color:var(--text-bright)}
+.bn-download-btn{
+  margin-top:12px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:9px 12px;border-radius:7px;cursor:pointer;
+  background:var(--accent);color:#06281d;border:1px solid var(--accent);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+  transition:filter .15s,transform .1s;
+}
+.bn-download-btn:hover{filter:brightness(1.08)}
+.bn-download-btn:active{transform:translateY(1px)}
+.bn-download-btn:disabled{opacity:.5;cursor:default}
+.bn-download-btn .bn-download-ic{font-size:13px;line-height:1}
 
 /* Keyword category filter */
 .bn-keyword-filter{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
@@ -5032,6 +5043,9 @@ html,body{
             <option value="December">December</option>
           </select>
         </div>
+        <button class="bn-download-btn" id="bnDownloadBtn" title="Unduh semua data bottleneck ke Excel">
+          <span class="bn-download-ic">⬇</span> Unduh Excel
+        </button>
         <!-- Keyword/category filter buttons (must select one to see records) -->
         <div class="bn-keyword-filter">
           <div class="bn-keyword-filter-label">Filter by Keyword Category</div>
@@ -11636,6 +11650,70 @@ function downloadUsulanExcel(){
   XLSX.writeFile(wb, 'Usulan_Kontrak_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
+// V64: Export ALL bottleneck records (tab Bottlenecks) to a formatted Excel file.
+function downloadBottlenecksExcel(){
+  const rows = ((DATA && DATA.bottlenecks) || []).slice();
+  if (!rows.length){ alert('Belum ada data bottleneck untuk diunduh.'); return; }
+  const MONTH_ORDER = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
+  rows.sort((a, b) => {
+    const pa = (a.pltu || '').localeCompare(b.pltu || '');
+    if (pa !== 0) return pa;
+    return (MONTH_ORDER[a.bulan] || 99) - (MONTH_ORDER[b.bulan] || 99);
+  });
+
+  const headers = ['No', 'PLTU', 'Bulan', 'Sumber Bottleneck', 'Bottleneck', 'Action Plan', 'Progress', 'PIC', 'Contact Person', 'Evaluasi', 'Complete', 'Link Eviden'];
+  const aoa = [headers];
+  rows.forEach((b, i) => {
+    aoa.push([
+      i + 1, b.pltu || '', b.bulan || '', b.sumber || '', b.bottleneck || '',
+      b.action_plan || '', b.progress || '', b.pic || '', b.contact_person || '',
+      b.evaluasi || '', (b.complete ? 'Ya' : 'Tidak'), b.link_eviden || '',
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    { wch: 5 }, { wch: 22 }, { wch: 12 }, { wch: 16 }, { wch: 52 }, { wch: 40 },
+    { wch: 30 }, { wch: 14 }, { wch: 16 }, { wch: 30 }, { wch: 9 }, { wch: 34 },
+  ];
+  ws['!rows'] = [{ hpt: 24 }]; // taller header row
+
+  const thin = { style: 'thin', color: { rgb: 'CCD3DA' } };
+  const borderAll = { top: thin, bottom: thin, left: thin, right: thin };
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r; R <= range.e.r; R++){
+    for (let C = range.s.c; C <= range.e.c; C++){
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[addr];
+      if (!cell) continue;
+      if (R === 0){
+        cell.s = {
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          fill: { fgColor: { rgb: '1F3A5F' } },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          border: borderAll,
+        };
+      } else {
+        const isEven = (R % 2 === 0);
+        // Center: No(0), Bulan(2), Sumber(3), Complete(10). Others left-aligned.
+        const center = (C === 0 || C === 2 || C === 3 || C === 10);
+        cell.s = {
+          font: { sz: 10, color: { rgb: '1F2937' } },
+          fill: { fgColor: { rgb: isEven ? 'F4F7FA' : 'FFFFFF' } },
+          alignment: { horizontal: center ? 'center' : 'left', vertical: 'top', wrapText: true },
+          border: borderAll,
+        };
+      }
+    }
+  }
+  ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' };
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range(range) };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Bottlenecks');
+  XLSX.writeFile(wb, 'Bottlenecks_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+}
+
 // ---------- Add Usulan modal ----------
 function wireUsulanAddModal(){
   const addBtn = document.getElementById('usulan-add-btn');
@@ -15971,6 +16049,10 @@ window.addEventListener('DOMContentLoaded', () => {
       renderBnList();
     };
   }
+
+  // V64: Download all bottleneck records to Excel
+  const bnDownloadBtn = document.getElementById('bnDownloadBtn');
+  if (bnDownloadBtn) bnDownloadBtn.onclick = () => downloadBottlenecksExcel();
 
   // Trends panel: hidden by default. × in panel closes it; Monthly Trend button opens it.
   const trendsCollapseBtn = document.getElementById('trendsCollapseBtn');
