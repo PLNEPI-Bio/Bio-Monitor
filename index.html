@@ -1958,6 +1958,15 @@ html,body{
 /* V54: Autofit table to screen width */
 .view[data-view="kontrak"] .kontrak-table{table-layout:auto;width:100%}
 .view[data-view="kontrak"] .kontrak-table-wrap{width:100%;max-width:100%}
+/* V64.1: The white card (.real-recap-wrap) is a GRID ITEM of .real-view. By
+   default a grid item has min-width:auto = min-content, so it refuses to shrink
+   below the table's intrinsic width — the table then overflowed the card and its
+   white background "stopped" at the viewport edge. min-width:0 lets the inner
+   .kontrak-table-wrap (overflow-x:auto) actually constrain + scroll, so the card
+   stays full-width and the white background covers the whole visible table. */
+.view[data-view="kontrak"] .real-recap-wrap,
+.view[data-view="kontrak"] .recap-scroll,
+.view[data-view="kontrak"] #kontrak-table{min-width:0}
 /* Desktop: hide mobile-only filter toggle */
 .kontrak-filter-toggle{display:none}
 
