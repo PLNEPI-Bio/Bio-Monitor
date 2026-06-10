@@ -1947,22 +1947,24 @@ html,body{
 .view[data-view="kontrak"]{overflow-x:hidden;max-width:100vw}
 .view[data-view="kontrak"] .real-view{overflow-x:hidden;overflow-y:auto;max-width:100%;box-sizing:border-box}
 .view[data-view="kontrak"] .real-recap-wrap{overflow:visible;max-width:100%;box-sizing:border-box}
-/* V64.2: horizontal scroll lives on .recap-scroll; the white table card expands
-   to the table's full width (below) so its background covers the entire table. */
-.view[data-view="kontrak"] .recap-scroll{border:none;border-radius:6px;overflow-x:auto;overflow-y:visible;max-height:none;-webkit-overflow-scrolling:touch}
-.view[data-view="kontrak"] .kontrak-table-wrap{border:1px solid var(--border);border-radius:6px;overflow:visible}
+/* V64.3: The TABLE itself is the white card (border+radius+background, sized to
+   its own content below). The wrap is just a viewport-width horizontal scroller,
+   and .recap-scroll stays a plain block. This guarantees the white background +
+   border always cover the FULL table width. */
+.view[data-view="kontrak"] .recap-scroll{border:none;border-radius:0;overflow:visible}
+.view[data-view="kontrak"] .kontrak-table-wrap{border:none;border-radius:0;background:transparent;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch}
 .view[data-view="kontrak"] .kontrak-summary{overflow:hidden;box-sizing:border-box}
 .view[data-view="kontrak"] .kontrak-toggle-row{box-sizing:border-box}
 .view[data-view="kontrak"] .real-recap-filters{box-sizing:border-box}
 .kontrak-pemasok-link{color:var(--accent);text-decoration:none;font-weight:500;transition:opacity .1s}
 .kontrak-pemasok-link:hover{opacity:.7;text-decoration:underline}
 
-/* V54: Autofit table to screen width */
-.view[data-view="kontrak"] .kontrak-table{table-layout:auto;width:100%}
-/* V64.2: white card auto-expands to the table's full content width so its
-   background always covers the entire table (it no longer stops at the viewport
-   edge). When the table exceeds the screen, .recap-scroll scrolls horizontally. */
-.view[data-view="kontrak"] .kontrak-table-wrap{width:max-content;min-width:100%;max-width:none}
+/* V54/V64.3: border+radius+bg are on the TABLE itself, so the white card is the
+   table — it always spans the table's actual rendered width (whether it fits the
+   viewport or overflows and scrolls), never stopping partway. The wrap is a plain
+   viewport-width horizontal scroller. */
+.view[data-view="kontrak"] .kontrak-table{table-layout:auto;width:100%;border:1px solid var(--border);border-radius:6px}
+.view[data-view="kontrak"] .kontrak-table-wrap{width:100%;max-width:100%}
 /* V64.1: The white card (.real-recap-wrap) is a GRID ITEM of .real-view. By
    default a grid item has min-width:auto = min-content, so it refuses to shrink
    below the table's intrinsic width — the table then overflowed the card and its
