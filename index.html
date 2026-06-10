@@ -6266,7 +6266,10 @@ function selectPlant(code, fromMarkerClick){
   if (!p) return;
   // Show the detail panel
   document.querySelector('.map-view').classList.add('detail-open');
-  setTimeout(() => { if (map) map.invalidateSize(); }, 260);
+  // V64: pan:false → anchor the top-left on resize instead of re-centering, so the
+  // map (and the clicked marker) does NOT shift left when the panel opens. This keeps
+  // the cursor over the marker and preserves the hover tooltip.
+  setTimeout(() => { if (map) map.invalidateSize({ pan: false }); }, 260);
 
   const color = gencoColor(p.genco);
   const sisaKontrak = p.sisa_kontrak || 0;
