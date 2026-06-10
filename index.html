@@ -792,6 +792,9 @@ html,body{
   font-family:'Plus Jakarta Sans',sans-serif;
 }
 .legend{top:16px;left:16px;min-width:200px;transition:all .2s ease;z-index:800;border-radius:6px}
+/* V64: legend yields to the hover tooltip (which renders inside the map pane and
+   can't be placed above the legend via z-index alone) */
+.legend.legend-behind-tooltip{opacity:0;pointer-events:none}
 .legend-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
 .legend-head .legend-title{margin-bottom:0}
 .legend.collapsed .legend-body{display:none}
@@ -6058,6 +6061,14 @@ function initMainMap(){
     attribution:'', subdomains:'abcd', maxZoom:12, minZoom:3, pane:'shadowPane',
   }).addTo(map);
   markerLayer = L.layerGroup().addTo(map);
+  // V64: The "Genco Color Code" legend is an HTML overlay that sits ABOVE the
+  // Leaflet map layer, while hover tooltips render INSIDE the map pane (a
+  // transformed stacking context). Because of that, a plain z-index can't place
+  // the legend between the map and the tooltip. Instead, fade the legend out
+  // only while a tooltip is open so the popup is never covered, then restore it.
+  const _cofiringLegend = document.querySelector('.map-view:not(.pembangkit-view):not(.fasilitas-view) .legend');
+  map.on('tooltipopen', () => { if (_cofiringLegend) _cofiringLegend.classList.add('legend-behind-tooltip'); });
+  map.on('tooltipclose', () => { if (_cofiringLegend) _cofiringLegend.classList.remove('legend-behind-tooltip'); });
   // Prevent Leaflet from capturing click/touch on overlays inside map-area
   document.querySelectorAll('.map-overlay, .sidebar-show-btn, .trends-panel, .trends-show-btn').forEach(el => {
     if (el) L.DomEvent.disableClickPropagation(el);
