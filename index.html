@@ -1947,8 +1947,10 @@ html,body{
 .view[data-view="kontrak"]{overflow-x:hidden;max-width:100vw}
 .view[data-view="kontrak"] .real-view{overflow-x:hidden;overflow-y:auto;max-width:100%;box-sizing:border-box}
 .view[data-view="kontrak"] .real-recap-wrap{overflow:visible;max-width:100%;box-sizing:border-box}
-.view[data-view="kontrak"] .recap-scroll{border:none;border-radius:6px;overflow:visible}
-.view[data-view="kontrak"] .kontrak-table-wrap{border:1px solid var(--border);border-radius:6px;overflow-x:auto;overflow-y:visible}
+/* V64.2: horizontal scroll lives on .recap-scroll; the white table card expands
+   to the table's full width (below) so its background covers the entire table. */
+.view[data-view="kontrak"] .recap-scroll{border:none;border-radius:6px;overflow-x:auto;overflow-y:visible;max-height:none;-webkit-overflow-scrolling:touch}
+.view[data-view="kontrak"] .kontrak-table-wrap{border:1px solid var(--border);border-radius:6px;overflow:visible}
 .view[data-view="kontrak"] .kontrak-summary{overflow:hidden;box-sizing:border-box}
 .view[data-view="kontrak"] .kontrak-toggle-row{box-sizing:border-box}
 .view[data-view="kontrak"] .real-recap-filters{box-sizing:border-box}
@@ -1957,7 +1959,10 @@ html,body{
 
 /* V54: Autofit table to screen width */
 .view[data-view="kontrak"] .kontrak-table{table-layout:auto;width:100%}
-.view[data-view="kontrak"] .kontrak-table-wrap{width:100%;max-width:100%}
+/* V64.2: white card auto-expands to the table's full content width so its
+   background always covers the entire table (it no longer stops at the viewport
+   edge). When the table exceeds the screen, .recap-scroll scrolls horizontally. */
+.view[data-view="kontrak"] .kontrak-table-wrap{width:max-content;min-width:100%;max-width:none}
 /* V64.1: The white card (.real-recap-wrap) is a GRID ITEM of .real-view. By
    default a grid item has min-width:auto = min-content, so it refuses to shrink
    below the table's intrinsic width — the table then overflowed the card and its
