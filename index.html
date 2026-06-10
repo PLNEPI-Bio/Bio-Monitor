@@ -675,6 +675,24 @@ html,body{
 .map-view.sidebar-collapsed{grid-template-columns:0px 1fr 0px}
 .map-view.sidebar-collapsed.detail-open{grid-template-columns:0px 1fr 340px}
 
+/* V64: On desktop, the Map Cofiring detail panel OVERLAYS the map instead of
+   taking a grid column. This keeps the map element the exact same size when the
+   panel opens, so the map never re-centers/shifts — the clicked marker stays put
+   under the cursor and its hover tooltip is preserved. Scoped to the cofiring
+   view only (pembangkit/fasilitas keep the side-by-side layout); mobile keeps its
+   own bottom-sheet behavior (max-width:768px). */
+@media (min-width:769px){
+  .map-view:not(.pembangkit-view):not(.fasilitas-view){position:relative}
+  .map-view:not(.pembangkit-view):not(.fasilitas-view).detail-open{grid-template-columns:260px 1fr 0px}
+  .map-view:not(.pembangkit-view):not(.fasilitas-view).sidebar-collapsed.detail-open{grid-template-columns:0px 1fr 0px}
+  .map-view:not(.pembangkit-view):not(.fasilitas-view) .detail-panel{
+    position:absolute;top:0;right:0;bottom:0;width:340px;z-index:1100;
+    box-shadow:-10px 0 28px rgba(0,0,0,.28);
+    transform:translateX(14px);transition:opacity .2s ease, transform .2s ease;
+  }
+  .map-view:not(.pembangkit-view):not(.fasilitas-view).detail-open .detail-panel{transform:translateX(0)}
+}
+
 .sidebar{background:var(--panel-2);border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;padding:20px 16px;position:relative;transition:opacity .2s}
 .map-view.sidebar-collapsed .sidebar{opacity:0;pointer-events:none}
 
@@ -760,6 +778,8 @@ html,body{
   white-space:normal!important;max-width:280px!important;
   pointer-events:none;
 }
+/* V64: cofiring popup is interactive — let the mouse rest on it so it stays visible */
+.leaflet-tooltip.plant-tooltip.plant-tooltip-interactive{pointer-events:auto}
 .leaflet-tooltip.plant-tooltip::before{display:none!important}
 :root[data-theme="light"] .leaflet-tooltip.plant-tooltip{
   box-shadow:0 6px 18px rgba(15,23,42,.15)!important;
@@ -6075,12 +6095,13 @@ function refreshMarkers(){
     });
     const m = L.marker([p.lat, p.lon], { icon, title: p.name });
     // V17: bindTooltip on hover (no auto-pan) instead of bindPopup (which pans the map)
+    // V64: interactive:true so the popup stays while the mouse is over it (marker OR popup)
     m.bindTooltip(renderPopup(p), {
       direction: 'top', offset: [0, -8], opacity: 1, sticky: false,
-      className: 'plant-tooltip', interactive: false,
+      className: 'plant-tooltip plant-tooltip-interactive', interactive: true,
     });
     // Click opens the full detail panel directly (does not show the popup)
-    m.on('click', () => selectPlant(p.code));
+    m.on('click', () => selectPlant(p.code, true));
     markers[p.code] = m;
     markerLayer.addLayer(m);
   });
@@ -6252,14 +6273,21 @@ function renderPlantJenisList(plant){
   return html;
 }
 
-function selectPlant(code){
+function selectPlant(code, fromMarkerClick){
   state.selected = code;
   refreshMarkers();
+  // V64: refreshMarkers() recreated the marker, which drops its hover tooltip.
+  // When the user clicked the marker, re-open it so the popup doesn't vanish; it
+  // still hides on mouse-out. Skipped for programmatic calls (no mouse over it).
+  if (fromMarkerClick && markers[code]) markers[code].openTooltip();
   const p = DATA.plants.find(pl => pl.code === code);
   if (!p) return;
   // Show the detail panel
   document.querySelector('.map-view').classList.add('detail-open');
-  setTimeout(() => { if (map) map.invalidateSize(); }, 260);
+  // V64: pan:false → anchor the top-left on resize instead of re-centering, so the
+  // map (and the clicked marker) does NOT shift left when the panel opens. This keeps
+  // the cursor over the marker and preserves the hover tooltip.
+  setTimeout(() => { if (map) map.invalidateSize({ pan: false }); }, 260);
 
   const color = gencoColor(p.genco);
   const sisaKontrak = p.sisa_kontrak || 0;
@@ -6641,9 +6669,7 @@ function selectPlant(code){
     yoyFilter.onchange = () => renderPlantYoyTable(p, yoyFilter.value);
   }
 
-  if (markers[code]){
-    map.panTo([p.lat, p.lon]);
-  }
+  // V64: no auto-pan — keep the map where the user left it when a PLTU is clicked.
 }
 
 // Render the YoY table for a plant, with optional month filter.
