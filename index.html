@@ -675,6 +675,24 @@ html,body{
 .map-view.sidebar-collapsed{grid-template-columns:0px 1fr 0px}
 .map-view.sidebar-collapsed.detail-open{grid-template-columns:0px 1fr 340px}
 
+/* V64: On desktop, the Map Cofiring detail panel OVERLAYS the map instead of
+   taking a grid column. This keeps the map element the exact same size when the
+   panel opens, so the map never re-centers/shifts — the clicked marker stays put
+   under the cursor and its hover tooltip is preserved. Scoped to the cofiring
+   view only (pembangkit/fasilitas keep the side-by-side layout); mobile keeps its
+   own bottom-sheet behavior (max-width:768px). */
+@media (min-width:769px){
+  .map-view:not(.pembangkit-view):not(.fasilitas-view){position:relative}
+  .map-view:not(.pembangkit-view):not(.fasilitas-view).detail-open{grid-template-columns:260px 1fr 0px}
+  .map-view:not(.pembangkit-view):not(.fasilitas-view).sidebar-collapsed.detail-open{grid-template-columns:0px 1fr 0px}
+  .map-view:not(.pembangkit-view):not(.fasilitas-view) .detail-panel{
+    position:absolute;top:0;right:0;bottom:0;width:340px;z-index:1100;
+    box-shadow:-10px 0 28px rgba(0,0,0,.28);
+    transform:translateX(14px);transition:opacity .2s ease, transform .2s ease;
+  }
+  .map-view:not(.pembangkit-view):not(.fasilitas-view).detail-open .detail-panel{transform:translateX(0)}
+}
+
 .sidebar{background:var(--panel-2);border-right:1px solid var(--border);overflow-y:auto;overflow-x:hidden;padding:20px 16px;position:relative;transition:opacity .2s}
 .map-view.sidebar-collapsed .sidebar{opacity:0;pointer-events:none}
 
