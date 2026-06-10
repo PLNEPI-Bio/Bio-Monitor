@@ -1756,6 +1756,14 @@ html,body{
   background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;min-width:140px;
 }
 .real-recap-filter select:hover,.real-recap-filter select:focus{border-color:var(--accent);color:var(--text-bright)}
+/* V64: typeable Mitra filter — match the select styling */
+.real-recap-filter input[type="text"]{
+  background:var(--panel-3);border:1px solid var(--border);color:var(--text);
+  padding:8px 10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
+  outline:none;min-width:140px;width:100%;box-sizing:border-box;border-radius:0;
+}
+.real-recap-filter input[type="text"]::placeholder{color:var(--text-dim)}
+.real-recap-filter input[type="text"]:hover,.real-recap-filter input[type="text"]:focus{border-color:var(--accent);color:var(--text-bright)}
 
 .recap-scroll{overflow-x:auto;overflow-y:auto;max-height:600px;border:1px solid var(--border);border-radius:6px;-webkit-overflow-scrolling:touch}
 .recap-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px}
@@ -1875,7 +1883,7 @@ html,body{
 }
 .kontrak-toggle input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
 
-.kontrak-table{width:100%;border-collapse:separate;border-spacing:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px}
+.kontrak-table{width:100%;border-collapse:separate;border-spacing:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;background:var(--panel)}
 .kontrak-table th{
   text-align:left;padding:10px 10px;color:var(--text-dim);font-weight:700;
   background:var(--panel-3);border-bottom:2px solid var(--border);font-size:9px;letter-spacing:.8px;
@@ -1891,15 +1899,20 @@ html,body{
 .kontrak-table td.num{text-align:right;padding-right:12px;color:var(--text-bright);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500}
 .kontrak-table td.num.dim{color:var(--text-dim);opacity:.55}
 .kontrak-table td.year-real{
-  background:rgba(15,73,110,.03);text-align:right;padding-right:12px;
+  text-align:right;padding-right:12px;border-left:1px solid var(--border);
   color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;
 }
 .kontrak-table td.year-real.zero{color:var(--text-dim);opacity:.5;font-weight:400}
-.kontrak-table td.old-year-cell{background:rgba(100,116,139,.03);color:var(--text-dim)}
+.kontrak-table td.old-year-cell{color:var(--text-dim);border-left:1px solid var(--border)}
 .kontrak-table tbody tr{transition:background .1s}
+/* V64: give EVERY cell (odd + even) an explicit opaque background so rows never
+   become transparent. Previously only even rows were painted, so when the table
+   was wider than its container the odd-row background appeared to "stop" partway
+   across on horizontal scroll. Setting the background per <td> keeps the whole
+   row consistent across the full scrollable width. */
+.kontrak-table tbody tr td{background:var(--panel)}
 .kontrak-table tbody tr:nth-child(even) td{background:var(--panel-2)}
-.kontrak-table tbody tr:hover td{background:color-mix(in srgb, var(--accent) 6%, var(--panel))}
-.kontrak-table tbody tr:hover td.year-real{background:rgba(15,73,110,.08)}
+.kontrak-table tbody tr:hover td{background:color-mix(in srgb, var(--accent) 7%, var(--panel))}
 .kontrak-table tfoot td{
   font-weight:700;background:var(--panel-3)!important;border-top:2px solid var(--border);
   padding:10px;color:var(--text-bright);font-size:11px;
@@ -1930,7 +1943,7 @@ html,body{
 .kontrak-date{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);white-space:nowrap}
 .kontrak-amandemen-text{font-size:10px;color:var(--text);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .kontrak-amandemen-text.none{color:var(--text-dim);opacity:.5;font-style:italic}
-.kontrak-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:6px}
+.kontrak-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:6px;background:var(--panel)}
 .view[data-view="kontrak"]{overflow-x:hidden;max-width:100vw}
 .view[data-view="kontrak"] .real-view{overflow-x:hidden;overflow-y:auto;max-width:100%;box-sizing:border-box}
 .view[data-view="kontrak"] .real-recap-wrap{overflow:visible;max-width:100%;box-sizing:border-box}
@@ -1945,6 +1958,15 @@ html,body{
 /* V54: Autofit table to screen width */
 .view[data-view="kontrak"] .kontrak-table{table-layout:auto;width:100%}
 .view[data-view="kontrak"] .kontrak-table-wrap{width:100%;max-width:100%}
+/* V64.1: The white card (.real-recap-wrap) is a GRID ITEM of .real-view. By
+   default a grid item has min-width:auto = min-content, so it refuses to shrink
+   below the table's intrinsic width — the table then overflowed the card and its
+   white background "stopped" at the viewport edge. min-width:0 lets the inner
+   .kontrak-table-wrap (overflow-x:auto) actually constrain + scroll, so the card
+   stays full-width and the white background covers the whole visible table. */
+.view[data-view="kontrak"] .real-recap-wrap,
+.view[data-view="kontrak"] .recap-scroll,
+.view[data-view="kontrak"] #kontrak-table{min-width:0}
 /* Desktop: hide mobile-only filter toggle */
 .kontrak-filter-toggle{display:none}
 
@@ -5302,7 +5324,8 @@ html,body{
         </div>
         <div class="real-recap-filter">
           <label>Mitra</label>
-          <select id="kontrak-mitra-filter"></select>
+          <input type="text" id="kontrak-mitra-filter" list="kontrak-mitra-list" placeholder="Ketik nama mitra…" autocomplete="off">
+          <datalist id="kontrak-mitra-list"></datalist>
         </div>
         <div class="real-recap-filter">
           <label>Jenis</label>
@@ -9739,23 +9762,31 @@ function buildKontrakPltuOptions(){
 }
 
 function buildKontrakMitraOptions(){
-  const sel = document.getElementById('kontrak-mitra-filter');
-  if (!sel) return;
+  // V64: Mitra filter is now a typeable input with autocomplete (datalist),
+  // matching by case-insensitive substring instead of exact dropdown selection.
+  const inp = document.getElementById('kontrak-mitra-filter');
+  if (!inp) return;
   const contracts = (DATA && DATA.contracts) || [];
   let scoped = contracts;
   if (state.kontrakFilters.genco !== 'all') scoped = scoped.filter(c => c.genco === state.kontrakFilters.genco);
   if (state.kontrakFilters.pltu !== 'all') scoped = scoped.filter(c => c.pltu === state.kontrakFilters.pltu);
-  const mitraSet = new Set(scoped.map(c => c.pemasok));
-  const mitras = Array.from(mitraSet).sort();
-  const prev = state.kontrakFilters.mitra;
-  sel.innerHTML = '<option value="all">All Mitra</option>' +
-    mitras.map(m => '<option value="' + m + '">' + m + '</option>').join('');
-  sel.value = mitras.indexOf(prev) >= 0 ? prev : 'all';
-  state.kontrakFilters.mitra = sel.value;
-  sel.onchange = () => {
-    state.kontrakFilters.mitra = sel.value;
-    renderKontrakTable();
-  };
+  const mitras = Array.from(new Set(scoped.map(c => c.pemasok).filter(Boolean))).sort();
+  const dl = document.getElementById('kontrak-mitra-list');
+  if (dl) dl.innerHTML = mitras.map(m => '<option value="' + escapeHtml(m) + '"></option>').join('');
+  // Reflect current filter value (treat 'all'/empty as no filter)
+  const cur = state.kontrakFilters.mitra;
+  inp.value = (cur && cur !== 'all') ? cur : '';
+  if (!inp.dataset.wired){
+    let _t;
+    inp.oninput = () => {
+      clearTimeout(_t);
+      _t = setTimeout(() => {
+        state.kontrakFilters.mitra = inp.value.trim();
+        renderKontrakTable();
+      }, 160);
+    };
+    inp.dataset.wired = '1';
+  }
 }
 
 function isContractActive(c, refDate){
@@ -9821,7 +9852,7 @@ function filteredContracts(){
     if (state.kontrakOnlyActive && !isContractActive(c, today)) return false;
     if (f.genco !== 'all' && c.genco !== f.genco) return false;
     if (f.pltu !== 'all' && c.pltu !== f.pltu) return false;
-    if (f.mitra !== 'all' && c.pemasok !== f.mitra) return false;
+    if (f.mitra && f.mitra !== 'all' && !(c.pemasok || '').toLowerCase().includes(f.mitra.toLowerCase())) return false;
     if (f.jenis !== 'all' && c.jenis !== f.jenis) return false;
     return true;
   });
@@ -12998,12 +13029,33 @@ async function doProcessAndUpload(){
   const mouUploaded = !!(updateFiles.mou && updateFiles.mou.parsedData);
   if (mouUploaded && mouData.mou){
     updateLog('  Saving MoU data to mou_data table...', 'info');
+    // V64: A fresh MoU upload replaces every timeline group, which would drop the
+    // drive links added via "Add Link" (stored as group.driveLink). Preserve them:
+    // read the current links (from memory if loaded, else from the server) and
+    // re-attach to the new groups, matched by normalized group name.
+    let prevTimeline = (mouState.loaded && Array.isArray(mouState.timeline)) ? mouState.timeline : null;
+    if (!prevTimeline && supabaseClient){
+      try {
+        const { data: cur } = await supabaseClient.from('mou_data').select('timeline').eq('id', 1).single();
+        prevTimeline = (cur && cur.timeline) || [];
+      } catch(e){ prevTimeline = []; }
+    }
+    const _normName = (s) => (s || '').toString().trim().toLowerCase().replace(/\s+/g, ' ');
+    const linkByName = new Map();
+    (prevTimeline || []).forEach(g => { if (g && g.name && g.driveLink) linkByName.set(_normName(g.name), g.driveLink); });
+    let _linksKept = 0;
+    (mouData.mou.timeline || []).forEach(g => {
+      if (g && g.name && !g.driveLink){
+        const lk = linkByName.get(_normName(g.name));
+        if (lk){ g.driveLink = lk; _linksKept++; }
+      }
+    });
     mouState.timeline = mouData.mou.timeline || [];
     mouState.busdev = mouData.mou.busdev || [];
     mouState.loaded = true;
     DATA.mou = mouData.mou;
     await mouSaveData();
-    updateLog('  ✓ MoU data saved (' + mouState.timeline.length + ' groups, ' + mouState.busdev.length + ' programs)', 'success');
+    updateLog('  ✓ MoU data saved (' + mouState.timeline.length + ' groups, ' + mouState.busdev.length + ' programs' + (_linksKept ? ' · ' + _linksKept + ' link dipertahankan' : '') + ')', 'success');
   }
   // usulan is NOT part of upload - intentionally not included; preserved on apply
   const paretoCount = (newDataset.pareto && newDataset.pareto.plants) ? newDataset.pareto.plants.length : 0;
@@ -14620,16 +14672,18 @@ const mouState = {
 
 const MOU_MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MOU_STATUS_CYCLE = ['Done','Pending','Planning',''];
-const MOU_2025_BLUE_SHADE = {
-  hdr:'#3E8EDE',
-  wk:'#3E8EDE',
-  cell:'rgba(62,142,222,.09)',
-  hover:'rgba(62,142,222,.18)',
-  fill:'#3E8EDE',
-};
-
-function mouMonthBlueShade(year){
-  return year === 2025 ? MOU_2025_BLUE_SHADE : null;
+// V64: subtle per-quarter (triwulan) tint for the timeline grid so each quarter
+// is visually distinguishable. Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec.
+// head/wk are solid (header rows use white text); cell/hover are light tints for
+// the grid body so each quarter is gently distinguishable without overpowering it.
+const MOU_QUARTER_TINTS = [
+  { head:'#0e8f63', wk:'#13a673', cell:'rgba(16,185,129,.06)', hover:'rgba(16,185,129,.16)' }, // Q1 · green
+  { head:'#c2750a', wk:'#dd8a12', cell:'rgba(245,158,11,.07)', hover:'rgba(245,158,11,.17)' }, // Q2 · amber
+  { head:'#1d4ed8', wk:'#2563eb', cell:'rgba(59,130,246,.06)', hover:'rgba(59,130,246,.16)' }, // Q3 · blue
+  { head:'#6d28d9', wk:'#7c3aed', cell:'rgba(168,85,247,.06)', hover:'rgba(168,85,247,.16)' }, // Q4 · purple
+];
+function mouQuarterShade(month){
+  return MOU_QUARTER_TINTS[Math.floor((((month || 1) - 1) % 12) / 3)] || MOU_QUARTER_TINTS[0];
 }
 
 // Generate list of {year, month, weekLabel} for the grid
@@ -14705,14 +14759,12 @@ function renderMouTimeline(){
   let monthHeaders = '', weekHeaders = '', prevYM = '';
   for (const wc of weekCols){
     const ym = wc.year + '-' + wc.month;
-    const shade = mouMonthBlueShade(wc.year);
+    const q = mouQuarterShade(wc.month);
     if (ym !== prevYM){
-      const monthStyle = shade ? ' style="background:' + shade.hdr + ';color:#fff"' : '';
-      monthHeaders += '<th colspan="4" class="mou-month-hdr"' + monthStyle + '>' + MOU_MONTHS_SHORT[wc.month - 1] + ' ' + (wc.year % 100) + '</th>';
+      monthHeaders += '<th colspan="4" class="mou-month-hdr" style="background:' + q.head + '">' + MOU_MONTHS_SHORT[wc.month - 1] + ' ' + (wc.year % 100) + '</th>';
       prevYM = ym;
     }
-    const weekStyle = shade ? ' style="background:' + shade.wk + ';color:#fff"' : '';
-    weekHeaders += '<th class="mou-wk-hdr"' + weekStyle + '>W' + wc.week + '</th>';
+    weekHeaders += '<th class="mou-wk-hdr" style="background:' + q.wk + ';color:#fff">W' + wc.week + '</th>';
   }
 
   // V52: Extract unique group prefixes for filter
@@ -14829,8 +14881,8 @@ function renderMouTimeline(){
 
       const tw = t.weeks || {};
       for (const wc of weekCols){
-        const shade = mouMonthBlueShade(wc.year);
-        const weekCellStyle = shade ? ' style="--mou-month-cell:' + shade.cell + ';--mou-month-cell-hover:' + shade.hover + ';--mou-month-fill:' + shade.fill + '"' : '';
+        const q = mouQuarterShade(wc.month);
+        const weekCellStyle = ' style="--mou-month-cell:' + q.cell + ';--mou-month-cell-hover:' + q.hover + '"';
         const filled = tw[wc.key];
         html += '<td class="mou-wk-cell' + (filled ? ' filled' : '') + '"' + weekCellStyle + ' data-wk="' + wc.key + '" data-tid="' + t.id + '" data-gid="' + g.id + '"></td>';
       }
