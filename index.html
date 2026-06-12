@@ -4932,7 +4932,7 @@ html,body{
   <div class="fas-modal-backdrop" id="fasAddModal">
     <div class="fas-modal">
       <div class="fas-modal-head">
-        <span>Tambah Titik Fasilitas Produksi</span>
+        <span id="fasModalTitle">Tambah Titik Fasilitas Produksi</span>
         <button class="fas-modal-close" id="fasModalClose" title="Tutup">×</button>
       </div>
       <div class="fas-modal-body">
@@ -14198,7 +14198,7 @@ async function bootFasilitasTab(){
       const arr = JSON.parse(saved);
       if (Array.isArray(arr)){
         for (let i = 0; i < arr.length && i < FASILITAS_DATA.length; i++){
-          ['kapasitas','jumlah_unit','tipe_mesin','jenis','produk','skema'].forEach(k => {
+          ['kapasitas','jumlah_unit','tipe_mesin','jenis','produk','skema','status','icon_type','icon_color','lat','lon'].forEach(k => {
             if (arr[i][k] !== undefined) FASILITAS_DATA[i][k] = arr[i][k];
           });
         }
@@ -14211,7 +14211,7 @@ async function bootFasilitasTab(){
   initFasilitasMap();
   renderFasilitasMarkers();
   wireFasilitasAddPoint();
-  loadFasilitasCustom().then(() => renderFasilitasMarkers());
+  loadFasilitasCustom().then(() => { applyFasilitasOverrides(); renderFasilitasMarkers(); });
   loadFasilitasPoints().then(() => { renderFasilitasMarkers(); fitFasilitasBounds(); });
   subscribeFasilitasPoints();
 }
@@ -14326,8 +14326,7 @@ function renderFasilitasDetail(f){
   }
   html += '</div>';
 
-  // Grid of facility details — V52.1: View mode + Edit mode toggle + Image upload
-  const fIdx = FASILITAS_DATA.indexOf(f);
+  // Grid of facility details (view mode). Editing is via the unified modal.
   const fields = [
     { key: 'kapasitas', label: 'Kapasitas', full: false },
     { key: 'jumlah_unit', label: 'Jumlah Unit', full: false },
@@ -14367,41 +14366,8 @@ function renderFasilitasDetail(f){
     html += '</div>';
   }
 
-  // Edit button
+  // V66: Edit opens the SAME modal used for "Tambah Titik" (identical fields).
   html += '<button class="fas-edit-toggle-btn" id="fasEditToggle"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 1.5l3 3L5 14H2v-3z"/></svg> Edit Detail</button>';
-
-  // Hidden edit form
-  html += '<div class="fas-edit-form" id="fasEditForm" style="display:none">';
-  html += '<div class="pembangkit-detail-grid">';
-  for (const fd of fields){
-    html += '<div class="pembangkit-detail-cell' + (fd.full ? '" style="grid-column:1/-1' : '') + '">';
-    html += '<div class="pembangkit-detail-cell-label">' + fd.label + '</div>';
-    html += '<input class="fas-edit-input" data-fidx="' + fIdx + '" data-key="' + fd.key + '" value="' + escapeHtml(f[fd.key] || '') + '" placeholder="\u2014">';
-    html += '</div>';
-  }
-  html += '</div>';
-  // Custom fields editor
-  html += '<div id="fasCustomFieldsEdit">';
-  for (let ci = 0; ci < customFields.length; ci++){
-    html += '<div class="fas-custom-row" data-ci="' + ci + '">';
-    html += '<input class="fas-edit-input fas-cf-label" value="' + escapeHtml(customFields[ci].label) + '" placeholder="Judul" style="flex:1">';
-    html += '<input class="fas-edit-input fas-cf-value" value="' + escapeHtml(customFields[ci].value) + '" placeholder="Data" style="flex:2">';
-    html += '<button class="fas-cf-del" data-ci="' + ci + '" title="Hapus">\u00d7</button>';
-    html += '</div>';
-  }
-  html += '</div>';
-  html += '<button class="fas-add-field-btn" id="fasAddFieldBtn">+ Tambah Kolom</button>';
-  // Image upload
-  html += '<div style="margin-top:10px">';
-  html += '<div class="pembangkit-detail-cell-label">Gambar Fasilitas</div>';
-  html += '<input type="file" id="fasImgInput" accept="image/*" class="fas-edit-input" style="padding:4px">';
-  if (savedImg) html += '<div style="margin-top:4px;font-size:9px;color:var(--text-dim)">\u2713 Gambar tersimpan. Upload baru untuk mengganti.</div>';
-  html += '</div>';
-  html += '<div class="fas-edit-actions">';
-  html += '<button class="fas-save-btn" id="fasSaveBtn">Simpan</button>';
-  html += '<button class="fas-cancel-btn" id="fasCancelBtn">Batal</button>';
-  html += '</div>';
-  html += '</div>';
 
   // Coordinates
   html += '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:9px;color:var(--text-dim);text-align:right;letter-spacing:.5px;margin-top:8px">';
@@ -14410,84 +14376,8 @@ function renderFasilitasDetail(f){
   html += '</div>';
   panel.innerHTML = html;
 
-  // Wire edit toggle
   const editToggle = document.getElementById('fasEditToggle');
-  const editForm = document.getElementById('fasEditForm');
-  const detailGrid = document.getElementById('fasDetailGrid');
-  if (editToggle && editForm && detailGrid){
-    editToggle.onclick = () => {
-      editForm.style.display = '';
-      detailGrid.style.display = 'none';
-      editToggle.style.display = 'none';
-    };
-  }
-  // Wire cancel
-  const cancelBtn = document.getElementById('fasCancelBtn');
-  if (cancelBtn){
-    cancelBtn.onclick = () => {
-      editForm.style.display = 'none';
-      detailGrid.style.display = '';
-      editToggle.style.display = '';
-    };
-  }
-  // Wire add custom field
-  const addFieldBtn = document.getElementById('fasAddFieldBtn');
-  if (addFieldBtn){
-    addFieldBtn.onclick = () => {
-      const container = document.getElementById('fasCustomFieldsEdit');
-      const ci = container.querySelectorAll('.fas-custom-row').length;
-      const row = document.createElement('div');
-      row.className = 'fas-custom-row';
-      row.dataset.ci = ci;
-      row.innerHTML = '<input class="fas-edit-input fas-cf-label" value="" placeholder="Judul" style="flex:1"><input class="fas-edit-input fas-cf-value" value="" placeholder="Data" style="flex:2"><button class="fas-cf-del" title="Hapus">\u00d7</button>';
-      container.appendChild(row);
-      row.querySelector('.fas-cf-del').onclick = () => row.remove();
-    };
-  }
-  // Wire delete custom field buttons
-  panel.querySelectorAll('.fas-cf-del').forEach(btn => {
-    btn.onclick = () => btn.closest('.fas-custom-row').remove();
-  });
-
-  // Wire save
-  const saveBtn = document.getElementById('fasSaveBtn');
-  if (saveBtn){
-    saveBtn.onclick = async () => {
-      saveBtn.textContent = 'Menyimpan...';
-      saveBtn.disabled = true;
-      // Update standard fields
-      const inputs = panel.querySelectorAll('.fas-edit-input[data-key]');
-      inputs.forEach(inp => {
-        const idx = parseInt(inp.dataset.fidx, 10);
-        const key = inp.dataset.key;
-        if (FASILITAS_DATA[idx]) FASILITAS_DATA[idx][key] = inp.value;
-      });
-      // Collect custom fields
-      const cfRows = panel.querySelectorAll('.fas-custom-row');
-      const newCustomFields = [];
-      cfRows.forEach(row => {
-        const label = row.querySelector('.fas-cf-label')?.value?.trim();
-        const value = row.querySelector('.fas-cf-value')?.value?.trim();
-        if (label) newCustomFields.push({ label, value: value || '' });
-      });
-      // Handle image
-      const imgInput = document.getElementById('fasImgInput');
-      let imgBase64 = fCustom.image || '';
-      if (imgInput && imgInput.files && imgInput.files[0]){
-        imgBase64 = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => resolve(ev.target.result);
-          reader.readAsDataURL(imgInput.files[0]);
-        });
-      }
-      // Save to fasilitasCustomData + Supabase
-      fasilitasCustomData[f.nama] = { image: imgBase64, fields: newCustomFields };
-      await saveFasilitasCustom();
-      // Also save standard fields to localStorage
-      try { localStorage.setItem('fasilitas-custom-data', JSON.stringify(FASILITAS_DATA)); } catch(e){}
-      showFasilitasDetail(f);
-    };
-  }
+  if (editToggle) editToggle.onclick = () => openFasEditModal(f);
 }
 
 // ============================================================
@@ -14543,6 +14433,26 @@ let fasilitasPickMode = false;
 let fasPickTempMarker = null;
 let fasilitasPointsChannel = null;
 let fasAddWired = false;
+let fasModalMode = 'add';   // 'add' | 'edit'
+let fasEditTarget = null;   // facility being edited (curated or added)
+
+// Fields persisted as a per-facility override for the curated list (keyed by nama).
+const FAS_OVERRIDE_KEYS = ['status','jenis','kapasitas','jumlah_unit','tipe_mesin','produk','skema','icon_type','icon_color','lat','lon'];
+function applyFasilitasOverrides(){
+  for (const f of FASILITAS_DATA){
+    const ov = (fasilitasCustomData[f.nama] || {}).overrides;
+    if (ov){ FAS_OVERRIDE_KEYS.forEach(k => { if (ov[k] !== undefined && ov[k] !== null && ov[k] !== '') f[k] = ov[k]; }); }
+  }
+}
+
+async function updateFasilitasPoint(id, patch){
+  if (!supabaseClient) return false;
+  try {
+    const { error } = await supabaseClient.from('fasilitas_points').update(patch).eq('id', id);
+    if (error){ console.error('[Fasilitas] update error', error); return false; }
+    return true;
+  } catch(e){ console.error('[Fasilitas] update failed', e); return false; }
+}
 
 function mapFasilitasRow(r){
   return {
@@ -14626,6 +14536,7 @@ function updateFasIconPreview(){
 function openFasAddModal(){
   const modal = document.getElementById('fasAddModal');
   if (!modal) return;
+  fasModalMode = 'add'; fasEditTarget = null;
   ['fasFormNama','fasFormKapasitas','fasFormUnit','fasFormMesin','fasFormProduk','fasFormSkema','fasFormLat','fasFormLon'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -14634,6 +14545,41 @@ function openFasAddModal(){
   set('fasFormIconType','factory'); set('fasFormIconColor','#0F496E');
   const im = document.getElementById('fasFormImage'); if (im) im.value = '';
   const err = document.getElementById('fasModalErr'); if (err) err.textContent = '';
+  const namaEl = document.getElementById('fasFormNama'); if (namaEl) namaEl.disabled = false;
+  const title = document.getElementById('fasModalTitle'); if (title) title.textContent = 'Tambah Titik Fasilitas Produksi';
+  const saveBtn = document.getElementById('fasModalSave'); if (saveBtn) saveBtn.textContent = 'Simpan Titik';
+  if (fasPickTempMarker && fasilitasMarkerLayer){ fasilitasMarkerLayer.removeLayer(fasPickTempMarker); fasPickTempMarker = null; }
+  updateFasIconPreview();
+  modal.classList.add('open');
+}
+
+// Open the same modal pre-filled to edit an existing facility (curated or added).
+function openFasEditModal(f){
+  const modal = document.getElementById('fasAddModal');
+  if (!modal || !f) return;
+  fasModalMode = 'edit'; fasEditTarget = f;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+  set('fasFormNama', f.nama);
+  set('fasFormStatus', f.status || 'operational');
+  set('fasFormJenis', f.jenis || 'Main Hub');
+  set('fasFormKapasitas', f.kapasitas || '');
+  set('fasFormUnit', f.jumlah_unit || '');
+  set('fasFormMesin', f.tipe_mesin || '');
+  set('fasFormProduk', f.produk || '');
+  set('fasFormSkema', f.skema || '');
+  // Icon: use the facility's explicit choice, else derive from its status.
+  let iconType = f.icon_type, iconColor = f.icon_color;
+  if (!iconType){ const s = fasilitasStatusStyle(f.status); iconType = s.type; iconColor = s.color; }
+  set('fasFormIconType', iconType);
+  set('fasFormIconColor', iconColor || '#0F496E');
+  set('fasFormLat', isFinite(f.lat) ? f.lat : '');
+  set('fasFormLon', isFinite(f.lon) ? f.lon : '');
+  const im = document.getElementById('fasFormImage'); if (im) im.value = '';
+  const err = document.getElementById('fasModalErr'); if (err) err.textContent = '';
+  // Curated facilities keep their name (it is the storage key); added points can be renamed.
+  const namaEl = document.getElementById('fasFormNama'); if (namaEl) namaEl.disabled = !f._added;
+  const title = document.getElementById('fasModalTitle'); if (title) title.textContent = f._added ? 'Edit Titik Fasilitas' : 'Edit Detail Fasilitas';
+  const saveBtn = document.getElementById('fasModalSave'); if (saveBtn) saveBtn.textContent = 'Simpan Perubahan';
   if (fasPickTempMarker && fasilitasMarkerLayer){ fasilitasMarkerLayer.removeLayer(fasPickTempMarker); fasPickTempMarker = null; }
   updateFasIconPreview();
   modal.classList.add('open');
@@ -14657,22 +14603,60 @@ async function onFasSavePoint(){
   if (!nama){ if (err) err.textContent = 'Nama fasilitas wajib diisi.'; return; }
   if (!isFinite(lat) || !isFinite(lon)){ if (err) err.textContent = 'Koordinat (Latitude & Longitude) wajib diisi — ketik atau pilih di peta.'; return; }
   const saveBtn = document.getElementById('fasModalSave');
+  const restore = () => { if (saveBtn){ saveBtn.disabled = false; saveBtn.textContent = (fasModalMode === 'edit' ? 'Simpan Perubahan' : 'Simpan Titik'); } };
   if (saveBtn){ saveBtn.disabled = true; saveBtn.textContent = 'Menyimpan...'; }
-  let image = '';
+  // Optional new image (kept as-is when none chosen).
+  let newImage = null;
   const imgEl = document.getElementById('fasFormImage');
   if (imgEl && imgEl.files && imgEl.files[0]){
-    try { image = await new Promise((res, rej) => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(imgEl.files[0]); }); } catch(e){}
+    try { newImage = await new Promise((res, rej) => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(imgEl.files[0]); }); } catch(e){}
   }
-  const point = {
-    _added: true, _id: 'fp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-    nama, lat, lon,
+  const fields = {
     status: val('fasFormStatus') || 'operational', jenis: val('fasFormJenis') || 'Main Hub',
     kapasitas: val('fasFormKapasitas'), jumlah_unit: val('fasFormUnit'), tipe_mesin: val('fasFormMesin'),
     produk: val('fasFormProduk'), skema: val('fasFormSkema'),
-    icon_type: val('fasFormIconType') || 'factory', icon_color: val('fasFormIconColor') || '#0F496E', image,
+    icon_type: val('fasFormIconType') || 'factory', icon_color: val('fasFormIconColor') || '#0F496E',
+    lat, lon,
   };
+
+  // ----- EDIT mode -----
+  if (fasModalMode === 'edit' && fasEditTarget){
+    const f = fasEditTarget;
+    if (f._added){
+      const patch = Object.assign({ nama }, fields);
+      if (newImage != null) patch.image = newImage;
+      const ok = await updateFasilitasPoint(f._id, patch);
+      if (!ok){ if (err) err.textContent = 'Gagal menyimpan ke server. Coba lagi.'; restore(); return; }
+      Object.assign(f, { nama }, fields);
+      if (newImage != null) f.image = newImage;
+    } else {
+      // Curated: keep the name (it is the storage key); store field overrides + image.
+      Object.assign(f, fields);
+      const key = f.nama;
+      const cur = fasilitasCustomData[key] || {};
+      cur.overrides = fields;
+      if (newImage != null) cur.image = newImage;
+      if (!cur.fields) cur.fields = [];
+      fasilitasCustomData[key] = cur;
+      await saveFasilitasCustom();
+      try { localStorage.setItem('fasilitas-custom-data', JSON.stringify(FASILITAS_DATA)); } catch(e){}
+    }
+    restore();
+    closeFasAddModal();
+    fasilitasSelected = f;
+    renderFasilitasMarkers();
+    renderFasilitasDetail(f);
+    return;
+  }
+
+  // ----- ADD mode -----
+  const point = {
+    _added: true, _id: 'fp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    nama, image: newImage || '',
+  };
+  Object.assign(point, fields);
   const ok = await saveFasilitasPoint(point);
-  if (saveBtn){ saveBtn.disabled = false; saveBtn.textContent = 'Simpan Titik'; }
+  restore();
   if (!ok){ if (err) err.textContent = 'Gagal menyimpan ke server. Coba lagi.'; return; }
   fasilitasAddedPoints.push(point);
   closeFasAddModal();
@@ -14733,10 +14717,13 @@ function renderFasilitasAddedDetail(f, panel){
   if (f.image){
     html += '<div class="fas-img-section"><div class="fas-img-preview"><img src="' + f.image + '" alt="' + escapeHtml(f.nama) + '" style="width:100%;border-radius:3px;max-height:200px;object-fit:cover"></div></div>';
   }
-  html += '<button id="fasDeletePointBtn" style="width:100%;margin-top:12px;border:1px solid #d33;color:#d33;background:transparent;padding:9px;border-radius:8px;font-weight:600;cursor:pointer;font-family:Plus Jakarta Sans,sans-serif;font-size:11px">Hapus Titik Ini</button>';
+  html += '<button class="fas-edit-toggle-btn" id="fasEditAddedBtn"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 1.5l3 3L5 14H2v-3z"/></svg> Edit Detail</button>';
+  html += '<button id="fasDeletePointBtn" style="width:100%;margin-top:8px;border:1px solid #d33;color:#d33;background:transparent;padding:9px;border-radius:8px;font-weight:600;cursor:pointer;font-family:Plus Jakarta Sans,sans-serif;font-size:11px">Hapus Titik Ini</button>';
   html += '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:9px;color:var(--text-dim);text-align:right;letter-spacing:.5px;margin-top:8px">COORD: ' + f.lat.toFixed(4) + '°, ' + f.lon.toFixed(4) + '°</div>';
   html += '</div>';
   panel.innerHTML = html;
+  const editAddedBtn = document.getElementById('fasEditAddedBtn');
+  if (editAddedBtn) editAddedBtn.onclick = () => openFasEditModal(f);
   const delBtn = document.getElementById('fasDeletePointBtn');
   if (delBtn) delBtn.onclick = async () => {
     if (!confirm('Hapus titik "' + f.nama + '"? Tindakan ini permanen.')) return;
