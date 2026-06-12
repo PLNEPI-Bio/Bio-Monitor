@@ -53,7 +53,15 @@
 .auth-gate{
   position:fixed; inset:0; z-index:2147483647;
   display:flex; align-items:center; justify-content:center; padding:20px;
-  background:linear-gradient(135deg,#0F496E 0%,#0a3350 58%,#062236 100%);
+  /* Biomass / bioenergy theme: layered green gradient with a faint foliage
+     (leaf + sprig + pellet) pattern overlay. */
+  background-color:#15532e;
+  background-image:
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27160%27%20height%3D%27160%27%20viewBox%3D%270%200%20160%20160%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27rgba%28255%2C255%2C255%2C0.07%29%27%20stroke-width%3D%271.6%27%20stroke-linecap%3D%27round%27%3E%3Cpath%20d%3D%27M34%2018%20C58%2026%2060%2062%2038%2078%20C16%2062%2018%2030%2034%2018%20Z%27%2F%3E%3Cpath%20d%3D%27M34%2020%20C36%2042%2037%2060%2038%2076%27%2F%3E%3Cpath%20d%3D%27M34%2038%20L24%2044%20M35%2050%20L26%2057%20M35%2060%20L27%2067%27%2F%3E%3Cpath%20d%3D%27M34%2038%20L45%2044%20M35%2050%20L45%2057%20M35%2060%20L44%2067%27%2F%3E%3Cpath%20d%3D%27M118%2096%20C138%20102%20140%20132%20122%20145%20C104%20132%20106%20106%20118%2096%20Z%27%2F%3E%3Cpath%20d%3D%27M118%2098%20C120%20116%20121%20130%20122%20143%27%2F%3E%3Cpath%20d%3D%27M118%20112%20L110%20117%20M119%20122%20L111%20128%20M119%20131%20L112%20137%27%2F%3E%3Cpath%20d%3D%27M118%20112%20L127%20117%20M119%20122%20L127%20128%20M119%20131%20L126%20137%27%2F%3E%3Cpath%20d%3D%27M120%2016%20L120%2056%27%2F%3E%3Cpath%20d%3D%27M120%2024%20q-9%20-4%20-14%20-1%20q5%206%2014%204%20Z%27%2F%3E%3Cpath%20d%3D%27M120%2024%20q9%20-4%2014%20-1%20q-5%206%20-14%204%20Z%27%2F%3E%3Cpath%20d%3D%27M120%2034%20q-9%20-4%20-14%20-1%20q5%206%2014%204%20Z%27%2F%3E%3Cpath%20d%3D%27M120%2034%20q9%20-4%2014%20-1%20q-5%206%20-14%204%20Z%27%2F%3E%3Cpath%20d%3D%27M120%2044%20q-9%20-4%20-14%20-1%20q5%206%2014%204%20Z%27%2F%3E%3Cpath%20d%3D%27M120%2044%20q9%20-4%2014%20-1%20q-5%206%20-14%204%20Z%27%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%27rgba%28255%2C255%2C255%2C0.05%29%27%3E%3Ccircle%20cx%3D%2730%27%20cy%3D%27120%27%20r%3D%273%27%2F%3E%3Ccircle%20cx%3D%2742%27%20cy%3D%27128%27%20r%3D%272.4%27%2F%3E%3Ccircle%20cx%3D%2736%27%20cy%3D%27134%27%20r%3D%272%27%2F%3E%3Ccircle%20cx%3D%2786%27%20cy%3D%2740%27%20r%3D%272.6%27%2F%3E%3Ccircle%20cx%3D%2796%27%20cy%3D%2734%27%20r%3D%272%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"),
+    radial-gradient(1100px 620px at 14% 8%, rgba(120,220,120,.22), transparent 60%),
+    radial-gradient(900px 560px at 100% 100%, rgba(8,60,30,.55), transparent 55%),
+    linear-gradient(135deg,#2e7d32 0%,#1f6b34 42%,#15532e 72%,#0e3d22 100%);
+  background-repeat:repeat, no-repeat, no-repeat, no-repeat;
   font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;
 }
 .auth-gate.hidden{display:none}
@@ -61,8 +69,8 @@
   width:100%; max-width:360px; background:#fff; border-radius:16px;
   padding:34px 30px; box-shadow:0 24px 60px rgba(0,0,0,.35); text-align:center;
 }
-.auth-logo{font-weight:800;font-size:30px;letter-spacing:-.5px;color:#0F496E;margin-bottom:18px}
-.auth-logo span{color:#FFC72C;margin-left:3px}
+.auth-logo{display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.auth-logo svg{width:215px;height:auto;display:block}
 .auth-title{font-size:18px;font-weight:700;color:#0f2740;margin-bottom:4px}
 .auth-sub{font-size:12.5px;color:#5a6b7b;margin-bottom:22px;line-height:1.5}
 .auth-input{
@@ -4439,8 +4447,20 @@ html,body{
 <!-- ===== V63: Password gate (shown before any content is visible) ===== -->
 <div id="authGate" class="auth-gate">
   <div class="auth-card">
-    <div class="auth-logo">PLN<span>EPI</span></div>
-    <div class="auth-title">Biomassa Monitoring</div>
+    <div class="auth-logo">
+      <svg viewBox="0 0 252 72" role="img" aria-label="PLN Energi Primer Indonesia" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="6" width="60" height="60" rx="7" fill="#FFE100"/>
+        <g fill="none" stroke="#0095DA" stroke-width="3.2" stroke-linecap="round">
+          <path d="M11 49 q5.5 -5 11 0 t11 0 t11 0"/>
+          <path d="M11 56 q5.5 -5 11 0 t11 0 t11 0"/>
+          <path d="M11 63 q5.5 -5 11 0 t11 0 t11 0"/>
+        </g>
+        <path d="M38 11 L21 41 H31 L26 61 L47 29 H37 L43 11 Z" fill="#ED1C24"/>
+        <text x="74" y="40" font-family="'Plus Jakarta Sans',sans-serif" font-weight="800" font-size="35" letter-spacing="1" fill="#0F496E">PLN</text>
+        <text x="75" y="57" font-family="'Plus Jakarta Sans',sans-serif" font-weight="600" font-size="12.6" letter-spacing=".2" fill="#0F496E">Energi Primer Indonesia</text>
+      </svg>
+    </div>
+    <div class="auth-title">Bioenergi Monitoring</div>
     <div class="auth-sub">Masukkan password untuk mengakses dashboard</div>
     <form id="authForm" autocomplete="off">
       <input type="password" id="authInput" class="auth-input" placeholder="Password" autocomplete="current-password" aria-label="Password">
