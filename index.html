@@ -69,8 +69,11 @@
   width:100%; max-width:360px; background:#fff; border-radius:16px;
   padding:34px 30px; box-shadow:0 24px 60px rgba(0,0,0,.35); text-align:center;
 }
-.auth-logo{display:flex;align-items:center;justify-content:center;margin-bottom:18px}
-.auth-logo svg{width:215px;height:auto;display:block}
+.auth-logo{display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:20px}
+.auth-logo svg{width:52px;height:52px;display:block;flex:none}
+.auth-logo-text{display:flex;flex-direction:column;line-height:1.05;text-align:left}
+.auth-logo-text .lp{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:800;font-size:29px;letter-spacing:.5px;color:#0F496E}
+.auth-logo-text .ls{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:600;font-size:11.5px;letter-spacing:.1px;color:#0F496E;margin-top:3px}
 .auth-title{font-size:18px;font-weight:700;color:#0f2740;margin-bottom:4px}
 .auth-sub{font-size:12.5px;color:#5a6b7b;margin-bottom:22px;line-height:1.5}
 .auth-input{
@@ -4448,17 +4451,17 @@ html,body{
 <div id="authGate" class="auth-gate">
   <div class="auth-card">
     <div class="auth-logo">
-      <svg viewBox="0 0 252 72" role="img" aria-label="PLN Energi Primer Indonesia" xmlns="http://www.w3.org/2000/svg">
-        <g transform="translate(2,6) scale(1.875)">
-          <rect x="0.142" y="0.353" width="31.295" height="31.295" style="fill:#f7e82e"/>
-          <path d="m 6.451,11.694 c 0.839,-0.463 2.014,-0.828 2.955,-0.828 1.797,0 2.213,0.828 3.096,0.828 0.883,0 1.79,-0.828 3.423,-0.828 1.486,0 2.271,0.828 3.591,0.828 1.323,0 1.048,-0.828 2.91,-0.828 1.853,0 2.701,0.828 2.701,0.828 l 0,2.111 c 0,0 -0.989,-0.881 -2.544,-0.902 -1.543,-0.018 -1.502,0.902 -3.063,0.902 -1.562,0 -1.687,-0.902 -3.521,-0.902 -1.833,0 -2.11,0.902 -3.526,0.902 -1.42,0 -1.686,-0.939 -3.165,-0.92 -1.479,0.018 -2.857,0.92 -2.857,0.92 l 0,-2.111 z" style="fill:#28a8e0"/>
-          <path d="M 6.451,16.617 C 7.29,16.153 8.465,15.79 9.406,15.79 c 1.797,0 2.213,0.827 3.096,0.827 0.883,0 1.79,-0.827 3.423,-0.827 1.486,0 2.271,0.827 3.591,0.827 1.323,0 1.048,-0.827 2.91,-0.827 1.853,0 2.701,0.827 2.701,0.827 l 0,2.112 c 0,0 -0.989,-0.887 -2.544,-0.903 -1.543,-0.015 -1.502,0.903 -3.063,0.903 -1.562,0 -1.687,-0.903 -3.521,-0.903 -1.833,0 -2.11,0.903 -3.526,0.903 -1.42,0 -1.686,-0.937 -3.165,-0.918 -1.479,0.015 -2.857,0.918 -2.857,0.918 l 0,-2.112 z" style="fill:#28a8e0"/>
-          <path d="m 6.451,21.536 c 0.839,-0.466 2.014,-0.828 2.955,-0.828 1.797,0 2.213,0.828 3.096,0.828 0.883,0 1.79,-0.828 3.423,-0.828 1.486,0 2.271,0.828 3.591,0.828 1.323,0 1.048,-0.828 2.91,-0.828 1.853,0 2.701,0.828 2.701,0.828 l 0,2.118 c 0,0 -0.989,-0.888 -2.544,-0.907 -1.543,-0.016 -1.502,0.907 -3.063,0.907 -1.562,0 -1.687,-0.907 -3.521,-0.907 -1.833,0 -2.11,0.907 -3.526,0.907 -1.42,0 -1.686,-0.94 -3.165,-0.923 -1.479,0.016 -2.857,0.923 -2.857,0.923 l 0,-2.118 z" style="fill:#28a8e0"/>
-          <polygon points="14.904,28.364 17.273,16.461 8.856,20.163 13.775,4.534 17.782,4.534 13.112,15.369 21.423,12.007" style="fill:#e62a2b"/>
-        </g>
-        <text x="74" y="40" font-family="'Plus Jakarta Sans',sans-serif" font-weight="800" font-size="35" letter-spacing="1" fill="#0F496E">PLN</text>
-        <text x="75" y="57" font-family="'Plus Jakarta Sans',sans-serif" font-weight="600" font-size="12.6" letter-spacing=".2" fill="#0F496E">Energi Primer Indonesia</text>
+      <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PLN Energi Primer Indonesia">
+        <rect x="0.142" y="0.353" width="31.295" height="31.295" style="fill:#f7e82e"/>
+        <path d="m 6.451,11.694 c 0.839,-0.463 2.014,-0.828 2.955,-0.828 1.797,0 2.213,0.828 3.096,0.828 0.883,0 1.79,-0.828 3.423,-0.828 1.486,0 2.271,0.828 3.591,0.828 1.323,0 1.048,-0.828 2.91,-0.828 1.853,0 2.701,0.828 2.701,0.828 l 0,2.111 c 0,0 -0.989,-0.881 -2.544,-0.902 -1.543,-0.018 -1.502,0.902 -3.063,0.902 -1.562,0 -1.687,-0.902 -3.521,-0.902 -1.833,0 -2.11,0.902 -3.526,0.902 -1.42,0 -1.686,-0.939 -3.165,-0.92 -1.479,0.018 -2.857,0.92 -2.857,0.92 l 0,-2.111 z" style="fill:#28a8e0"/>
+        <path d="M 6.451,16.617 C 7.29,16.153 8.465,15.79 9.406,15.79 c 1.797,0 2.213,0.827 3.096,0.827 0.883,0 1.79,-0.827 3.423,-0.827 1.486,0 2.271,0.827 3.591,0.827 1.323,0 1.048,-0.827 2.91,-0.827 1.853,0 2.701,0.827 2.701,0.827 l 0,2.112 c 0,0 -0.989,-0.887 -2.544,-0.903 -1.543,-0.015 -1.502,0.903 -3.063,0.903 -1.562,0 -1.687,-0.903 -3.521,-0.903 -1.833,0 -2.11,0.903 -3.526,0.903 -1.42,0 -1.686,-0.937 -3.165,-0.918 -1.479,0.015 -2.857,0.918 -2.857,0.918 l 0,-2.112 z" style="fill:#28a8e0"/>
+        <path d="m 6.451,21.536 c 0.839,-0.466 2.014,-0.828 2.955,-0.828 1.797,0 2.213,0.828 3.096,0.828 0.883,0 1.79,-0.828 3.423,-0.828 1.486,0 2.271,0.828 3.591,0.828 1.323,0 1.048,-0.828 2.91,-0.828 1.853,0 2.701,0.828 2.701,0.828 l 0,2.118 c 0,0 -0.989,-0.888 -2.544,-0.907 -1.543,-0.016 -1.502,0.907 -3.063,0.907 -1.562,0 -1.687,-0.907 -3.521,-0.907 -1.833,0 -2.11,0.907 -3.526,0.907 -1.42,0 -1.686,-0.94 -3.165,-0.923 -1.479,0.016 -2.857,0.923 -2.857,0.923 l 0,-2.118 z" style="fill:#28a8e0"/>
+        <polygon points="14.904,28.364 17.273,16.461 8.856,20.163 13.775,4.534 17.782,4.534 13.112,15.369 21.423,12.007" style="fill:#e62a2b"/>
       </svg>
+      <div class="auth-logo-text">
+        <span class="lp">PLN</span>
+        <span class="ls">Energi Primer Indonesia</span>
+      </div>
     </div>
     <div class="auth-title">Bioenergi Monitoring</div>
     <div class="auth-sub">Masukkan password untuk mengakses dashboard</div>
