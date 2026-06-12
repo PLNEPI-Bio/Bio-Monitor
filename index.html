@@ -2835,6 +2835,55 @@ html,body{
 }
 
 /* ===== MAP FASILITAS PRODUKSI TAB (V45) ===== */
+/* Add-point button + modal (V66) */
+.map-area{position:relative}
+.fas-add-point-btn{
+  position:absolute;top:14px;right:14px;z-index:600;display:flex;align-items:center;gap:6px;
+  background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 14px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3px;
+  cursor:pointer;box-shadow:0 4px 14px rgba(15,73,110,.32);transition:filter .15s,transform .1s;
+}
+.fas-add-point-btn:hover{filter:brightness(1.08)}
+.fas-add-point-btn:active{transform:translateY(1px)}
+.fas-pick-hint{
+  display:none;position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:600;
+  background:var(--accent);color:#fff;padding:8px 14px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:11px;font-weight:600;box-shadow:0 4px 14px rgba(15,73,110,.32);
+}
+.fas-pick-hint.show{display:flex;align-items:center;gap:10px}
+.fas-pick-hint button{background:rgba(255,255,255,.22);border:none;color:#fff;border-radius:5px;padding:3px 9px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit}
+.fas-modal-backdrop{
+  display:none;position:fixed;inset:0;z-index:100000;background:rgba(8,20,30,.55);
+  align-items:center;justify-content:center;padding:20px;font-family:'Plus Jakarta Sans',sans-serif;
+}
+.fas-modal-backdrop.open{display:flex}
+.fas-modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.fas-modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700;color:var(--text-bright)}
+.fas-modal-close{background:transparent;border:none;color:var(--text-dim);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
+.fas-modal-close:hover{color:var(--text-bright)}
+.fas-modal-body{padding:18px 20px;overflow-y:auto}
+.fas-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.fas-field{display:flex;flex-direction:column;gap:4px}
+.fas-field-full{grid-column:1/-1}
+.fas-field>span{font-size:10px;font-weight:700;letter-spacing:.4px;color:var(--text-dim);text-transform:uppercase}
+.fas-field input[type=text],.fas-field input[type=number],.fas-field select,.fas-field input[type=file]{
+  width:100%;box-sizing:border-box;padding:9px 11px;font-size:12.5px;font-family:inherit;color:var(--text);
+  background:var(--panel-2);border:1.4px solid var(--border);border-radius:8px;outline:none;transition:border-color .15s;
+}
+.fas-field input:focus,.fas-field select:focus{border-color:var(--accent)}
+.fas-color-row{display:flex;align-items:center;gap:10px}
+.fas-color-row input[type=color]{width:46px;height:38px;padding:2px;border:1.4px solid var(--border);border-radius:8px;background:var(--panel-2);cursor:pointer}
+.fas-icon-preview{width:34px;height:38px;display:flex;align-items:center;justify-content:center}
+.fas-coord-row{display:flex;gap:8px;align-items:center}
+.fas-coord-row input{flex:1}
+.fas-pick-btn{white-space:nowrap;background:var(--panel-3);border:1.4px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.fas-pick-btn:hover{border-color:var(--accent);color:var(--accent)}
+.fas-modal-err{min-height:16px;margin-top:10px;font-size:11px;color:#d33;font-weight:600}
+.fas-modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border)}
+.fas-modal-foot .fas-cancel-btn{background:var(--panel-3);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 18px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.fas-modal-foot .fas-save-btn{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.fas-modal-foot .fas-save-btn:disabled{opacity:.6;cursor:default}
+@media(max-width:560px){.fas-form-grid{grid-template-columns:1fr}}
 /* V45.1: No sidebar — 2-column grid: map + detail panel. */
 .map-view.fasilitas-view{grid-template-columns:1fr 0px}
 .map-view.fasilitas-view.detail-open{grid-template-columns:1fr 340px}
@@ -4030,6 +4079,7 @@ html,body{
 .mou-filter-btn.active{
   background:var(--accent);border-color:var(--accent);color:white;
 }
+.mou-filter-count{opacity:.65;font-weight:700;margin-left:1px}
 .mou-year-btn{padding:6px 12px;font-size:9px;border-radius:20px}
 .mou-year-btn.active{background:#0F496E;border-color:#0F496E;color:white}
 .mou-year-btn:not(.active){opacity:.55}
@@ -4579,14 +4629,6 @@ html,body{
       </div>
       <div class="login-dd-actions" id="loginDdActions"></div>
     </div>
-    <button class="notif-btn" id="notifBtn" title="Notifications">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="17" height="17"><path d="M10 13a2 2 0 1 1-4 0M2.5 11c1-1 1-3 1.2-5.5C4 3 5.8 1.5 8 1.5s4 1.5 4.3 4c.2 2.5.2 4.5 1.2 5.5H2.5z"/></svg>
-      <span class="notif-badge" id="notifBadge"></span>
-    </button>
-    <div class="notif-dropdown" id="notifDropdown">
-      <div class="notif-header"><span>Notifications</span><button class="notif-clear-btn" id="notifClearBtn">Clear all</button></div>
-      <div id="notifList"></div>
-    </div>
     <div class="datetime-display">
       <div class="datetime-date" id="topbarDate">—</div>
       <div class="datetime-time" id="topbarTime">—</div>
@@ -4875,10 +4917,78 @@ html,body{
   <div class="map-view fasilitas-view">
     <div class="map-area">
       <div id="fasilitas-map"></div>
+      <button class="fas-add-point-btn" id="fasAddPointBtn" title="Tambah titik fasilitas baru">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+        Tambah Titik
+      </button>
+      <div class="fas-pick-hint" id="fasPickHint">📍 Klik di peta untuk menentukan lokasi titik baru <button id="fasPickCancel">Batal</button></div>
     </div>
 
     <!-- Right detail panel (hidden until a marker is clicked) -->
     <aside class="detail-panel" id="fasilitasDetailPanel"></aside>
+  </div>
+
+  <!-- Add-point modal -->
+  <div class="fas-modal-backdrop" id="fasAddModal">
+    <div class="fas-modal">
+      <div class="fas-modal-head">
+        <span>Tambah Titik Fasilitas Produksi</span>
+        <button class="fas-modal-close" id="fasModalClose" title="Tutup">×</button>
+      </div>
+      <div class="fas-modal-body">
+        <div class="fas-form-grid">
+          <label class="fas-field fas-field-full"><span>Nama Fasilitas</span>
+            <input type="text" id="fasFormNama" placeholder="cth: Cirebon"></label>
+          <label class="fas-field"><span>Status</span>
+            <select id="fasFormStatus">
+              <option value="understudy">Understudy (Kajian)</option>
+              <option value="construction">Under Construction (Konstruksi)</option>
+              <option value="operational" selected>Operational (Operasional)</option>
+            </select></label>
+          <label class="fas-field"><span>Jenis Fasilitas</span>
+            <select id="fasFormJenis">
+              <option value="Main Hub" selected>Main Hub</option>
+              <option value="Sub Hub">Sub Hub</option>
+              <option value="Stockpile">Stockpile</option>
+            </select></label>
+          <label class="fas-field"><span>Kapasitas</span>
+            <input type="text" id="fasFormKapasitas" placeholder="cth: 10 ton/jam"></label>
+          <label class="fas-field"><span>Jumlah Unit</span>
+            <input type="text" id="fasFormUnit" placeholder="cth: 1 unit"></label>
+          <label class="fas-field fas-field-full"><span>Tipe Mesin Pengolahan</span>
+            <input type="text" id="fasFormMesin" placeholder="cth: Hammer Mill"></label>
+          <label class="fas-field"><span>Produk</span>
+            <input type="text" id="fasFormProduk" placeholder="cth: Sawdust"></label>
+          <label class="fas-field"><span>Skema Utilisasi</span>
+            <input type="text" id="fasFormSkema" placeholder="cth: Service Provider"></label>
+          <label class="fas-field"><span>Jenis Ikon</span>
+            <select id="fasFormIconType">
+              <option value="factory">Pabrik / Hub</option>
+              <option value="hardhat">Konstruksi</option>
+              <option value="research">Riset / Kajian</option>
+              <option value="stockpile">Stockpile</option>
+              <option value="pin">Pin Lokasi</option>
+            </select></label>
+          <label class="fas-field"><span>Warna Ikon</span>
+            <span class="fas-color-row"><input type="color" id="fasFormIconColor" value="#0F496E"><span class="fas-icon-preview" id="fasIconPreview"></span></span></label>
+          <label class="fas-field fas-field-full"><span>Gambar Fasilitas</span>
+            <input type="file" id="fasFormImage" accept="image/*"></label>
+          <div class="fas-field fas-field-full">
+            <span>Titik Koordinat</span>
+            <div class="fas-coord-row">
+              <input type="number" step="any" id="fasFormLat" placeholder="Latitude">
+              <input type="number" step="any" id="fasFormLon" placeholder="Longitude">
+              <button type="button" class="fas-pick-btn" id="fasPickMapBtn">📍 Pilih di peta</button>
+            </div>
+          </div>
+        </div>
+        <div class="fas-modal-err" id="fasModalErr"></div>
+      </div>
+      <div class="fas-modal-foot">
+        <button class="fas-cancel-btn" id="fasModalCancel">Batal</button>
+        <button class="fas-save-btn" id="fasModalSave">Simpan Titik</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -14018,41 +14128,70 @@ let fasilitasSelected = null;
 //   - factory   (operational) — brand accent color
 //   - hardhat   (construction) — amber
 //   - research  (understudy) — purple (default) or green
-function buildFasilitasIconHtml(facility, selected){
-  const isOp = facility.status === 'operational';
-  const isUC = facility.status === 'construction';
-  const isUS = facility.status === 'understudy';
-  const isUSG = facility.status === 'understudy-green';
-  const color = isOp ? 'var(--accent)' : isUC ? '#f59e0b' : isUSG ? '#10b981' : isUS ? '#8b5cf6' : '#64748b';
-  const resolvedColor = isOp ? '#0F496E' : isUC ? '#f59e0b' : isUSG ? '#10b981' : isUS ? '#8b5cf6' : '#64748b';
-  // V54: Fasilitas produksi icon (warehouse/production facility) for operational
-  const iconSvg = isOp
-    ? '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
-      + '<path d="M2 20V10l5-3.5L12 10l5-3.5L22 10v10z" fill="' + resolvedColor + '" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/>'
-      + '<path d="M6 20v-4h3v4" stroke="#1a1a1a" stroke-width="0.8" fill="rgba(255,255,255,.35)"/>'
-      + '<path d="M11 20v-5h4v5" stroke="#1a1a1a" stroke-width="0.8" fill="rgba(255,255,255,.35)"/>'
-      + '<path d="M18 14.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0" fill="rgba(255,255,255,.5)"/>'
-      + '<path d="M2 20h20" stroke="#1a1a1a" stroke-width="1.2"/>'
-      + '</svg>'
-    : (isUC
-    ? '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
-      + '<path d="M4 19h16L12 5z" fill="' + resolvedColor + '" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/>'
+// Icon shape library — returns inner SVG markup filled with `color`.
+function fasilitasIconSvg(type, color){
+  const c = color || '#64748b';
+  if (type === 'hardhat' || type === 'construction'){
+    return '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="M4 19h16L12 5z" fill="' + c + '" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/>'
       + '<path d="M12 10.5v3.5" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/>'
-      + '<circle cx="12" cy="16" r="0.8" fill="#1a1a1a"/>'
-      + '</svg>'
-    : '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
-      + '<circle cx="10.5" cy="10.5" r="5.5" fill="' + resolvedColor + '" stroke="#1a1a1a" stroke-width="1.2"/>'
+      + '<circle cx="12" cy="16" r="0.8" fill="#1a1a1a"/></svg>';
+  }
+  if (type === 'research' || type === 'understudy' || type === 'understudy-green'){
+    return '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
+      + '<circle cx="10.5" cy="10.5" r="5.5" fill="' + c + '" stroke="#1a1a1a" stroke-width="1.2"/>'
       + '<path d="M15 15l4.5 4.5" stroke="#1a1a1a" stroke-width="1.8" stroke-linecap="round"/>'
-      + '<path d="M10.5 8v5M8 10.5h5" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>'
-      + '</svg>');
-  return '<div class="fasilitas-marker' + (selected ? ' selected' : '') + '" style="color:' + resolvedColor + '">'
-    + iconSvg + '</div>';
+      + '<path d="M10.5 8v5M8 10.5h5" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/></svg>';
+  }
+  if (type === 'stockpile'){
+    return '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="M2 19h20L12 7z" fill="' + c + '" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/>'
+      + '<path d="M7 19l5-5 5 5" stroke="#1a1a1a" stroke-width="0.7" opacity="0.45"/>'
+      + '<path d="M2 19h20" stroke="#1a1a1a" stroke-width="1.2"/></svg>';
+  }
+  if (type === 'pin'){
+    return '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="' + c + '" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/>'
+      + '<circle cx="12" cy="9" r="2.4" fill="#fff"/></svg>';
+  }
+  // factory (default)
+  return '<svg viewBox="0 0 24 24" width="32" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    + '<path d="M2 20V10l5-3.5L12 10l5-3.5L22 10v10z" fill="' + c + '" stroke="#1a1a1a" stroke-width="1.2" stroke-linejoin="round"/>'
+    + '<path d="M6 20v-4h3v4" stroke="#1a1a1a" stroke-width="0.8" fill="rgba(255,255,255,.35)"/>'
+    + '<path d="M11 20v-5h4v5" stroke="#1a1a1a" stroke-width="0.8" fill="rgba(255,255,255,.35)"/>'
+    + '<path d="M18 14.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0" fill="rgba(255,255,255,.5)"/>'
+    + '<path d="M2 20h20" stroke="#1a1a1a" stroke-width="1.2"/></svg>';
 }
 
+// Default {type,color} derived from a facility's status (for the curated list).
+function fasilitasStatusStyle(status){
+  if (status === 'operational') return { type: 'factory', color: '#0F496E' };
+  if (status === 'construction') return { type: 'hardhat', color: '#f59e0b' };
+  if (status === 'understudy-green') return { type: 'research', color: '#10b981' };
+  if (status === 'understudy') return { type: 'research', color: '#8b5cf6' };
+  return { type: 'factory', color: '#64748b' };
+}
+
+function buildFasilitasIconHtml(facility, selected){
+  let type, color;
+  // Added points carry an explicit icon choice; curated points derive it from status.
+  if (facility.icon_type){
+    type = facility.icon_type;
+    color = facility.icon_color || '#0F496E';
+  } else {
+    const s = fasilitasStatusStyle(facility.status);
+    type = s.type; color = s.color;
+  }
+  return '<div class="fasilitas-marker' + (selected ? ' selected' : '') + '" style="color:' + color + '">'
+    + fasilitasIconSvg(type, color) + '</div>';
+}
+
+// All facilities = curated list + user-added points (from Supabase).
+let fasilitasAddedPoints = [];
+function getAllFasilitas(){ return FASILITAS_DATA.concat(fasilitasAddedPoints); }
+
 async function bootFasilitasTab(){
-  // V53: Load custom data from Supabase first
-  await loadFasilitasCustom();
-  // V52: Load custom fasilitas data from localStorage if exists
+  // Apply any locally-saved field overrides for the curated rows (sync, instant).
   try {
     const saved = localStorage.getItem('fasilitas-custom-data');
     if (saved){
@@ -14066,10 +14205,15 @@ async function bootFasilitasTab(){
       }
     }
   } catch(e){}
-  // V45.1: Sidebar dihapus per request. No filters, no summary el.
-  // Just init map and render all markers directly.
+  // V66: Init the map and paint the curated markers IMMEDIATELY so the tab feels
+  // instant. Previously this awaited a Supabase round-trip before the map was even
+  // created, which is what made the tab slow to appear. Enrich asynchronously.
   initFasilitasMap();
   renderFasilitasMarkers();
+  wireFasilitasAddPoint();
+  loadFasilitasCustom().then(() => renderFasilitasMarkers());
+  loadFasilitasPoints().then(() => { renderFasilitasMarkers(); fitFasilitasBounds(); });
+  subscribeFasilitasPoints();
 }
 
 function initFasilitasMap(){
@@ -14097,14 +14241,22 @@ function initFasilitasMap(){
   L.tileLayer(baseUrl, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 14, minZoom: 3 }).addTo(fasilitasMap);
   L.tileLayer(labelsUrl, { attribution: '', subdomains: 'abcd', maxZoom: 14, minZoom: 3, pane: 'shadowPane' }).addTo(fasilitasMap);
   fasilitasMarkerLayer = L.layerGroup().addTo(fasilitasMap);
-  // Fit to facility points with some padding
-  const bounds = L.latLngBounds(FASILITAS_DATA.map(f => [f.lat, f.lon]));
+  // Map click handler — used to pick coordinates for a new point.
+  fasilitasMap.on('click', onFasilitasMapClick);
+  // Fit to facility points with some padding (re-fit after added points load).
   setTimeout(() => {
     try {
       fasilitasMap.invalidateSize();
-      fasilitasMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 9 });
+      fitFasilitasBounds();
     } catch(e){}
-  }, 100);
+  }, 80);
+}
+
+function fitFasilitasBounds(){
+  if (!fasilitasMap) return;
+  const all = getAllFasilitas().filter(f => isFinite(f.lat) && isFinite(f.lon));
+  if (!all.length) return;
+  try { fasilitasMap.fitBounds(L.latLngBounds(all.map(f => [f.lat, f.lon])), { padding: [60, 60], maxZoom: 9 }); } catch(e){}
 }
 
 // V45.1: renderFasilitasFilters, fasilitasMatchesFilter, and
@@ -14114,8 +14266,11 @@ function initFasilitasMap(){
 function renderFasilitasMarkers(){
   if (!fasilitasMap || !fasilitasMarkerLayer) return;
   fasilitasMarkerLayer.clearLayers();
-  for (const f of FASILITAS_DATA){
-    const isSelected = fasilitasSelected && fasilitasSelected.nama === f.nama;
+  fasPickTempMarker = null; // the temp pick marker lived in this layer
+  for (const f of getAllFasilitas()){
+    if (!isFinite(f.lat) || !isFinite(f.lon)) continue;
+    const isSelected = fasilitasSelected === f ||
+      (!!fasilitasSelected && !!fasilitasSelected._id && fasilitasSelected._id === f._id);
     const iconHtml = buildFasilitasIconHtml(f, isSelected);
     const icon = L.divIcon({
       html: iconHtml,
@@ -14130,7 +14285,7 @@ function renderFasilitasMarkers(){
       : (f.status === 'understudy' || f.status === 'understudy-green')
       ? f.nama + ' · Understudy'
       : f.nama;
-    marker.bindTooltip(tooltipText, { direction: 'top', offset: [0, -16], className: 'fasilitas-tooltip' });
+    marker.bindTooltip(tooltipText || 'Fasilitas', { direction: 'top', offset: [0, -16], className: 'fasilitas-tooltip' });
     marker.on('click', () => {
       fasilitasSelected = f;
       renderFasilitasMarkers();   // refresh to highlight selected
@@ -14147,6 +14302,8 @@ function renderFasilitasMarkers(){
 function renderFasilitasDetail(f){
   const panel = document.getElementById('fasilitasDetailPanel');
   if (!panel) return;
+  // V66: user-added points have their own (read-only + delete) detail view.
+  if (f._added){ renderFasilitasAddedDetail(f, panel); return; }
   const isUC = f.status === 'construction';
   const isUS = f.status === 'understudy' || f.status === 'understudy-green';
   const color = isUC ? '#f59e0b' : isUS ? (f.status === 'understudy-green' ? '#10b981' : '#8b5cf6') : 'var(--accent)';
@@ -14377,6 +14534,220 @@ function closeFasilitasDetail(){
   setTimeout(() => { if (fasilitasMap) fasilitasMap.invalidateSize(); }, 260);
 }
 window.closeFasilitasDetail = closeFasilitasDetail;
+
+// ============================================================
+// V66: User-added facility points — Supabase table `fasilitas_points`
+// (one row per point, realtime-synced). Add via the "+ Tambah Titik" modal.
+// ============================================================
+let fasilitasPickMode = false;
+let fasPickTempMarker = null;
+let fasilitasPointsChannel = null;
+let fasAddWired = false;
+
+function mapFasilitasRow(r){
+  return {
+    _added: true, _id: r.id, nama: r.nama || '', lat: Number(r.lat), lon: Number(r.lon),
+    status: r.status || 'operational', jenis: r.jenis || 'Main Hub', kapasitas: r.kapasitas || '',
+    jumlah_unit: r.jumlah_unit || '', tipe_mesin: r.tipe_mesin || '', produk: r.produk || '',
+    skema: r.skema || '', icon_type: r.icon_type || 'factory', icon_color: r.icon_color || '#0F496E',
+    image: r.image || '',
+  };
+}
+
+async function loadFasilitasPoints(){
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient.from('fasilitas_points').select('*').order('created_at');
+    if (error){ console.warn('[Fasilitas] points load error', error); return; }
+    fasilitasAddedPoints = (data || []).map(mapFasilitasRow);
+  } catch(e){ console.warn('[Fasilitas] points load failed', e); }
+}
+
+function subscribeFasilitasPoints(){
+  if (!supabaseClient || fasilitasPointsChannel) return;
+  try {
+    fasilitasPointsChannel = supabaseClient.channel('fasilitas-points-ch')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fasilitas_points' }, () => {
+        loadFasilitasPoints().then(() => renderFasilitasMarkers());
+      }).subscribe();
+  } catch(e){ console.warn('[Fasilitas] points subscribe failed', e); }
+}
+
+async function saveFasilitasPoint(p){
+  if (!supabaseClient) return false;
+  try {
+    const { error } = await supabaseClient.from('fasilitas_points').insert({
+      id: p._id, nama: p.nama, lat: p.lat, lon: p.lon, status: p.status, jenis: p.jenis,
+      kapasitas: p.kapasitas, jumlah_unit: p.jumlah_unit, tipe_mesin: p.tipe_mesin,
+      produk: p.produk, skema: p.skema, icon_type: p.icon_type, icon_color: p.icon_color,
+      image: p.image, created_by: (typeof getUserName === 'function' ? getUserName() : '') || '',
+    });
+    if (error){ console.error('[Fasilitas] save point error', error); return false; }
+    return true;
+  } catch(e){ console.error('[Fasilitas] save point failed', e); return false; }
+}
+
+async function deleteFasilitasPoint(id){
+  if (!supabaseClient) return false;
+  try {
+    const { error } = await supabaseClient.from('fasilitas_points').delete().eq('id', id);
+    if (error){ console.error('[Fasilitas] delete error', error); return false; }
+    return true;
+  } catch(e){ console.error('[Fasilitas] delete failed', e); return false; }
+}
+
+function onFasilitasMapClick(e){
+  if (!fasilitasPickMode) return;
+  fasilitasPickMode = false;
+  const hint = document.getElementById('fasPickHint');
+  if (hint) hint.classList.remove('show');
+  const mapEl = document.getElementById('fasilitas-map');
+  if (mapEl) mapEl.style.cursor = '';
+  const latI = document.getElementById('fasFormLat');
+  const lonI = document.getElementById('fasFormLon');
+  if (latI) latI.value = e.latlng.lat.toFixed(6);
+  if (lonI) lonI.value = e.latlng.lng.toFixed(6);
+  if (fasilitasMarkerLayer){
+    if (fasPickTempMarker) fasilitasMarkerLayer.removeLayer(fasPickTempMarker);
+    fasPickTempMarker = L.marker(e.latlng).addTo(fasilitasMarkerLayer);
+  }
+  // Reopen the modal WITHOUT resetting the values already entered.
+  const modal = document.getElementById('fasAddModal');
+  if (modal) modal.classList.add('open');
+}
+
+function updateFasIconPreview(){
+  const prev = document.getElementById('fasIconPreview');
+  const it = document.getElementById('fasFormIconType');
+  const ic = document.getElementById('fasFormIconColor');
+  if (prev && it && ic) prev.innerHTML = fasilitasIconSvg(it.value, ic.value);
+}
+
+function openFasAddModal(){
+  const modal = document.getElementById('fasAddModal');
+  if (!modal) return;
+  ['fasFormNama','fasFormKapasitas','fasFormUnit','fasFormMesin','fasFormProduk','fasFormSkema','fasFormLat','fasFormLon'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('fasFormStatus','operational'); set('fasFormJenis','Main Hub');
+  set('fasFormIconType','factory'); set('fasFormIconColor','#0F496E');
+  const im = document.getElementById('fasFormImage'); if (im) im.value = '';
+  const err = document.getElementById('fasModalErr'); if (err) err.textContent = '';
+  if (fasPickTempMarker && fasilitasMarkerLayer){ fasilitasMarkerLayer.removeLayer(fasPickTempMarker); fasPickTempMarker = null; }
+  updateFasIconPreview();
+  modal.classList.add('open');
+}
+
+function closeFasAddModal(){
+  const modal = document.getElementById('fasAddModal');
+  if (modal) modal.classList.remove('open');
+  fasilitasPickMode = false;
+  const hint = document.getElementById('fasPickHint'); if (hint) hint.classList.remove('show');
+  const mapEl = document.getElementById('fasilitas-map'); if (mapEl) mapEl.style.cursor = '';
+  if (fasPickTempMarker && fasilitasMarkerLayer){ fasilitasMarkerLayer.removeLayer(fasPickTempMarker); fasPickTempMarker = null; }
+}
+
+async function onFasSavePoint(){
+  const err = document.getElementById('fasModalErr');
+  const val = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const nama = val('fasFormNama');
+  const lat = parseFloat(val('fasFormLat'));
+  const lon = parseFloat(val('fasFormLon'));
+  if (!nama){ if (err) err.textContent = 'Nama fasilitas wajib diisi.'; return; }
+  if (!isFinite(lat) || !isFinite(lon)){ if (err) err.textContent = 'Koordinat (Latitude & Longitude) wajib diisi — ketik atau pilih di peta.'; return; }
+  const saveBtn = document.getElementById('fasModalSave');
+  if (saveBtn){ saveBtn.disabled = true; saveBtn.textContent = 'Menyimpan...'; }
+  let image = '';
+  const imgEl = document.getElementById('fasFormImage');
+  if (imgEl && imgEl.files && imgEl.files[0]){
+    try { image = await new Promise((res, rej) => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(imgEl.files[0]); }); } catch(e){}
+  }
+  const point = {
+    _added: true, _id: 'fp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    nama, lat, lon,
+    status: val('fasFormStatus') || 'operational', jenis: val('fasFormJenis') || 'Main Hub',
+    kapasitas: val('fasFormKapasitas'), jumlah_unit: val('fasFormUnit'), tipe_mesin: val('fasFormMesin'),
+    produk: val('fasFormProduk'), skema: val('fasFormSkema'),
+    icon_type: val('fasFormIconType') || 'factory', icon_color: val('fasFormIconColor') || '#0F496E', image,
+  };
+  const ok = await saveFasilitasPoint(point);
+  if (saveBtn){ saveBtn.disabled = false; saveBtn.textContent = 'Simpan Titik'; }
+  if (!ok){ if (err) err.textContent = 'Gagal menyimpan ke server. Coba lagi.'; return; }
+  fasilitasAddedPoints.push(point);
+  closeFasAddModal();
+  renderFasilitasMarkers();
+  if (fasilitasMap) fasilitasMap.setView([lat, lon], Math.max(fasilitasMap.getZoom() || 8, 9));
+}
+
+function wireFasilitasAddPoint(){
+  if (fasAddWired) return;
+  const addBtn = document.getElementById('fasAddPointBtn');
+  const modal = document.getElementById('fasAddModal');
+  if (!addBtn || !modal) return;
+  fasAddWired = true;
+  addBtn.onclick = () => openFasAddModal();
+  const closeBtn = document.getElementById('fasModalClose'); if (closeBtn) closeBtn.onclick = closeFasAddModal;
+  const cancelBtn = document.getElementById('fasModalCancel'); if (cancelBtn) cancelBtn.onclick = closeFasAddModal;
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeFasAddModal(); });
+  const it = document.getElementById('fasFormIconType'); if (it) it.onchange = updateFasIconPreview;
+  const ic = document.getElementById('fasFormIconColor'); if (ic) ic.oninput = updateFasIconPreview;
+  const pickBtn = document.getElementById('fasPickMapBtn');
+  if (pickBtn) pickBtn.onclick = () => {
+    fasilitasPickMode = true;
+    modal.classList.remove('open');
+    const hint = document.getElementById('fasPickHint'); if (hint) hint.classList.add('show');
+    const mapEl = document.getElementById('fasilitas-map'); if (mapEl) mapEl.style.cursor = 'crosshair';
+  };
+  const pickCancel = document.getElementById('fasPickCancel');
+  if (pickCancel) pickCancel.onclick = () => {
+    fasilitasPickMode = false;
+    const hint = document.getElementById('fasPickHint'); if (hint) hint.classList.remove('show');
+    const mapEl = document.getElementById('fasilitas-map'); if (mapEl) mapEl.style.cursor = '';
+    modal.classList.add('open');
+  };
+  const saveBtn = document.getElementById('fasModalSave'); if (saveBtn) saveBtn.onclick = onFasSavePoint;
+  updateFasIconPreview();
+}
+
+function renderFasilitasAddedDetail(f, panel){
+  const statusLabel = f.status === 'construction' ? 'Under Construction'
+    : (f.status === 'understudy' || f.status === 'understudy-green') ? 'Understudy' : 'Operasional';
+  const color = f.icon_color || '#0F496E';
+  let html = '<div class="pembangkit-detail-content">';
+  html += '<div class="pembangkit-detail-head">';
+  html += '<button class="detail-close-btn" onclick="closeFasilitasDetail()" title="Close">×</button>';
+  html += '<div class="pembangkit-detail-eyebrow">Detail Fasilitas Produksi · Titik Tambahan</div>';
+  html += '<div class="pembangkit-detail-name">' + escapeHtml(f.nama) + '</div>';
+  html += '<div class="pembangkit-detail-meta">';
+  html += '<span class="pembangkit-detail-pill" style="border-left:3px solid ' + color + '">' + escapeHtml(statusLabel) + '</span>';
+  html += '<span class="pembangkit-detail-pill">' + escapeHtml(f.jenis || '—') + '</span></div></div>';
+  const fields = [['kapasitas','Kapasitas',false],['jumlah_unit','Jumlah Unit',false],['tipe_mesin','Tipe Mesin Pengolahan',true],['produk','Produk',false],['skema','Skema Utilisasi',true]];
+  html += '<div class="pembangkit-detail-grid">';
+  for (const [key, label, full] of fields){
+    html += '<div class="pembangkit-detail-cell' + (full ? '" style="grid-column:1/-1' : '') + '">';
+    html += '<div class="pembangkit-detail-cell-label">' + label + '</div>';
+    html += '<div class="pembangkit-detail-cell-value text">' + escapeHtml(f[key] || '—') + '</div></div>';
+  }
+  html += '</div>';
+  if (f.image){
+    html += '<div class="fas-img-section"><div class="fas-img-preview"><img src="' + f.image + '" alt="' + escapeHtml(f.nama) + '" style="width:100%;border-radius:3px;max-height:200px;object-fit:cover"></div></div>';
+  }
+  html += '<button id="fasDeletePointBtn" style="width:100%;margin-top:12px;border:1px solid #d33;color:#d33;background:transparent;padding:9px;border-radius:8px;font-weight:600;cursor:pointer;font-family:Plus Jakarta Sans,sans-serif;font-size:11px">Hapus Titik Ini</button>';
+  html += '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:9px;color:var(--text-dim);text-align:right;letter-spacing:.5px;margin-top:8px">COORD: ' + f.lat.toFixed(4) + '°, ' + f.lon.toFixed(4) + '°</div>';
+  html += '</div>';
+  panel.innerHTML = html;
+  const delBtn = document.getElementById('fasDeletePointBtn');
+  if (delBtn) delBtn.onclick = async () => {
+    if (!confirm('Hapus titik "' + f.nama + '"? Tindakan ini permanen.')) return;
+    delBtn.disabled = true; delBtn.textContent = 'Menghapus...';
+    const ok = await deleteFasilitasPoint(f._id);
+    if (!ok){ delBtn.disabled = false; delBtn.textContent = 'Hapus Titik Ini'; alert('Gagal menghapus titik.'); return; }
+    fasilitasAddedPoints = fasilitasAddedPoints.filter(p => p._id !== f._id);
+    closeFasilitasDetail();
+    renderFasilitasMarkers();
+  };
+}
 
 function wireFasilitasSidebarCollapse(){ /* V45.1: stub, sidebar removed */ }
 
@@ -14863,15 +15234,26 @@ function renderMouTimeline(){
   // V52: Extract unique group prefixes for filter
   const prefixes = new Set();
   prefixes.add('ALL');
-  for (const g of groups){
+  const groupPrefix = (g) => {
     const m = g.name.match(/^\(([^)]+)\)/);
-    if (m) prefixes.add(m[1].toUpperCase());
-    else if (g.name.toUpperCase().includes('INTERNAL')) prefixes.add('INTERNAL');
+    if (m) return m[1].toUpperCase();
+    return g.name.toUpperCase().includes('INTERNAL') ? 'INTERNAL' : '';
+  };
+  for (const g of groups){
+    const pf = groupPrefix(g);
+    if (pf) prefixes.add(pf);
+  }
+  // Count how many groups fall under each category prefix (ALL = total).
+  const prefixCounts = {};
+  for (const g of groups){
+    const pf = groupPrefix(g);
+    if (pf) prefixCounts[pf] = (prefixCounts[pf] || 0) + 1;
   }
   let filterHtml = '<div class="mou-filter-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">';
   for (const p of prefixes){
     const isActive = (mouState.groupFilter || 'ALL') === p;
-    filterHtml += '<button class="mou-filter-btn' + (isActive ? ' active' : '') + '" data-prefix="' + p + '">' + p + '</button>';
+    const cnt = p === 'ALL' ? groups.length : (prefixCounts[p] || 0);
+    filterHtml += '<button class="mou-filter-btn' + (isActive ? ' active' : '') + '" data-prefix="' + p + '">' + p + ' <span class="mou-filter-count">(' + cnt + ')</span></button>';
   }
   filterHtml += '</div>';
 
