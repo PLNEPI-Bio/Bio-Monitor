@@ -5898,6 +5898,9 @@ function buildFilters(){
     entries.forEach(([val, n]) => {
       const btn = document.createElement('button');
       btn.className = 'filter-btn';
+      // Preserve any selection across rebuilds (filters are rebuilt once the
+      // data arrives from Supabase, so keep already-active toggles highlighted).
+      if (state.filters[key].has(val)) btn.classList.add('active');
       const swatch = key === 'genco' ? `<span class="filter-swatch" style="background:${gencoColor(val)}"></span>` : '';
       btn.innerHTML = `${swatch}<span class="filter-label">${val}</span><span class="filter-count">${n}</span>`;
       btn.onclick = () => {
@@ -12358,6 +12361,14 @@ function applyDashboardData(newData, meta){
 
   // Update last-updated indicator
   populateUpdatedIndicator();
+
+  // Rebuild the Map Cofiring filter chips (Genco/Boiler/Regional) now that the
+  // plant data is available. buildFilters() runs once at map init, which (with
+  // data loaded from Supabase) happens before DATA.plants is populated — without
+  // this rebuild the filter lists render empty.
+  if (typeof buildFilters === 'function' && document.getElementById('filter-genco')){
+    try { buildFilters(); } catch(e){ console.warn('[Map] buildFilters refresh failed:', e); }
+  }
 
   // Re-render visible tab + invalidate caches for tabs not yet shown
   rerenderActiveTab();
