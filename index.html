@@ -16547,6 +16547,11 @@ window.addEventListener('DOMContentLoaded', () => {
   // ========= SUPABASE: load latest dashboard data on app start =========
   // Boot Supabase early so Update Data tab + Usulan tab share the same client
   initSupabase();
+  // Pre-load the usulan base rows (no longer embedded in the HTML) so the Update
+  // Data status count is correct and the Usulan tab paints instantly when opened.
+  if (typeof fetchUsulanBaseFromServer === 'function'){
+    fetchUsulanBaseFromServer().catch(() => {});
+  }
   if (supabaseClient && navigator.onLine){
     // Async load latest dashboard data from server (overrides embedded HTML data)
     loadDashboardDataFromServer().then(serverRow => {
