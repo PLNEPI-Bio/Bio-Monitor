@@ -8667,13 +8667,31 @@ function renderParetoView(){
   // Set default month to last data month if available
   const lastIdx = (typeof pareto.last_data_month_idx === 'number') ? pareto.last_data_month_idx : 3;
 
-  // Wire month + genco selectors (once)
+  // Build the month dropdown dynamically from the last month that has data, so
+  // newly-uploaded months always appear. The options used to be hardcoded up to
+  // April, so uploading e.g. May (Mei) data left the filter stuck — the value was
+  // set to "4" but no matching <option> existed.
   const monthSel = document.getElementById('paretoMonthSel');
   const gencoSel = document.getElementById('paretoGencoSel');
-  if (monthSel && !monthSel.dataset.wired){
-    monthSel.value = paretoState.monthSel = String(lastIdx);
-    monthSel.onchange = () => { paretoState.monthSel = monthSel.value; renderParetoAll(); };
-    monthSel.dataset.wired = '1';
+  if (monthSel){
+    const ID_MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    const ID_MONTHS_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    const safeIdx = Math.max(0, Math.min(11, lastIdx));
+    let opts = '<option value="ytd">YTD (Jan-' + ID_MONTHS_SHORT[safeIdx] + ')</option>';
+    for (let m = 0; m <= safeIdx; m++){
+      opts += '<option value="' + m + '">' + ID_MONTHS[m] + '</option>';
+    }
+    monthSel.innerHTML = opts;
+    if (!monthSel.dataset.wired){
+      // First render: default to the latest month with data.
+      paretoState.monthSel = String(safeIdx);
+      monthSel.onchange = () => { paretoState.monthSel = monthSel.value; renderParetoAll(); };
+      monthSel.dataset.wired = '1';
+    } else if (paretoState.monthSel !== 'ytd' && parseInt(paretoState.monthSel, 10) > safeIdx){
+      // A previously-selected month no longer exists → clamp to the last one.
+      paretoState.monthSel = String(safeIdx);
+    }
+    monthSel.value = paretoState.monthSel;
   }
   if (gencoSel && !gencoSel.dataset.wired){
     gencoSel.value = paretoState.gencoSel;
