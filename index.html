@@ -751,6 +751,15 @@ html,body{
 .kpi.neutral{border-left:2px solid var(--neutral)}
 
 .filter-group{display:flex;flex-direction:column;gap:4px}
+.map-export-btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
+  margin-top:18px;padding:10px 12px;cursor:pointer;
+  background:var(--accent);color:#fff;border:none;border-radius:8px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.4px;
+  transition:filter .15s,transform .1s;box-shadow:var(--shadow-sm);
+}
+.map-export-btn:hover{filter:brightness(1.08)}
+.map-export-btn:active{transform:translateY(1px)}
 .filter-btn{
   background:transparent;border:1px solid var(--border);color:var(--text);
   padding:7px 10px;text-align:left;cursor:pointer;transition:all .15s;
@@ -4793,6 +4802,11 @@ html,body{
 
       <h3>Filter · Regional</h3>
       <div class="filter-group" id="filter-regional"></div>
+
+      <button class="map-export-btn" id="mapExportBtn" onclick="downloadMapCofiringExcel()" title="Unduh semua data PLTU pada tab ini sebagai Excel">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Unduh Excel
+      </button>
     </aside>
 
     <div class="map-area">
@@ -11990,6 +12004,134 @@ function downloadBottlenecksExcel(){
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Bottlenecks');
   XLSX.writeFile(wb, 'Bottlenecks_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+}
+
+// ============================================================
+// V67: Map Cofiring — export all PLTU data to a formatted .xlsx
+// ============================================================
+// Apply a consistent style to an aoa sheet: dark header, zebra rows, borders,
+// number formats, frozen header, autofilter, and an optional bold TOTAL row.
+function _styleExcelSheet(ws, opts){
+  opts = opts || {};
+  const centerCols = opts.centerCols || [];
+  const numCols = opts.numCols || [];
+  const pctCols = opts.pctCols || [];
+  const totalRowIndex = (opts.totalRowIndex != null) ? opts.totalRowIndex : -1;
+  const thin = { style: 'thin', color: { rgb: 'CCD3DA' } };
+  const borderAll = { top: thin, bottom: thin, left: thin, right: thin };
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = range.s.r; R <= range.e.r; R++){
+    for (let C = range.s.c; C <= range.e.c; C++){
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[addr];
+      if (!cell) continue;
+      const isNum = numCols.includes(C);
+      const isPct = pctCols.includes(C);
+      if (R === 0){
+        cell.s = {
+          font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+          fill: { fgColor: { rgb: '1F3A5F' } },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          border: borderAll,
+        };
+      } else {
+        const isTotal = (R === totalRowIndex);
+        const isEven = (R % 2 === 0);
+        cell.s = {
+          font: { sz: 10, bold: isTotal, color: { rgb: isTotal ? '0F496E' : '1F2937' } },
+          fill: { fgColor: { rgb: isTotal ? 'E3ECF5' : (isEven ? 'F4F7FA' : 'FFFFFF') } },
+          alignment: { horizontal: (isNum || isPct) ? 'right' : (centerCols.includes(C) ? 'center' : 'left'), vertical: 'center', wrapText: !(isNum || isPct) },
+          border: borderAll,
+        };
+        if (isNum && typeof cell.v === 'number') cell.z = '#,##0';
+        if (isPct && typeof cell.v === 'number') cell.z = '0.0%';
+      }
+    }
+  }
+  const fc = (opts.freezeCols != null) ? opts.freezeCols : 1;
+  ws['!freeze'] = { xSplit: fc, ySplit: 1, topLeftCell: XLSX.utils.encode_cell({ r: 1, c: fc }), activePane: 'bottomLeft', state: 'frozen' };
+  const lastFilterRow = (totalRowIndex >= 0) ? totalRowIndex - 1 : range.e.r;
+  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, lastFilterRow), c: range.e.c } }) };
+}
+
+function downloadMapCofiringExcel(){
+  const plants = (DATA && DATA.plants) ? DATA.plants.slice() : [];
+  if (!plants.length){ alert('Belum ada data PLTU untuk diunduh.'); return; }
+  plants.sort((a, b) => (a.genco || '').localeCompare(b.genco || '') || (a.name || '').localeCompare(b.name || ''));
+  const STATUS_LABEL = { on_track: 'On Track', at_risk: 'At Risk', behind: 'Behind', no_data: 'No Data' };
+  const MONTHS_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  const sum = (arr) => (arr || []).reduce((s, v) => s + (+v || 0), 0);
+  const wb = XLSX.utils.book_new();
+
+  // ----- Sheet 1: Ringkasan PLTU -----
+  const h1 = ['No','PLTU','Genco','Boiler','Regional','Status','Latitude','Longitude','Target 2026 (ton)','Konfirmasi DO 2026 (ton)','Realisasi 2024 (ton)','Realisasi 2025 (ton)','Realisasi 2026 (ton)','Realisasi 2026 %','Gap Akm (ton)','Sisa Kontrak (ton)','Keb. Batubara (ton)','Jumlah Unit','Total Kapasitas (MW)'];
+  const aoa1 = [h1];
+  let tTarget = 0, tDO = 0, tReal = 0, tReal24 = 0, tReal25 = 0;
+  plants.forEach((p, i) => {
+    const tg = (+p.target_2026_total) || sum(p.target_2026);
+    const doT = (+p.do_2026_total) || sum(p.do_2026);
+    const rl = (+p.real_2026_total) || sum(p.real_2026);
+    const r24 = sum((p.historical_real && p.historical_real['2024']) || []);
+    const r25 = sum((p.historical_real && p.historical_real['2025']) || []);
+    tTarget += tg; tDO += doT; tReal += rl; tReal24 += r24; tReal25 += r25;
+    const pct = (typeof p.real_pct === 'number' && p.real_pct) ? p.real_pct : (tg > 0 ? rl / tg : 0);
+    aoa1.push([ i + 1, p.name || '', p.genco || '', p.boiler || '', p.regional || '', STATUS_LABEL[p.status] || p.status || '',
+      (typeof p.lat === 'number' ? p.lat : ''), (typeof p.lon === 'number' ? p.lon : ''),
+      tg, doT, r24, r25, rl, pct, (+p.gap_akm || 0), (+p.sisa_kontrak || 0), (+p.kebutuhan_batubara || 0),
+      (+p.jumlah_unit || 0), (+p.total_kapasitas || 0) ]);
+  });
+  aoa1.push(['', 'TOTAL', '', '', '', '', '', '', tTarget, tDO, tReal24, tReal25, tReal, (tTarget > 0 ? tReal / tTarget : 0), '', '', '', '', '']);
+  const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
+  ws1['!cols'] = [{wch:5},{wch:24},{wch:8},{wch:10},{wch:16},{wch:10},{wch:12},{wch:12},{wch:16},{wch:20},{wch:18},{wch:18},{wch:18},{wch:13},{wch:14},{wch:15},{wch:16},{wch:11},{wch:17}];
+  ws1['!rows'] = [{hpt:30}];
+  _styleExcelSheet(ws1, { centerCols:[0,2,3,5,6,7], numCols:[8,9,10,11,12,14,15,16,17,18], pctCols:[13], freezeCols:2, totalRowIndex: aoa1.length - 1 });
+  // Latitude/Longitude: 6-decimal format (keep existing style, just set number fmt)
+  for (let R = 1; R < aoa1.length - 1; R++){
+    [6, 7].forEach(c => { const cell = ws1[XLSX.utils.encode_cell({ r: R, c })]; if (cell && typeof cell.v === 'number') cell.z = '0.000000'; });
+  }
+  XLSX.utils.book_append_sheet(wb, ws1, 'Ringkasan PLTU');
+
+  // ----- Monthly sheets (Realisasi / Target / DO) per year -----
+  const getMonthly = (p, metric, year) => {
+    if (year === '2026'){
+      if (metric === 'real') return p.real_2026 || (p.historical_real && p.historical_real['2026']) || [];
+      if (metric === 'target') return p.target_2026 || (p.historical_target && p.historical_target['2026']) || [];
+      return p.do_2026 || (p.historical_do && p.historical_do['2026']) || [];
+    }
+    const map = metric === 'real' ? p.historical_real : metric === 'target' ? p.historical_target : p.historical_do;
+    return (map && map[year]) || [];
+  };
+  function monthlySheet(title, getArr){
+    const h = ['No','PLTU','Genco'].concat(MONTHS_ID).concat(['Total']);
+    const aoa = [h];
+    const totals = new Array(12).fill(0);
+    plants.forEach((p, i) => {
+      const arr = getArr(p) || [];
+      const row = [ i + 1, p.name || '', p.genco || '' ];
+      let rt = 0;
+      for (let m = 0; m < 12; m++){ const v = +arr[m] || 0; row.push(v); totals[m] += v; rt += v; }
+      row.push(rt);
+      aoa.push(row);
+    });
+    const totalRow = ['', 'TOTAL', ''];
+    let gt = 0; for (let m = 0; m < 12; m++){ totalRow.push(totals[m]); gt += totals[m]; } totalRow.push(gt);
+    aoa.push(totalRow);
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:5},{wch:24},{wch:8}].concat(MONTHS_ID.map(() => ({wch:10}))).concat([{wch:13}]);
+    ws['!rows'] = [{hpt:22}];
+    const numCols = []; for (let c = 3; c <= 15; c++) numCols.push(c);
+    _styleExcelSheet(ws, { centerCols:[0,2], numCols, freezeCols:2, totalRowIndex: aoa.length - 1 });
+    XLSX.utils.book_append_sheet(wb, ws, title);
+  }
+  // DO data only exists for 2026 and 2025 (the 2024 historical layout has no DO).
+  [['2026', true], ['2025', true], ['2024', false]].forEach(function(yc){
+    const yr = yc[0], hasDO = yc[1];
+    monthlySheet('Realisasi Bulanan ' + yr, p => getMonthly(p, 'real', yr));
+    monthlySheet('Target Bulanan ' + yr, p => getMonthly(p, 'target', yr));
+    if (hasDO) monthlySheet('DO Bulanan ' + yr, p => getMonthly(p, 'do', yr));
+  });
+
+  XLSX.writeFile(wb, 'Map_Cofiring_PLTU_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 
 // ---------- Add Usulan modal ----------
