@@ -15370,6 +15370,14 @@ function renderMouTimeline(){
     weekHeaders += '<th class="mou-wk-hdr" style="background:' + q.wk + ';color:#fff">W' + wc.week + '</th>';
   }
 
+  // V65: "INTERNAL EVENT" / MOU-NDA groups are informational rows, not MoU
+  // items — exclude them from the filter chips and all counts.
+  const isInternalEventGroup = (g) => {
+    const u = g.name.toUpperCase();
+    return u.includes('INTERNAL EVENT') || u.replace(/[\s]+/g,'').includes('MOU-NDA') || u.includes('MOU - NDA');
+  };
+  const filterableGroups = groups.filter(g => !isInternalEventGroup(g));
+
   // V52: Extract unique group prefixes for filter
   const prefixes = new Set();
   prefixes.add('ALL');
@@ -15378,20 +15386,20 @@ function renderMouTimeline(){
     if (m) return m[1].toUpperCase();
     return g.name.toUpperCase().includes('INTERNAL') ? 'INTERNAL' : '';
   };
-  for (const g of groups){
+  for (const g of filterableGroups){
     const pf = groupPrefix(g);
     if (pf) prefixes.add(pf);
   }
   // Count how many groups fall under each category prefix (ALL = total).
   const prefixCounts = {};
-  for (const g of groups){
+  for (const g of filterableGroups){
     const pf = groupPrefix(g);
     if (pf) prefixCounts[pf] = (prefixCounts[pf] || 0) + 1;
   }
   let filterHtml = '<div class="mou-filter-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">';
   for (const p of prefixes){
     const isActive = (mouState.groupFilter || 'ALL') === p;
-    const cnt = p === 'ALL' ? groups.length : (prefixCounts[p] || 0);
+    const cnt = p === 'ALL' ? filterableGroups.length : (prefixCounts[p] || 0);
     filterHtml += '<button class="mou-filter-btn' + (isActive ? ' active' : '') + '" data-prefix="' + p + '">' + p + ' <span class="mou-filter-count">(' + cnt + ')</span></button>';
   }
   filterHtml += '</div>';
@@ -15453,7 +15461,7 @@ function renderMouTimeline(){
     const totalCols = 6 + weekCols.length;
 
     // V51: Track if we've passed "INTERNAL EVENT" group for green styling
-    const isInternalEvent = g.name.toUpperCase().includes('INTERNAL EVENT') || g.name.toUpperCase().replace(/[\s]+/g,'').includes('MOU-NDA') || g.name.toUpperCase().includes('MOu-NDA') || g.name.toUpperCase().includes('MOU - NDA');
+    const isInternalEvent = isInternalEventGroup(g);
     if (isInternalEvent) _pastInternalEvent = true;
     const grpStyle = isInternalEvent ? 'background:#4b5563 !important' : (_pastInternalEvent ? '' : '');
     const nameColor = _pastInternalEvent && !isInternalEvent ? 'color:#0047AB' : '';
