@@ -6393,14 +6393,24 @@ function renderPlantJenisList(plant){
   const plantNameLower = (plant.name || '').toLowerCase().trim();
   if (!plantNameLower) return '<div class="jenis-empty">—</div>';
   // Filter contracts for this plant
-  const matched = DATA.contracts.filter(c => {
+  const nameMatched = DATA.contracts.filter(c => {
     const cp = (c.pltu || '').toLowerCase().trim();
     if (!cp) return false;
     // Exact match preferred; fallback to startsWith for split units like "Suralaya 1-4" vs "Suralaya"
     return cp === plantNameLower || cp.startsWith(plantNameLower) || plantNameLower.startsWith(cp);
   });
-  if (matched.length === 0){
+  if (nameMatched.length === 0){
     return '<div class="jenis-empty">Belum ada kontrak terdaftar untuk PLTU ini.</div>';
+  }
+  // V67: Only count contracts that are still within their active period — exclude
+  // any whose end date (akhir) has already passed. Contracts without an end date
+  // are kept (their activeness can't be determined as "expired"). This keeps the
+  // "X kontrak · Y mitra" counts (and the volume/realisasi totals) aligned with
+  // contracts that are actually still in force.
+  const today = new Date().toISOString().slice(0, 10);
+  const matched = nameMatched.filter(c => !(c.akhir && c.akhir < today));
+  if (matched.length === 0){
+    return '<div class="jenis-empty">Tidak ada kontrak yang masih aktif untuk PLTU ini.</div>';
   }
   // Aggregate by jenis: sum volume, count contracts, sum total realisasi
   const byJenis = {};
