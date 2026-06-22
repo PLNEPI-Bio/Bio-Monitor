@@ -1853,6 +1853,51 @@ html,body{
   .kontrak-summary-value{font-size:16px}
 }
 
+/* Executive Summary (Ringkasan) */
+.ringkasan-section{margin-bottom:18px}
+.ringkasan-section-sub{font-size:10px;color:var(--text-dim);margin:-6px 0 12px;line-height:1.4}
+.ringkasan-export-btn{
+  display:inline-flex;align-items:center;gap:7px;font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:11px;font-weight:600;letter-spacing:.3px;color:#fff;background:var(--accent);
+  border:none;border-radius:8px;padding:9px 14px;cursor:pointer;transition:opacity .15s,transform .1s;
+}
+.ringkasan-export-btn:hover{opacity:.9}
+.ringkasan-export-btn:active{transform:scale(.97)}
+.ringkasan-scroll{max-height:none;border:1px solid var(--border);border-radius:8px}
+.ringkasan-expiry-legend{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:10px;color:var(--text-dim);margin-bottom:10px}
+.ringkasan-expiry-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:6px}
+.ringkasan-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px}
+.ringkasan-table th{
+  position:sticky;top:0;z-index:1;background:var(--panel-3);color:var(--text-dim);
+  font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.ringkasan-table td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.ringkasan-table tr:hover td{background:var(--panel-2)}
+.ringkasan-table td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ringkasan-table .r-pltu{color:var(--text-bright);font-weight:500}
+.ringkasan-days{display:inline-block;min-width:54px;text-align:center;font-weight:700;font-size:10px;padding:3px 8px;border-radius:20px}
+.ringkasan-days.d30{background:rgba(239,68,68,.15);color:#ef4444}
+.ringkasan-days.d60{background:rgba(245,158,11,.15);color:#f59e0b}
+.ringkasan-days.d90{background:rgba(59,130,246,.15);color:#3b82f6}
+.ringkasan-empty{padding:24px;text-align:center;color:var(--text-dim);font-size:11px}
+
+/* PDF export: print only the Executive Summary, expanded full-height */
+@media print{
+  body.printing-ringkasan .topbar,
+  body.printing-ringkasan .tabs,
+  body.printing-ringkasan .tab-dd-menu,
+  body.printing-ringkasan .mobile-bottom-nav,
+  body.printing-ringkasan .ringkasan-export-btn{display:none !important}
+  body.printing-ringkasan .view:not([data-view="ringkasan"]){display:none !important}
+  body.printing-ringkasan .view[data-view="ringkasan"]{display:block !important;position:static !important}
+  body.printing-ringkasan .real-view{height:auto !important;overflow:visible !important;display:block !important;padding:0 !important}
+  body.printing-ringkasan .ringkasan-scroll{max-height:none !important;overflow:visible !important;border:none !important}
+  body.printing-ringkasan .ringkasan-section{break-inside:avoid;page-break-inside:avoid}
+  body.printing-ringkasan .kontrak-summary-cell{break-inside:avoid;box-shadow:none !important}
+  body.printing-ringkasan .ringkasan-table tr{break-inside:avoid}
+}
+
 /* V45.2: Jenis Biomassa pie chart section */
 .kontrak-jenis-chart-section{
   background:var(--panel);border:1px solid var(--border);
@@ -4653,6 +4698,10 @@ html,body{
 
 <!-- Tab navigation (V49: dropdown menus for Maps + MoU) -->
 <nav class="tabs">
+  <button class="tab" data-tab="ringkasan">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12v12H2zM2 6h12M6 6v8M2 10h4"/></svg>
+    RINGKASAN
+  </button>
   <button class="tab active" data-tab="map">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3zM5 2v12M11 4v12"/></svg>
     MAP COFIRING
@@ -4723,6 +4772,10 @@ html,body{
 </div>
 <div class="mobile-more-backdrop" id="mobMoreBackdrop" onclick="mobCloseMore()"></div>
 <div class="mobile-more-menu" id="mobMoreMenu">
+  <button class="mobile-more-item" onclick="mobNav('ringkasan')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12v12H2zM2 6h12M6 6v8M2 10h4"/></svg>
+    Executive Summary
+  </button>
   <div class="mobile-more-group" id="mobPembangkitGroup">
     <button class="mobile-more-item mobile-more-parent" onclick="mobTogglePembangkitSub()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
@@ -4751,6 +4804,43 @@ html,body{
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h10v10H2zM12 5h2v8a1 1 0 0 1-1 1H4M4 6h6M4 8h6M4 10h4"/></svg>
     Berita
   </button>
+</div>
+
+<!-- ====== TAB 0: EXECUTIVE SUMMARY (RINGKASAN) ====== -->
+<div class="view" data-view="ringkasan">
+  <div class="real-view" id="ringkasanView">
+    <div class="real-header">
+      <div>
+        <div class="real-title">Executive Summary</div>
+        <div class="real-title-sub">Ringkasan kinerja · realisasi, kontrak, pemasok &amp; MoU</div>
+      </div>
+      <button class="ringkasan-export-btn" id="ringkasanExportBtn" title="Ekspor ringkasan ke PDF">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 1v9M5 7l3 3 3-3M2 13h12"/></svg>
+        Export PDF
+      </button>
+    </div>
+
+    <div class="real-recap-wrap ringkasan-section">
+      <h3><span>Indikator Utama 2026 <span class="recap-count" id="ringkasan-asof"></span></span></h3>
+      <div class="kontrak-summary" id="ringkasan-kpi"></div>
+    </div>
+
+    <div class="real-recap-wrap ringkasan-section">
+      <h3><span>Kontrak Akan Berakhir <span class="recap-count" id="ringkasan-expiry-count"></span></span></h3>
+      <div class="ringkasan-expiry-legend">
+        <span class="ringkasan-expiry-dot" style="background:#ef4444"></span>≤ 30 hari
+        <span class="ringkasan-expiry-dot" style="background:#f59e0b"></span>31–60 hari
+        <span class="ringkasan-expiry-dot" style="background:#3b82f6"></span>61–90 hari
+      </div>
+      <div class="recap-scroll ringkasan-scroll"><div id="ringkasan-expiry"></div></div>
+    </div>
+
+    <div class="real-recap-wrap ringkasan-section">
+      <h3><span>Supplier Scorecard <span class="recap-count" id="ringkasan-supplier-count"></span></span></h3>
+      <div class="ringkasan-section-sub">Agregat per pemasok pada kontrak aktif · diurutkan dari volume terbesar</div>
+      <div class="recap-scroll ringkasan-scroll"><div id="ringkasan-suppliers"></div></div>
+    </div>
+  </div>
 </div>
 
 <!-- ====== TAB 1: MAP VIEW ====== -->
@@ -9765,6 +9855,9 @@ function switchTab(tab){
   if (tab === 'berita'){
     if (typeof initBeritaView === 'function') initBeritaView();
   }
+  if (tab === 'ringkasan'){
+    if (typeof renderRingkasan === 'function') renderRingkasan();
+  }
 
   setTimeout(() => {
     if (tab === 'map' && map) map.invalidateSize();
@@ -10491,6 +10584,219 @@ function closeKontrakBreakdown(){
   if (backdrop) backdrop.classList.remove('open');
 }
 window.closeKontrakBreakdown = closeKontrakBreakdown;
+
+// =====================================================
+// EXECUTIVE SUMMARY (Ringkasan) — KPI overview, contract
+// expiry alerts, supplier scorecard, and PDF export.
+// =====================================================
+
+// Whole-day count from today (local) to an ISO date (YYYY-MM-DD).
+// Negative = already past. Returns null for missing/invalid dates.
+function daysUntilISO(iso){
+  if (!iso) return null;
+  const parts = String(iso).split('-');
+  if (parts.length !== 3) return null;
+  const target = new Date(parseInt(parts[0],10), parseInt(parts[1],10) - 1, parseInt(parts[2],10));
+  if (isNaN(target.getTime())) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((target - today) / 86400000);
+}
+
+// Sum of realisasi across all years for one contract.
+function contractTotalReal(c){
+  const yt = c.realisasi_total || {};
+  return (yt['2023']||0) + (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
+}
+
+// MoU completion across timeline groups, excluding INTERNAL EVENT / MOU-NDA
+// informational rows (mirrors the Monitoring MoU filter).
+function ringkasanMouStats(){
+  const groups = (mouState && mouState.timeline && mouState.timeline.length)
+    ? mouState.timeline
+    : ((DATA.mou && DATA.mou.timeline) || []);
+  let done = 0, total = 0;
+  for (const g of groups){
+    const u = (g.name || '').toUpperCase();
+    if (u.includes('INTERNAL EVENT') || u.replace(/[\s]+/g,'').includes('MOU-NDA') || u.includes('MOU - NDA')) continue;
+    const tasks = g.tasks || [];
+    for (const t of tasks){
+      total++;
+      if ((t.status||'').toLowerCase() === 'done') done++;
+    }
+  }
+  return { done, total, pct: total > 0 ? (done / total * 100) : 0 };
+}
+
+function renderRingkasan(){
+  // Wire the export button once.
+  const exportBtn = document.getElementById('ringkasanExportBtn');
+  if (exportBtn && !exportBtn.dataset.wired){
+    exportBtn.onclick = exportRingkasanPDF;
+    exportBtn.dataset.wired = '1';
+  }
+
+  const today = todayISO();
+  const plants = (DATA && DATA.plants) || [];
+  const contracts = (DATA && DATA.contracts) || [];
+  const active = contracts.filter(c => isContractActive(c, today));
+
+  // --- KPI: Realisasi vs Target 2026 (national) ---
+  let totalTarget = 0, totalReal = 0;
+  for (const p of plants){
+    totalTarget += p.target_2026_total || 0;
+    totalReal += p.real_2026_total || 0;
+  }
+  const capaianPct = totalTarget > 0 ? (totalReal / totalTarget * 100) : 0;
+
+  // --- KPI: contracts ---
+  const activeVol = active.reduce((s, c) => s + (c.vol_mt || 0), 0);
+  const activeReal = active.reduce((s, c) => s + contractTotalReal(c), 0);
+  const activeSisa = activeVol - activeReal;
+  const uniqueSuppliers = new Set(active.map(c => c.pemasok).filter(Boolean)).size;
+
+  // --- KPI: expiry within 90 days ---
+  const expiring = active.map(c => ({ c, days: daysUntilISO(c.akhir) }))
+    .filter(x => x.days !== null && x.days >= 0 && x.days <= 90)
+    .sort((a, b) => a.days - b.days);
+
+  // --- KPI: MoU progress ---
+  const mou = ringkasanMouStats();
+
+  const asof = document.getElementById('ringkasan-asof');
+  if (asof) asof.textContent = '· per ' + today;
+
+  // ---- KPI cards ----
+  const kpi = document.getElementById('ringkasan-kpi');
+  if (kpi){
+    const capClass = capaianPct >= 80 ? '' : capaianPct >= 50 ? 'warn' : 'danger';
+    let h = '';
+    h += '<div class="kontrak-summary-cell ' + capClass + ' kontrak-summary-clickable" onclick="switchTab(\'realisasi\')" title="Buka Realisasi">' +
+        '<div class="kontrak-summary-label">Realisasi 2026</div>' +
+        '<div class="kontrak-summary-value">' + capaianPct.toFixed(1) + '%</div>' +
+        '<div class="kontrak-summary-sub">' + fmtInt(totalReal) + ' / ' + fmtInt(totalTarget) + ' ton · <u>Lihat detail</u></div>' +
+        '<div class="kontrak-progress"><div class="kontrak-progress-bar" style="width:' + Math.min(capaianPct, 100) + '%"></div></div>' +
+      '</div>';
+    h += '<div class="kontrak-summary-cell info kontrak-summary-clickable" onclick="switchTab(\'kontrak\')" title="Buka Daftar Kontrak">' +
+        '<div class="kontrak-summary-label">Kontrak Aktif</div>' +
+        '<div class="kontrak-summary-value">' + fmtInt(active.length) + ' <span class="unit">kontrak</span></div>' +
+        '<div class="kontrak-summary-sub">' + fmtInt(activeVol) + ' MT · ' + uniqueSuppliers + ' pemasok · <u>Lihat detail</u></div>' +
+      '</div>';
+    h += '<div class="kontrak-summary-cell warn kontrak-summary-clickable" onclick="switchTab(\'kontrak\')" title="Buka Daftar Kontrak">' +
+        '<div class="kontrak-summary-label">Sisa Volume Kontrak</div>' +
+        '<div class="kontrak-summary-value">' + fmtInt(activeSisa) + ' <span class="unit">MT</span></div>' +
+        '<div class="kontrak-summary-sub">Belum terealisasi dari kontrak aktif</div>' +
+      '</div>';
+    const expClass = expiring.some(x => x.days <= 30) ? 'danger' : expiring.length ? 'warn' : '';
+    h += '<div class="kontrak-summary-cell ' + expClass + '">' +
+        '<div class="kontrak-summary-label">Akan Berakhir ≤ 90 Hari</div>' +
+        '<div class="kontrak-summary-value">' + fmtInt(expiring.length) + ' <span class="unit">kontrak</span></div>' +
+        '<div class="kontrak-summary-sub">' + (expiring.length ? expiring.filter(x => x.days <= 30).length + ' di antaranya ≤ 30 hari' : 'Tidak ada yang segera berakhir') + '</div>' +
+      '</div>';
+    h += '<div class="kontrak-summary-cell info kontrak-summary-clickable" onclick="switchTab(\'mou-timeline\')" title="Buka Monitoring MoU">' +
+        '<div class="kontrak-summary-label">Progress MoU</div>' +
+        '<div class="kontrak-summary-value">' + (mou.total ? mou.pct.toFixed(0) + '%' : '—') + '</div>' +
+        '<div class="kontrak-summary-sub">' + (mou.total ? mou.done + ' / ' + mou.total + ' tugas selesai · <u>Lihat detail</u>' : 'Data MoU belum dimuat') + '</div>' +
+        (mou.total ? '<div class="kontrak-progress"><div class="kontrak-progress-bar" style="width:' + Math.min(mou.pct, 100) + '%"></div></div>' : '') +
+      '</div>';
+    kpi.innerHTML = h;
+  }
+
+  // ---- Contract expiry alert table ----
+  const expEl = document.getElementById('ringkasan-expiry');
+  const expCount = document.getElementById('ringkasan-expiry-count');
+  if (expCount) expCount.textContent = '· ' + expiring.length + ' kontrak (≤ 90 hari)';
+  if (expEl){
+    if (expiring.length === 0){
+      expEl.innerHTML = '<div class="ringkasan-empty">Tidak ada kontrak aktif yang berakhir dalam 90 hari ke depan.</div>';
+    } else {
+      let h = '<table class="ringkasan-table"><thead><tr>' +
+        '<th>Genco</th><th>PLTU</th><th>Pemasok</th><th>Jenis</th><th>Akhir Kontrak</th><th>Sisa Hari</th><th style="text-align:right">Sisa Vol (MT)</th>' +
+        '</tr></thead><tbody>';
+      for (const x of expiring){
+        const c = x.c;
+        const dClass = x.days <= 30 ? 'd30' : x.days <= 60 ? 'd60' : 'd90';
+        const sisa = (c.vol_mt || 0) - contractTotalReal(c);
+        h += '<tr>' +
+          '<td>' + escapeHtml(c.genco || '—') + '</td>' +
+          '<td class="r-pltu">' + escapeHtml(c.pltu || '—') + '</td>' +
+          '<td>' + escapeHtml(c.pemasok || '—') + '</td>' +
+          '<td>' + (c.jenis ? escapeHtml(c.jenis) : '—') + '</td>' +
+          '<td style="white-space:nowrap">' + fmtKontrakDate(c.akhir) + '</td>' +
+          '<td><span class="ringkasan-days ' + dClass + '">' + x.days + ' hari</span></td>' +
+          '<td class="num">' + fmtInt(sisa) + '</td>' +
+        '</tr>';
+      }
+      h += '</tbody></table>';
+      expEl.innerHTML = h;
+    }
+  }
+
+  // ---- Supplier scorecard ----
+  const supEl = document.getElementById('ringkasan-suppliers');
+  const supCount = document.getElementById('ringkasan-supplier-count');
+  const supMap = {};
+  for (const c of active){
+    const key = c.pemasok || '—';
+    if (!supMap[key]) supMap[key] = { pemasok: key, count: 0, vol: 0, real: 0, amd: 0, jenis: new Set() };
+    const s = supMap[key];
+    s.count++;
+    s.vol += c.vol_mt || 0;
+    s.real += contractTotalReal(c);
+    if (c.amandemen && String(c.amandemen).trim()) s.amd++;
+    if (c.jenis) s.jenis.add(c.jenis);
+  }
+  const suppliers = Object.values(supMap).sort((a, b) => b.vol - a.vol);
+  if (supCount) supCount.textContent = '· ' + suppliers.length + ' pemasok aktif';
+  if (supEl){
+    if (suppliers.length === 0){
+      supEl.innerHTML = '<div class="ringkasan-empty">Belum ada kontrak aktif untuk diagregasi.</div>';
+    } else {
+      let h = '<table class="ringkasan-table"><thead><tr>' +
+        '<th>#</th><th>Pemasok</th><th>Jenis</th><th style="text-align:right">Kontrak</th><th style="text-align:right">Vol (MT)</th><th style="text-align:right">Realisasi</th><th style="text-align:center">%</th><th style="text-align:right">Amandemen</th>' +
+        '</tr></thead><tbody>';
+      suppliers.forEach((s, i) => {
+        const pct = s.vol > 0 ? (s.real / s.vol * 100) : 0;
+        const jenisStr = Array.from(s.jenis).join(', ') || '—';
+        h += '<tr>' +
+          '<td style="color:var(--text-dim)">' + (i + 1) + '</td>' +
+          '<td class="r-pltu">' + escapeHtml(s.pemasok) + '</td>' +
+          '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(jenisStr) + '">' + escapeHtml(jenisStr) + '</td>' +
+          '<td class="num">' + fmtInt(s.count) + '</td>' +
+          '<td class="num">' + fmtInt(s.vol) + '</td>' +
+          '<td class="num">' + fmtInt(s.real) + '</td>' +
+          '<td style="text-align:center"><span class="kontrak-pct-badge ' + pctBadgeClass(pct) + '" style="font-size:9px;padding:2px 5px;min-width:40px">' + pct.toFixed(1) + '%</span></td>' +
+          '<td class="num">' + (s.amd ? s.amd : '—') + '</td>' +
+        '</tr>';
+      });
+      h += '</tbody></table>';
+      supEl.innerHTML = h;
+    }
+  }
+
+  // Pull live MoU data once so the MoU KPI reflects Supabase, then re-render.
+  if (mou.total === 0 && !mouState.loaded && typeof mouFetchData === 'function'){
+    mouFetchData().then(() => { if (state.tab === 'ringkasan') renderRingkasan(); }).catch(() => {});
+  }
+}
+window.renderRingkasan = renderRingkasan;
+
+function exportRingkasanPDF(){
+  renderRingkasan();
+  const prevTitle = document.title;
+  document.title = 'Executive_Summary_' + todayISO();
+  document.body.classList.add('printing-ringkasan');
+  const cleanup = () => {
+    document.body.classList.remove('printing-ringkasan');
+    document.title = prevTitle;
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+  // Fallback cleanup in case afterprint never fires (some browsers).
+  setTimeout(() => { if (document.body.classList.contains('printing-ringkasan')) cleanup(); }, 60000);
+  setTimeout(() => window.print(), 60);
+}
+window.exportRingkasanPDF = exportRingkasanPDF;
 
 function renderKontrakTable(){
   const container = document.getElementById('kontrak-table');
@@ -18705,7 +19011,7 @@ function mobNav(tab){
     b.classList.toggle('active', b.dataset.mobTab === tab);
   });
   // If tab is in "More" menu, highlight the More button
-  const moreTabs1 = ['pareto','mou-timeline','usulan','berita','pembangkit','fasilitas'];
+  const moreTabs1 = ['ringkasan','pareto','mou-timeline','usulan','berita','pembangkit','fasilitas'];
   if (moreTabs1.includes(tab)){
     document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
     const moreBtn = document.querySelector('[data-mob-tab="more"]');
