@@ -291,6 +291,27 @@ Deno.serve(async (_req: Request) => {
     });
 
   try {
+    // 0) Honour the admin pause switch (public.app_control id=1). When paused,
+    //    skip the refresh entirely so existing data is preserved until resumed.
+    try {
+      const pcRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/app_control?id=eq.1&select=auto_refresh_paused,updated_by,updated_at`,
+        { headers: restHeaders() },
+      );
+      if (pcRes.ok) {
+        const pcRows = await pcRes.json();
+        const pc = Array.isArray(pcRows) && pcRows.length ? pcRows[0] : null;
+        if (pc && pc.auto_refresh_paused === true) {
+          log.push(`⏸ Auto-refresh is PAUSED (by ${pc.updated_by || "?"} at ${pc.updated_at || "?"}). Skipping. Existing data preserved.`);
+          return out(true);
+        }
+      } else {
+        log.push(`(app_control check skipped: HTTP ${pcRes.status})`);
+      }
+    } catch (e) {
+      log.push(`(app_control check failed, continuing: ${e instanceof Error ? e.message : String(e)})`);
+    }
+
     // 1) Download the Excel from SharePoint
     log.push(`Downloading: ${SHAREPOINT_URL}`);
     const dl = await fetch(SHAREPOINT_URL, {

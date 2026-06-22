@@ -223,6 +223,26 @@ html,body{
   background:var(--accent);border-color:var(--accent);color:white;
 }
 
+/* Auto-refresh pause switch (admin only) */
+.topbar-pause-btn{
+  background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  padding:6px 12px;display:flex;align-items:center;gap:7px;
+  cursor:pointer;border-radius:4px;transition:all .15s ease;flex-shrink:0;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:.4px;white-space:nowrap;
+}
+.topbar-pause-btn:hover{background:var(--panel-3);border-color:var(--accent);color:var(--accent)}
+.topbar-pause-btn .pause-dot{
+  width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0;
+  box-shadow:0 0 0 3px rgba(16,185,129,.18);transition:all .15s ease;
+}
+/* Paused state — amber */
+.topbar-pause-btn.paused{border-color:#f59e0b;color:#f59e0b}
+.topbar-pause-btn.paused .pause-dot{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.18)}
+.topbar-pause-btn.paused .pause-icon-pause{display:none}
+.topbar-pause-btn.paused .pause-icon-play{display:inline !important}
+.topbar-pause-btn.busy{opacity:.6;pointer-events:none}
+
 /* V48: Calendar header button */
 .topbar-calendar-btn{
   background:transparent;border:1px solid var(--border);color:var(--text-dim);
@@ -4618,6 +4638,13 @@ html,body{
       <span class="updated-label">Updated per</span>
       <span class="updated-date" id="updatedDate">—</span>
     </div>
+    <!-- Auto-refresh pause switch — only visible to "Maulana - Admin" -->
+    <button class="topbar-pause-btn" id="topbarPauseBtn" style="display:none" onclick="toggleAutoRefreshPause()" title="Jeda / lanjutkan auto-refresh data (setiap 10 menit)">
+      <span class="pause-dot" id="pauseDot"></span>
+      <svg class="pause-icon-pause" viewBox="0 0 16 16" fill="currentColor" width="12" height="12"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg>
+      <svg class="pause-icon-play" viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style="display:none"><path d="M4 2.5v11a1 1 0 0 0 1.5.87l9-5.5a1 1 0 0 0 0-1.74l-9-5.5A1 1 0 0 0 4 2.5z"/></svg>
+      <span class="pause-label" id="pauseLabel">Auto-refresh: ON</span>
+    </button>
     <!-- V47: Update Data moved from tab bar to header as icon-only -->
     <button class="topbar-update-btn" id="topbarUpdateBtn" onclick="switchTab('update')" title="Update Data">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M8 2v8M5 5l3-3 3 3M2 12v2h12v-2"/></svg>
@@ -10913,7 +10940,93 @@ function renderLoginUI(){
       if (li) li.onclick = () => { closeLoginDropdown(); promptLogin(); };
     }
   }
+  // Refresh the admin-only auto-refresh pause control whenever identity changes.
+  if (typeof renderPauseBtn === 'function') renderPauseBtn();
 }
+
+// =====================================================
+// Auto-refresh PAUSE switch (admin-only, header).
+// Controls public.app_control.id=1 (auto_refresh_paused), which the
+// prod-auto-refresh Edge Function checks each run; when paused it skips
+// the 10-minute SharePoint refresh until resumed. State is realtime-synced.
+// Visible/usable only for "Maulana - Admin".
+// =====================================================
+const AUTO_REFRESH_ADMIN = 'Maulana - Admin';
+let autoRefreshState = { paused: false, loaded: false, channel: null, busy: false };
+
+function canControlAutoRefresh(){
+  return (typeof getUserName === 'function' ? getUserName() : '') === AUTO_REFRESH_ADMIN;
+}
+
+function renderPauseBtn(){
+  const btn = document.getElementById('topbarPauseBtn');
+  if (!btn) return;
+  if (!canControlAutoRefresh()){ btn.style.display = 'none'; return; }
+  btn.style.display = 'flex';
+  btn.classList.toggle('paused', autoRefreshState.paused);
+  btn.classList.toggle('busy', autoRefreshState.busy);
+  const label = document.getElementById('pauseLabel');
+  if (label) label.textContent = autoRefreshState.paused ? 'Auto-refresh: PAUSED' : 'Auto-refresh: ON';
+  btn.title = autoRefreshState.paused
+    ? 'Auto-refresh dijeda. Klik untuk mengaktifkan kembali (refresh tiap 10 menit).'
+    : 'Auto-refresh aktif (tiap 10 menit). Klik untuk menjeda sementara.';
+}
+
+async function fetchAutoRefreshState(){
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('app_control').select('auto_refresh_paused').eq('id', 1).single();
+    if (!error && data){
+      autoRefreshState.paused = !!data.auto_refresh_paused;
+      autoRefreshState.loaded = true;
+      renderPauseBtn();
+    }
+  } catch(e){ console.warn('[AutoRefresh] state fetch failed:', e); }
+}
+
+function subscribeAutoRefreshState(){
+  if (!supabaseClient || autoRefreshState.channel) return;
+  autoRefreshState.channel = supabaseClient
+    .channel('app-control-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_control' }, (payload) => {
+      const r = payload.new;
+      if (r && typeof r.auto_refresh_paused !== 'undefined'){
+        autoRefreshState.paused = !!r.auto_refresh_paused;
+        renderPauseBtn();
+      }
+    })
+    .subscribe();
+}
+
+async function toggleAutoRefreshPause(){
+  if (!canControlAutoRefresh()) return;
+  if (!supabaseClient){ alert('Koneksi Supabase belum siap. Coba lagi sebentar.'); return; }
+  if (autoRefreshState.busy) return;
+  const next = !autoRefreshState.paused;
+  if (next && !confirm('Jeda auto-refresh data?\n\nData produksi tidak akan diperbarui otomatis (tiap 10 menit) sampai diaktifkan kembali. Berlaku untuk semua pengguna.')) return;
+  autoRefreshState.busy = true; renderPauseBtn();
+  try {
+    const { error } = await supabaseClient.from('app_control').upsert({
+      id: 1,
+      auto_refresh_paused: next,
+      updated_by: getUserName() || AUTO_REFRESH_ADMIN,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+    if (error){
+      console.error('[AutoRefresh] toggle error:', error);
+      alert('Gagal mengubah status auto-refresh: ' + error.message);
+    } else {
+      autoRefreshState.paused = next;
+    }
+  } catch(e){
+    console.error('[AutoRefresh] toggle failed:', e);
+    alert('Gagal mengubah status auto-refresh.');
+  } finally {
+    autoRefreshState.busy = false; renderPauseBtn();
+  }
+}
+window.toggleAutoRefreshPause = toggleAutoRefreshPause;
 
 function toggleLoginDropdown(){
   const dd = document.getElementById('loginDropdown');
@@ -17116,6 +17229,13 @@ window.addEventListener('DOMContentLoaded', () => {
   // ========= SUPABASE: load latest dashboard data on app start =========
   // Boot Supabase early so Update Data tab + Usulan tab share the same client
   initSupabase();
+  // Auto-refresh pause switch: load current state + subscribe for live changes.
+  if (supabaseClient){
+    fetchAutoRefreshState();
+    subscribeAutoRefreshState();
+  }
+  // Reflect admin-only pause control on first paint.
+  if (typeof renderPauseBtn === 'function') renderPauseBtn();
   // Pre-load the usulan base rows (no longer embedded in the HTML) so the Update
   // Data status count is correct and the Usulan tab paints instantly when opened.
   if (typeof fetchUsulanBaseFromServer === 'function'){
