@@ -3160,13 +3160,26 @@ html,body{
   background:var(--panel-3);color:var(--text-bright);font-weight:600;
   border-bottom:none;border-top:1px solid var(--border-bright);
 }
-/* Realisasi + Delivery Order (DO) cell layout */
-.pemasok-monthly-table td .pm-real{display:block;line-height:1.25}
-.pemasok-monthly-table td .pm-do{
-  display:block;font-size:8.5px;font-weight:600;color:#a855f7;
-  letter-spacing:.2px;line-height:1.2;margin-top:1px;
+/* Split DO | Realisasi columns per year */
+.pemasok-monthly-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pemasok-monthly-table-split{min-width:560px}
+.pemasok-monthly-table-split th.pm-th-year{
+  text-align:center;border-left:1px solid var(--border-bright);
+  color:var(--text-bright);letter-spacing:.5px;
 }
-.pemasok-monthly-table tfoot td .pm-do{color:#c084fc}
+.pemasok-monthly-table-split th.pm-th-do,
+.pemasok-monthly-table-split th.pm-th-real{
+  font-size:8.5px;font-weight:700;letter-spacing:.3px;text-align:right;padding:3px 8px;
+}
+.pemasok-monthly-table-split th.pm-th-do{color:#a855f7;border-left:1px solid var(--border-bright)}
+.pemasok-monthly-table-split th.pm-th-real{color:var(--accent)}
+.pemasok-monthly-table-split th.pm-th-month{vertical-align:middle}
+.pemasok-monthly-table-split td.pm-td-month{text-align:left;color:var(--text-dim);font-size:9px;text-transform:uppercase;letter-spacing:1px}
+.pemasok-monthly-table-split td.pm-cell-do{color:#a855f7;border-left:1px solid var(--border-bright);font-weight:600}
+.pemasok-monthly-table-split td.pm-cell-real{color:var(--accent);font-weight:500}
+.pemasok-monthly-table-split td.pm-cell-do.zero,
+.pemasok-monthly-table-split td.pm-cell-real.zero{color:var(--text-dim);opacity:.35;font-weight:400}
+.pemasok-monthly-table-split tfoot td.pm-cell-do{color:#c084fc}
 .pemasok-monthly-legend{
   display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:8px;
   font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);letter-spacing:.3px;
@@ -10195,26 +10208,34 @@ function openPemasokModal(pemasok, focusPltu){
     const sisaColor = sisaC < 0 ? 'var(--danger)' : (sisaC < vol * 0.1 ? 'var(--warn)' : 'var(--text-bright)');
     const isActive = isContractActive(c, today);
 
-    // Build monthly table: rows = months, cols = years.
-    // Each cell shows Realisasi and, beside it, the Delivery Order (DO) for
-    // that month (DO bucketed by Awal Pengiriman from the DO workbook).
+    // Build monthly table: rows = months. Each year is split into two
+    // sub-columns — DO (Delivery Order) and Realisasi — shown side by side.
     const cDO = getContractDO(c);
     const doLegend = '<div class="pemasok-monthly-legend">' +
-      '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-real"></span>Realisasi (MT)</span>' +
       '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-do"></span>DO — Delivery Order (MT)</span>' +
+      '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-real"></span>Realisasi (MT)</span>' +
       (cDO ? '' : '<span class="pm-legend-nodata">· DO tidak tersedia untuk kontrak ini</span>') +
       '</div>';
-    let monthlyTable = doLegend + '<table class="pemasok-monthly-table"><thead><tr>';
-    monthlyTable += '<th>Month</th>';
-    for (let i = 0; i < years.length; i++) monthlyTable += '<th>' + years[i] + '</th>';
-    monthlyTable += '<th>Total</th></tr></thead><tbody>';
-    const cellHtml = (real, dov) => {
-      let h = '<span class="pm-real">' + (real ? fmtInt(real) : '—') + '</span>';
-      if (dov) h += '<span class="pm-do" title="Delivery Order">DO ' + fmtInt(dov) + '</span>';
-      return h;
+    let monthlyTable = doLegend + '<table class="pemasok-monthly-table pemasok-monthly-table-split"><thead>';
+    // Row 1: year group headers (each spans DO + Realisasi)
+    monthlyTable += '<tr><th rowspan="2" class="pm-th-month">Month</th>';
+    for (let i = 0; i < years.length; i++) monthlyTable += '<th colspan="2" class="pm-th-year">' + years[i] + '</th>';
+    monthlyTable += '<th colspan="2" class="pm-th-year">Total</th></tr>';
+    // Row 2: DO / Realisasi sub-headers
+    monthlyTable += '<tr>';
+    for (let i = 0; i <= years.length; i++){
+      monthlyTable += '<th class="pm-th-do">DO</th><th class="pm-th-real pm-col-end">Real</th>';
+    }
+    monthlyTable += '</tr></thead><tbody>';
+    // Two cells per year: DO then Realisasi
+    const pairCells = (real, dov) => {
+      const doCls = dov ? 'pm-cell-do has-value' : 'pm-cell-do zero';
+      const rCls = real ? 'pm-cell-real has-value pm-col-end' : 'pm-cell-real zero pm-col-end';
+      return '<td class="' + doCls + '">' + (dov ? fmtInt(dov) : '—') + '</td>' +
+             '<td class="' + rCls + '">' + (real ? fmtInt(real) : '—') + '</td>';
     };
     for (let mi = 0; mi < 12; mi++){
-      monthlyTable += '<tr><td>' + months[mi] + '</td>';
+      monthlyTable += '<tr><td class="pm-td-month">' + months[mi] + '</td>';
       let monthTotal = 0, monthDoTotal = 0;
       for (let yi = 0; yi < years.length; yi++){
         const arr = (c.realisasi && c.realisasi[years[yi]]) || [];
@@ -10222,23 +10243,21 @@ function openPemasokModal(pemasok, focusPltu){
         const doArr = (cDO && cDO[years[yi]]) || null;
         const dov = doArr ? (doArr[mi] || 0) : 0;
         monthTotal += v; monthDoTotal += dov;
-        const cls = (v === 0 && dov === 0) ? 'zero' : 'has-value';
-        monthlyTable += '<td class="' + cls + '">' + cellHtml(v, dov) + '</td>';
+        monthlyTable += pairCells(v, dov);
       }
-      const totalCls = (monthTotal === 0 && monthDoTotal === 0) ? 'zero' : 'has-value';
-      monthlyTable += '<td class="' + totalCls + '"><b>' + cellHtml(monthTotal, monthDoTotal) + '</b></td>';
+      monthlyTable += pairCells(monthTotal, monthDoTotal);
       monthlyTable += '</tr>';
     }
-    monthlyTable += '</tbody><tfoot><tr><td>Year Total</td>';
+    monthlyTable += '</tbody><tfoot><tr><td class="pm-td-month">Year Total</td>';
     let footerTotal = 0, footerDoTotal = 0;
     for (let yi = 0; yi < years.length; yi++){
       const yTot = realByYear[years[yi]] || 0;
       const doArr = (cDO && cDO[years[yi]]) || null;
       const doYTot = doArr ? doArr.reduce((s, x) => s + (x || 0), 0) : 0;
       footerTotal += yTot; footerDoTotal += doYTot;
-      monthlyTable += '<td>' + cellHtml(yTot, doYTot) + '</td>';
+      monthlyTable += pairCells(yTot, doYTot);
     }
-    monthlyTable += '<td>' + cellHtml(footerTotal, footerDoTotal) + '</td></tr></tfoot></table>';
+    monthlyTable += pairCells(footerTotal, footerDoTotal) + '</tr></tfoot></table>';
 
     const gcColor = c.genco === 'PNP' ? '#10b981' : c.genco === 'PIP' ? '#f59e0b' : c.genco === 'UIW' ? '#3b82f6' : '#64748b';
     const statusBadge = isActive
@@ -10279,7 +10298,7 @@ function openPemasokModal(pemasok, focusPltu){
           '<dt>Jenis</dt><dd>' + (c.jenis ? '<span class="kontrak-jenis-pill">' + escapeHtml(c.jenis) + '</span>' : '—') + '</dd>' +
           '<dt>Amandemen</dt><dd style="line-height:1.5">' + amandemenHtml + '</dd>' +
         '</dl>' +
-        monthlyTable +
+        '<div class="pemasok-monthly-scroll">' + monthlyTable + '</div>' +
       '</div>';
   }).join('');
 
