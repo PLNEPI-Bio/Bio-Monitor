@@ -40,14 +40,21 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Speed up first connection to the CDNs and the Supabase data endpoint -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="preconnect" href="https://emezjgefsgpsxucqfypa.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link rel="dns-prefetch" href="https://unpkg.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- xlsx libs are only needed on-demand (export / upload), so defer them off the critical path -->
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- xlsx-js-style: SheetJS fork that adds cell styling (fills, borders, fonts) for nicer Excel exports -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>/* ======= Biomassa Monitoring Dashboard v2 ======= */
 /* ===== V63: Password gate overlay ===== */
 .auth-gate{
@@ -697,7 +704,12 @@ html,body{
 
 /* View container */
 .view{display:none;height:100%;overflow:hidden}
-.view.active{display:block}
+.view.active{display:block;animation:viewFadeIn .2s ease both}
+@keyframes viewFadeIn{from{opacity:0}to{opacity:1}}
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .view.active{animation:none}
+}
 
 /* ===== TAB 1: MAP VIEW ===== */
 .map-view{display:grid;grid-template-columns:260px 1fr 0px;height:100%;overflow:hidden;transition:grid-template-columns .25s ease}
