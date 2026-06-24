@@ -5528,6 +5528,10 @@ html,body{
         <div class="real-title">Daftar Kontrak Mitra</div>
         <div class="real-title-sub">Contract agreements between PLN EPI and biomass suppliers · PNP / PIP / UIW</div>
       </div>
+      <button class="map-export-btn" id="kontrakExportBtn" style="width:auto;margin-top:0" onclick="downloadKontrakExcel()" title="Unduh seluruh data kontrak pada tab ini sebagai Excel">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Unduh Excel
+      </button>
     </div>
 
     <div class="real-recap-wrap">
@@ -12326,6 +12330,100 @@ function downloadMapCofiringExcel(){
 
   XLSX.writeFile(wb, 'Map_Cofiring_PLTU_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
+
+// ============================================================
+// Daftar Kontrak — export ALL contract data to a formatted .xlsx
+// Sheet 1: per-contract summary (+ TOTAL row).
+// Sheet 2: monthly realisasi (long format, one row per contract per year).
+// ============================================================
+function _fmtDateID(iso){
+  if (!iso) return '';
+  const p = String(iso).split('-');
+  if (p.length !== 3) return String(iso);
+  const M = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+  const mi = parseInt(p[1], 10) - 1;
+  return parseInt(p[2], 10) + ' ' + (M[mi] || p[1]) + ' ' + p[0];
+}
+function downloadKontrakExcel(){
+  if (typeof XLSX === 'undefined'){ alert('Modul Excel belum termuat, coba lagi sebentar.'); return; }
+  const all = (DATA && DATA.contracts) ? DATA.contracts.slice() : [];
+  if (!all.length){ alert('Belum ada data kontrak untuk diunduh.'); return; }
+  const btn = document.getElementById('kontrakExportBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const today = todayISO();
+    const YEARS = ['2023','2024','2025','2026'];
+    const MONTHS_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
+    const sum = (arr) => (arr || []).reduce((s, v) => s + (+v || 0), 0);
+    // Sort: Genco, PLTU, Pemasok
+    all.sort((a, b) =>
+      (a.genco || '').localeCompare(b.genco || '') ||
+      (a.pltu || '').localeCompare(b.pltu || '') ||
+      (a.pemasok || '').localeCompare(b.pemasok || ''));
+
+    const wb = XLSX.utils.book_new();
+
+    // ----- Sheet 1: Daftar Kontrak (summary) -----
+    const h1 = ['No','Genco','PLTU','Pemasok','Nomor Kontrak','Jenis','Awal Kontrak','Akhir Kontrak','Status',
+      'Vol Kontrak (MT)','Realisasi 2023 (MT)','Realisasi 2024 (MT)','Realisasi 2025 (MT)','Realisasi 2026 (MT)',
+      'Total Realisasi (MT)','Sisa (MT)','Capaian %','Amandemen'];
+    const aoa1 = [h1];
+    let tVol = 0, tR = [0,0,0,0], tTotal = 0, tSisa = 0;
+    all.forEach((c, i) => {
+      const yt = c.realisasi_total || {};
+      const r = YEARS.map(y => (+yt[y] || 0));
+      const totalReal = r.reduce((s, v) => s + v, 0);
+      const vol = +c.vol_mt || 0;
+      const sisa = vol - totalReal;
+      const pct = vol > 0 ? (totalReal / vol) : 0;
+      tVol += vol; r.forEach((v, k) => tR[k] += v); tTotal += totalReal; tSisa += sisa;
+      const amd = (c.amandemen && String(c.amandemen).trim())
+        ? String(c.amandemen).replace(/[\r\n]+/g, '; ') : '';
+      aoa1.push([ i + 1, c.genco || '', c.pltu || '', c.pemasok || '', c.kontrak || '', c.jenis || '',
+        _fmtDateID(c.awal), _fmtDateID(c.akhir), isContractActive(c, today) ? 'Aktif' : 'Expired',
+        vol, r[0], r[1], r[2], r[3], totalReal, sisa, pct, amd ]);
+    });
+    const totalPct = tVol > 0 ? (tTotal / tVol) : 0;
+    aoa1.push(['', '', '', '', '', '', '', '', 'TOTAL', tVol, tR[0], tR[1], tR[2], tR[3], tTotal, tSisa, totalPct, '']);
+    const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
+    ws1['!cols'] = [{wch:5},{wch:7},{wch:20},{wch:30},{wch:34},{wch:16},{wch:13},{wch:13},{wch:9},
+      {wch:15},{wch:15},{wch:15},{wch:15},{wch:15},{wch:16},{wch:13},{wch:10},{wch:42}];
+    _styleExcelSheet(ws1, {
+      centerCols: [1, 5, 8], numCols: [9,10,11,12,13,14,15], pctCols: [16],
+      totalRowIndex: aoa1.length - 1, freezeCols: 3,
+    });
+    XLSX.utils.book_append_sheet(wb, ws1, 'Daftar Kontrak');
+
+    // ----- Sheet 2: Realisasi Bulanan (long format) -----
+    const h2 = ['Genco','PLTU','Pemasok','Nomor Kontrak','Jenis','Tahun', ...MONTHS_ID, 'Total Tahun'];
+    const aoa2 = [h2];
+    all.forEach(c => {
+      YEARS.forEach(y => {
+        const arr = (c.realisasi && c.realisasi[y]) || [];
+        const yTotal = sum(arr);
+        if (yTotal <= 0) return; // only years that actually have realisasi
+        const months = [];
+        for (let m = 0; m < 12; m++) months.push(+arr[m] || 0);
+        aoa2.push([ c.genco || '', c.pltu || '', c.pemasok || '', c.kontrak || '', c.jenis || '', y, ...months, yTotal ]);
+      });
+    });
+    const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+    ws2['!cols'] = [{wch:7},{wch:20},{wch:30},{wch:34},{wch:16},{wch:7},
+      ...MONTHS_ID.map(() => ({wch:9})), {wch:13}];
+    _styleExcelSheet(ws2, {
+      centerCols: [0, 4, 5], numCols: [6,7,8,9,10,11,12,13,14,15,16,17,18], freezeCols: 4,
+    });
+    XLSX.utils.book_append_sheet(wb, ws2, 'Realisasi Bulanan');
+
+    XLSX.writeFile(wb, 'Daftar_Kontrak_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+  } catch (e) {
+    console.error('[Kontrak] Excel export failed:', e);
+    alert('Gagal membuat file Excel: ' + (e && e.message ? e.message : e));
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+window.downloadKontrakExcel = downloadKontrakExcel;
 
 // ---------- Add Usulan modal ----------
 function wireUsulanAddModal(){
