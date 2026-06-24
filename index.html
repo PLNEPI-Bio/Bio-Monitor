@@ -12394,26 +12394,38 @@ function downloadKontrakExcel(){
     });
     XLSX.utils.book_append_sheet(wb, ws1, 'Daftar Kontrak');
 
-    // ----- Sheet 2: Realisasi Bulanan (long format) -----
-    const h2 = ['Genco','PLTU','Pemasok','Nomor Kontrak','Jenis','Tahun', ...MONTHS_ID, 'Total Tahun'];
+    // ----- Sheet 2: DO & Realisasi Bulanan (long format) -----
+    // For each contract & year, emit a DO row and a Realisasi row (whichever
+    // has data), distinguished by the 'Metrik' column. DO is sourced from
+    // DELIVERY_ORDERS via the same signature used by the mitra popup.
+    const h2 = ['Genco','PLTU','Pemasok','Nomor Kontrak','Jenis','Status','Tahun','Metrik', ...MONTHS_ID, 'Total Tahun'];
     const aoa2 = [h2];
     all.forEach(c => {
+      const cdo = (typeof getContractDO === 'function') ? getContractDO(c) : null;
+      const status = isContractActive(c, today) ? 'Aktif' : 'Expired';
+      const base = [c.genco || '', c.pltu || '', c.pemasok || '', c.kontrak || '', c.jenis || '', status];
       YEARS.forEach(y => {
-        const arr = (c.realisasi && c.realisasi[y]) || [];
-        const yTotal = sum(arr);
-        if (yTotal <= 0) return; // only years that actually have realisasi
-        const months = [];
-        for (let m = 0; m < 12; m++) months.push(+arr[m] || 0);
-        aoa2.push([ c.genco || '', c.pltu || '', c.pemasok || '', c.kontrak || '', c.jenis || '', y, ...months, yTotal ]);
+        const realArr = (c.realisasi && c.realisasi[y]) || [];
+        const doArr = (cdo && cdo[y]) || [];
+        const realTotal = sum(realArr), doTotal = sum(doArr);
+        if (realTotal <= 0 && doTotal <= 0) return;
+        if (doTotal > 0){
+          const md = []; for (let m = 0; m < 12; m++) md.push(+doArr[m] || 0);
+          aoa2.push([ ...base, y, 'DO', ...md, doTotal ]);
+        }
+        if (realTotal > 0){
+          const mr = []; for (let m = 0; m < 12; m++) mr.push(+realArr[m] || 0);
+          aoa2.push([ ...base, y, 'Realisasi', ...mr, realTotal ]);
+        }
       });
     });
     const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
-    ws2['!cols'] = [{wch:7},{wch:20},{wch:30},{wch:34},{wch:16},{wch:7},
+    ws2['!cols'] = [{wch:7},{wch:20},{wch:30},{wch:34},{wch:16},{wch:9},{wch:7},{wch:11},
       ...MONTHS_ID.map(() => ({wch:9})), {wch:13}];
     _styleExcelSheet(ws2, {
-      centerCols: [0, 4, 5], numCols: [6,7,8,9,10,11,12,13,14,15,16,17,18], freezeCols: 4,
+      centerCols: [0, 4, 5, 6, 7], numCols: [8,9,10,11,12,13,14,15,16,17,18,19,20], freezeCols: 4,
     });
-    XLSX.utils.book_append_sheet(wb, ws2, 'Realisasi Bulanan');
+    XLSX.utils.book_append_sheet(wb, ws2, 'DO & Realisasi Bulanan');
 
     XLSX.writeFile(wb, 'Daftar_Kontrak_' + new Date().toISOString().slice(0, 10) + '.xlsx');
   } catch (e) {
