@@ -81,11 +81,28 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
   }
 
   const PLANT_COUNT = 51;
-  const ROW_2026 = 4, ROW_2025 = 66, ROW_2024 = 128, ROW_2023 = 191;
-  const COL_NO = 1, COL_NAME = 2, COL_GENCO = 3, COL_CODE = 4, COL_BOILER = 5, COL_REGIONAL = 6;
-  const COL_TARGET_JAN = 7, COL_DO_JAN = 20, COL_REAL_JAN = 33, COL_GAP_JAN = 47;
-  const COL_SISA_KONTRAK = 60, COL_KEBUTUHAN_BATUBARA = 61;
-  const COL_JUMLAH_UNIT = 62, COL_KAPASITAS_PER_UNIT = 63, COL_TOTAL_KAPASITAS = 64;
+  // V66: The "Rekap" sheet layout can shift between source-file revisions
+  // (e.g. a column inserted at the left pushes every column right by one,
+  // which silently broke parsing → 0 plants). Detect the header row and the
+  // "No" base column dynamically by locating the "No"/"PLTU" header pair, then
+  // derive every column relative to it. Falls back to the historical layout.
+  let baseCol = 1, headerRow = 3, found = false;
+  for (let r = 0; r < 14 && r < rekap.length && !found; r++) {
+    const row = rekap[r] || [];
+    for (let c = 0; c < row.length - 1; c++) {
+      if (_safeStr(row[c]).toLowerCase() === "no" && _safeStr(row[c + 1]).toLowerCase() === "pltu") {
+        baseCol = c; headerRow = r; found = true; break;
+      }
+    }
+  }
+  const ROW_2026 = headerRow + 1;
+  const ROW_2025 = ROW_2026 + 62, ROW_2024 = ROW_2026 + 124, ROW_2023 = ROW_2026 + 187;
+  const COL_NO = baseCol, COL_NAME = baseCol + 1, COL_GENCO = baseCol + 2, COL_CODE = baseCol + 3, COL_BOILER = baseCol + 4, COL_REGIONAL = baseCol + 5;
+  const COL_TARGET_JAN = baseCol + 6, COL_DO_JAN = baseCol + 19, COL_REAL_JAN = baseCol + 32, COL_GAP_JAN = baseCol + 46;
+  const COL_SISA_KONTRAK = baseCol + 59, COL_KEBUTUHAN_BATUBARA = baseCol + 60;
+  const COL_JUMLAH_UNIT = baseCol + 61, COL_KAPASITAS_PER_UNIT = baseCol + 62, COL_TOTAL_KAPASITAS = baseCol + 63;
+  // Scalar "total"/"%" columns, relative to the No column.
+  const COL_TARGET_TOTAL = baseCol + 18, COL_DO_TOTAL = baseCol + 31, COL_REAL_TOTAL = baseCol + 44, COL_REAL_PCT = baseCol + 45, COL_GAP_AKM = baseCol + 58;
 
   const targets2026 = extractMonthBlock(ROW_2026, COL_TARGET_JAN, PLANT_COUNT);
   const dos2026 = extractMonthBlock(ROW_2026, COL_DO_JAN, PLANT_COUNT);
@@ -125,7 +142,7 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
   }
   const dos2025 = extractMonthBlock(ROW_2025, COL_DO_JAN, PLANT_COUNT);
   const reals2025 = extractMonthBlock(ROW_2025, COL_REAL_JAN, PLANT_COUNT);
-  const COL_REAL_JAN_HISTORICAL = 7;
+  const COL_REAL_JAN_HISTORICAL = COL_TARGET_JAN;
   const reals2024 = extractMonthBlock(ROW_2024, COL_REAL_JAN_HISTORICAL, PLANT_COUNT);
   const reals2023 = extractMonthBlock(ROW_2023, COL_REAL_JAN_HISTORICAL, PLANT_COUNT);
 
@@ -142,12 +159,12 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
     const boiler = _safeStr(noRow[COL_BOILER]) || "N/A";
     const regional = _safeStr(noRow[COL_REGIONAL]);
     const target_2026 = targets2026[i];
-    const target_total = _safeNum(noRow[19]);
-    const do_total = _safeNum(noRow[32]);
+    const target_total = _safeNum(noRow[COL_TARGET_TOTAL]);
+    const do_total = _safeNum(noRow[COL_DO_TOTAL]);
     const real_2026 = reals2026[i];
-    const real_total = _safeNum(noRow[45]);
-    const real_pct_raw = _safeNum(noRow[46]);
-    const gap_akm = _safeNum(noRow[59]);
+    const real_total = _safeNum(noRow[COL_REAL_TOTAL]);
+    const real_pct_raw = _safeNum(noRow[COL_REAL_PCT]);
+    const gap_akm = _safeNum(noRow[COL_GAP_AKM]);
     const existing = coordMap[name];
     const lat = existing ? existing.lat : null;
     const lon = existing ? existing.lon : null;

@@ -16032,23 +16032,36 @@ async function parseProdExcel(wb){
   //   iloc[idx, 48..59]=gap, iloc[idx, 61]=sisa_kontrak, iloc[idx, 62]=kebutuhan_batubara
   // SheetJS subtracts 1 from each (no leading empty col): col 1=no, col 2=name, etc.
   const PLANT_COUNT = 51;
-  const ROW_2026 = 4;
-  const ROW_2025 = 66;
-  const ROW_2024 = 128;
-  const ROW_2023 = 191;
-  const COL_NO = 1, COL_NAME = 2, COL_GENCO = 3, COL_CODE = 4, COL_BOILER = 5, COL_REGIONAL = 6;
-  const COL_TARGET_JAN = 7;    // 12 cols Jan-Dec
-  const COL_DO_JAN = 20;       // 12 cols Jan-Dec
-  const COL_REAL_JAN = 33;     // 12 cols Jan-Dec
-  const COL_GAP_JAN = 47;      // 12 cols Jan-Dec
-  const COL_SISA_KONTRAK = 60;
-  const COL_KEBUTUHAN_BATUBARA = 61;
-  // V13+ capacity columns from Rekap (Excel cols BL/BM/BN).
-  // Note: in JS SheetJS the columns are 1 less than Python pandas reads.
-  // Verified empirically: JS col[62]=Jumlah Unit, col[63]=Kapasitas, col[64]=Total Kapasitas.
-  const COL_JUMLAH_UNIT = 62;
-  const COL_KAPASITAS_PER_UNIT = 63;
-  const COL_TOTAL_KAPASITAS = 64;
+  // V66: The "Rekap" sheet layout can shift between source-file revisions (a
+  // column inserted at the left pushes every column right by one → 0 plants
+  // parsed). Detect the header row + "No" base column dynamically (locate the
+  // "No"/"PLTU" header pair) and derive all columns relative to it. Falls back
+  // to the historical layout (baseCol=1, headerRow=3).
+  let baseCol = 1, headerRow = 3, _hdrFound = false;
+  for (let r = 0; r < 14 && r < rekap.length && !_hdrFound; r++){
+    const hrow = rekap[r] || [];
+    for (let c = 0; c < hrow.length - 1; c++){
+      if (_safeStr(hrow[c]).toLowerCase() === 'no' && _safeStr(hrow[c + 1]).toLowerCase() === 'pltu'){
+        baseCol = c; headerRow = r; _hdrFound = true; break;
+      }
+    }
+  }
+  const ROW_2026 = headerRow + 1;
+  const ROW_2025 = ROW_2026 + 62;
+  const ROW_2024 = ROW_2026 + 124;
+  const ROW_2023 = ROW_2026 + 187;
+  const COL_NO = baseCol, COL_NAME = baseCol + 1, COL_GENCO = baseCol + 2, COL_CODE = baseCol + 3, COL_BOILER = baseCol + 4, COL_REGIONAL = baseCol + 5;
+  const COL_TARGET_JAN = baseCol + 6;    // 12 cols Jan-Dec
+  const COL_DO_JAN = baseCol + 19;       // 12 cols Jan-Dec
+  const COL_REAL_JAN = baseCol + 32;     // 12 cols Jan-Dec
+  const COL_GAP_JAN = baseCol + 46;      // 12 cols Jan-Dec
+  const COL_SISA_KONTRAK = baseCol + 59;
+  const COL_KEBUTUHAN_BATUBARA = baseCol + 60;
+  const COL_JUMLAH_UNIT = baseCol + 61;
+  const COL_KAPASITAS_PER_UNIT = baseCol + 62;
+  const COL_TOTAL_KAPASITAS = baseCol + 63;
+  // Scalar "total"/"%" columns, relative to the No column.
+  const COL_TARGET_TOTAL = baseCol + 18, COL_DO_TOTAL = baseCol + 31, COL_REAL_TOTAL = baseCol + 44, COL_REAL_PCT = baseCol + 45, COL_GAP_AKM = baseCol + 58;
 
   // Extract names + meta from 2026 block first
   const targets2026 = extractMonthBlock(ROW_2026, COL_TARGET_JAN, PLANT_COUNT);
@@ -16098,7 +16111,7 @@ async function parseProdExcel(wb){
   // Verified empirically from sheet "Rekap" rows 128 (2024) and 191 (2023):
   //   col[2]=name, col[3-6]=meta, col[7-18]=Real Jan-Dec, col[19]=Total.
   // Reading from col 33 (COL_REAL_JAN, used for 2026) yielded null → 0 totals.
-  const COL_REAL_JAN_HISTORICAL = 7;
+  const COL_REAL_JAN_HISTORICAL = COL_TARGET_JAN;
   const reals2024 = extractMonthBlock(ROW_2024, COL_REAL_JAN_HISTORICAL, PLANT_COUNT);
   const reals2023 = extractMonthBlock(ROW_2023, COL_REAL_JAN_HISTORICAL, PLANT_COUNT);
 
@@ -16116,12 +16129,12 @@ async function parseProdExcel(wb){
     const regional = _safeStr(noRow[COL_REGIONAL]);
     const target_2026 = targets2026[i];
     // Read totals from Excel's "Total" columns (matches Python; values may differ slightly from sum due to rounding/formulas)
-    const target_total = _safeNum(noRow[19]);   // target_total col
-    const do_total = _safeNum(noRow[32]);        // do_total col
+    const target_total = _safeNum(noRow[COL_TARGET_TOTAL]);   // target_total col
+    const do_total = _safeNum(noRow[COL_DO_TOTAL]);        // do_total col
     const real_2026 = reals2026[i];
-    const real_total = _safeNum(noRow[45]);      // real_total col
-    const real_pct_raw = _safeNum(noRow[46]);    // real_pct (decimal) col
-    const gap_akm = _safeNum(noRow[59]);          // gap_akm col
+    const real_total = _safeNum(noRow[COL_REAL_TOTAL]);      // real_total col
+    const real_pct_raw = _safeNum(noRow[COL_REAL_PCT]);    // real_pct (decimal) col
+    const gap_akm = _safeNum(noRow[COL_GAP_AKM]);          // gap_akm col
     // Coords from existing data
     const existing = coordMap[name];
     const lat = existing ? existing.lat : null;
