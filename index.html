@@ -952,11 +952,20 @@ html,body{
 /* Clickable Sisa Kontrak section → opens active-contracts popup */
 .detail-section-clickable{cursor:pointer;border-radius:10px;transition:background .15s}
 .detail-section-clickable:hover{background:var(--panel-2)}
-.detail-section-clickable:hover .progress-block{border-color:var(--accent)}
-.detail-section-hint{
-  font-size:8px;letter-spacing:.5px;color:var(--accent);font-weight:700;
-  margin-left:6px;opacity:.85;
+.detail-section-clickable:hover .progress-block{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.detail-section-clickable:active{transform:translateY(1px)}
+.detail-h4-click{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.detail-click-badge{
+  display:inline-flex;align-items:center;gap:5px;flex-shrink:0;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:700;letter-spacing:.4px;
+  text-transform:none;color:#fff;background:var(--accent);
+  padding:3px 9px;border-radius:20px;box-shadow:var(--shadow-sm);
+  transition:filter .15s,transform .15s;
 }
+.detail-click-badge svg{opacity:.9}
+.detail-click-badge .dcb-chevron{font-size:12px;line-height:1;margin-left:1px}
+.detail-section-clickable:hover .detail-click-badge{filter:brightness(1.1)}
+.detail-section-clickable:hover .detail-click-badge .dcb-chevron{transform:translateX(2px)}
 .sk-modal-note{font-size:10px;color:var(--text-dim);margin-bottom:10px;line-height:1.5}
 
 .progress-block{background:var(--panel);border:1px solid var(--border);padding:14px}
@@ -6880,7 +6889,9 @@ function selectPlant(code, fromMarkerClick){
 
       ${state.mapPeriod.year === '2026' ? `
       <div class="detail-section detail-section-clickable" onclick="showSisaKontrakDetail('${p.code}')" title="Klik untuk lihat kontrak-kontrak aktif">
-        <h4>Sisa Kontrak 2026 vs Sisa Target <span class="detail-section-hint">→ klik untuk detail</span></h4>
+        <h4 class="detail-h4-click">Sisa Kontrak 2026 vs Sisa Target
+          <span class="detail-click-badge"><svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="4.5"/><path d="M11 11l3.5 3.5"/></svg>Lihat kontrak<span class="dcb-chevron">›</span></span>
+        </h4>
         <div class="progress-block">
           <div class="progress-head">
             <span class="progress-label">${isShortfall ? 'SHORTFALL ⚠' : sisaKontrak === 0 && sisaTarget === 0 ? 'TARGET ACHIEVED' : 'SUFFICIENT'}</span>
