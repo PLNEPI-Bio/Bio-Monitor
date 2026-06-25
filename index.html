@@ -6347,7 +6347,7 @@ function refreshMarkers(){
     const size = Math.max(22, Math.min(44, 20 + Math.sqrt(sizeBase || 0) / 30));
 
     // Check contract shortfall (only for 2026 since that's the only year with contract data)
-    const sisaKontrak = p.sisa_kontrak || 0;
+    const sisaKontrak = computePlantSisaKontrak(p);
     const sisaTarget = Math.max(0, (p.target_2026_total || 0) - (p.real_2026_total || 0));
     const hasShortfall = state.mapPeriod.year === '2026' && sisaTarget > 0 && sisaKontrak < sisaTarget;
 
@@ -6377,7 +6377,7 @@ function refreshMarkers(){
 
 function renderPopup(p){
   const color = gencoColor(p.genco);
-  const sisa = p.sisa_kontrak || 0;
+  const sisa = computePlantSisaKontrak(p);
   const batubara = p.kebutuhan_batubara || 0;
   const t = plantPeriodTotals(p);
   const status = plantPeriodStatus(p);
@@ -6551,6 +6551,51 @@ function renderPlantJenisList(plant){
   return html;
 }
 
+// ===== Sisa Kontrak from "Daftar Kontrak" data (not the Excel field) =====
+// Match active contracts to a PLTU point (same PLTU-name matching used by the
+// Jenis Biomassa list), then compute Sisa Kontrak 2026 = (annualised contract
+// volume) − (realisasi 2026), summed over the matched active contracts.
+// New rule: when a contract spans 2 years or more, its volume is divided by the
+// contract duration in years (e.g. 60.000 ton over 5 years → 12.000 ton/year).
+function plantContractDurationYears(c){
+  if (!c || !c.awal || !c.akhir) return 1;
+  const a = new Date(c.awal), b = new Date(c.akhir);
+  if (isNaN(a.getTime()) || isNaN(b.getTime()) || b <= a) return 1;
+  const years = (b - a) / (365.25 * 24 * 3600 * 1000);
+  // Only annualise when the contract genuinely spans ~2 years or more.
+  return years >= 1.9 ? Math.max(2, Math.round(years)) : 1;
+}
+function matchPlantContracts(plant, activeOnly){
+  const out = [];
+  if (!plant || !DATA || !DATA.contracts) return out;
+  const pn = (plant.name || '').toLowerCase().trim();
+  if (!pn) return out;
+  const today = new Date().toISOString().slice(0, 10);
+  for (const c of DATA.contracts){
+    const cp = (c.pltu || '').toLowerCase().trim();
+    if (!cp) continue;
+    if (!(cp === pn || cp.startsWith(pn) || pn.startsWith(cp))) continue;
+    if (activeOnly && c.akhir && c.akhir < today) continue;
+    out.push(c);
+  }
+  return out;
+}
+// Sisa Kontrak 2026 for a plant, derived from active contracts.
+function computePlantSisaKontrak(plant){
+  let sisa = 0;
+  const matched = matchPlantContracts(plant, true);
+  for (const c of matched){
+    const years = plantContractDurationYears(c);
+    const annualVol = (+c.vol_mt || 0) / years;
+    const rt = c.realisasi_total || {};
+    const real2026 = (typeof rt['2026'] === 'number')
+      ? rt['2026']
+      : ((c.realisasi && c.realisasi['2026']) || []).reduce((s, v) => s + (+v || 0), 0);
+    sisa += annualVol - real2026;
+  }
+  return sisa;
+}
+
 function selectPlant(code, fromMarkerClick){
   state.selected = code;
   refreshMarkers();
@@ -6568,7 +6613,7 @@ function selectPlant(code, fromMarkerClick){
   setTimeout(() => { if (map) map.invalidateSize({ pan: false }); }, 260);
 
   const color = gencoColor(p.genco);
-  const sisaKontrak = p.sisa_kontrak || 0;
+  const sisaKontrak = computePlantSisaKontrak(p);
   const kebutuhanBatubara = p.kebutuhan_batubara || 0;
   const sisaKontrakPct = p.target_2026_total ? (sisaKontrak / p.target_2026_total * 100) : 0;
   const biomassaRatio = kebutuhanBatubara ? (p.target_2026_total / (p.target_2026_total + kebutuhanBatubara) * 100) : 0;
@@ -12274,7 +12319,7 @@ function downloadMapCofiringExcel(){
     const pct = (typeof p.real_pct === 'number' && p.real_pct) ? p.real_pct : (tg > 0 ? rl / tg : 0);
     aoa1.push([ i + 1, p.name || '', p.genco || '', p.boiler || '', p.regional || '', STATUS_LABEL[p.status] || p.status || '',
       (typeof p.lat === 'number' ? p.lat : ''), (typeof p.lon === 'number' ? p.lon : ''),
-      tg, doT, r24, r25, rl, pct, (+p.gap_akm || 0), (+p.sisa_kontrak || 0), (+p.kebutuhan_batubara || 0),
+      tg, doT, r24, r25, rl, pct, (+p.gap_akm || 0), (+computePlantSisaKontrak(p) || 0), (+p.kebutuhan_batubara || 0),
       (+p.jumlah_unit || 0), (+p.total_kapasitas || 0) ]);
   });
   aoa1.push(['', 'TOTAL', '', '', '', '', '', '', tTarget, tDO, tReal24, tReal25, tReal, (tTarget > 0 ? tReal / tTarget : 0), '', '', '', '', '']);
@@ -18076,7 +18121,7 @@ function computeAlerts(){
   for (const p of plants){
     if (!p.target_2026_total) continue;
     const sisaTarget = Math.max(0, (p.target_2026_total || 0) - (p.real_2026_total || 0));
-    const sisaKontrak = p.sisa_kontrak || 0;
+    const sisaKontrak = computePlantSisaKontrak(p);
     if (sisaTarget > 5000 && sisaKontrak < sisaTarget && sisaKontrak >= 0){
       const shortfall = sisaTarget - sisaKontrak;
       alerts.push({
@@ -18214,7 +18259,7 @@ function exportPlantPdf(code){
   const allYearMax = Math.max(...allYearReal.flat(), 1);
 
   const sisaTarget = Math.max(0, (p.target_2026_total || 0) - (p.real_2026_total || 0));
-  const sisaKontrak = p.sisa_kontrak || 0;
+  const sisaKontrak = computePlantSisaKontrak(p);
   const isShortfall = sisaKontrak < sisaTarget;
   const pct = p.real_pct || 0;
   let achColor = '#475569';
