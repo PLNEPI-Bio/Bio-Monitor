@@ -17609,6 +17609,13 @@ window.addEventListener('DOMContentLoaded', () => {
   if (typeof fetchUsulanBaseFromServer === 'function'){
     fetchUsulanBaseFromServer().catch(() => {});
   }
+  // Warm the Berita feed cache in the background (after first paint) so the
+  // Berita tab opens instantly instead of fetching on first open.
+  if (typeof prefetchBerita === 'function'){
+    const warmBerita = () => { try { prefetchBerita(); } catch(e){} };
+    if ('requestIdleCallback' in window) requestIdleCallback(warmBerita, { timeout: 4000 });
+    else setTimeout(warmBerita, 2500);
+  }
   if (supabaseClient && navigator.onLine){
     // Async load latest dashboard data from server (overrides embedded HTML data)
     loadDashboardDataFromServer().then(serverRow => {
@@ -18625,7 +18632,25 @@ let beritaState = {
   loading: false,
   lastFetched: 0,
   wired: false,
+  inFlight: false,   // a fetch is currently running (avoids duplicate requests)
 };
+
+// Warm the Berita cache in the background a moment after the app loads, so the
+// tab renders instantly when opened. No-op if a fresh cache already exists.
+function prefetchBerita(){
+  try {
+    const cached = localStorage.getItem(BERITA_CACHE_KEY);
+    if (cached){
+      const obj = JSON.parse(cached);
+      if (obj && obj.articles && obj.fetchedAt && (Date.now() - obj.fetchedAt) < BERITA_CACHE_TTL_MS){
+        beritaState.articles = obj.articles;
+        beritaState.lastFetched = obj.fetchedAt;
+        return; // already fresh — nothing to do
+      }
+    }
+  } catch(e){ /* ignore */ }
+  fetchBerita({ force: false, background: true });
+}
 
 function initBeritaView(){
   // Wire UI controls once
@@ -18655,7 +18680,7 @@ function initBeritaView(){
   fetchBerita({ force: false });
 }
 
-async function fetchBerita({ force }){
+async function fetchBerita({ force, background } = {}){
   // Try localStorage cache first (unless force refresh)
   if (!force){
     try {
@@ -18665,18 +18690,26 @@ async function fetchBerita({ force }){
         if (obj && obj.articles && obj.fetchedAt && (Date.now() - obj.fetchedAt) < BERITA_CACHE_TTL_MS){
           beritaState.articles = obj.articles;
           beritaState.lastFetched = obj.fetchedAt;
-          renderBeritaFeed();
+          if (!background) renderBeritaFeed();
           return;
         }
       }
     } catch(e){ /* ignore */ }
   }
 
-  // Show loading state
-  beritaState.loading = true;
-  renderBeritaFeed();
+  // Show loading state (skip for silent background prefetch). Done before the
+  // in-flight guard so opening the tab while the prefetch runs still shows the
+  // skeleton; the in-flight request then populates the feed when it completes.
   const refreshBtn = document.getElementById('beritaRefreshBtn');
-  if (refreshBtn){ refreshBtn.classList.add('spinning'); refreshBtn.disabled = true; }
+  if (!background){
+    beritaState.loading = true;
+    renderBeritaFeed();
+    if (refreshBtn){ refreshBtn.classList.add('spinning'); refreshBtn.disabled = true; }
+  }
+
+  // A fetch is already running (e.g. background prefetch) — don't fire a second.
+  if (beritaState.inFlight && !force) return;
+  beritaState.inFlight = true;
 
   try {
     const headers = { 'Content-Type': 'application/json' };
@@ -18706,8 +18739,11 @@ async function fetchBerita({ force }){
     beritaState.articles = [];
     beritaState.fetchError = err.message || String(err);
   } finally {
+    beritaState.inFlight = false;
     beritaState.loading = false;
-    if (refreshBtn){ refreshBtn.classList.remove('spinning'); refreshBtn.disabled = false; }
+    const rb = document.getElementById('beritaRefreshBtn');
+    if (rb){ rb.classList.remove('spinning'); rb.disabled = false; }
+    // Render so the (possibly hidden) feed is pre-built; instant when opened.
     renderBeritaFeed();
   }
 }
