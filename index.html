@@ -6536,11 +6536,15 @@ function renderPlantJenisList(plant){
   const items = matched.map(c => {
     const years = plantContractDurationYears(c);
     const annualVol = (+c.vol_mt || 0) / years;
+    // Realisasi = total realisasi across all years (matches the Daftar Kontrak
+    // tab). Using only 2026 made expired contracts show 0 even though they were
+    // realised in prior years.
     const rt = c.realisasi_total || {};
-    const real2026 = (typeof rt['2026'] === 'number')
-      ? rt['2026'] : ((c.realisasi && c.realisasi['2026']) || []).reduce((s, v) => s + (+v || 0), 0);
+    const real = (typeof c.total_realisasi === 'number' && c.total_realisasi)
+      ? c.total_realisasi
+      : ((+rt['2023'] || 0) + (+rt['2024'] || 0) + (+rt['2025'] || 0) + (+rt['2026'] || 0));
     const expired = !!(c.akhir && c.akhir < today);
-    return { c, years, annualVol, real2026, expired };
+    return { c, years, annualVol, real, expired };
   });
   // Active first, then expired; each group sorted by volume desc.
   items.sort((a, b) => (a.expired - b.expired) || (b.annualVol - a.annualVol));
@@ -6557,7 +6561,7 @@ function renderPlantJenisList(plant){
       html += '<div class="jenis-expired-divider">Kontrak Expired</div>';
       expiredHeaderShown = true;
     }
-    const realPct = item.annualVol > 0 ? Math.min(100, item.real2026 / item.annualVol * 100) : 0;
+    const realPct = item.annualVol > 0 ? Math.min(100, item.real / item.annualVol * 100) : 0;
     let barColor = '#475569';
     if (item.expired) barColor = '#64748b';
     else if (realPct >= 70) barColor = '#10b981';
@@ -6576,8 +6580,8 @@ function renderPlantJenisList(plant){
     html += '<span class="jenis-bar-value">' + fmtInt(Math.round(item.annualVol)) + '</span>';
     html += '</div>';
     html += '<div class="jenis-progress-row">';
-    html += '<span class="jenis-progress-label">Realisasi 2026</span>';
-    html += '<span class="jenis-progress-value" style="color:' + barColor + '">' + fmtInt(Math.round(item.real2026)) + ' ton (' + realPct.toFixed(1) + '%)</span>';
+    html += '<span class="jenis-progress-label">Realisasi</span>';
+    html += '<span class="jenis-progress-value" style="color:' + barColor + '">' + fmtInt(Math.round(item.real)) + ' ton (' + realPct.toFixed(1) + '%)</span>';
     html += '</div>';
     html += '</div>';
   });
