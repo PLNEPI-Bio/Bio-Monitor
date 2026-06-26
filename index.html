@@ -3339,6 +3339,12 @@ html,body{
     padding-bottom:40px;
   }
   .sidebar.mobile-open{transform:translateX(0)}
+  /* V71 fix: the .view.active fade animation creates a stacking context that
+     traps the position:fixed mobile sidebar BELOW the body-level backdrop —
+     dimming the open drawer and intercepting touch (so it can't scroll and a
+     tap closes it). Disable the animation on mobile so the sidebar paints above
+     the backdrop again. */
+  .view.active{animation:none!important}
 
   /* Floating "show sidebar" button for mobile.
      V28: positioned center-vertically (not at top), tab-style, hidden when
