@@ -1040,6 +1040,18 @@ html,body{
   letter-spacing:.5px;text-align:right;
 }
 .jenis-footer b{color:var(--accent);font-weight:700}
+/* V69: per-contract list — expired separation + annualised tag */
+.jenis-expired-divider{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;color:var(--text-dim);margin:12px 0 6px;padding-top:8px;
+  border-top:1px dashed var(--border);
+}
+.jenis-item-expired{opacity:.62}
+.jenis-expired-tag{
+  font-size:7.5px;font-weight:700;letter-spacing:.5px;color:#fff;background:#64748b;
+  padding:1px 5px;border-radius:20px;vertical-align:middle;margin-left:4px;
+}
+.jenis-ann-tag{font-size:8px;font-weight:600;color:var(--accent);margin-left:4px}
 
 .monthly-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px}
 .monthly-table th{text-align:left;padding:6px 4px;color:var(--text-dim);font-weight:500;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:1px;font-size:9px}
@@ -6509,78 +6521,69 @@ function updateKPIs(){
 }
 
 // Returns HTML for the "Jenis Biomassa Terkontrak" section in the detail panel.
-// Looks up contracts for this PLTU and aggregates by jenis with vol totals.
+// V69: lists every contract matched to this PLTU — active (2026) first, then
+// expired ones tagged "EXPIRED". Each contract's volume is annualised the same
+// way as Sisa Kontrak (vol ÷ durasi when the contract spans >= 2 years).
 function renderPlantJenisList(plant){
   if (!plant || !DATA.contracts || DATA.contracts.length === 0){
     return '<div class="jenis-empty">Data kontrak tidak tersedia.</div>';
   }
-  // Match by PLTU name (case-insensitive partial match for robustness)
-  const plantNameLower = (plant.name || '').toLowerCase().trim();
-  if (!plantNameLower) return '<div class="jenis-empty">—</div>';
-  // Filter contracts for this plant
-  const nameMatched = DATA.contracts.filter(c => {
-    const cp = (c.pltu || '').toLowerCase().trim();
-    if (!cp) return false;
-    // Exact match preferred; fallback to startsWith for split units like "Suralaya 1-4" vs "Suralaya"
-    return cp === plantNameLower || cp.startsWith(plantNameLower) || plantNameLower.startsWith(cp);
-  });
-  if (nameMatched.length === 0){
+  const matched = matchPlantContracts(plant, false); // all (active + expired)
+  if (matched.length === 0){
     return '<div class="jenis-empty">Belum ada kontrak terdaftar untuk PLTU ini.</div>';
   }
-  // V67: Only count contracts that are still within their active period — exclude
-  // any whose end date (akhir) has already passed. Contracts without an end date
-  // are kept (their activeness can't be determined as "expired"). This keeps the
-  // "X kontrak · Y mitra" counts (and the volume/realisasi totals) aligned with
-  // contracts that are actually still in force.
   const today = new Date().toISOString().slice(0, 10);
-  const matched = nameMatched.filter(c => !(c.akhir && c.akhir < today));
-  if (matched.length === 0){
-    return '<div class="jenis-empty">Tidak ada kontrak yang masih aktif untuk PLTU ini.</div>';
-  }
-  // Aggregate by jenis: sum volume, count contracts, sum total realisasi
-  const byJenis = {};
-  matched.forEach(c => {
-    const j = (c.jenis || 'Tidak Diketahui').trim() || 'Tidak Diketahui';
-    if (!byJenis[j]) byJenis[j] = { jenis: j, count: 0, vol: 0, real: 0, mitra: new Set() };
-    byJenis[j].count++;
-    byJenis[j].vol += (c.vol_mt || 0);
-    byJenis[j].real += (c.total_realisasi || 0);
-    if (c.pemasok) byJenis[j].mitra.add(c.pemasok);
+  const items = matched.map(c => {
+    const years = plantContractDurationYears(c);
+    const annualVol = (+c.vol_mt || 0) / years;
+    const rt = c.realisasi_total || {};
+    const real2026 = (typeof rt['2026'] === 'number')
+      ? rt['2026'] : ((c.realisasi && c.realisasi['2026']) || []).reduce((s, v) => s + (+v || 0), 0);
+    const expired = !!(c.akhir && c.akhir < today);
+    return { c, years, annualVol, real2026, expired };
   });
-  const list = Object.values(byJenis).sort((a,b) => b.vol - a.vol);
-  const totalVol = list.reduce((s,x) => s + x.vol, 0);
-  // Render as a list with bars
+  // Active first, then expired; each group sorted by volume desc.
+  items.sort((a, b) => (a.expired - b.expired) || (b.annualVol - a.annualVol));
+
+  const activeItems = items.filter(x => !x.expired);
+  const activeVol = activeItems.reduce((s, x) => s + x.annualVol, 0);
+  const expiredCount = items.length - activeItems.length;
+
   let html = '<div class="jenis-list">';
-  list.forEach(item => {
-    // V23: progress bar shows realisasi/kontrak per jenis (not share-of-total).
-    // Previously used (item.vol / totalVol * 100) which made tiny contracts
-    // appear empty even at 98% completion. Now matches the "Realisasi YTD" line.
-    const realPct = item.vol > 0 ? Math.min(100, item.real / item.vol * 100) : 0;
-    // Color by completion: ≥70% green, ≥30% amber, >0% red, 0 slate
-    let barColor = '#10b981';
-    if (realPct >= 70) barColor = '#10b981';
+  let expiredHeaderShown = false;
+  items.forEach(item => {
+    const c = item.c;
+    if (item.expired && !expiredHeaderShown){
+      html += '<div class="jenis-expired-divider">Kontrak Expired</div>';
+      expiredHeaderShown = true;
+    }
+    const realPct = item.annualVol > 0 ? Math.min(100, item.real2026 / item.annualVol * 100) : 0;
+    let barColor = '#475569';
+    if (item.expired) barColor = '#64748b';
+    else if (realPct >= 70) barColor = '#10b981';
     else if (realPct >= 30) barColor = '#f59e0b';
     else if (realPct > 0) barColor = '#ef4444';
-    else barColor = '#475569';
-    // Minimum 0.5% width so bar is always slightly visible
-    const barFillWidth = item.vol > 0 ? Math.max(0.5, realPct) : 0;
-    html += '<div class="jenis-item">';
+    const barFillWidth = item.annualVol > 0 ? Math.max(0.5, realPct) : 0;
+    const annTag = item.years > 1 ? ' <span class="jenis-ann-tag" title="Volume disetahunkan: ' + fmtInt(+c.vol_mt || 0) + ' ÷ ' + item.years + ' thn">÷' + item.years + ' thn</span>' : '';
+    html += '<div class="jenis-item' + (item.expired ? ' jenis-item-expired' : '') + '">';
     html += '<div class="jenis-row">';
-    html += '<span class="jenis-name">' + escapeHtml(item.jenis) + '</span>';
-    html += '<span class="jenis-meta">' + item.count + ' kontrak · ' + item.mitra.size + ' mitra</span>';
+    html += '<span class="jenis-name">' + escapeHtml(c.pemasok || 'Tanpa Nama') +
+      (item.expired ? ' <span class="jenis-expired-tag">EXPIRED</span>' : '') + '</span>';
+    html += '<span class="jenis-meta">' + escapeHtml(c.jenis || '—') + annTag + '</span>';
     html += '</div>';
     html += '<div class="jenis-bar-row">';
     html += '<div class="jenis-bar-track"><div class="jenis-bar-fill" style="width:' + barFillWidth.toFixed(2) + '%;background:' + barColor + '"></div></div>';
-    html += '<span class="jenis-bar-value">' + fmtInt(item.vol) + '</span>';
+    html += '<span class="jenis-bar-value">' + fmtInt(Math.round(item.annualVol)) + '</span>';
     html += '</div>';
     html += '<div class="jenis-progress-row">';
-    html += '<span class="jenis-progress-label">Realisasi YTD</span>';
-    html += '<span class="jenis-progress-value" style="color:' + barColor + '">' + fmtInt(item.real) + ' ton (' + realPct.toFixed(1) + '%)</span>';
+    html += '<span class="jenis-progress-label">Realisasi 2026</span>';
+    html += '<span class="jenis-progress-value" style="color:' + barColor + '">' + fmtInt(Math.round(item.real2026)) + ' ton (' + realPct.toFixed(1) + '%)</span>';
     html += '</div>';
     html += '</div>';
   });
   html += '</div>';
-  html += '<div class="jenis-footer">Total volume: <b>' + fmtInt(totalVol) + '</b> ton across <b>' + matched.length + '</b> kontrak</div>';
+  html += '<div class="jenis-footer">Volume aktif (disetahunkan): <b>' + fmtInt(Math.round(activeVol)) + '</b> ton · <b>' +
+    activeItems.length + '</b> kontrak aktif' + (expiredCount ? ' · <b>' + expiredCount + '</b> expired' : '') + '</div>';
   return html;
 }
 
