@@ -4430,25 +4430,6 @@ html,body{
 .notif-clear-btn{background:transparent;border:none;color:var(--accent);font-size:10px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
 
 /* V55: Login / user menu */
-/* V70: Language toggle [ IN | EN ] */
-.lang-toggle{
-  display:flex;align-items:center;gap:2px;background:var(--panel);
-  border:1px solid var(--border);border-radius:8px;padding:3px 5px;flex-shrink:0;
-  font-family:'Plus Jakarta Sans',sans-serif;
-}
-.lang-toggle .lang-opt{
-  background:transparent;border:none;cursor:pointer;color:var(--text-dim);
-  font-size:11px;font-weight:700;letter-spacing:.5px;padding:3px 7px;border-radius:5px;
-  transition:all .15s;font-family:inherit;
-}
-.lang-toggle .lang-opt:hover{color:var(--text)}
-.lang-toggle .lang-opt.active{background:var(--accent);color:#fff}
-.lang-toggle .lang-sep{color:var(--border-bright);font-size:11px}
-#google_translate_element{display:none}
-/* Hide the Google Translate top banner / tooltip + keep body anchored */
-.goog-te-banner-frame,.goog-te-balloon-frame,#goog-gt-tt,.goog-te-spinner-pos{display:none!important}
-.skiptranslate{display:none!important}
-body{top:0!important}
 .topbar-login-btn{
   display:flex;align-items:center;gap:7px;background:var(--panel);
   border:1px solid var(--border);color:var(--text);cursor:pointer;
@@ -4739,13 +4720,6 @@ body{top:0!important}
     <button class="topbar-update-btn" id="topbarUpdateBtn" onclick="switchTab('update')" title="Update Data">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M8 2v8M5 5l3-3 3 3M2 12v2h12v-2"/></svg>
     </button>
-    <!-- V70: Language toggle (Indonesian / English via Google Website Translator) -->
-    <div class="lang-toggle notranslate" id="langToggle" translate="no" title="Ubah bahasa / Change language">
-      <button type="button" class="lang-opt" data-lang="id" onclick="setSiteLang('id')">IN</button>
-      <span class="lang-sep">|</span>
-      <button type="button" class="lang-opt" data-lang="en" onclick="setSiteLang('en')">EN</button>
-    </div>
-    <div id="google_translate_element" aria-hidden="true"></div>
     <!-- V55: Login / user menu -->
     <button class="topbar-login-btn" id="topbarLoginBtn" title="Login">
       <svg class="login-icon-out" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="15" height="15"><path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3M10 11l3-3-3-3M13 8H6"/></svg>
@@ -19313,39 +19287,5 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 </script>
-
-<!-- V70: Site language toggle via Google Website Translator (translates all
-     content, including dynamically-rendered panels, to English). -->
-<script>
-function googleTranslateElementInit(){
-  try {
-    new google.translate.TranslateElement(
-      { pageLanguage: 'id', includedLanguages: 'en,id', autoDisplay: false },
-      'google_translate_element'
-    );
-  } catch (e) { /* widget unavailable */ }
-}
-function _getGoogtrans(){
-  const m = document.cookie.match(/(?:^|;\s*)googtrans=([^;]+)/);
-  return m ? decodeURIComponent(m[1]) : '';
-}
-function currentSiteLang(){ return /\/en$/.test(_getGoogtrans()) ? 'en' : 'id'; }
-function reflectSiteLang(){
-  const lang = currentSiteLang();
-  document.querySelectorAll('#langToggle .lang-opt').forEach(b => {
-    b.classList.toggle('active', b.dataset.lang === lang);
-  });
-}
-function setSiteLang(lang){
-  if (lang === currentSiteLang()) return;
-  if (lang === 'en') document.cookie = 'googtrans=/id/en;path=/';
-  else document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-  location.reload();
-}
-window.setSiteLang = setSiteLang;
-if (document.readyState !== 'loading') reflectSiteLang();
-else document.addEventListener('DOMContentLoaded', reflectSiteLang);
-</script>
-<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
