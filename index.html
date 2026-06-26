@@ -6015,7 +6015,7 @@ body{top:0!important}
     <div class="pemasok-modal-head">
       <div class="pemasok-modal-title-wrap">
         <div class="pemasok-modal-eyebrow">Pemasok / Mitra Detail</div>
-        <div class="pemasok-modal-title notranslate" translate="no" id="pemasokModalTitle">—</div>
+        <div class="pemasok-modal-title" id="pemasokModalTitle">—</div>
         <div class="pemasok-modal-meta" id="pemasokModalMeta"></div>
       </div>
       <button class="pemasok-modal-close" id="pemasokModalClose" title="Close">× CLOSE</button>
@@ -6061,7 +6061,7 @@ body{top:0!important}
     <div class="pemasok-modal-head">
       <div class="pemasok-modal-title-wrap">
         <div class="pemasok-modal-eyebrow">Sisa Kontrak 2026 · Kontrak Aktif</div>
-        <div class="pemasok-modal-title notranslate" translate="no" id="sisaKontrakModalTitle">—</div>
+        <div class="pemasok-modal-title" id="sisaKontrakModalTitle">—</div>
         <div class="pemasok-modal-meta" id="sisaKontrakModalMeta"></div>
       </div>
       <button class="pemasok-modal-close" onclick="closeSisaKontrakModal()" title="Close">× CLOSE</button>
@@ -6456,7 +6456,7 @@ function renderPopup(p){
   const sisaTarget = Math.max(0, (p.target_2026_total || 0) - (p.real_2026_total || 0));
   const hasShortfall = state.mapPeriod.year === '2026' && sisaTarget > 0 && sisa < sisaTarget;
   return `<div class="plant-popup">
-    <div class="plant-popup-name">${ntr(p.name)}${hasShortfall ? ' <span class="popup-warn">!</span>' : ''}</div>
+    <div class="plant-popup-name">${p.name}${hasShortfall ? ' <span class="popup-warn">!</span>' : ''}</div>
     <div class="plant-popup-row"><span>Genco</span><span style="color:${color};font-weight:700">${p.genco}</span></div>
     <div class="plant-popup-row"><span>Boiler</span><span>${p.boiler}</span></div>
     <div class="plant-popup-row"><span>Region</span><span>${p.regional}</span></div>
@@ -6597,7 +6597,7 @@ function renderPlantJenisList(plant){
     const annTag = item.years > 1 ? ' <span class="jenis-ann-tag" title="Volume disetahunkan: ' + fmtInt(+c.vol_mt || 0) + ' ÷ ' + item.years + ' thn">÷' + item.years + ' thn</span>' : '';
     html += '<div class="jenis-item' + (item.expired ? ' jenis-item-expired' : '') + '">';
     html += '<div class="jenis-row">';
-    html += '<span class="jenis-name">' + ntr(c.pemasok || 'Tanpa Nama') +
+    html += '<span class="jenis-name">' + escapeHtml(c.pemasok || 'Tanpa Nama') +
       (item.expired ? ' <span class="jenis-expired-tag">EXPIRED</span>' : '') + '</span>';
     html += '<span class="jenis-meta">' + escapeHtml(c.jenis || '—') + annTag + '</span>';
     html += '</div>';
@@ -6710,7 +6710,7 @@ function showSisaKontrakDetail(code){
       const multi = r.years > 1;
       html += '<tr>' +
         '<td style="color:var(--text-dim)">' + (i + 1) + '</td>' +
-        '<td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(c.pemasok || '') + '">' + ntr(c.pemasok || '—') + '</td>' +
+        '<td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(c.pemasok || '') + '">' + escapeHtml(c.pemasok || '—') + '</td>' +
         '<td>' + escapeHtml(c.jenis || '—') + '</td>' +
         '<td style="font-size:8px;color:var(--text-dim);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(c.kontrak || '') + '">' + (c.kontrak ? escapeHtml(c.kontrak) : '—') + '</td>' +
         '<td style="white-space:nowrap;font-size:8px">' + fmtKontrakDate(c.awal) + ' → ' + fmtKontrakDate(c.akhir) + '</td>' +
@@ -6775,7 +6775,7 @@ function selectPlant(code, fromMarkerClick){
     <div class="detail-header">
       <button class="detail-close-btn" onclick="closeDetailPanel()" title="Close">×</button>
       <div class="detail-code">${p.code} · PLTU #${p.no}</div>
-      <div class="detail-name">${ntr(p.name)}</div>
+      <div class="detail-name">${p.name}</div>
       <div class="detail-tags">
         <span class="detail-tag genco-tag" style="color:${color};border-color:${color}40">${p.genco}</span>
         <span class="detail-tag">${p.boiler}</span>
@@ -7932,7 +7932,7 @@ function renderRealView(){
             const p = ranked[index];
             if (!p) return '';
             const pct = (p.ratio*100).toFixed(0);
-            return `${ntr(p.name)}  ${pct}%`;
+            return `${p.name}  ${pct}%`;
           } } }
         }
       },
@@ -8184,7 +8184,7 @@ function renderRealRecap(){
   // Body
   const rowsHtml = plants.map(p => {
     let row = `<tr>
-      <td class="pltu-cell">${ntr(p.name)}<span class="code">${p.code}</span></td>
+      <td class="pltu-cell">${p.name}<span class="code">${p.code}</span></td>
       <td><span class="genco-pill" style="color:${gencoColor(p.genco)};border-color:${gencoColor(p.genco)}40">${p.genco}</span></td>
       <td class="region-cell">${p.regional}</td>`;
     let grand = 0;
@@ -8424,7 +8424,7 @@ function renderBnPopup(p, items){
   const monthsList = Object.entries(byMonth).sort((a,b) => (monthOrder[a[0]]||99) - (monthOrder[b[0]]||99));
 
   return `<div class="plant-popup">
-    <div class="plant-popup-name">${ntr(p.name)}</div>
+    <div class="plant-popup-name">${p.name}</div>
     <div class="plant-popup-row"><span>Genco</span><span style="color:${color};font-weight:700">${p.genco}</span></div>
     <div class="plant-popup-row"><span>Region</span><span>${p.regional}</span></div>
     <div class="plant-popup-row" style="border-top:1px solid var(--border);padding-top:4px;margin-top:4px">
@@ -8449,7 +8449,7 @@ function showBnPltuEmpty(p){
     <div class="bn-pltu-header">
       <button class="detail-close-btn" onclick="closeBnPltuDetail()" title="Close">×</button>
       <div class="detail-code">PLTU · 0 bottleneck records</div>
-      <div class="detail-name">${ntr(p.name)}</div>
+      <div class="detail-name">${p.name}</div>
       <div class="detail-tags">
         <span class="detail-tag genco-tag" style="color:${color};border-color:${color}40">${p.genco}</span>
         <span class="detail-tag">${p.boiler}</span>
@@ -8527,7 +8527,7 @@ function renderBnPltuDetailPanel(){
     <div class="bn-pltu-header">
       <button class="detail-close-btn" onclick="closeBnPltuDetail()" title="Close">×</button>
       <div class="detail-code">PLTU · ${items.length} of ${allItems.length} record${allItems.length>1?'s':''}</div>
-      <div class="detail-name">${ntr(cl.pltu)}</div>
+      <div class="detail-name">${cl.pltu}</div>
       <div class="detail-tags">
         ${genco ? `<span class="detail-tag genco-tag" style="color:${gcColor};border-color:${gcColor}40">${genco}</span>` : ''}
         ${plantData ? `<span class="detail-tag">${plantData.boiler}</span>` : ''}
@@ -9514,7 +9514,7 @@ function openParetoCatModal(catCode){
       return '<div class="pareto-cat-row">' +
         '<div class="pareto-cat-rank">' + (i+1) + '</div>' +
         '<div class="pareto-cat-pltu">' +
-          '<div class="pareto-cat-pltu-name">' + ntr(r.pltu) + '</div>' +
+          '<div class="pareto-cat-pltu-name">' + escapeHtml(r.pltu) + '</div>' +
           '<div class="pareto-cat-pltu-genco" style="color:' + gencoColor(r.genco) + '">' + (r.genco || '—') + (r.company ? ' · ' + escapeHtml(r.company) : '') + '</div>' +
           '<div class="pareto-cat-bar"><div class="pareto-cat-bar-fill" style="width:' + barPct + '%;background:' + catColor + '"></div></div>' +
         '</div>' +
@@ -9713,7 +9713,7 @@ function renderParetoTopTable(){
       : '—';
     return '<tr>'
       + '<td class="pareto-top-rank">' + (i + 1) + '</td>'
-      + '<td class="pareto-top-pltu">' + ntr(r.pltu) + '</td>'
+      + '<td class="pareto-top-pltu">' + escapeHtml(r.pltu) + '</td>'
       + '<td class="pareto-top-genco">' + escapeHtml(r.genco || '—') + '</td>'
       + '<td class="num">' + fmtK(r.target) + '</td>'
       + '<td class="num">' + fmtK(r.real) + '</td>'
@@ -10332,11 +10332,6 @@ function escapeHtml(s){
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-// V70: wrap PLTU / mitra (pemasok) names so the Google translator leaves them
-// as-is (proper nouns shouldn't be translated to English).
-function ntr(s){
-  return '<span class="notranslate" translate="no">' + escapeHtml(s == null ? '' : String(s)) + '</span>';
-}
 
 // ====== PEMASOK DETAIL MODAL ======
 // Delivery Order (DO) lookup. DELIVERY_ORDERS is keyed by a contract
@@ -10389,7 +10384,7 @@ function openPemasokModal(pemasok, focusPltu){
   metaEl.innerHTML =
     contracts.length + ' contract' + (contracts.length !== 1 ? 's' : '') + ' · ' +
     activeCount + ' active · ' +
-    pltuList.length + ' PLTU (' + pltuList.map(x => ntr(x)).join(', ') + ') · ' +
+    pltuList.length + ' PLTU (' + pltuList.join(', ') + ') · ' +
     'Genco: ' + gencoList.join(', ') + ' · ' +
     'Total Vol ' + fmtInt(totalVol) + ' MT · ' +
     'Realisasi ' + fmtInt(totalReal) + ' MT (' + overallPct.toFixed(1) + '%) · ' +
@@ -10476,7 +10471,7 @@ function openPemasokModal(pemasok, focusPltu){
             '<div class="pemasok-stat-label">PLTU</div>' +
             '<div class="pemasok-stat-value">' +
               '<span class="kontrak-genco-pill" style="color:' + gcColor + ';border-color:' + gcColor + '40;font-size:8px;margin-right:6px">' + c.genco + '</span>' +
-              ntr(c.pltu) +
+              escapeHtml(c.pltu) +
             '</div>' +
           '</div>' +
           '<div class="pemasok-stat-cell">' +
@@ -10765,8 +10760,8 @@ function showKontrakBreakdown(type){
     html += '<tr>';
     html += '<td style="color:var(--text-dim)">' + (i + 1) + '</td>';
     html += '<td>' + escapeHtml(r.genco) + '</td>';
-    html += '<td style="font-weight:500;color:var(--text-bright)">' + ntr(r.pltu) + '</td>';
-    html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(r.pemasok) + '">' + ntr(r.pemasok) + '</td>';
+    html += '<td style="font-weight:500;color:var(--text-bright)">' + escapeHtml(r.pltu) + '</td>';
+    html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(r.pemasok) + '">' + escapeHtml(r.pemasok) + '</td>';
     html += '<td>' + escapeHtml(r.jenis) + '</td>';
     html += '<td style="white-space:nowrap' + (highlightCol === 'akhir' ? ';font-weight:700;color:var(--accent)' : '') + '">' + fmtKontrakDate(r.akhir) + '</td>';
     html += '<td class="num"' + (highlightCol === 'vol' ? ' style="font-weight:700;color:var(--accent)"' : '') + '>' + fmtInt(r.vol) + '</td>';
@@ -10860,8 +10855,8 @@ function renderKontrakTable(){
 
     let row = '<tr>';
     row += '<td><span class="kontrak-genco-pill" style="color:' + gcColor + ';border-color:' + gcColor + '40">' + c.genco + '</span></td>';
-    row += '<td class="wrap" style="color:var(--text-bright);font-weight:500">' + ntr(c.pltu) + '</td>';
-    row += '<td class="wrap"><a href="#" class="kontrak-pemasok-link" data-pemasok="' + escapeHtml(pemasokAttr) + '" data-pltu="' + escapeHtml(c.pltu) + '">' + ntr(c.pemasok) + '</a></td>';
+    row += '<td class="wrap" style="color:var(--text-bright);font-weight:500">' + escapeHtml(c.pltu) + '</td>';
+    row += '<td class="wrap"><a href="#" class="kontrak-pemasok-link" data-pemasok="' + escapeHtml(pemasokAttr) + '" data-pltu="' + escapeHtml(c.pltu) + '">' + escapeHtml(c.pemasok) + '</a></td>';
     row += '<td class="num">' + fmtInt(vol) + '</td>';
     row += '<td class="wrap" style="font-size:9px;color:var(--text-dim);line-height:1.4">' + (c.kontrak ? escapeHtml(c.kontrak) : '—') + '</td>';
     row += '<td>' + fmtKontrakDate(c.awal) + '</td>';
@@ -10964,8 +10959,8 @@ function buildKontrakCards(contracts, yearsToShow, monthFilterApplied, monthFilt
 
     html += '<div class="kontrak-card" data-pemasok="' + escapeHtml((c.pemasok||'').replace(/'/g,"&#39;")) + '" data-pltu="' + escapeHtml(c.pltu) + '">';
     html += '<div class="kontrak-card-head">';
-    html += '<div><div class="kontrak-card-pltu">' + ntr(c.pltu) + '</div>';
-    html += '<div class="kontrak-card-mitra"><span style="color:var(--accent);font-weight:500">' + ntr(c.pemasok) + '</span> <span style="font-size:9px;opacity:.5">tap for details</span></div></div>';
+    html += '<div><div class="kontrak-card-pltu">' + escapeHtml(c.pltu) + '</div>';
+    html += '<div class="kontrak-card-mitra"><span style="color:var(--accent);font-weight:500">' + escapeHtml(c.pemasok) + '</span> <span style="font-size:9px;opacity:.5">tap for details</span></div></div>';
     html += '<div class="kontrak-card-genco"><span class="kontrak-genco-pill" style="color:' + gcColor + ';border-color:' + gcColor + '40">' + c.genco + '</span></div>';
     html += '</div>';
 
@@ -19335,32 +19330,17 @@ function _getGoogtrans(){
   return m ? decodeURIComponent(m[1]) : '';
 }
 function currentSiteLang(){ return /\/en$/.test(_getGoogtrans()) ? 'en' : 'id'; }
-function reflectSiteLang(lang){
-  lang = lang || currentSiteLang();
+function reflectSiteLang(){
+  const lang = currentSiteLang();
   document.querySelectorAll('#langToggle .lang-opt').forEach(b => {
     b.classList.toggle('active', b.dataset.lang === lang);
   });
 }
-// Drive the (hidden) Google Translate combo for an instant, reload-free switch.
-// 'en' translates the page; 'id' (the source language) restores the original.
-function _driveGoogleTranslate(lang, attempt){
-  const combo = document.querySelector('.goog-te-combo');
-  if (combo){
-    combo.value = (lang === 'en') ? 'en' : 'id';
-    combo.dispatchEvent(new Event('change'));
-    return true;
-  }
-  if ((attempt || 0) < 50) setTimeout(() => _driveGoogleTranslate(lang, (attempt || 0) + 1), 100);
-  return false;
-}
 function setSiteLang(lang){
-  if (lang !== 'en' && lang !== 'id') return;
-  // Persist choice (so a manual reload keeps it) …
+  if (lang === currentSiteLang()) return;
   if (lang === 'en') document.cookie = 'googtrans=/id/en;path=/';
   else document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-  // … and apply instantly without a reload.
-  reflectSiteLang(lang);
-  _driveGoogleTranslate(lang);
+  location.reload();
 }
 window.setSiteLang = setSiteLang;
 if (document.readyState !== 'loading') reflectSiteLang();
