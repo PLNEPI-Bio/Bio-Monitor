@@ -1052,6 +1052,9 @@ html,body{
   padding:1px 5px;border-radius:20px;vertical-align:middle;margin-left:4px;
 }
 .jenis-ann-tag{font-size:8px;font-weight:600;color:var(--accent);margin-left:4px}
+.jenis-end-row{margin-top:2px}
+.jenis-end-value{font-size:10px;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.jenis-end-value .kontrak-date{color:var(--text-dim)}
 
 .monthly-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px}
 .monthly-table th{text-align:left;padding:6px 4px;color:var(--text-dim);font-weight:500;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:1px;font-size:9px}
@@ -6526,75 +6529,78 @@ function updateKPIs(){
   if (lbl) lbl.textContent = periodLabelStr();
 }
 
-// Returns HTML for the "Jenis Biomassa Terkontrak" section in the detail panel.
-// V69: lists every contract matched to this PLTU — active (2026) first, then
-// expired ones tagged "EXPIRED". Each contract's volume is annualised the same
-// way as Sisa Kontrak (vol ÷ durasi when the contract spans >= 2 years).
-function renderPlantJenisList(plant){
-  if (!plant || !DATA.contracts || DATA.contracts.length === 0){
-    return '<div class="jenis-empty">Data kontrak tidak tersedia.</div>';
-  }
+// Build {c, years, annualVol, real, expired} for every contract matched to a
+// PLTU (volume annualised like Sisa Kontrak; realisasi = total across years to
+// match the Daftar Kontrak tab). Returns null when contract data is missing.
+function _plantContractItems(plant){
+  if (!plant || !DATA.contracts || DATA.contracts.length === 0) return null;
   const matched = matchPlantContracts(plant, false); // all (active + expired)
-  if (matched.length === 0){
-    return '<div class="jenis-empty">Belum ada kontrak terdaftar untuk PLTU ini.</div>';
-  }
   const today = new Date().toISOString().slice(0, 10);
-  const items = matched.map(c => {
+  return matched.map(c => {
     const years = plantContractDurationYears(c);
     const annualVol = (+c.vol_mt || 0) / years;
-    // Realisasi = total realisasi across all years (matches the Daftar Kontrak
-    // tab). Using only 2026 made expired contracts show 0 even though they were
-    // realised in prior years.
     const rt = c.realisasi_total || {};
     const real = (typeof c.total_realisasi === 'number' && c.total_realisasi)
       ? c.total_realisasi
       : ((+rt['2023'] || 0) + (+rt['2024'] || 0) + (+rt['2025'] || 0) + (+rt['2026'] || 0));
     const expired = !!(c.akhir && c.akhir < today);
     return { c, years, annualVol, real, expired };
-  });
-  // Active first, then expired; each group sorted by volume desc.
-  items.sort((a, b) => (a.expired - b.expired) || (b.annualVol - a.annualVol));
-
-  const activeItems = items.filter(x => !x.expired);
-  const activeVol = activeItems.reduce((s, x) => s + x.annualVol, 0);
-  const expiredCount = items.length - activeItems.length;
-
-  let html = '<div class="jenis-list">';
-  let expiredHeaderShown = false;
-  items.forEach(item => {
-    const c = item.c;
-    if (item.expired && !expiredHeaderShown){
-      html += '<div class="jenis-expired-divider">Kontrak Expired</div>';
-      expiredHeaderShown = true;
-    }
-    const realPct = item.annualVol > 0 ? Math.min(100, item.real / item.annualVol * 100) : 0;
-    let barColor = '#475569';
-    if (item.expired) barColor = '#64748b';
-    else if (realPct >= 70) barColor = '#10b981';
-    else if (realPct >= 30) barColor = '#f59e0b';
-    else if (realPct > 0) barColor = '#ef4444';
-    const barFillWidth = item.annualVol > 0 ? Math.max(0.5, realPct) : 0;
-    const annTag = item.years > 1 ? ' <span class="jenis-ann-tag" title="Volume disetahunkan: ' + fmtInt(+c.vol_mt || 0) + ' ÷ ' + item.years + ' thn">÷' + item.years + ' thn</span>' : '';
-    html += '<div class="jenis-item' + (item.expired ? ' jenis-item-expired' : '') + '">';
-    html += '<div class="jenis-row">';
-    html += '<span class="jenis-name">' + escapeHtml(c.pemasok || 'Tanpa Nama') +
-      (item.expired ? ' <span class="jenis-expired-tag">EXPIRED</span>' : '') + '</span>';
-    html += '<span class="jenis-meta">' + escapeHtml(c.jenis || '—') + annTag + '</span>';
-    html += '</div>';
-    html += '<div class="jenis-bar-row">';
-    html += '<div class="jenis-bar-track"><div class="jenis-bar-fill" style="width:' + barFillWidth.toFixed(2) + '%;background:' + barColor + '"></div></div>';
-    html += '<span class="jenis-bar-value">' + fmtInt(Math.round(item.annualVol)) + '</span>';
-    html += '</div>';
-    html += '<div class="jenis-progress-row">';
-    html += '<span class="jenis-progress-label">Realisasi</span>';
-    html += '<span class="jenis-progress-value" style="color:' + barColor + '">' + fmtInt(Math.round(item.real)) + ' ton (' + realPct.toFixed(1) + '%)</span>';
-    html += '</div>';
-    html += '</div>';
-  });
+  }).sort((a, b) => b.annualVol - a.annualVol);
+}
+function _plantContractItemHtml(item){
+  const c = item.c;
+  const realPct = item.annualVol > 0 ? Math.min(100, item.real / item.annualVol * 100) : 0;
+  let barColor = '#475569';
+  if (item.expired) barColor = '#64748b';
+  else if (realPct >= 70) barColor = '#10b981';
+  else if (realPct >= 30) barColor = '#f59e0b';
+  else if (realPct > 0) barColor = '#ef4444';
+  const barFillWidth = item.annualVol > 0 ? Math.max(0.5, realPct) : 0;
+  const annTag = item.years > 1 ? ' <span class="jenis-ann-tag" title="Volume disetahunkan: ' + fmtInt(+c.vol_mt || 0) + ' ÷ ' + item.years + ' thn">÷' + item.years + ' thn</span>' : '';
+  const akhir = c.akhir ? fmtKontrakDate(c.akhir) : '<span style="opacity:.45">—</span>';
+  let html = '<div class="jenis-item' + (item.expired ? ' jenis-item-expired' : '') + '">';
+  html += '<div class="jenis-row">';
+  html += '<span class="jenis-name">' + escapeHtml(c.pemasok || 'Tanpa Nama') +
+    (item.expired ? ' <span class="jenis-expired-tag">EXPIRED</span>' : '') + '</span>';
+  html += '<span class="jenis-meta">' + escapeHtml(c.jenis || '—') + annTag + '</span>';
   html += '</div>';
-  html += '<div class="jenis-footer">Volume aktif (disetahunkan): <b>' + fmtInt(Math.round(activeVol)) + '</b> ton · <b>' +
-    activeItems.length + '</b> kontrak aktif' + (expiredCount ? ' · <b>' + expiredCount + '</b> expired' : '') + '</div>';
+  html += '<div class="jenis-bar-row">';
+  html += '<div class="jenis-bar-track"><div class="jenis-bar-fill" style="width:' + barFillWidth.toFixed(2) + '%;background:' + barColor + '"></div></div>';
+  html += '<span class="jenis-bar-value">' + fmtInt(Math.round(item.annualVol)) + '</span>';
+  html += '</div>';
+  html += '<div class="jenis-progress-row">';
+  html += '<span class="jenis-progress-label">Realisasi</span>';
+  html += '<span class="jenis-progress-value" style="color:' + barColor + '">' + fmtInt(Math.round(item.real)) + ' ton (' + realPct.toFixed(1) + '%)</span>';
+  html += '</div>';
+  html += '<div class="jenis-progress-row jenis-end-row">';
+  html += '<span class="jenis-progress-label">Berakhir</span>';
+  html += '<span class="jenis-end-value">' + akhir + '</span>';
+  html += '</div>';
+  html += '</div>';
   return html;
+}
+// "Jenis Biomassa Terkontrak" section — ACTIVE contracts only.
+function renderPlantJenisList(plant){
+  const items = _plantContractItems(plant);
+  if (items === null) return '<div class="jenis-empty">Data kontrak tidak tersedia.</div>';
+  if (items.length === 0) return '<div class="jenis-empty">Belum ada kontrak terdaftar untuk PLTU ini.</div>';
+  const active = items.filter(x => !x.expired);
+  if (active.length === 0) return '<div class="jenis-empty">Tidak ada kontrak aktif untuk PLTU ini.</div>';
+  const activeVol = active.reduce((s, x) => s + x.annualVol, 0);
+  return '<div class="jenis-list">' + active.map(_plantContractItemHtml).join('') + '</div>' +
+    '<div class="jenis-footer">Volume aktif (disetahunkan): <b>' + fmtInt(Math.round(activeVol)) + '</b> ton · <b>' +
+    active.length + '</b> kontrak aktif</div>';
+}
+// "Kontrak Expired" section — its own detail-section (placed after GCV Kalori).
+// Returns '' when the PLTU has no expired contracts.
+function renderPlantExpiredSection(plant){
+  const items = _plantContractItems(plant);
+  if (!items || items.length === 0) return '';
+  const expired = items.filter(x => x.expired);
+  if (expired.length === 0) return '';
+  return '<div class="detail-section"><h4>Kontrak Expired</h4>' +
+    '<div class="jenis-list">' + expired.map(_plantContractItemHtml).join('') + '</div>' +
+    '<div class="jenis-footer"><b>' + expired.length + '</b> kontrak expired</div></div>';
 }
 
 // ===== Sisa Kontrak from "Daftar Kontrak" data (not the Excel field) =====
@@ -7020,6 +7026,8 @@ function selectPlant(code, fromMarkerClick){
         h += '</div>';
         return h;
       })()}
+
+      ${renderPlantExpiredSection(p)}
     </div>
   `;
   // Draw mini chart - data depends on selected period year
