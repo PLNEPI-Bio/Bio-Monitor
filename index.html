@@ -12858,10 +12858,19 @@ async function submitUsulanForm(){
 async function addCustomUsulan(formData){
   if (!supabaseClient) return false;
   const userName = getUserName() || 'Anonymous';
-  // Find next available `no` — follow immediately after the highest existing no
+  // Find next available `no`. Collect the highest no from every local source
+  // (remote state, base rows, and already-added custom rows) AND the live server
+  // max — otherwise a stale local view produced a `no` that collided with an
+  // existing row, so the insert failed with a duplicate-key error.
   let maxNo = 0;
   Object.keys(usulanRemoteState).forEach(k => { const n = parseInt(k, 10); if (!isNaN(n) && n > maxNo) maxNo = n; });
-  (usulanBaseRows).forEach(u => { if (u.no > maxNo) maxNo = u.no; });
+  (usulanBaseRows || []).forEach(u => { if (u && u.no > maxNo) maxNo = u.no; });
+  (usulanCustomRows || []).forEach(u => { if (u && u.no > maxNo) maxNo = u.no; });
+  try {
+    const { data: mx } = await supabaseClient
+      .from('usulan_tahap').select('usulan_no').order('usulan_no', { ascending: false }).limit(1);
+    if (mx && mx[0] && mx[0].usulan_no > maxNo) maxNo = mx[0].usulan_no;
+  } catch(e){ /* fall back to local max */ }
   const nextNo = maxNo + 1;
 
   const payload = {
@@ -12880,12 +12889,18 @@ async function addCustomUsulan(formData){
     updated_by: userName,
   };
   try {
-    const { data, error } = await supabaseClient
-      .from('usulan_tahap')
-      .insert(payload)
-      .select();
+    let data = null, error = null;
+    // Retry on duplicate-key (race / stale no) by bumping usulan_no.
+    for (let attempt = 0; attempt < 4; attempt++){
+      const res = await supabaseClient.from('usulan_tahap').insert(payload).select();
+      data = res.data; error = res.error;
+      if (!error) break;
+      const dup = error.code === '23505' || /duplicate key|already exists/i.test(error.message || '');
+      if (!dup){ console.error('[Usulan] Insert error:', error); return false; }
+      payload.usulan_no = payload.usulan_no + 1;
+    }
     if (error){
-      console.error('[Usulan] Insert error:', error);
+      console.error('[Usulan] Insert failed after retries:', error);
       return false;
     }
     if (data && data[0]){
