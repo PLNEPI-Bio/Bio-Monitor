@@ -5579,6 +5579,16 @@ html,body{
       </h3>
       <div class="real-recap-filters">
         <div class="real-recap-filter">
+          <label>Regional</label>
+          <select id="kontrak-regional-filter">
+            <option value="all">Semua Regional</option>
+            <option value="sumatera">Sumatera</option>
+            <option value="jawa">Jawa</option>
+            <option value="kalimantan">Kalimantan</option>
+            <option value="sulmapana">Sulmapana (Sulawesi · Maluku · Papua · Nusa Tenggara)</option>
+          </select>
+        </div>
+        <div class="real-recap-filter">
           <label>Genco</label>
           <select id="kontrak-genco-filter"></select>
         </div>
@@ -6101,7 +6111,7 @@ const state = {
   bnSelected: null,
   bnSelectedPltu: null, // when user clicks a PLTU cluster on bn map
   realFilters: { year: 'all', month: 'all', genco: 'all', regional: 'all', pltu: 'all' },
-  kontrakFilters: { genco: 'all', pltu: 'all', mitra: 'all', jenis: 'all', tahun: 'all', bulan: 'all' },
+  kontrakFilters: { regional: 'all', genco: 'all', pltu: 'all', mitra: 'all', jenis: 'all', tahun: 'all', bulan: 'all' },
   kontrakShowOldYears: false,
   kontrakOnlyActive: true,
   paretoShowLoss: true,
@@ -10057,6 +10067,19 @@ function switchTab(tab){
 function buildKontrakFilters(){
   const contracts = (DATA && DATA.contracts) || [];
 
+  // Regional filter (options are static in the HTML; just wire onchange)
+  const regionalSel = document.getElementById('kontrak-regional-filter');
+  if (regionalSel && !regionalSel.dataset.built){
+    regionalSel.value = state.kontrakFilters.regional || 'all';
+    regionalSel.onchange = () => {
+      state.kontrakFilters.regional = regionalSel.value;
+      buildKontrakPltuOptions();
+      buildKontrakMitraOptions();
+      renderKontrakTable();
+    };
+    regionalSel.dataset.built = '1';
+  }
+
   // Genco filter
   const gencoSel = document.getElementById('kontrak-genco-filter');
   if (gencoSel && !gencoSel.dataset.built){
@@ -10213,6 +10236,7 @@ function buildKontrakPltuOptions(){
   const contracts = (DATA && DATA.contracts) || [];
   let scoped = contracts;
   if (state.kontrakFilters.genco !== 'all') scoped = scoped.filter(c => c.genco === state.kontrakFilters.genco);
+  if (state.kontrakFilters.regional && state.kontrakFilters.regional !== 'all') scoped = scoped.filter(c => contractProvince(c) === state.kontrakFilters.regional);
   const pltuSet = new Set(scoped.map(c => c.pltu));
   const pltus = Array.from(pltuSet).sort();
   const prev = state.kontrakFilters.pltu;
@@ -10310,12 +10334,32 @@ function getFilteredRealisasiForContract(c){
   }
 }
 
+// Macro-region (jawa/sumatera/kalimantan/sulmapana) for a contract, resolved via
+// its PLTU → the matching plant's `regional` → PROVINCE_GROUPS.
+function contractProvince(c){
+  const cp = (c.pltu || '').toLowerCase().trim();
+  if (!cp) return null;
+  const plants = (DATA && DATA.plants) || [];
+  let reg = null;
+  for (const p of plants){
+    const pn = (p.name || '').toLowerCase().trim();
+    if (!pn) continue;
+    if (cp === pn || cp.startsWith(pn) || pn.startsWith(cp)){ reg = p.regional; break; }
+  }
+  if (!reg) return null;
+  for (const prov in PROVINCE_GROUPS){
+    if (PROVINCE_GROUPS[prov].has(reg)) return prov;
+  }
+  return null;
+}
+
 function filteredContracts(){
   const f = state.kontrakFilters;
   const contracts = (DATA && DATA.contracts) || [];
   const today = todayISO();
   return contracts.filter(c => {
     if (state.kontrakOnlyActive && !isContractActive(c, today)) return false;
+    if (f.regional && f.regional !== 'all' && contractProvince(c) !== f.regional) return false;
     if (f.genco !== 'all' && c.genco !== f.genco) return false;
     if (f.pltu !== 'all' && c.pltu !== f.pltu) return false;
     if (f.mitra && f.mitra !== 'all' && !(c.pemasok || '').toLowerCase().includes(f.mitra.toLowerCase())) return false;
@@ -13145,6 +13189,7 @@ function applyDashboardData(newData, meta){
   const COORD_OVERRIDES = {
     'Tarahan':        { lat: -5.468, lon: 105.322 },
     'Pangkalan Susu': { lat:  4.078, lon:  98.290 },
+    'Bengkayang':     { lat:  0.8355192107807176, lon: 108.8737249 },
   };
   if (DATA.plants && Array.isArray(DATA.plants)){
     DATA.plants.forEach(p => {
