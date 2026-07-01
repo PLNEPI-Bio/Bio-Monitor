@@ -6747,6 +6747,9 @@ function selectPlant(code, fromMarkerClick){
   const kebutuhanBatubara = p.kebutuhan_batubara || 0;
   const sisaKontrakPct = p.target_2026_total ? (sisaKontrak / p.target_2026_total * 100) : 0;
   const biomassaRatio = kebutuhanBatubara ? (p.target_2026_total / (p.target_2026_total + kebutuhanBatubara) * 100) : 0;
+  // Realisasi biomassa 2026 vs kebutuhan batubara 2026 (actual contribution)
+  const realBiomassa = p.real_2026_total || 0;
+  const realBiomassaRatio = (realBiomassa + kebutuhanBatubara) ? (realBiomassa / (realBiomassa + kebutuhanBatubara) * 100) : 0;
   // Sisa Target = Target 2026 - Realisasi YTD (what's still needed to hit target)
   const sisaTarget = Math.max(0, (p.target_2026_total || 0) - (p.real_2026_total || 0));
   const kontrakVsSisaTarget = sisaKontrak - sisaTarget; // positive = enough contract to cover remaining need
@@ -6967,6 +6970,28 @@ function selectPlant(code, fromMarkerClick){
           </div>
           <div class="progress-meta" style="margin-top:4px">
             <span>BIOMASSA <b>${fmtInt(p.target_2026_total)}</b> ton</span>
+            <span>BATUBARA <b>${fmtInt(kebutuhanBatubara)}</b> ton</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>Realisasi Biomassa vs Kebutuhan Batubara 2026</h4>
+        <div class="progress-block">
+          <div class="progress-head">
+            <span class="progress-label">Realisasi Biomassa</span>
+            <span class="progress-value" style="color:var(--accent)">${fmt(realBiomassa)}</span>
+          </div>
+          ${(realBiomassa + kebutuhanBatubara) ? `<div style="display:flex;height:10px;margin-top:8px;border:1px solid var(--border);overflow:hidden">
+            <div style="background:var(--accent);width:${realBiomassaRatio}%" title="Realisasi biomassa"></div>
+            <div style="background:var(--warn);flex:1" title="Kebutuhan batubara"></div>
+          </div>` : ''}
+          <div class="progress-meta">
+            <span><b style="color:var(--accent)">${realBiomassaRatio.toFixed(1)}%</b> biomassa</span>
+            <span><b style="color:var(--warn)">${(100-realBiomassaRatio).toFixed(1)}%</b> batubara</span>
+          </div>
+          <div class="progress-meta" style="margin-top:4px">
+            <span>BIOMASSA <b>${fmtInt(realBiomassa)}</b> ton</span>
             <span>BATUBARA <b>${fmtInt(kebutuhanBatubara)}</b> ton</span>
           </div>
         </div>
