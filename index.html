@@ -6567,6 +6567,7 @@ function _plantContractItemHtml(item){
   else if (realPct > 0) barColor = '#ef4444';
   const barFillWidth = item.annualVol > 0 ? Math.max(0.5, realPct) : 0;
   const annTag = item.years > 1 ? ' <span class="jenis-ann-tag" title="Volume disetahunkan: ' + fmtInt(+c.vol_mt || 0) + ' ÷ ' + item.years + ' thn">÷' + item.years + ' thn</span>' : '';
+  const awal = c.awal ? fmtKontrakDate(c.awal) : '<span style="opacity:.45">—</span>';
   const akhir = c.akhir ? fmtKontrakDate(c.akhir) : '<span style="opacity:.45">—</span>';
   let html = '<div class="jenis-item' + (item.expired ? ' jenis-item-expired' : '') + '">';
   html += '<div class="jenis-row">';
@@ -6581,6 +6582,10 @@ function _plantContractItemHtml(item){
   html += '<div class="jenis-progress-row">';
   html += '<span class="jenis-progress-label">Realisasi</span>';
   html += '<span class="jenis-progress-value" style="color:' + barColor + '">' + fmtInt(Math.round(item.real)) + ' ton (' + realPct.toFixed(1) + '%)</span>';
+  html += '</div>';
+  html += '<div class="jenis-progress-row jenis-end-row">';
+  html += '<span class="jenis-progress-label">Awal</span>';
+  html += '<span class="jenis-end-value">' + awal + '</span>';
   html += '</div>';
   html += '<div class="jenis-progress-row jenis-end-row">';
   html += '<span class="jenis-progress-label">Berakhir</span>';
