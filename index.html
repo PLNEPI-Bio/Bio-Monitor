@@ -4879,6 +4879,11 @@ html,body{
           <div class="kpi-value" id="kpi-target">—</div>
           <div class="kpi-meta">TARGET FGD PERIODE</div>
         </div>
+        <div class="kpi neutral" id="kpi-card-target-berjalan">
+          <div class="kpi-label">Target Berjalan</div>
+          <div class="kpi-value" id="kpi-target-berjalan">—</div>
+          <div class="kpi-meta" id="kpi-target-berjalan-meta">AKUMULASI S/D BULAN REALISASI TERAKHIR</div>
+        </div>
         <div class="kpi accent">
           <div class="kpi-label">Realisasi</div>
           <div class="kpi-value" id="kpi-real">—</div>
@@ -6489,6 +6494,27 @@ function updateKPIs(){
     doSum += t.do_sum;
     gap += t.gap;
   });
+  // Target Berjalan: akumulasi target dari Januari s/d bulan realisasi terakhir.
+  const _tbYear = state.mapPeriod.year;
+  const _tbMonth = state.mapPeriod.month;
+  const _tbTargetArr = p => (_tbYear === '2026') ? (p.target_2026 || []) : ((p.historical_target && p.historical_target[_tbYear]) || []);
+  const _tbRealArr = p => (_tbYear === '2026') ? (p.real_2026 || []) : ((p.historical_real && p.historical_real[_tbYear]) || []);
+  let tbCutoff;
+  if (_tbMonth === 'all'){
+    // National last month with any realisasi across the filtered plants.
+    tbCutoff = -1;
+    for (let m = 0; m < 12; m++){
+      let s = 0; for (const p of plants){ s += (_tbRealArr(p)[m] || 0); }
+      if (s > 0) tbCutoff = m;
+    }
+  } else {
+    tbCutoff = parseInt(_tbMonth, 10);
+  }
+  let targetBerjalan = 0;
+  for (const p of plants){
+    const arr = _tbTargetArr(p);
+    for (let m = 0; m <= tbCutoff; m++){ targetBerjalan += (arr[m] || 0); }
+  }
   // V58: bump a generation token on every call so any counter animation still
   // in flight from an earlier call knows it is stale and must stop. Without this,
   // the first-render animation (which captures the old values in its closure)
@@ -6497,6 +6523,20 @@ function updateKPIs(){
   // only correct itself on the next updateKPIs (e.g. a filter toggle).
   const kpiGen = (window._kpiAnimGen = (window._kpiAnimGen || 0) + 1);
   document.getElementById('kpi-target').innerHTML = fmt(target) + '<span class="kpi-unit">ton</span>';
+  const tbCard = document.getElementById('kpi-card-target-berjalan');
+  const tbEl = document.getElementById('kpi-target-berjalan');
+  const tbMetaEl = document.getElementById('kpi-target-berjalan-meta');
+  if (tbEl){
+    if (tbCutoff >= 0){
+      tbEl.innerHTML = fmt(targetBerjalan) + '<span class="kpi-unit">ton</span>';
+      if (tbMetaEl) tbMetaEl.textContent = 'AKUMULASI TARGET JAN–' + MONTHS[tbCutoff].toUpperCase() + ' ' + _tbYear;
+      if (tbCard) tbCard.style.display = '';
+    } else {
+      // No realisasi yet for this period → nothing to accumulate.
+      tbEl.innerHTML = '—';
+      if (tbMetaEl) tbMetaEl.textContent = 'BELUM ADA REALISASI';
+    }
+  }
   document.getElementById('kpi-real').innerHTML = fmt(real) + '<span class="kpi-unit">ton</span>';
   document.getElementById('kpi-real-pct').textContent = target ? `${(real/target*100).toFixed(1)}% OF TARGET FGD` : '—';
   document.getElementById('kpi-do').innerHTML = fmt(doSum) + '<span class="kpi-unit">ton</span>';
