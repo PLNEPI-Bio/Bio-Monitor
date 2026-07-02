@@ -6632,14 +6632,23 @@ function plantContractDurationYears(c){
   // Only annualise when the contract genuinely spans ~2 years or more.
   return years >= 1.9 ? Math.max(2, Math.round(years)) : 1;
 }
+// Canonicalize PLTU names so known spelling variants between the map points
+// and the Daftar Kontrak sheet resolve to the same plant.
+const PLTU_NAME_ALIASES = {
+  "tanjung awar's": 'tanjung awar-awar'
+};
+function canonPltuName(name){
+  const n = (name || '').toLowerCase().trim();
+  return PLTU_NAME_ALIASES[n] || n;
+}
 function matchPlantContracts(plant, activeOnly){
   const out = [];
   if (!plant || !DATA || !DATA.contracts) return out;
-  const pn = (plant.name || '').toLowerCase().trim();
+  const pn = canonPltuName(plant.name);
   if (!pn) return out;
   const today = new Date().toISOString().slice(0, 10);
   for (const c of DATA.contracts){
-    const cp = (c.pltu || '').toLowerCase().trim();
+    const cp = canonPltuName(c.pltu);
     if (!cp) continue;
     if (!(cp === pn || cp.startsWith(pn) || pn.startsWith(cp))) continue;
     if (activeOnly && c.akhir && c.akhir < today) continue;
@@ -10342,12 +10351,12 @@ function getFilteredRealisasiForContract(c){
 // Macro-region (jawa/sumatera/kalimantan/sulmapana) for a contract, resolved via
 // its PLTU → the matching plant's `regional` → PROVINCE_GROUPS.
 function contractProvince(c){
-  const cp = (c.pltu || '').toLowerCase().trim();
+  const cp = canonPltuName(c.pltu);
   if (!cp) return null;
   const plants = (DATA && DATA.plants) || [];
   let reg = null;
   for (const p of plants){
-    const pn = (p.name || '').toLowerCase().trim();
+    const pn = canonPltuName(p.name);
     if (!pn) continue;
     if (cp === pn || cp.startsWith(pn) || pn.startsWith(cp)){ reg = p.regional; break; }
   }
