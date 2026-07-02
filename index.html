@@ -6776,6 +6776,17 @@ function selectPlant(code, fromMarkerClick){
   const realBiomassaRatio = (realBiomassa + kebutuhanBatubara) ? (realBiomassa / (realBiomassa + kebutuhanBatubara) * 100) : 0;
   // Sisa Target = Target 2026 - Realisasi YTD (what's still needed to hit target)
   const sisaTarget = Math.max(0, (p.target_2026_total || 0) - (p.real_2026_total || 0));
+  // Target Berjalan: akumulasi target dari Januari s/d bulan realisasi terakhir.
+  const _realArr2026 = p.real_2026 || [];
+  const _targetArr2026 = p.target_2026 || [];
+  let lastRealMonth = -1;
+  for (let i = 0; i < 12; i++){ if ((_realArr2026[i] || 0) > 0) lastRealMonth = i; }
+  let targetBerjalan = 0;
+  for (let i = 0; i <= lastRealMonth; i++){ targetBerjalan += (_targetArr2026[i] || 0); }
+  const lastRealMonthName = lastRealMonth >= 0 ? MONTHS[lastRealMonth] : '—';
+  const targetBerjalanPct = targetBerjalan ? (realBiomassa / targetBerjalan * 100) : 0;
+  const tbColor = targetBerjalan ? (targetBerjalanPct >= 95 ? '#10b981' : targetBerjalanPct >= 70 ? '#f59e0b' : '#ef4444') : '#475569';
+  const tbFillPct = Math.min(100, Math.max(0.5, targetBerjalanPct));
   const kontrakVsSisaTarget = sisaKontrak - sisaTarget; // positive = enough contract to cover remaining need
   const isShortfall = sisaKontrak < sisaTarget;
   // For the bar visual: scale both to the larger of the two
@@ -6824,6 +6835,26 @@ function selectPlant(code, fromMarkerClick){
       </div>
         `;
       })() : ''}
+
+      ${state.mapPeriod.year === '2026' && lastRealMonth >= 0 ? `
+      <div class="detail-section">
+        <h4>Target Berjalan · s/d ${lastRealMonthName} 2026</h4>
+        <div class="progress-block">
+          <div class="progress-head">
+            <span class="progress-label">Realisasi vs Target Berjalan</span>
+            <span class="progress-value" style="color:${tbColor}">${targetBerjalanPct.toFixed(1)}%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${tbFillPct}%;background:${tbColor}"></div></div>
+          <div class="progress-meta">
+            <span>REAL <b>${fmtInt(realBiomassa)}</b> ton</span>
+            <span>TARGET BERJALAN <b>${fmtInt(targetBerjalan)}</b> ton</span>
+          </div>
+          <div class="progress-meta" style="margin-top:4px">
+            <span>Akumulasi target Jan–${lastRealMonthName}</span>
+            <span>TARGET TAHUNAN <b>${fmtInt(p.target_2026_total)}</b> ton</span>
+          </div>
+        </div>
+      </div>` : ''}
 
       <div class="detail-section">
         <h4>Kapasitas Pembangkit</h4>
