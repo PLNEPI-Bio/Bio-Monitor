@@ -6593,8 +6593,9 @@ function _plantContractItems(plant){
     const real = (typeof c.total_realisasi === 'number' && c.total_realisasi)
       ? c.total_realisasi
       : ((+rt['2023'] || 0) + (+rt['2024'] || 0) + (+rt['2025'] || 0) + (+rt['2026'] || 0));
-    const expired = !!(c.akhir && c.akhir < today);
-    return { c, years, annualVol, real, expired };
+    const terminated = !!c.terminated;
+    const expired = terminated || !!(c.akhir && c.akhir < today);
+    return { c, years, annualVol, real, expired, terminated };
   }).sort((a, b) => b.annualVol - a.annualVol);
 }
 function _plantContractItemHtml(item){
@@ -6608,11 +6609,15 @@ function _plantContractItemHtml(item){
   const barFillWidth = item.annualVol > 0 ? Math.max(0.5, realPct) : 0;
   const annTag = item.years > 1 ? ' <span class="jenis-ann-tag" title="Volume disetahunkan: ' + fmtInt(+c.vol_mt || 0) + ' ÷ ' + item.years + ' thn">÷' + item.years + ' thn</span>' : '';
   const awal = c.awal ? fmtKontrakDate(c.awal) : '<span style="opacity:.45">—</span>';
-  const akhir = c.akhir ? fmtKontrakDate(c.akhir) : '<span style="opacity:.45">—</span>';
+  // Terminated contracts: akhir date is ignored (contract cut short), show a label.
+  const akhir = item.terminated
+    ? '<span style="opacity:.6">Diterminasi</span>'
+    : (c.akhir ? fmtKontrakDate(c.akhir) : '<span style="opacity:.45">—</span>');
   let html = '<div class="jenis-item' + (item.expired ? ' jenis-item-expired' : '') + '">';
   html += '<div class="jenis-row">';
   html += '<span class="jenis-name">' + escapeHtml(c.pemasok || 'Tanpa Nama') +
-    (item.expired ? ' <span class="jenis-expired-tag">EXPIRED</span>' : '') + '</span>';
+    (item.terminated ? ' <span class="jenis-expired-tag">DITERMINASI</span>'
+      : item.expired ? ' <span class="jenis-expired-tag">EXPIRED</span>' : '') + '</span>';
   html += '<span class="jenis-meta">' + escapeHtml(c.jenis || '—') + annTag + '</span>';
   html += '</div>';
   html += '<div class="jenis-bar-row">';
@@ -6691,7 +6696,8 @@ function matchPlantContracts(plant, activeOnly){
     const cp = canonPltuName(c.pltu);
     if (!cp) continue;
     if (!(cp === pn || cp.startsWith(pn) || pn.startsWith(cp))) continue;
-    if (activeOnly && c.akhir && c.akhir < today) continue;
+    // Terminated (struck-through) contracts count as expired regardless of akhir.
+    if (activeOnly && (c.terminated || (c.akhir && c.akhir < today))) continue;
     out.push(c);
   }
   return out;
@@ -10335,6 +10341,8 @@ function buildKontrakMitraOptions(){
 
 function isContractActive(c, refDate){
   // Active if akhir (end date) is on or after reference date.
+  // Terminated (struck-through in source Excel) contracts are always inactive.
+  if (c.terminated) return false;
   // Empty/missing akhir is treated as inactive (cannot determine activeness).
   if (!c.akhir) return false;
   // c.akhir is ISO YYYY-MM-DD; compare lexicographically with refDate's ISO string
@@ -13819,7 +13827,9 @@ async function handleFileSelect(kind, file){
   updateLog('Reading <b>' + escapeHtml(file.name) + '</b>...', 'info');
   try {
     const buf = await readFileAsArrayBuffer(file);
-    const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+    // cellStyles + bookFiles: needed so the Daftar Kontrak parser can detect
+    // strikethrough rows (terminated contracts) from the raw styles/XML.
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true, cellStyles: true, bookFiles: true });
     updateLog('  Workbook loaded · sheets: ' + wb.SheetNames.length, 'dim');
 
     // V43: auto-detect file type and warn if mismatch with chosen zone
@@ -16829,9 +16839,56 @@ const _CONTRACT_CFG = {
 };
 const _JENIS_NORM = { 'sawdust': 'Sawdust', 'Cangkang Sawit ': 'Cangkang Sawit' };
 
+// Build a strikethrough lookup from the raw workbook styles/XML. A struck row
+// in the source Excel means the contract has been terminated, so we flag it and
+// treat it as expired regardless of its akhir date. Returns fn(sheetName, addr)
+// -> boolean, or null when style/raw-file data isn't available (older uploads).
+function _contractStrikeLookup(wb){
+  try {
+    const Fonts = (wb.Styles && wb.Styles.Fonts) || [];
+    const CellXf = (wb.Styles && wb.Styles.CellXf) || [];
+    if (!Fonts.length || !CellXf.length || !wb.files) return null;
+    const fontStrike = Fonts.map(f => !!(f && f.strike));
+    const strikeXf = new Set();
+    CellXf.forEach((xf, i) => {
+      const fid = xf && (xf.fontId != null ? xf.fontId : parseInt(xf.fontid, 10));
+      if (fontStrike[fid]) strikeXf.add(i);
+    });
+    if (!strikeXf.size) return () => false; // workbook has no struck styles
+    const dec = buf => (typeof buf === 'string') ? buf
+      : new TextDecoder('utf-8').decode(buf instanceof Uint8Array ? buf : new Uint8Array(buf));
+    const fileText = name => { const f = wb.files[name]; return f ? dec(f.content) : null; };
+    const wbxml = fileText('xl/workbook.xml');
+    const rels = fileText('xl/_rels/workbook.xml.rels');
+    if (!wbxml || !rels) return null;
+    const relMap = {};
+    for (const m of rels.matchAll(/<Relationship[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"/g)){ relMap[m[1]] = m[2]; }
+    const sheetFile = {};
+    for (const m of wbxml.matchAll(/<sheet[^>]*name="([^"]+)"[^>]*r:id="([^"]+)"/g)){
+      let t = (relMap[m[2]] || '').replace(/^\/?xl\//, '').replace(/^\//, '');
+      sheetFile[m[1]] = 'xl/' + t;
+    }
+    const cache = {};
+    function addrMap(sn){
+      if (cache[sn]) return cache[sn];
+      const xml = sheetFile[sn] ? fileText(sheetFile[sn]) : null;
+      const map = {};
+      if (xml){
+        for (const m of xml.matchAll(/<c\s+r="([A-Z]+\d+)"([^>]*)>/g)){
+          const sm = /\bs="(\d+)"/.exec(m[2]);
+          if (sm) map[m[1]] = parseInt(sm[1], 10);
+        }
+      }
+      return (cache[sn] = map);
+    }
+    return (sheetName, addr) => { const s = addrMap(sheetName)[addr]; return s != null && strikeXf.has(s); };
+  } catch (e){ console.warn('[kontrak] strike lookup unavailable:', e); return null; }
+}
+
 async function parseKontrakExcel(wb){
   const records = [];
   const sheetNames = ['PNP', 'PIP', 'UIW'];
+  const strikeFn = _contractStrikeLookup(wb);
   for (let s = 0; s < sheetNames.length; s++){
     const sheet = sheetNames[s];
     if (!wb.Sheets[sheet]) continue;
@@ -16850,6 +16907,11 @@ async function parseKontrakExcel(wb){
       let jenisStr = _safeStr(row[cfg.cols.jenis]);
       if (_JENIS_NORM[jenisStr]) jenisStr = _JENIS_NORM[jenisStr];
       jenisStr = jenisStr.trim();
+      // Terminated = row struck through in the source Excel (identifier cell).
+      const terminated = !!(strikeFn && (
+        strikeFn(sheet, XLSX.utils.encode_cell({ r: ri, c: cfg.cols.pltu })) ||
+        strikeFn(sheet, XLSX.utils.encode_cell({ r: ri, c: cfg.cols.pemasok }))
+      ));
       const rec = {
         genco: cfg.genco,
         pltu: pltuStr,
@@ -16863,6 +16925,7 @@ async function parseKontrakExcel(wb){
         realisasi: { '2023': new Array(12).fill(0), '2024': new Array(12).fill(0), '2025': new Array(12).fill(0), '2026': new Array(12).fill(0) },
         realisasi_total: { '2023': 0, '2024': 0, '2025': 0, '2026': 0 },
       };
+      if (terminated) rec.terminated = true;
       Object.keys(cfg.year_blocks).forEach(year => {
         const cols = cfg.year_blocks[year];
         const months = cols.map(c => _safeNum(row[c]));
