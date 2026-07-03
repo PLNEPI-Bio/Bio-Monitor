@@ -1,5 +1,5 @@
 // prod-auto-refresh
-// Scheduled (pg_cron, every 10 min) Edge Function that downloads the
+// Scheduled (pg_cron) Edge Function that downloads the
 // "Monitoring Produksi" Excel from a public SharePoint link, parses the
 // Produksi dataset (plants, monthly, pembangkit, gcv, gcv_national) and
 // merges it into the `dashboard_data` row id=1 — exactly mirroring what the
@@ -36,6 +36,15 @@ function _safeNum(v: unknown): number {
 }
 function _sheetToMatrix(ws: XLSX.WorkSheet): any[][] {
   return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as any[][];
+}
+// Deterministic JSON with recursively sorted object keys — used to compare the
+// freshly-parsed data against the stored copy (which JSONB returns with keys in
+// a different order) without false "changed" results.
+function stableStringify(v: any): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  if (Array.isArray(v)) return "[" + v.map(stableStringify).join(",") + "]";
+  const keys = Object.keys(v).sort();
+  return "{" + keys.map((k) => JSON.stringify(k) + ":" + stableStringify(v[k])).join(",") + "}";
 }
 
 // ---------------- prod parser (port of parseProdExcel, prod fields only) ----
@@ -403,6 +412,25 @@ Deno.serve(async (_req: Request) => {
     };
 
     const summary = `Auto-refresh (SharePoint) · ${merged.plants.length} plants, ${merged.pembangkit.length} pembangkit, ${Object.keys(merged.gcv || {}).length} GCV`;
+
+    // 4b) EGRESS GUARD: skip the write entirely when the parsed data is identical
+    // to what's already stored. Writing id=1 fires a Realtime broadcast of the full
+    // ~860 KB row to every connected client, so an unconditional write every 10 min
+    // burns egress even when SharePoint hasn't changed. We compare only the fields
+    // this function actually refreshes (ignoring volatile last_updated / metadata).
+    // NOTE: the stored copy comes back from JSONB with object keys re-ordered, so a
+    // plain JSON.stringify never matches. stableStringify sorts keys recursively so
+    // the comparison is key-order-independent (value-based).
+    const sameData =
+      stableStringify(merged.plants) === stableStringify(existing.plants) &&
+      stableStringify(merged.monthly) === stableStringify(existing.monthly) &&
+      stableStringify(merged.pembangkit) === stableStringify(existing.pembangkit) &&
+      stableStringify(merged.gcv) === stableStringify(existing.gcv) &&
+      stableStringify(merged.gcv_national) === stableStringify(existing.gcv_national);
+    if (sameData) {
+      log.push(`↔ No change vs stored data — skipped write (saves egress). ${summary}`);
+      return out(true);
+    }
 
     // 5) Backup current → id=2 (best-effort)
     if (currentRow && currentRow.data) {
