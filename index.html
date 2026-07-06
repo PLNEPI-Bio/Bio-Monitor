@@ -10813,17 +10813,47 @@ function wireKontrakJenisYearSel(){
 // Opened when user clicks the Vol or Sisa KPI cards.
 // Shows a table of all active contracts sorted by the clicked metric.
 // =====================================================
+// Module state so the genco filter chips can re-render the same modal in place.
+let kontrakBreakdownType = 'sisa';
+let kontrakBreakdownGenco = 'all';
+
 function showKontrakBreakdown(type){
   const backdrop = document.getElementById('kontrakBreakdownBackdrop');
+  if (!backdrop) return;
+  kontrakBreakdownType = type;
+  kontrakBreakdownGenco = 'all'; // reset filter each time the modal opens
+  renderKontrakBreakdownBody();
+  backdrop.classList.add('open');
+  // Close on backdrop click
+  backdrop.onclick = (e) => { if (e.target === backdrop) closeKontrakBreakdown(); };
+}
+window.showKontrakBreakdown = showKontrakBreakdown;
+
+// Change the genco filter (all/PNP/PIP/UIW) and re-render the modal body in place.
+function setKontrakBreakdownGenco(g){
+  kontrakBreakdownGenco = g;
+  renderKontrakBreakdownBody();
+}
+window.setKontrakBreakdownGenco = setKontrakBreakdownGenco;
+
+function renderKontrakBreakdownBody(){
+  const type = kontrakBreakdownType;
   const titleEl = document.getElementById('kontrakBreakdownTitle');
   const metaEl = document.getElementById('kontrakBreakdownMeta');
   const eyebrowEl = document.getElementById('kontrakBreakdownEyebrow');
   const bodyEl = document.getElementById('kontrakBreakdownBody');
-  if (!backdrop || !bodyEl) return;
+  if (!bodyEl) return;
 
   const all = (DATA && DATA.contracts) || [];
   const today = todayISO();
-  const active = all.filter(c => isContractActive(c, today));
+  const activeAll = all.filter(c => isContractActive(c, today));
+  // Per-genco counts (over the full active set) for the filter chip labels.
+  const gencoCounts = { all: activeAll.length, PNP: 0, PIP: 0, UIW: 0 };
+  for (const c of activeAll){ const g = c.genco || ''; if (gencoCounts[g] !== undefined) gencoCounts[g]++; }
+  // Apply the genco filter for the table itself.
+  const active = kontrakBreakdownGenco === 'all'
+    ? activeAll
+    : activeAll.filter(c => (c.genco || '') === kontrakBreakdownGenco);
 
   // Compute per-contract stats
   const rows = active.map(c => {
@@ -10861,10 +10891,25 @@ function showKontrakBreakdown(type){
   const totalVol = rows.reduce((s, r) => s + r.vol, 0);
   const totalReal = rows.reduce((s, r) => s + r.totalReal, 0);
   const totalSisa = totalVol - totalReal;
-  metaEl.textContent = active.length + ' kontrak aktif (akhir ≥ ' + today + ') · Total Vol ' + fmtInt(totalVol) + ' MT · Total Realisasi ' + fmtInt(totalReal) + ' MT · Sisa ' + fmtInt(totalSisa) + ' MT';
+  const gencoSuffix = kontrakBreakdownGenco === 'all' ? '' : ' · Genco ' + kontrakBreakdownGenco;
+  metaEl.textContent = active.length + ' kontrak aktif (akhir ≥ ' + today + ')' + gencoSuffix + ' · Total Vol ' + fmtInt(totalVol) + ' MT · Total Realisasi ' + fmtInt(totalReal) + ' MT · Sisa ' + fmtInt(totalSisa) + ' MT';
+
+  // Genco filter chips (Semua / PNP / PIP / UIW) — re-render the modal in place.
+  const gencoOptions = [['all', 'Semua'], ['PNP', 'PNP'], ['PIP', 'PIP'], ['UIW', 'UIW']];
+  let html = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">';
+  html += '<span style="font-size:10px;color:var(--text-dim);font-weight:600;margin-right:2px">GENCO:</span>';
+  for (const [g, label] of gencoOptions){
+    const on = kontrakBreakdownGenco === g;
+    const style = 'padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ' +
+      (on ? 'var(--accent)' : 'var(--border)') + ';background:' + (on ? 'var(--accent)' : 'transparent') +
+      ';color:' + (on ? '#fff' : 'var(--text-dim)') + ';';
+    html += '<button type="button" onclick="setKontrakBreakdownGenco(\'' + g + '\')" style="' + style + '">' +
+      label + ' <span style="opacity:.7">(' + fmtInt(gencoCounts[g] || 0) + ')</span></button>';
+  }
+  html += '</div>';
 
   // Build table
-  let html = '<div style="overflow:auto;max-height:500px;border:1px solid var(--border)">';
+  html += '<div style="overflow:auto;max-height:500px;border:1px solid var(--border)">';
   html += '<table class="kontrak-table" style="font-size:9px">';
   html += '<thead><tr>';
   html += '<th>#</th><th>Genco</th><th>PLTU</th><th>Pemasok</th><th>Jenis</th><th>Akhir</th>';
@@ -10900,12 +10945,7 @@ function showKontrakBreakdown(type){
   html += '</tr></tfoot></table></div>';
 
   bodyEl.innerHTML = html;
-  backdrop.classList.add('open');
-
-  // Close on backdrop click
-  backdrop.onclick = (e) => { if (e.target === backdrop) closeKontrakBreakdown(); };
 }
-window.showKontrakBreakdown = showKontrakBreakdown;
 
 function closeKontrakBreakdown(){
   const backdrop = document.getElementById('kontrakBreakdownBackdrop');
