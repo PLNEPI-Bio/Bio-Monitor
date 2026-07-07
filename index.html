@@ -5786,7 +5786,20 @@ html,body{
 .laporan-save-lbl{display:block;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim);margin:8px 0 4px}
 .laporan-input{width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;color:var(--text-bright);font-size:12px;padding:7px 9px;font-family:inherit}
 .laporan-input:focus{outline:none;border-color:#2e7d47}
-.laporan-arsip-section{margin-top:22px;border-top:1px solid var(--border);padding-top:16px}
+.laporan-arsip-section{margin-bottom:22px}
+.laporan-arsip-groups{margin-top:12px;display:flex;flex-direction:column;gap:16px}
+.laporan-arsip-month{font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;letter-spacing:.4px;color:#2e7d47;text-transform:uppercase;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.laporan-arsip-month::after{content:"";flex:1;height:1px;background:var(--border)}
+.laporan-arsip-month .cnt{font-weight:600;color:var(--text-dim);font-size:10px}
+/* compact upload zone for the Laporan tab (slim horizontal bar) */
+.laporan-upload-compact{margin-bottom:0}
+.laporan-upload-compact .update-upload-zone{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;text-align:left;padding:12px 16px;border-width:1px}
+.laporan-upload-compact .update-upload-icon{font-size:20px;margin:0}
+.laporan-upload-compact .lap-up-text{flex:1;min-width:180px}
+.laporan-upload-compact .update-upload-title{margin-bottom:2px;font-size:12px}
+.laporan-upload-compact .update-upload-sub{margin-bottom:0;font-size:10px}
+.laporan-upload-compact .update-upload-cta{justify-content:flex-end}
+.laporan-upload-compact .update-upload-filename{flex-basis:100%}
 .laporan-mini-btn{background:var(--panel-3);border:1px solid var(--border);color:var(--text-dim);font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer}
 .laporan-mini-btn:hover{border-color:#2e7d47;color:var(--text-bright)}
 .laporan-arsip-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px}
@@ -5816,18 +5829,12 @@ html,body{
       </div>
     </div>
 
-    <div class="update-upload-grid" style="grid-template-columns:1fr">
-      <div class="update-upload-zone" id="uploadZoneLaporan" data-kind="laporan">
-        <input type="file" accept=".xlsx,.xls" id="fileInputLaporan" style="display:none">
-        <div class="update-upload-icon">🖼️</div>
-        <div class="update-upload-title">Data Laporan (template terisi)</div>
-        <div class="update-upload-sub">Excel dari template di atas — wilayah, realisasi tahunan, realisasi bulanan per PLTU, dan DO</div>
-        <div class="update-upload-cta">
-          <button class="update-upload-btn" data-trigger="laporan">Pilih file</button>
-          <span class="update-upload-or">atau seret ke sini</span>
-        </div>
-        <div class="update-upload-filename" id="filenameLaporan"></div>
+    <div class="laporan-arsip-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div class="laporan-lbl" style="font-size:13px;margin:0">📚 Arsip Laporan Tersimpan</div>
+        <button class="laporan-mini-btn" onclick="fetchLaporanArsip().then(renderLaporanArsip)" title="Muat ulang daftar">↻ Muat ulang</button>
       </div>
+      <div id="laporanArsipList" class="laporan-arsip-groups"><div class="laporan-hint">Memuat…</div></div>
     </div>
 
     <div id="laporanEditor" style="display:none">
@@ -5870,12 +5877,20 @@ html,body{
       </div>
     </div>
 
-    <div class="laporan-arsip-section">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div class="laporan-lbl" style="font-size:13px;margin:0">📚 Arsip Laporan Tersimpan</div>
-        <button class="laporan-mini-btn" onclick="fetchLaporanArsip().then(renderLaporanArsip)" title="Muat ulang daftar">↻ Muat ulang</button>
+    <div class="update-upload-grid laporan-upload-compact" style="grid-template-columns:1fr">
+      <div class="update-upload-zone" id="uploadZoneLaporan" data-kind="laporan">
+        <input type="file" accept=".xlsx,.xls" id="fileInputLaporan" style="display:none">
+        <div class="update-upload-icon">🖼️</div>
+        <div class="lap-up-text">
+          <div class="update-upload-title">Upload Data Laporan (template terisi)</div>
+          <div class="update-upload-sub">Excel dari template — wilayah, realisasi tahunan &amp; bulanan per PLTU, DO</div>
+        </div>
+        <div class="update-upload-cta">
+          <button class="update-upload-btn" data-trigger="laporan">Pilih file</button>
+          <span class="update-upload-or">atau seret ke sini</span>
+        </div>
+        <div class="update-upload-filename" id="filenameLaporan"></div>
       </div>
-      <div id="laporanArsipList" class="laporan-arsip-list"><div class="laporan-hint">Memuat…</div></div>
     </div>
   </div>
 </div>
@@ -8304,6 +8319,37 @@ async function fetchLaporanArsip(){
 }
 window.fetchLaporanArsip = fetchLaporanArsip;
 
+// Group archive items by upload month (created_at), newest month first.
+function _laporanArsipGroups(items){
+  const map = new Map(); // 'YYYY-MM' -> { key, label, items }
+  (items || []).forEach(it => {
+    const d = it.created_at ? new Date(it.created_at) : new Date();
+    const y = d.getFullYear(), mo = d.getMonth();
+    const key = y + '-' + String(mo + 1).padStart(2, '0');
+    if (!map.has(key)) map.set(key, { key, label: LAPORAN_MONTHS_FULL[mo] + ' ' + y, items: [] });
+    map.get(key).items.push(it);
+  });
+  return Array.from(map.values()).sort((a, b) => a.key < b.key ? 1 : a.key > b.key ? -1 : 0);
+}
+
+function _laporanArsipCardHtml(it){
+  const dt = it.checkpoint_date ? fmtKontrakDate(it.checkpoint_date) : '—';
+  const savedAt = it.created_at ? new Date(it.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+  const by = it.created_by ? escapeHtml(it.created_by) : 'Anonim';
+  return '<div class="laporan-arsip-card">' +
+    '<div class="laporan-arsip-card-top">' +
+      '<span class="laporan-arsip-wilayah">' + escapeHtml(it.wilayah || '—') + '</span>' +
+      '<span class="laporan-arsip-date">📅 ' + dt + '</span>' +
+    '</div>' +
+    (it.keterangan ? '<div class="laporan-arsip-ket">' + escapeHtml(it.keterangan) + '</div>' : '') +
+    '<div class="laporan-arsip-meta">oleh ' + by + (savedAt ? ' · ' + savedAt : '') + '</div>' +
+    '<div class="laporan-arsip-actions">' +
+      '<button class="laporan-arsip-open" onclick="openLaporanArsip(\'' + it.id + '\')">Buka</button>' +
+      '<button class="laporan-arsip-del" onclick="deleteLaporanArsip(\'' + it.id + '\')">Hapus</button>' +
+    '</div>' +
+  '</div>';
+}
+
 function renderLaporanArsip(){
   const wrap = document.getElementById('laporanArsipList');
   if (!wrap) return;
@@ -8312,23 +8358,13 @@ function renderLaporanArsip(){
     wrap.innerHTML = '<div class="laporan-arsip-empty">Belum ada laporan tersimpan. Upload data lalu klik "Simpan ke Library".</div>';
     return;
   }
-  wrap.innerHTML = items.map(it => {
-    const dt = it.checkpoint_date ? fmtKontrakDate(it.checkpoint_date) : '—';
-    const savedAt = it.created_at ? new Date(it.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '';
-    const by = it.created_by ? escapeHtml(it.created_by) : 'Anonim';
-    return '<div class="laporan-arsip-card">' +
-      '<div class="laporan-arsip-card-top">' +
-        '<span class="laporan-arsip-wilayah">' + escapeHtml(it.wilayah || '—') + '</span>' +
-        '<span class="laporan-arsip-date">📅 ' + dt + '</span>' +
-      '</div>' +
-      (it.keterangan ? '<div class="laporan-arsip-ket">' + escapeHtml(it.keterangan) + '</div>' : '') +
-      '<div class="laporan-arsip-meta">oleh ' + by + (savedAt ? ' · ' + savedAt : '') + '</div>' +
-      '<div class="laporan-arsip-actions">' +
-        '<button class="laporan-arsip-open" onclick="openLaporanArsip(\'' + it.id + '\')">Buka</button>' +
-        '<button class="laporan-arsip-del" onclick="deleteLaporanArsip(\'' + it.id + '\')">Hapus</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
+  const groups = _laporanArsipGroups(items);
+  wrap.innerHTML = groups.map(g =>
+    '<div class="laporan-arsip-group">' +
+      '<div class="laporan-arsip-month">' + escapeHtml(g.label) + ' <span class="cnt">' + g.items.length + ' laporan</span></div>' +
+      '<div class="laporan-arsip-list">' + g.items.map(_laporanArsipCardHtml).join('') + '</div>' +
+    '</div>'
+  ).join('');
 }
 window.renderLaporanArsip = renderLaporanArsip;
 
