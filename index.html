@@ -55,6 +55,8 @@
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <!-- xlsx-js-style: SheetJS fork that adds cell styling (fills, borders, fonts) for nicer Excel exports -->
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<!-- jsPDF: wrap the generated Laporan PNG into a one-page PDF (report export only) -->
+<script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>/* ======= Biomassa Monitoring Dashboard v2 ======= */
 /* ===== V63: Password gate overlay ===== */
 .auth-gate{
@@ -4323,6 +4325,7 @@ html,body{
 .tab[data-tab="mou-timeline"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#06b6d4;opacity:0;transition:opacity .2s}
 .tab[data-tab="usulan"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#ec4899;opacity:0;transition:opacity .2s}
 .tab[data-tab="berita"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#f97316;opacity:0;transition:opacity .2s}
+.tab[data-tab="laporan"]::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:3px;border-radius:0 2px 2px 0;background:#2e7d47;opacity:0;transition:opacity .2s}
 .tab.active::before,.tab:hover::before{opacity:1}
 /* Active bottom bar color matches indicator */
 .tab[data-tab="map"].active::after{background:#0F496E!important}
@@ -4335,6 +4338,7 @@ html,body{
 .tab[data-tab="mou-timeline"].active::after{background:#06b6d4!important}
 .tab[data-tab="usulan"].active::after{background:#ec4899!important}
 .tab[data-tab="berita"].active::after{background:#f97316!important}
+.tab[data-tab="laporan"].active::after{background:#2e7d47!important}
 
 /* Better data tables */
 .monthly-table,.kontrak-table,.pareto-top-table,.yoy-table,.bn-table{border-collapse:separate;border-spacing:0;width:100%;font-family:'Plus Jakarta Sans',sans-serif}
@@ -4802,6 +4806,10 @@ html,body{
   <button class="tab" data-tab="berita">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h10v10H2zM12 5h2v8a1 1 0 0 1-1 1H4M4 6h6M4 8h6M4 10h4"/></svg>
     BERITA
+  </button>
+  <button class="tab" data-tab="laporan">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1h7l3 3v11H3zM10 1v3h3M6 8l1.5 1.5L9 8m-3 3h4"/></svg>
+    LAPORAN
   </button>
 </nav>
 <!-- Pembangkit jenis dropdown menu (fixed-position to escape tab-bar overflow) -->
@@ -5758,6 +5766,68 @@ html,body{
       <div class="berita-loading">
         <div class="berita-loading-spinner"></div>
         <div class="berita-loading-text">Memuat berita...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== TAB: LAPORAN (Infografis Generator) ====== -->
+<style>
+.laporan-grid{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:18px;margin-top:14px;align-items:start}
+.laporan-lbl{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-dim);margin:10px 0 5px}
+.laporan-textarea{width:100%;box-sizing:border-box;background:var(--panel-3);border:1px solid var(--border);border-radius:6px;color:var(--text-bright);font-size:12px;line-height:1.5;padding:8px 10px;resize:vertical;font-family:inherit}
+.laporan-textarea:focus{outline:none;border-color:#2e7d47}
+.laporan-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.laporan-hint{font-size:11px;color:var(--text-dim);margin-top:10px;line-height:1.5}
+.laporan-preview-wrap{background:var(--panel-3);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:200px;overflow:auto}
+.laporan-preview-canvas{width:100%;height:auto;display:block;background:#fff;border-radius:4px;box-shadow:0 1px 6px rgba(0,0,0,.12)}
+@media (max-width:768px){ .laporan-grid{grid-template-columns:1fr} }
+</style>
+<div class="view" data-view="laporan">
+  <div class="real-view">
+    <div class="real-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;width:100%">
+        <div>
+          <div class="real-title">Generate Laporan Infografis</div>
+          <div class="real-title-sub">Unduh template, isi data realisasi, upload, lalu unduh laporan sebagai PNG/PDF</div>
+        </div>
+        <button class="update-upload-btn" onclick="downloadLaporanTemplate()" title="Unduh template Excel kosong">⬇ Unduh Template Excel</button>
+      </div>
+    </div>
+
+    <div class="update-upload-grid" style="grid-template-columns:1fr">
+      <div class="update-upload-zone" id="uploadZoneLaporan" data-kind="laporan">
+        <input type="file" accept=".xlsx,.xls" id="fileInputLaporan" style="display:none">
+        <div class="update-upload-icon">🖼️</div>
+        <div class="update-upload-title">Data Laporan (template terisi)</div>
+        <div class="update-upload-sub">Excel dari template di atas — wilayah, realisasi tahunan, realisasi bulanan per PLTU, dan DO</div>
+        <div class="update-upload-cta">
+          <button class="update-upload-btn" data-trigger="laporan">Pilih file</button>
+          <span class="update-upload-or">atau seret ke sini</span>
+        </div>
+        <div class="update-upload-filename" id="filenameLaporan"></div>
+      </div>
+    </div>
+
+    <div id="laporanEditor" style="display:none">
+      <div class="laporan-grid">
+        <div>
+          <label class="laporan-lbl" for="laporanKendala">Kendala (satu poin per baris)</label>
+          <textarea id="laporanKendala" class="laporan-textarea" rows="5" placeholder="Contoh:&#10;Keterbatasan armada transportasi." oninput="renderLaporanPreview()"></textarea>
+          <label class="laporan-lbl" for="laporanDukungan">Dukungan yang diperlukan (satu poin per baris)</label>
+          <textarea id="laporanDukungan" class="laporan-textarea" rows="5" placeholder="Contoh:&#10;Percepatan kontraktual di ..." oninput="renderLaporanPreview()"></textarea>
+          <div class="laporan-actions">
+            <button class="update-upload-btn" onclick="downloadLaporanPNG()">⬇ Unduh PNG</button>
+            <button class="update-upload-btn" onclick="downloadLaporanPDF()">⬇ Unduh PDF</button>
+          </div>
+          <div class="laporan-hint" id="laporanHint"></div>
+        </div>
+        <div>
+          <div class="laporan-lbl">Preview</div>
+          <div class="laporan-preview-wrap">
+            <canvas id="laporanPreviewCanvas" class="laporan-preview-canvas"></canvas>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -7589,6 +7659,559 @@ function downloadTrendTablePNG(yearTotals){
   link.click();
   document.body.removeChild(link);
 }
+
+// ============================================================
+// LAPORAN INFOGRAFIS GENERATOR
+// User uploads a filled "template" Excel → we parse it and render a branded
+// infografis (like the reference PDF) entirely client-side → export PNG / PDF.
+// ============================================================
+const LAPORAN_MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const LAPORAN_MONTHS_FULL = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+let laporanModel = null; // parsed model for the current uploaded file
+
+function _lpStr(v){ return (v === null || v === undefined) ? '' : String(v).trim(); }
+function _lpNum(v){
+  if (v === null || v === undefined || v === '') return 0;
+  const n = (typeof v === 'number') ? v : parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+// tons → "ribu ton" string, id-ID (comma decimal, dot thousands), 2 decimals.
+function _lpRT(ton){ return (ton / 1000).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function _lpMatrix(sheet){ return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null }); }
+
+// ---- Build + download a blank (example-filled) template ----
+function downloadLaporanTemplate(){
+  if (typeof XLSX === 'undefined'){ alert('Library Excel belum siap, coba lagi sebentar.'); return; }
+  const aoa = [];
+  aoa.push(['Wilayah', 'Sumatera']);
+  aoa.push(['Tahun Laporan', 2026]);
+  aoa.push(['Satuan input', 'ton (ditampilkan sebagai ribu ton)']);
+  aoa.push([]);
+  aoa.push(['REALISASI TAHUNAN (total wilayah, ton)']);
+  aoa.push(['Tahun', 'Total']);
+  aoa.push([2023, 108290]);
+  aoa.push([2024, 307360]);
+  aoa.push([2025, 445750]);
+  aoa.push(['(Tahun berjalan dihitung otomatis dari tabel bulanan di bawah)']);
+  aoa.push([]);
+  aoa.push(['REALISASI BULANAN (per PLTU, ton) — kolom DO = rencana bulan berikutnya']);
+  aoa.push(['PLTU'].concat(LAPORAN_MONTHS).concat(['DO']));
+  // Example rows (Sumatera, angka contoh dalam ton). Isi 0 untuk bulan yang belum ada.
+  const ex = [
+    ['Labuhan Angin', 340, 1060, 1800, 2150, 1000, 2230, 0,0,0,0,0,0, 2990],
+    ['Ombilin', 4390, 3300, 2160, 0, 750, 1580, 0,0,0,0,0,0, 2500],
+    ['Teluk Sirih', 5660, 5550, 5550, 5560, 5790, 6920, 0,0,0,0,0,0, 6680],
+  ];
+  ex.forEach(r => aoa.push(r));
+  aoa.push([]);
+  aoa.push(['KENDALA (satu poin per baris)']);
+  aoa.push(['Keterbatasan armada transportasi.']);
+  aoa.push(['Kelangkaan BBM yang membuat antrian menjadi panjang.']);
+  aoa.push([]);
+  aoa.push(['DUKUNGAN YANG DIPERLUKAN (satu poin per baris)']);
+  aoa.push(['Percepatan kontraktual di PLTU terkait.']);
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch: 22 }].concat(LAPORAN_MONTHS.map(() => ({ wch: 7 }))).concat([{ wch: 9 }]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan');
+  XLSX.writeFile(wb, 'Template_Laporan_Biomassa.xlsx');
+}
+window.downloadLaporanTemplate = downloadLaporanTemplate;
+
+// ---- Parse a filled template into a model ----
+function parseLaporanTemplate(wb){
+  const sheet = wb.Sheets['Laporan'] || wb.Sheets[wb.SheetNames[0]];
+  if (!sheet) throw new Error('Sheet tidak ditemukan.');
+  const m = _lpMatrix(sheet);
+  let wilayah = '', yearStr = '';
+  const annual = {};                 // year(number) -> ton
+  const rows = [];                   // { pltu, months:[12], do }
+  const kendala = [], dukungan = [];
+  let monthCols = new Array(12).fill(null), doCol = -1;
+  let section = null;
+
+  for (let r = 0; r < m.length; r++){
+    const row = m[r] || [];
+    const c0 = _lpStr(row[0]);
+    const lc = c0.toLowerCase();
+    if (lc === 'wilayah'){ wilayah = _lpStr(row[1]); continue; }
+    if (lc.indexOf('tahun laporan') === 0){ yearStr = _lpStr(row[1]); section = null; continue; }
+    if (lc.indexOf('satuan input') === 0){ continue; }
+    if (lc.indexOf('realisasi tahunan') === 0){ section = 'annual'; continue; }
+    if (lc === 'tahun' && _lpStr(row[1]).toLowerCase() === 'total'){ continue; }
+    if (lc.indexOf('realisasi bulanan') === 0){ continue; } // title line before header
+    if (lc === 'pltu'){
+      section = 'monthly';
+      monthCols = new Array(12).fill(null); doCol = -1;
+      for (let c = 1; c < row.length; c++){
+        const h = _lpStr(row[c]).toLowerCase();
+        const mi = LAPORAN_MONTHS.findIndex(mm => mm.toLowerCase() === h);
+        if (mi >= 0) monthCols[mi] = c;
+        else if (h === 'do') doCol = c;
+      }
+      continue;
+    }
+    if (lc.indexOf('kendala') === 0){ section = 'kendala'; continue; }
+    if (lc.indexOf('dukungan') === 0){ section = 'dukungan'; continue; }
+
+    // Data rows by section
+    if (section === 'annual'){
+      const y = parseInt(c0, 10);
+      if (y >= 2000 && y <= 2100) annual[y] = _lpNum(row[1]);
+    } else if (section === 'monthly'){
+      if (!c0) continue;
+      const months = monthCols.map(c => (c != null ? _lpNum(row[c]) : 0));
+      const dov = doCol >= 0 ? _lpNum(row[doCol]) : 0;
+      rows.push({ pltu: c0, months, do: dov });
+    } else if (section === 'kendala'){
+      if (c0) kendala.push(c0);
+    } else if (section === 'dukungan'){
+      if (c0) dukungan.push(c0);
+    }
+  }
+
+  // Aggregates
+  let lastMonth = -1;
+  for (let mi = 0; mi < 12; mi++){
+    let s = 0; for (const rr of rows) s += rr.months[mi] || 0;
+    if (s > 0) lastMonth = mi;
+  }
+  const monthlyTotals = [];
+  for (let mi = 0; mi <= lastMonth; mi++){
+    let s = 0; for (const rr of rows) s += rr.months[mi] || 0;
+    monthlyTotals.push(s);
+  }
+  const doTotal = rows.reduce((s, rr) => s + (rr.do || 0), 0);
+  const real2026 = monthlyTotals.reduce((a, b) => a + b, 0);
+  const yearNum = parseInt(yearStr, 10) || (new Date().getFullYear());
+  annual[yearNum] = real2026; // current year derived from monthly
+  const years = Object.keys(annual).map(Number).sort((a, b) => a - b);
+  const annualVals = years.map(y => annual[y]);
+  let maxAnnual = 0, maxYear = yearNum;
+  years.forEach(y => { if (annual[y] >= maxAnnual){ maxAnnual = annual[y]; maxYear = y; } });
+  const akumulasi = annualVals.reduce((a, b) => a + b, 0);
+
+  return {
+    wilayah: wilayah || '—', year: yearNum, years, annual,
+    rows, lastMonth, monthlyTotals, doTotal, real2026,
+    maxAnnual, maxYear, akumulasi, kendala, dukungan,
+  };
+}
+
+// ---- Upload handling ----
+async function handleLaporanFile(file){
+  if (!file) return;
+  const nameEl = document.getElementById('filenameLaporan');
+  const hintEl = document.getElementById('laporanHint');
+  if (nameEl) nameEl.textContent = file.name;
+  try {
+    const buf = await readFileAsArrayBuffer(file);
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+    const model = parseLaporanTemplate(wb);
+    if (!model.rows.length) throw new Error('Tidak ada baris PLTU terbaca. Pastikan tabel memakai header "PLTU".');
+    laporanModel = model;
+    // Prefill narrative textareas from the file (user can still edit)
+    const kEl = document.getElementById('laporanKendala');
+    const dEl = document.getElementById('laporanDukungan');
+    if (kEl) kEl.value = model.kendala.join('\n');
+    if (dEl) dEl.value = model.dukungan.join('\n');
+    const editor = document.getElementById('laporanEditor');
+    if (editor) editor.style.display = '';
+    if (hintEl) hintEl.textContent = 'Wilayah: ' + model.wilayah + ' · ' + model.rows.length + ' PLTU · data s.d ' +
+      (model.lastMonth >= 0 ? LAPORAN_MONTHS_FULL[model.lastMonth] : '—') + ' ' + model.year +
+      '. Edit teks Kendala/Dukungan bila perlu, lalu unduh PNG/PDF.';
+    renderLaporanPreview();
+  } catch (e){
+    if (hintEl) hintEl.textContent = '⚠ Gagal membaca file: ' + (e && e.message ? e.message : e);
+    console.error('[Laporan] parse failed', e);
+  }
+}
+
+let laporanUploadWired = false;
+function wireLaporanUpload(){
+  if (laporanUploadWired) return;
+  const zone = document.getElementById('uploadZoneLaporan');
+  const input = document.getElementById('fileInputLaporan');
+  if (!zone || !input) return;
+  laporanUploadWired = true;
+  const trigger = zone.querySelector('[data-trigger="laporan"]');
+  if (trigger) trigger.addEventListener('click', (e) => { e.preventDefault(); input.click(); });
+  input.addEventListener('change', () => { if (input.files && input.files[0]) handleLaporanFile(input.files[0]); });
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) handleLaporanFile(e.dataTransfer.files[0]);
+  });
+}
+
+// ---- Canvas helpers ----
+function _lpRoundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function _lpWrap(ctx, text, maxW){
+  const words = String(text).split(/\s+/);
+  const lines = []; let cur = '';
+  for (const w of words){
+    const t = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(t).width <= maxW || !cur) cur = t;
+    else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+// ---- Render the infografis onto the given canvas ----
+function buildLaporanCanvas(canvas, model, kendala, dukungan){
+  const S = 2;                 // retina scale
+  const W = 900;               // logical width
+  const pad = 40;
+  const CW = W - pad * 2;
+  // palette (green/cream, matching the reference PDF)
+  const bg = '#f6f5ef', ink = '#14432b', green = '#2e7d47', greenLt = '#7cb342';
+  const gray = '#5f6b62', cardBg = '#ffffff', cardBorder = '#e4e3d9';
+  const orange = '#d98324', red = '#c0392b';
+
+  const font = (wt, sz) => wt + ' ' + sz + "px 'Plus Jakarta Sans', sans-serif";
+  // measuring ctx
+  const meas = document.createElement('canvas').getContext('2d');
+
+  // ----- pre-compute variable heights -----
+  const R = model.rows.length;
+  const nMonths = Math.max(0, model.lastMonth + 1);
+  const tableRowH = 26, tableHeadH = 32;
+  const tableH = tableHeadH + tableRowH * (R + 1);
+
+  // narrative wrapping
+  const narrTitleH = 30, bulletLH = 19, boxPad = 14, boxGap = 16;
+  const boxW = (CW - boxGap) / 2;
+  const bulletTextW = boxW - boxPad * 2 - 14;
+  meas.font = font('400', 12);
+  const wrapBullets = (arr) => {
+    const out = [];
+    (arr || []).forEach(b => { _lpWrap(meas, b, bulletTextW).forEach((ln, i) => out.push({ ln, first: i === 0 })); });
+    return out;
+  };
+  const kLines = wrapBullets(kendala);
+  const dLines = wrapBullets(dukungan);
+  const boxInnerH = Math.max(kLines.length, dLines.length, 1) * bulletLH;
+  const narrBoxH = narrTitleH + boxPad + boxInnerH + boxPad;
+
+  // section y-metrics
+  const headerH = 118, chartH = 300, secLabelH = 30, cardsH = 92, footerH = 54;
+  const gap = 20;
+  let H = pad
+    + headerH + 14
+    + secLabelH + cardsH + gap
+    + chartH + gap
+    + secLabelH + tableH + gap
+    + secLabelH + narrBoxH + gap
+    + footerH + pad;
+
+  canvas.width = W * S; canvas.height = H * S;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(S, 0, 0, S, 0, 0);
+  ctx.textBaseline = 'alphabetic';
+
+  // background
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  let y = pad;
+
+  // ===== HEADER =====
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = green; ctx.font = font('700', 12);
+  ctx.textAlign = 'left';
+  ctx.fillText(('COFIRING PLTU ' + model.wilayah + ' · PLN ENERGI PRIMER INDONESIA').toUpperCase(), pad, y);
+  y += 20;
+  ctx.fillStyle = ink; ctx.font = font('800', 36);
+  ctx.fillText('Realisasi Pasokan Biomassa', pad, y);
+  y += 46;
+  ctx.font = font('600', 17); ctx.fillStyle = gray;
+  ctx.fillText('PLTU Wilayah ', pad, y);
+  const wlx = pad + ctx.measureText('PLTU Wilayah ').width;
+  ctx.fillStyle = orange; ctx.fillText(model.wilayah, wlx, y);
+  y += 30;
+  ctx.strokeStyle = green; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+  y += 14;
+
+  // ===== SECTION: REALISASI TAHUNAN =====
+  const lastMonName = model.lastMonth >= 0 ? LAPORAN_MONTHS_FULL[model.lastMonth] : '—';
+  drawSectionLabel(ctx, pad, y, 'REALISASI TAHUNAN', green, 'SATUAN: RIBU TON', W - pad, font, gray);
+  y += secLabelH;
+
+  // 3 stat cards
+  const cardW = (CW - gap * 2) / 3;
+  const cards = [
+    { val: model.maxAnnual, lbl: 'Realisasi tahunan tertinggi (' + model.maxYear + ')' },
+    { val: model.akumulasi, lbl: 'Akumulasi realisasi ' + model.years[0] + ' – ' + model.year + ' (s.d ' + lastMonName + ')' },
+    { val: model.real2026, lbl: 'Realisasi ' + model.year + ' (s.d ' + lastMonName + ')' },
+  ];
+  cards.forEach((c, i) => {
+    const cx = pad + (cardW + gap) * i;
+    ctx.fillStyle = cardBg; _lpRoundRect(ctx, cx, y, cardW, cardsH, 8); ctx.fill();
+    ctx.strokeStyle = cardBorder; ctx.lineWidth = 1; _lpRoundRect(ctx, cx, y, cardW, cardsH, 8); ctx.stroke();
+    ctx.fillStyle = green; ctx.fillRect(cx, y + 10, 4, cardsH - 20);
+    ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    ctx.fillStyle = green; ctx.font = font('800', 26);
+    ctx.fillText(_lpRT(c.val), cx + 16, y + 16);
+    const vw = ctx.measureText(_lpRT(c.val)).width;
+    ctx.fillStyle = gray; ctx.font = font('600', 11);
+    ctx.fillText('ribu ton', cx + 16 + vw + 6, y + 26);
+    ctx.fillStyle = gray; ctx.font = font('500', 11);
+    _lpWrap(ctx, c.lbl, cardW - 24).slice(0, 2).forEach((ln, li) => ctx.fillText(ln, cx + 16, y + 52 + li * 15));
+  });
+  y += cardsH + gap;
+
+  // ===== AREA CHART =====
+  drawLaporanChart(ctx, pad, y, CW, chartH, model, { ink, green, greenLt, gray, cardBorder, orange, font });
+  y += chartH + gap;
+
+  // ===== SECTION: REALISASI BULANAN =====
+  drawSectionLabel(ctx, pad, y, 'REALISASI BULANAN ' + model.year, orange, 'SATUAN: RIBU TON', W - pad, font, gray);
+  y += secLabelH;
+  drawLaporanTable(ctx, pad, y, CW, model, { ink, green, greenLt, gray, cardBorder, orange, tableHeadH, tableRowH, font });
+  y += tableH + gap;
+
+  // ===== SECTION: KENDALA & DUKUNGAN =====
+  drawSectionLabel(ctx, pad, y, 'KENDALA & DUKUNGAN YANG DIPERLUKAN', red, '', W - pad, font, gray);
+  y += secLabelH;
+  drawNarrativeBox(ctx, pad, y, boxW, narrBoxH, 'KENDALA', red, kLines, { ink, gray, cardBg, cardBorder, boxPad, narrTitleH, bulletLH, font });
+  drawNarrativeBox(ctx, pad + boxW + boxGap, y, boxW, narrBoxH, 'DUKUNGAN YANG DIPERLUKAN', green, dLines, { ink, gray, cardBg, cardBorder, boxPad, narrTitleH, bulletLH, font });
+  y += narrBoxH + gap;
+
+  // ===== FOOTER =====
+  ctx.strokeStyle = cardBorder; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = green; ctx.font = font('700', 11); ctx.textAlign = 'left';
+  ctx.fillText(('PT PLN ENERGI PRIMER INDONESIA · COFIRING PLTU ' + model.wilayah).toUpperCase(), pad, y + 12);
+  ctx.fillStyle = gray; ctx.font = font('400', 10); ctx.textAlign = 'right';
+  ctx.fillText('Satuan dalam ribu ton · ' + model.year + ' baru s.d ' + lastMonName, W - pad, y + 12);
+  ctx.fillText('Sumber: data realisasi pasokan biomassa cofiring', W - pad, y + 26);
+  ctx.textAlign = 'left';
+}
+
+function drawSectionLabel(ctx, x, y, text, color, rightText, rightX, font, gray){
+  ctx.fillStyle = color; _lpRoundRect(ctx, x, y, 22, 22, 5); ctx.fill();
+  // small white "chart bars" icon (font-independent, avoids missing-glyph tofu)
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x + 6, y + 12, 3, 5);
+  ctx.fillRect(x + 10.5, y + 9, 3, 8);
+  ctx.fillRect(x + 15, y + 6, 3, 11);
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#14432b'; ctx.font = font('800', 15); ctx.textAlign = 'left';
+  ctx.fillText(text, x + 32, y + 4);
+  if (rightText){
+    ctx.fillStyle = gray; ctx.font = font('700', 10); ctx.textAlign = 'right';
+    ctx.fillText(rightText, rightX, y + 7);
+  }
+  ctx.textAlign = 'left';
+}
+
+function drawLaporanChart(ctx, x, y, w, h, model, C){
+  const years = model.years, vals = years.map(yr => model.annual[yr] / 1000); // ribu ton
+  const n = years.length;
+  ctx.fillStyle = '#ffffff'; _lpRoundRect(ctx, x, y, w, h, 8); ctx.fill();
+  ctx.strokeStyle = C.cardBorder; ctx.lineWidth = 1; _lpRoundRect(ctx, x, y, w, h, 8); ctx.stroke();
+  const padL = 58, padR = 24, padT = 40, padB = 46;
+  const x0 = x + padL, x1 = x + w - padR, yTop = y + padT, yBot = y + h - padB;
+  // "nice" round axis max so gridlines land on 100/200/… instead of odd values.
+  const rawMax = Math.max(1, Math.max.apply(null, vals)) * 1.12;
+  const rough = rawMax / 5;
+  const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+  const norm = rough / mag;
+  const niceMul = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10;
+  const step = niceMul * mag;
+  const maxV = Math.ceil(rawMax / step) * step;
+  const xAt = i => n <= 1 ? (x0 + x1) / 2 : x0 + (x1 - x0) * (i / (n - 1));
+  const yAt = v => yBot - (v / maxV) * (yBot - yTop);
+
+  // y gridlines at nice round steps
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+  for (let gv = 0; gv <= maxV + 0.5; gv += step){
+    const gy = yAt(gv);
+    ctx.strokeStyle = '#eceada'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x0, gy); ctx.lineTo(x1, gy); ctx.stroke();
+    ctx.fillStyle = C.gray; ctx.font = C.font('500', 10);
+    ctx.fillText(Math.round(gv).toLocaleString('id-ID'), x0 - 8, gy);
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillStyle = C.gray; ctx.font = C.font('600', 10);
+  ctx.fillText('ribu ton', x0 - 4, yTop - 22);
+
+  // area fill
+  const grad = ctx.createLinearGradient(0, yTop, 0, yBot);
+  grad.addColorStop(0, 'rgba(124,179,66,.35)');
+  grad.addColorStop(1, 'rgba(124,179,66,.02)');
+  ctx.beginPath(); ctx.moveTo(xAt(0), yBot);
+  for (let i = 0; i < n; i++) ctx.lineTo(xAt(i), yAt(vals[i]));
+  ctx.lineTo(xAt(n - 1), yBot); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  // hatch the final (partial) segment + dashed divider at the previous year
+  if (n >= 2){
+    const hx0 = xAt(n - 2), hx1 = xAt(n - 1);
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(hx0, yBot);
+    ctx.lineTo(hx0, yAt(vals[n - 2])); ctx.lineTo(hx1, yAt(vals[n - 1])); ctx.lineTo(hx1, yBot); ctx.closePath();
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(46,125,71,.35)'; ctx.lineWidth = 1;
+    for (let hx = hx0 - h; hx < hx1 + h; hx += 9){
+      ctx.beginPath(); ctx.moveTo(hx, yBot); ctx.lineTo(hx + h, yBot - h); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.strokeStyle = C.greenLt; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(hx0, yTop); ctx.lineTo(hx0, yBot); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // line + points + labels
+  ctx.strokeStyle = C.green; ctx.lineWidth = 2.5; ctx.beginPath();
+  for (let i = 0; i < n; i++){ const px = xAt(i), py = yAt(vals[i]); if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+  ctx.stroke();
+  for (let i = 0; i < n; i++){
+    const px = xAt(i), py = yAt(vals[i]);
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = C.green; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.ink; ctx.font = C.font('800', 13); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(vals[i].toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), px, py - 10);
+    // x labels
+    ctx.fillStyle = (i === n - 1) ? C.greenLt : C.ink; ctx.font = C.font('800', 13); ctx.textBaseline = 'top';
+    ctx.fillText(String(years[i]), px, yBot + 8);
+    ctx.fillStyle = C.gray; ctx.font = C.font('500', 9);
+    ctx.fillText(i === n - 1 ? ('s.d ' + (model.lastMonth >= 0 ? LAPORAN_MONTHS[model.lastMonth] : '—')) : 'Jan–Des', px, yBot + 24);
+  }
+  ctx.textAlign = 'left';
+}
+
+function drawLaporanTable(ctx, x, y, w, model, C){
+  const nMonths = model.lastMonth + 1;
+  const cols = nMonths + 1; // months + DO
+  const pltuW = Math.min(200, Math.max(150, w - cols * 62));
+  const colW = (w - pltuW) / cols;
+  const headH = C.tableHeadH, rowH = C.tableRowH;
+  const doMonthIdx = model.lastMonth + 1;
+  const doLabel = doMonthIdx <= 11 ? ('DO ' + LAPORAN_MONTHS[doMonthIdx]) : 'DO';
+
+  // header
+  ctx.fillStyle = '#eaf1e6'; ctx.fillRect(x, y, w, headH);
+  ctx.fillStyle = C.orange; ctx.fillRect(x + pltuW + colW * nMonths, y, colW, headH);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = C.ink; ctx.font = C.font('700', 11); ctx.textAlign = 'left';
+  ctx.fillText('PLTU', x + 10, y + headH / 2);
+  ctx.textAlign = 'right';
+  for (let mi = 0; mi < nMonths; mi++){
+    ctx.fillStyle = C.ink; ctx.font = C.font('700', 11);
+    ctx.fillText(LAPORAN_MONTHS[mi], x + pltuW + colW * mi + colW - 8, y + headH / 2);
+  }
+  ctx.fillStyle = '#fff'; ctx.font = C.font('800', 11);
+  ctx.fillText(doLabel, x + pltuW + colW * nMonths + colW - 8, y + headH / 2);
+
+  // rows
+  ctx.font = C.font('400', 11);
+  for (let ri = 0; ri < model.rows.length; ri++){
+    const rr = model.rows[ri];
+    const ry = y + headH + rowH * ri;
+    if (ri % 2 === 1){ ctx.fillStyle = '#faf9f4'; ctx.fillRect(x, ry, w, rowH); }
+    ctx.fillStyle = C.orange; ctx.globalAlpha = 0.06; ctx.fillRect(x + pltuW + colW * nMonths, ry, colW, rowH); ctx.globalAlpha = 1;
+    ctx.fillStyle = C.ink; ctx.font = C.font('600', 11); ctx.textAlign = 'left';
+    ctx.fillText(rr.pltu, x + 10, ry + rowH / 2);
+    ctx.font = C.font('400', 11); ctx.textAlign = 'right';
+    for (let mi = 0; mi < nMonths; mi++){
+      ctx.fillStyle = (rr.months[mi] ? C.ink : '#b9b9ad');
+      ctx.fillText(_lpRT(rr.months[mi] || 0), x + pltuW + colW * mi + colW - 8, ry + rowH / 2);
+    }
+    ctx.fillStyle = C.ink; ctx.font = C.font('700', 11);
+    ctx.fillText(_lpRT(rr.do || 0), x + pltuW + colW * nMonths + colW - 8, ry + rowH / 2);
+    ctx.strokeStyle = '#ecebe1'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, ry + rowH); ctx.lineTo(x + w, ry + rowH); ctx.stroke();
+  }
+
+  // total row
+  const ty = y + headH + rowH * model.rows.length;
+  ctx.fillStyle = '#e3edda'; ctx.fillRect(x, ty, w, rowH);
+  ctx.strokeStyle = C.green; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, ty); ctx.lineTo(x + w, ty); ctx.stroke();
+  ctx.fillStyle = C.ink; ctx.font = C.font('800', 11); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText('Total', x + 10, ty + rowH / 2);
+  ctx.textAlign = 'right';
+  for (let mi = 0; mi < nMonths; mi++){
+    ctx.fillText(_lpRT(model.monthlyTotals[mi] || 0), x + pltuW + colW * mi + colW - 8, ty + rowH / 2);
+  }
+  ctx.fillText(_lpRT(model.doTotal || 0), x + pltuW + colW * nMonths + colW - 8, ty + rowH / 2);
+
+  ctx.strokeStyle = C.cardBorder; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, headH + rowH * (model.rows.length + 1));
+  ctx.textAlign = 'left';
+}
+
+function drawNarrativeBox(ctx, x, y, w, h, title, color, lines, C){
+  ctx.fillStyle = C.cardBg; _lpRoundRect(ctx, x, y, w, h, 8); ctx.fill();
+  ctx.strokeStyle = C.cardBorder; ctx.lineWidth = 1; _lpRoundRect(ctx, x, y, w, h, 8); ctx.stroke();
+  ctx.fillStyle = color; _lpRoundRect(ctx, x, y, 4, h, 2); ctx.fill();
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.fillStyle = color; ctx.font = C.font('800', 12);
+  ctx.fillText(title.toUpperCase(), x + C.boxPad, y + C.boxPad);
+  let ly = y + C.narrTitleH + C.boxPad - 4;
+  ctx.font = C.font('400', 12); ctx.fillStyle = C.ink;
+  for (const item of lines){
+    if (item.first){ ctx.fillStyle = color; ctx.fillText('•', x + C.boxPad, ly); ctx.fillStyle = C.ink; }
+    ctx.fillText(item.ln, x + C.boxPad + 14, ly);
+    ly += C.bulletLH;
+  }
+}
+
+// ---- Preview + exports ----
+function renderLaporanPreview(){
+  if (!laporanModel) return;
+  const canvas = document.getElementById('laporanPreviewCanvas');
+  if (!canvas) return;
+  const kendala = (document.getElementById('laporanKendala').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const dukungan = (document.getElementById('laporanDukungan').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  try { buildLaporanCanvas(canvas, laporanModel, kendala, dukungan); }
+  catch (e){ console.error('[Laporan] render failed', e); }
+}
+window.renderLaporanPreview = renderLaporanPreview;
+
+function _laporanFileStamp(){
+  const w = (laporanModel && laporanModel.wilayah ? laporanModel.wilayah : 'Wilayah').replace(/[^a-zA-Z0-9]+/g, '_');
+  const d = new Date();
+  const stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  return 'Laporan_Biomassa_' + w + '_' + stamp;
+}
+function downloadLaporanPNG(){
+  const canvas = document.getElementById('laporanPreviewCanvas');
+  if (!canvas || !laporanModel){ alert('Upload data laporan dulu.'); return; }
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = _laporanFileStamp() + '.png';
+    link.href = url; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
+}
+window.downloadLaporanPNG = downloadLaporanPNG;
+
+function downloadLaporanPDF(){
+  const canvas = document.getElementById('laporanPreviewCanvas');
+  if (!canvas || !laporanModel){ alert('Upload data laporan dulu.'); return; }
+  const jspdfNS = window.jspdf || window.jsPDF;
+  const JsPDF = jspdfNS && (jspdfNS.jsPDF || jspdfNS);
+  if (!JsPDF){ alert('Library PDF belum siap, coba lagi sebentar.'); return; }
+  const imgW = canvas.width / 2, imgH = canvas.height / 2; // logical pts
+  const pdf = new JsPDF({ orientation: imgH >= imgW ? 'portrait' : 'landscape', unit: 'pt', format: [imgW, imgH] });
+  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH);
+  pdf.save(_laporanFileStamp() + '.pdf');
+}
+window.downloadLaporanPDF = downloadLaporanPDF;
 
 // V26: Filter for Realisasi tab — Province dropdown + PLTU dropdown.
 // Province dropdown filters which PLTUs appear in the PLTU dropdown.
@@ -9982,6 +10605,9 @@ function switchTab(tab){
   const topbarCalBtn = document.getElementById('topbarCalendarBtn');
   if (topbarCalBtn) topbarCalBtn.classList.toggle('active', tab === 'calendar');
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === tab));
+
+  // Laporan tab: wire upload handlers on first open (idempotent).
+  if (tab === 'laporan' && typeof wireLaporanUpload === 'function') wireLaporanUpload();
 
   // V54: Show skeleton loading for tabs that haven't been initialized yet
   if (tab === 'realisasi' && !realCharts.trend){
