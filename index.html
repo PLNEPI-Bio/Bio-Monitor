@@ -5381,78 +5381,80 @@ html,body{
       </div>
     </aside>
   </div>
+</div>
 
-  <!-- V61: Add/Edit Bottleneck modal -->
-  <div class="bn-form-backdrop" id="bnFormBackdrop">
-    <div class="bn-form-modal" role="dialog" aria-modal="true">
-      <div class="bn-form-head">
-        <div class="bn-form-title" id="bnFormTitle">Tambah Bottleneck</div>
-        <button class="bn-form-close" id="bnFormClose" title="Tutup">×</button>
+<!-- V61: Add/Edit Bottleneck modal (kept as a sibling of .view, not nested inside
+     it — the .view.active opacity fade-in animation creates a stacking context
+     that would otherwise trap this modal's z-index below the topbar's) -->
+<div class="bn-form-backdrop" id="bnFormBackdrop">
+  <div class="bn-form-modal" role="dialog" aria-modal="true">
+    <div class="bn-form-head">
+      <div class="bn-form-title" id="bnFormTitle">Tambah Bottleneck</div>
+      <button class="bn-form-close" id="bnFormClose" title="Tutup">×</button>
+    </div>
+    <div class="bn-form-body">
+      <div class="bn-form-field">
+        <label>Bottleneck <span class="bn-form-req">*</span></label>
+        <textarea id="bnFormBottleneck" rows="3" placeholder="Deskripsi bottleneck…"></textarea>
       </div>
-      <div class="bn-form-body">
+      <div class="bn-form-row">
         <div class="bn-form-field">
-          <label>Bottleneck <span class="bn-form-req">*</span></label>
-          <textarea id="bnFormBottleneck" rows="3" placeholder="Deskripsi bottleneck…"></textarea>
-        </div>
-        <div class="bn-form-row">
-          <div class="bn-form-field">
-            <label>Bulan Bottleneck <span class="bn-form-req">*</span></label>
-            <select id="bnFormBulan">
-              <option value="">— Pilih bulan —</option>
-              <option value="January">January</option>
-              <option value="February">February</option>
-              <option value="March">March</option>
-              <option value="April">April</option>
-              <option value="May">May</option>
-              <option value="June">June</option>
-              <option value="July">July</option>
-              <option value="August">August</option>
-              <option value="September">September</option>
-              <option value="October">October</option>
-              <option value="November">November</option>
-              <option value="December">December</option>
-            </select>
-          </div>
-          <div class="bn-form-field">
-            <label>Sumber Bottleneck <span class="bn-form-req">*</span></label>
-            <select id="bnFormSumber">
-              <option value="">— Pilih sumber bottleneck —</option>
-              <option value="PLN EPI">PLN EPI</option>
-              <option value="PLTU">PLTU</option>
-              <option value="Mitra">Mitra</option>
-            </select>
-          </div>
+          <label>Bulan Bottleneck <span class="bn-form-req">*</span></label>
+          <select id="bnFormBulan">
+            <option value="">— Pilih bulan —</option>
+            <option value="January">January</option>
+            <option value="February">February</option>
+            <option value="March">March</option>
+            <option value="April">April</option>
+            <option value="May">May</option>
+            <option value="June">June</option>
+            <option value="July">July</option>
+            <option value="August">August</option>
+            <option value="September">September</option>
+            <option value="October">October</option>
+            <option value="November">November</option>
+            <option value="December">December</option>
+          </select>
         </div>
         <div class="bn-form-field">
-          <label>Action Plan</label>
-          <textarea id="bnFormActionPlan" rows="2" placeholder="Rencana aksi mitigasi…"></textarea>
+          <label>Sumber Bottleneck <span class="bn-form-req">*</span></label>
+          <select id="bnFormSumber">
+            <option value="">— Pilih sumber bottleneck —</option>
+            <option value="PLN EPI">PLN EPI</option>
+            <option value="PLTU">PLTU</option>
+            <option value="Mitra">Mitra</option>
+          </select>
         </div>
-        <div class="bn-form-field">
-          <label>Progress</label>
-          <textarea id="bnFormProgress" rows="2" placeholder="Progress terkini…"></textarea>
-        </div>
-        <div class="bn-form-row">
-          <div class="bn-form-field">
-            <label>PIC</label>
-            <input type="text" id="bnFormPic" placeholder="Penanggung jawab">
-          </div>
-          <div class="bn-form-field">
-            <label>Link Eviden</label>
-            <input type="url" id="bnFormLinkEviden" placeholder="https://…">
-          </div>
-        </div>
-        <label class="bn-form-complete" id="bnFormCompleteRow" style="display:none">
-          <input type="checkbox" id="bnFormComplete">
-          <span>Tandai sebagai <b>Complete</b> (bottleneck sudah selesai)</span>
-        </label>
-        <div class="bn-form-error" id="bnFormError"></div>
       </div>
-      <div class="bn-form-actions">
-        <button class="bn-form-btn danger" id="bnFormDelete" style="display:none">Hapus</button>
-        <div class="bn-form-actions-right">
-          <button class="bn-form-btn" id="bnFormCancel">Batal</button>
-          <button class="bn-form-btn primary" id="bnFormSubmit">Simpan</button>
+      <div class="bn-form-field">
+        <label>Action Plan</label>
+        <textarea id="bnFormActionPlan" rows="2" placeholder="Rencana aksi mitigasi…"></textarea>
+      </div>
+      <div class="bn-form-field">
+        <label>Progress</label>
+        <textarea id="bnFormProgress" rows="2" placeholder="Progress terkini…"></textarea>
+      </div>
+      <div class="bn-form-row">
+        <div class="bn-form-field">
+          <label>PIC</label>
+          <input type="text" id="bnFormPic" placeholder="Penanggung jawab">
         </div>
+        <div class="bn-form-field">
+          <label>Link Eviden</label>
+          <input type="url" id="bnFormLinkEviden" placeholder="https://…">
+        </div>
+      </div>
+      <label class="bn-form-complete" id="bnFormCompleteRow" style="display:none">
+        <input type="checkbox" id="bnFormComplete">
+        <span>Tandai sebagai <b>Complete</b> (bottleneck sudah selesai)</span>
+      </label>
+      <div class="bn-form-error" id="bnFormError"></div>
+    </div>
+    <div class="bn-form-actions">
+      <button class="bn-form-btn danger" id="bnFormDelete" style="display:none">Hapus</button>
+      <div class="bn-form-actions-right">
+        <button class="bn-form-btn" id="bnFormCancel">Batal</button>
+        <button class="bn-form-btn primary" id="bnFormSubmit">Simpan</button>
       </div>
     </div>
   </div>
@@ -9110,7 +9112,6 @@ function wireBnForm(){
   if (cancelBtn) cancelBtn.onclick = closeBnForm;
   if (submitBtn) submitBtn.onclick = submitBnForm;
   if (delBtn) delBtn.onclick = () => { if (_bnFormCtx && _bnFormCtx.id != null) deleteBnRecord(_bnFormCtx.id); };
-  backdrop.onclick = (e) => { if (e.target === backdrop) closeBnForm(); };
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && backdrop.classList.contains('open')) closeBnForm();
   });
