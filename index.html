@@ -10700,9 +10700,15 @@ function renderKontrakSummary(){
     const yt = c.realisasi_total || {};
     return s + (yt['2023']||0) + (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
   }, 0);
-  // Net sisa kontrak: total Vol kontrak aktif − total Realisasi
-  // (includes negative offset from over-fulfilled contracts, more accurate than summing positive only)
-  const totalActiveSisa = totalActiveVol - totalActiveReal;
+  // Total Sisa Kontrak Aktif = Σ per-contract sisa, clamped at 0. Over-fulfilled
+  // contracts (realisasi > volume → negative sisa) count as 0 so they don't
+  // offset other contracts. Terminated contracts are already excluded above via
+  // isContractActive().
+  const totalActiveSisa = active.reduce((s, c) => {
+    const yt = c.realisasi_total || {};
+    const real = (yt['2023']||0) + (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
+    return s + Math.max(0, (c.vol_mt || 0) - real);
+  }, 0);
   const overallPct = totalActiveVol > 0 ? (totalActiveReal / totalActiveVol * 100) : 0;
   // PLTU + Mitra unique counts
   const uniquePltus = new Set(active.map(c => c.pltu)).size;
@@ -10728,7 +10734,7 @@ function renderKontrakSummary(){
     '<div class="kontrak-summary-cell warn kontrak-summary-clickable" onclick="showKontrakBreakdown(\'sisa\')" title="Klik untuk detail">' +
       '<div class="kontrak-summary-label">Total Sisa Kontrak Aktif</div>' +
       '<div class="kontrak-summary-value">' + fmtInt(totalActiveSisa) + ' <span class="unit">MT</span></div>' +
-      '<div class="kontrak-summary-sub">Net = Total Vol − Total Realisasi · <u>Lihat detail</u></div>' +
+      '<div class="kontrak-summary-sub">Σ sisa per kontrak (min 0, tanpa terminasi) · <u>Lihat detail</u></div>' +
     '</div>' +
     '<div class="kontrak-summary-cell">' +
       '<div class="kontrak-summary-label">Overall Realisasi</div>' +
@@ -10949,9 +10955,12 @@ function renderKontrakBreakdownBody(){
 
   const totalVol = rows.reduce((s, r) => s + r.vol, 0);
   const totalReal = rows.reduce((s, r) => s + r.totalReal, 0);
-  const totalSisa = totalVol - totalReal;
+  // Clamp per-contract sisa at 0 so over-fulfilled contracts don't offset the
+  // total (matches the "Total Sisa Kontrak Aktif" card). Terminated contracts
+  // are already excluded (isContractActive). Per-row column still shows actual.
+  const totalSisa = rows.reduce((s, r) => s + Math.max(0, r.sisa), 0);
   const gencoSuffix = kontrakBreakdownGenco === 'all' ? '' : ' · Genco ' + kontrakBreakdownGenco;
-  metaEl.textContent = active.length + ' kontrak aktif (akhir ≥ ' + today + ')' + gencoSuffix + ' · Total Vol ' + fmtInt(totalVol) + ' MT · Total Realisasi ' + fmtInt(totalReal) + ' MT · Sisa ' + fmtInt(totalSisa) + ' MT';
+  metaEl.textContent = active.length + ' kontrak aktif (akhir ≥ ' + today + ')' + gencoSuffix + ' · Total Vol ' + fmtInt(totalVol) + ' MT · Total Realisasi ' + fmtInt(totalReal) + ' MT · Sisa (min 0/kontrak) ' + fmtInt(totalSisa) + ' MT';
 
   // Genco filter chips (Semua / PNP / PIP / UIW) — re-render the modal in place.
   const gencoOptions = [['all', 'Semua'], ['PNP', 'PNP'], ['PIP', 'PIP'], ['UIW', 'UIW']];
