@@ -5781,6 +5781,27 @@ html,body{
 .laporan-hint{font-size:11px;color:var(--text-dim);margin-top:10px;line-height:1.5}
 .laporan-preview-wrap{background:var(--panel-3);border:1px solid var(--border);border-radius:8px;padding:12px;min-height:200px;overflow:auto}
 .laporan-preview-canvas{width:100%;height:auto;display:block;background:#fff;border-radius:4px;box-shadow:0 1px 6px rgba(0,0,0,.12)}
+.laporan-save-card{margin-top:16px;padding:12px 14px;background:var(--panel-3);border:1px solid var(--border);border-radius:8px}
+.laporan-save-row{display:flex;gap:10px;flex-wrap:wrap}
+.laporan-save-lbl{display:block;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim);margin:8px 0 4px}
+.laporan-input{width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;color:var(--text-bright);font-size:12px;padding:7px 9px;font-family:inherit}
+.laporan-input:focus{outline:none;border-color:#2e7d47}
+.laporan-arsip-section{margin-top:22px;border-top:1px solid var(--border);padding-top:16px}
+.laporan-mini-btn{background:var(--panel-3);border:1px solid var(--border);color:var(--text-dim);font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer}
+.laporan-mini-btn:hover{border-color:#2e7d47;color:var(--text-bright)}
+.laporan-arsip-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px}
+.laporan-arsip-card{background:var(--panel-3);border:1px solid var(--border);border-left:3px solid #2e7d47;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.laporan-arsip-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.laporan-arsip-wilayah{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;color:var(--text-bright)}
+.laporan-arsip-date{font-size:11px;font-weight:600;color:#2e7d47;white-space:nowrap}
+.laporan-arsip-ket{font-size:12px;color:var(--text);line-height:1.4}
+.laporan-arsip-meta{font-size:10px;color:var(--text-dim)}
+.laporan-arsip-actions{display:flex;gap:8px;margin-top:4px}
+.laporan-arsip-actions button{flex:1;font-size:11px;font-weight:600;padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--border)}
+.laporan-arsip-open{background:#2e7d47;color:#fff;border-color:#2e7d47!important}
+.laporan-arsip-del{background:transparent;color:var(--danger)}
+.laporan-arsip-del:hover{background:rgba(192,57,43,.1)}
+.laporan-arsip-empty{font-size:12px;color:var(--text-dim);padding:8px 0}
 @media (max-width:768px){ .laporan-grid{grid-template-columns:1fr} }
 </style>
 <div class="view" data-view="laporan">
@@ -5821,6 +5842,24 @@ html,body{
             <button class="update-upload-btn" onclick="downloadLaporanPDF()">⬇ Unduh PDF</button>
           </div>
           <div class="laporan-hint" id="laporanHint"></div>
+
+          <div class="laporan-save-card">
+            <div class="laporan-lbl" style="margin-top:0">Simpan ke Library</div>
+            <div class="laporan-save-row">
+              <div style="flex:1;min-width:120px">
+                <label class="laporan-save-lbl" for="laporanSaveWilayah">Wilayah</label>
+                <input type="text" id="laporanSaveWilayah" class="laporan-input" placeholder="mis. Sumatera">
+              </div>
+              <div style="flex:1;min-width:120px">
+                <label class="laporan-save-lbl" for="laporanSaveDate">Tanggal Checkpoint</label>
+                <input type="date" id="laporanSaveDate" class="laporan-input">
+              </div>
+            </div>
+            <label class="laporan-save-lbl" for="laporanSaveKeterangan">Keterangan</label>
+            <input type="text" id="laporanSaveKeterangan" class="laporan-input" placeholder="mis. Laporan mingguan realisasi biomassa">
+            <button class="update-upload-btn" style="margin-top:10px" onclick="saveLaporanArsip()">💾 Simpan ke Library</button>
+            <div class="laporan-hint" id="laporanSaveHint"></div>
+          </div>
         </div>
         <div>
           <div class="laporan-lbl">Preview</div>
@@ -5829,6 +5868,14 @@ html,body{
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="laporan-arsip-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div class="laporan-lbl" style="font-size:13px;margin:0">📚 Arsip Laporan Tersimpan</div>
+        <button class="laporan-mini-btn" onclick="fetchLaporanArsip().then(renderLaporanArsip)" title="Muat ulang daftar">↻ Muat ulang</button>
+      </div>
+      <div id="laporanArsipList" class="laporan-arsip-list"><div class="laporan-hint">Memuat…</div></div>
     </div>
   </div>
 </div>
@@ -7818,9 +7865,18 @@ async function handleLaporanFile(file){
     if (dEl) dEl.value = model.dukungan.join('\n');
     const editor = document.getElementById('laporanEditor');
     if (editor) editor.style.display = '';
+    // Prefill "Simpan ke Library" form (wilayah from file, checkpoint = today)
+    const wEl = document.getElementById('laporanSaveWilayah');
+    const dtEl = document.getElementById('laporanSaveDate');
+    const ketEl = document.getElementById('laporanSaveKeterangan');
+    if (wEl) wEl.value = model.wilayah && model.wilayah !== '—' ? model.wilayah : '';
+    if (dtEl && !dtEl.value) dtEl.value = new Date().toISOString().slice(0, 10);
+    if (ketEl) ketEl.value = '';
+    const shEl = document.getElementById('laporanSaveHint');
+    if (shEl) shEl.textContent = '';
     if (hintEl) hintEl.textContent = 'Wilayah: ' + model.wilayah + ' · ' + model.rows.length + ' PLTU · data s.d ' +
       (model.lastMonth >= 0 ? LAPORAN_MONTHS_FULL[model.lastMonth] : '—') + ' ' + model.year +
-      '. Edit teks Kendala/Dukungan bila perlu, lalu unduh PNG/PDF.';
+      '. Edit teks Kendala/Dukungan bila perlu, lalu unduh PNG/PDF atau simpan ke library.';
     renderLaporanPreview();
   } catch (e){
     if (hintEl) hintEl.textContent = '⚠ Gagal membaca file: ' + (e && e.message ? e.message : e);
@@ -8212,6 +8268,141 @@ function downloadLaporanPDF(){
   pdf.save(_laporanFileStamp() + '.pdf');
 }
 window.downloadLaporanPDF = downloadLaporanPDF;
+
+// ============================================================
+// LAPORAN ARSIP (library) — save/list/open/delete via Supabase.
+// Stores the compact data model (JSON), NOT the rendered image, so egress and
+// storage stay tiny; the infografis is re-rendered client-side on open. The
+// library list fetches metadata only (never the `model` column). Mirrors the
+// calendar_events CRUD pattern (Supabase-first + localStorage fallback).
+// ============================================================
+const LAPORAN_ARSIP_KEY = 'biomassa_laporan_arsip_cache';
+const laporanArsipState = { items: [], fetched: false };
+
+function _laporanArsipCache(items){ try { localStorage.setItem(LAPORAN_ARSIP_KEY, JSON.stringify(items)); } catch(e){} }
+function _laporanArsipReadCache(){ try { return JSON.parse(localStorage.getItem(LAPORAN_ARSIP_KEY) || '[]'); } catch(e){ return []; } }
+
+async function fetchLaporanArsip(){
+  if (supabaseClient){
+    try {
+      // metadata only — the big `model` column is fetched lazily on open
+      const { data, error } = await supabaseClient
+        .from('laporan_arsip')
+        .select('id,wilayah,checkpoint_date,keterangan,created_by,created_at')
+        .order('created_at', { ascending: false });
+      if (!error && data){
+        laporanArsipState.items = data;
+        laporanArsipState.fetched = true;
+        _laporanArsipCache(data);
+        return data;
+      }
+      if (error) console.warn('[LaporanArsip] fetch error:', error.message);
+    } catch(e){ console.warn('[LaporanArsip] fetch failed:', e); }
+  }
+  laporanArsipState.items = _laporanArsipReadCache();
+  return laporanArsipState.items;
+}
+window.fetchLaporanArsip = fetchLaporanArsip;
+
+function renderLaporanArsip(){
+  const wrap = document.getElementById('laporanArsipList');
+  if (!wrap) return;
+  const items = laporanArsipState.items || [];
+  if (!items.length){
+    wrap.innerHTML = '<div class="laporan-arsip-empty">Belum ada laporan tersimpan. Upload data lalu klik "Simpan ke Library".</div>';
+    return;
+  }
+  wrap.innerHTML = items.map(it => {
+    const dt = it.checkpoint_date ? fmtKontrakDate(it.checkpoint_date) : '—';
+    const savedAt = it.created_at ? new Date(it.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+    const by = it.created_by ? escapeHtml(it.created_by) : 'Anonim';
+    return '<div class="laporan-arsip-card">' +
+      '<div class="laporan-arsip-card-top">' +
+        '<span class="laporan-arsip-wilayah">' + escapeHtml(it.wilayah || '—') + '</span>' +
+        '<span class="laporan-arsip-date">📅 ' + dt + '</span>' +
+      '</div>' +
+      (it.keterangan ? '<div class="laporan-arsip-ket">' + escapeHtml(it.keterangan) + '</div>' : '') +
+      '<div class="laporan-arsip-meta">oleh ' + by + (savedAt ? ' · ' + savedAt : '') + '</div>' +
+      '<div class="laporan-arsip-actions">' +
+        '<button class="laporan-arsip-open" onclick="openLaporanArsip(\'' + it.id + '\')">Buka</button>' +
+        '<button class="laporan-arsip-del" onclick="deleteLaporanArsip(\'' + it.id + '\')">Hapus</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+window.renderLaporanArsip = renderLaporanArsip;
+
+async function saveLaporanArsip(){
+  const hint = document.getElementById('laporanSaveHint');
+  const setHint = (msg) => { if (hint) hint.textContent = msg; };
+  if (!laporanModel){ setHint('⚠ Upload data laporan dulu.'); return; }
+  const name = (typeof getUserName === 'function' && getUserName()) || '';
+  if (!name){ setHint('⚠ Isi nama Anda dulu (login) untuk menyimpan.'); return; }
+  const wilayah = (document.getElementById('laporanSaveWilayah').value || '').trim() || laporanModel.wilayah || '—';
+  const checkpoint = document.getElementById('laporanSaveDate').value || null;
+  const keterangan = (document.getElementById('laporanSaveKeterangan').value || '').trim();
+  // capture current narrative edits into the saved model
+  const kendala = (document.getElementById('laporanKendala').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const dukungan = (document.getElementById('laporanDukungan').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const model = Object.assign({}, laporanModel, { wilayah, kendala, dukungan });
+  const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('lap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8));
+  const row = { id, wilayah, checkpoint_date: checkpoint, keterangan, model, created_by: name, created_at: new Date().toISOString() };
+
+  if (!supabaseClient){ setHint('⚠ Koneksi Supabase belum siap, coba lagi sebentar.'); return; }
+  setHint('Menyimpan…');
+  try {
+    const { error } = await supabaseClient.from('laporan_arsip').insert(row);
+    if (error){ setHint('⚠ Gagal menyimpan: ' + error.message); return; }
+  } catch(e){ setHint('⚠ Gagal menyimpan: ' + (e && e.message ? e.message : e)); return; }
+  // prepend to local list (store metadata only, mirroring fetch shape)
+  const meta = { id, wilayah, checkpoint_date: checkpoint, keterangan, created_by: name, created_at: row.created_at };
+  laporanArsipState.items.unshift(meta);
+  _laporanArsipCache(laporanArsipState.items);
+  renderLaporanArsip();
+  setHint('✓ Tersimpan ke library.');
+}
+window.saveLaporanArsip = saveLaporanArsip;
+
+async function openLaporanArsip(id){
+  if (!supabaseClient){ alert('Koneksi Supabase belum siap.'); return; }
+  try {
+    const { data, error } = await supabaseClient
+      .from('laporan_arsip').select('model,wilayah,checkpoint_date,keterangan').eq('id', id).single();
+    if (error || !data || !data.model){ alert('Gagal memuat laporan: ' + (error ? error.message : 'data kosong')); return; }
+    laporanModel = data.model;
+    const kEl = document.getElementById('laporanKendala');
+    const dEl = document.getElementById('laporanDukungan');
+    if (kEl) kEl.value = (data.model.kendala || []).join('\n');
+    if (dEl) dEl.value = (data.model.dukungan || []).join('\n');
+    const wEl = document.getElementById('laporanSaveWilayah');
+    const dtEl = document.getElementById('laporanSaveDate');
+    const ketEl = document.getElementById('laporanSaveKeterangan');
+    if (wEl) wEl.value = data.wilayah || data.model.wilayah || '';
+    if (dtEl) dtEl.value = data.checkpoint_date || '';
+    if (ketEl) ketEl.value = data.keterangan || '';
+    const editor = document.getElementById('laporanEditor');
+    if (editor) editor.style.display = '';
+    renderLaporanPreview();
+    if (editor && editor.scrollIntoView) editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch(e){ alert('Gagal memuat laporan: ' + (e && e.message ? e.message : e)); }
+}
+window.openLaporanArsip = openLaporanArsip;
+
+async function deleteLaporanArsip(id){
+  const it = (laporanArsipState.items || []).find(x => x.id === id);
+  const label = it ? (it.wilayah || '') + (it.checkpoint_date ? ' · ' + it.checkpoint_date : '') : 'laporan ini';
+  if (!confirm('Hapus ' + label + ' dari library? Tindakan ini tidak dapat dibatalkan.')) return;
+  if (supabaseClient){
+    try {
+      const { error } = await supabaseClient.from('laporan_arsip').delete().eq('id', id);
+      if (error){ alert('Gagal menghapus: ' + error.message); return; }
+    } catch(e){ alert('Gagal menghapus: ' + (e && e.message ? e.message : e)); return; }
+  }
+  laporanArsipState.items = (laporanArsipState.items || []).filter(x => x.id !== id);
+  _laporanArsipCache(laporanArsipState.items);
+  renderLaporanArsip();
+}
+window.deleteLaporanArsip = deleteLaporanArsip;
 
 // V26: Filter for Realisasi tab — Province dropdown + PLTU dropdown.
 // Province dropdown filters which PLTUs appear in the PLTU dropdown.
@@ -10606,8 +10797,13 @@ function switchTab(tab){
   if (topbarCalBtn) topbarCalBtn.classList.toggle('active', tab === 'calendar');
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === tab));
 
-  // Laporan tab: wire upload handlers on first open (idempotent).
-  if (tab === 'laporan' && typeof wireLaporanUpload === 'function') wireLaporanUpload();
+  // Laporan tab: wire upload handlers on first open (idempotent) + load archive.
+  if (tab === 'laporan'){
+    if (typeof wireLaporanUpload === 'function') wireLaporanUpload();
+    if (typeof fetchLaporanArsip === 'function' && !laporanArsipState.fetched){
+      fetchLaporanArsip().then(() => renderLaporanArsip()).catch(() => {});
+    }
+  }
 
   // V54: Show skeleton loading for tabs that haven't been initialized yet
   if (tab === 'realisasi' && !realCharts.trend){
