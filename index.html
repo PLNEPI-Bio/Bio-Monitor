@@ -1009,6 +1009,8 @@ html,body{
   border-left:2px solid var(--accent);
   display:flex;flex-direction:column;gap:5px;
 }
+.jenis-item-clickable{cursor:pointer;transition:background .12s,box-shadow .12s}
+.jenis-item-clickable:hover{background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--accent)}
 .jenis-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .jenis-name{
   font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;
@@ -6613,7 +6615,11 @@ function _plantContractItemHtml(item){
   const akhir = item.terminated
     ? '<span style="opacity:.6">Diterminasi</span>'
     : (c.akhir ? fmtKontrakDate(c.akhir) : '<span style="opacity:.45">—</span>');
-  let html = '<div class="jenis-item' + (item.expired ? ' jenis-item-expired' : '') + '">';
+  let html = '<div class="jenis-item jenis-item-clickable' + (item.expired ? ' jenis-item-expired' : '') + '"' +
+    ' data-pemasok="' + escapeHtml(c.pemasok || '') + '"' +
+    ' data-pltu="' + escapeHtml(c.pltu || '') + '"' +
+    ' data-kontrak="' + escapeHtml(c.kontrak || '') + '"' +
+    ' onclick="openJenisContract(this)" title="Klik untuk lihat detail realisasi kontrak">';
   html += '<div class="jenis-row">';
   html += '<span class="jenis-name">' + escapeHtml(c.pemasok || 'Tanpa Nama') +
     (item.terminated ? ' <span class="jenis-expired-tag">DITERMINASI</span>'
@@ -10229,9 +10235,10 @@ function buildKontrakFilters(){
         e.preventDefault();
         const pemasok = link.getAttribute('data-pemasok');
         const pltu = link.getAttribute('data-pltu');
+        const kontrak = link.getAttribute('data-kontrak') || '';
         // Decode HTML entities for the apostrophe we encoded earlier
         const decoded = pemasok ? pemasok.replace(/&#39;/g, "'") : '';
-        openPemasokModal(decoded, pltu);
+        openPemasokModal(decoded, pltu, kontrak);
       }
     });
     tblWrap.dataset.handlerBuilt = '1';
@@ -10463,11 +10470,31 @@ function getContractDO(c){
   return DELIVERY_ORDERS[doSigForContract(c)] || null;
 }
 
-function openPemasokModal(pemasok, focusPltu){
+// Opens the contract-detail modal. When kontrakNo (contract number) is given,
+// it shows ONLY that specific contract (pemasok + PLTU + kontrak). Without it,
+// falls back to narrowing by clicked PLTU, then to all contracts of the mitra.
+function openPemasokModal(pemasok, focusPltu, kontrakNo){
   if (!pemasok) return;
   const all = (DATA && DATA.contracts) || [];
-  // Find all contracts for this pemasok (across all PLTU/Genco)
-  const contracts = all.filter(c => c.pemasok === pemasok);
+  let contracts;
+  const hasKontrak = kontrakNo !== undefined && kontrakNo !== null &&
+    String(kontrakNo) !== '' && String(kontrakNo) !== '—';
+  if (hasKontrak){
+    // Exact single contract clicked.
+    contracts = all.filter(c => c.pemasok === pemasok &&
+      (!focusPltu || c.pltu === focusPltu) && (c.kontrak || '') === kontrakNo);
+    if (contracts.length === 0 && focusPltu){
+      contracts = all.filter(c => c.pemasok === pemasok && c.pltu === focusPltu);
+    }
+  } else if (focusPltu){
+    // No contract number (e.g. blank) — narrow to the clicked PLTU only.
+    contracts = all.filter(c => c.pemasok === pemasok && c.pltu === focusPltu);
+  } else {
+    contracts = all.filter(c => c.pemasok === pemasok);
+  }
+  if (!contracts || contracts.length === 0){
+    contracts = all.filter(c => c.pemasok === pemasok);
+  }
   if (contracts.length === 0) return;
 
   // Sort: focus PLTU first, then by PLTU name
@@ -10485,7 +10512,10 @@ function openPemasokModal(pemasok, focusPltu){
   const backdrop = document.getElementById('pemasokModalBackdrop');
   if (!titleEl || !metaEl || !bodyEl || !backdrop) return;
 
-  titleEl.textContent = pemasok;
+  // Single contract → include the PLTU in the title for context.
+  titleEl.textContent = (contracts.length === 1)
+    ? pemasok + ' · ' + (contracts[0].pltu || '')
+    : pemasok;
 
   // Aggregate stats across all contracts of this mitra
   const totalVol = contracts.reduce((s, c) => s + (c.vol_mt || 0), 0);
@@ -10617,9 +10647,38 @@ function openPemasokModal(pemasok, focusPltu){
   }).join('');
 
   bodyEl.innerHTML = blocks;
+  // Ensure close handlers are bound even when the modal is opened outside the
+  // Daftar Kontrak tab (e.g. from a Jenis card in Map Cofiring), since the tab's
+  // buildKontrakFilters() may not have run yet.
+  if (!backdrop.dataset.closeBound){
+    const closeBtn = document.getElementById('pemasokModalClose');
+    if (closeBtn) closeBtn.onclick = closePemasokModal;
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closePemasokModal(); });
+    backdrop.dataset.closeBound = '1';
+  }
+  if (!window._pemasokEscBound){
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape'){
+        const bd = document.getElementById('pemasokModalBackdrop');
+        if (bd && bd.classList.contains('open')) closePemasokModal();
+      }
+    });
+    window._pemasokEscBound = true;
+  }
   backdrop.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
+
+// Click handler for a "Jenis Biomassa Terkontrak" card (Map Cofiring detail):
+// opens the same contract-detail modal, scoped to that exact contract.
+function openJenisContract(el){
+  if (!el) return;
+  const pemasok = el.getAttribute('data-pemasok') || '';
+  const pltu = el.getAttribute('data-pltu') || '';
+  const kontrak = el.getAttribute('data-kontrak') || '';
+  if (pemasok) openPemasokModal(pemasok, pltu, kontrak);
+}
+window.openJenisContract = openJenisContract;
 
 function closePemasokModal(){
   const backdrop = document.getElementById('pemasokModalBackdrop');
@@ -11015,7 +11074,7 @@ function renderKontrakTable(){
     let row = '<tr>';
     row += '<td><span class="kontrak-genco-pill" style="color:' + gcColor + ';border-color:' + gcColor + '40">' + c.genco + '</span></td>';
     row += '<td class="wrap" style="color:var(--text-bright);font-weight:500">' + escapeHtml(c.pltu) + '</td>';
-    row += '<td class="wrap"><a href="#" class="kontrak-pemasok-link" data-pemasok="' + escapeHtml(pemasokAttr) + '" data-pltu="' + escapeHtml(c.pltu) + '">' + escapeHtml(c.pemasok) + '</a></td>';
+    row += '<td class="wrap"><a href="#" class="kontrak-pemasok-link" data-pemasok="' + escapeHtml(pemasokAttr) + '" data-pltu="' + escapeHtml(c.pltu) + '" data-kontrak="' + escapeHtml(c.kontrak || '') + '">' + escapeHtml(c.pemasok) + '</a></td>';
     row += '<td class="num">' + fmtInt(vol) + '</td>';
     row += '<td class="wrap" style="font-size:9px;color:var(--text-dim);line-height:1.4">' + (c.kontrak ? escapeHtml(c.kontrak) : '—') + '</td>';
     row += '<td>' + fmtKontrakDate(c.awal) + '</td>';
@@ -11099,7 +11158,8 @@ function renderKontrakTable(){
       if (e.target.closest('.kontrak-card-expand')) return;
       const pemasok = (card.dataset.pemasok || '').replace(/&#39;/g, "'");
       const pltu = card.dataset.pltu || '';
-      if (pemasok) openPemasokModal(pemasok, pltu);
+      const kontrak = card.dataset.kontrak || '';
+      if (pemasok) openPemasokModal(pemasok, pltu, kontrak);
     };
   });
 }
@@ -11116,7 +11176,7 @@ function buildKontrakCards(contracts, yearsToShow, monthFilterApplied, monthFilt
     const pctClass = pctBadgeClass(pct);
     const sisaColor = sisa < 0 ? 'var(--danger)' : sisa < vol * 0.1 ? 'var(--warn)' : 'var(--text-bright)';
 
-    html += '<div class="kontrak-card" data-pemasok="' + escapeHtml((c.pemasok||'').replace(/'/g,"&#39;")) + '" data-pltu="' + escapeHtml(c.pltu) + '">';
+    html += '<div class="kontrak-card" data-pemasok="' + escapeHtml((c.pemasok||'').replace(/'/g,"&#39;")) + '" data-pltu="' + escapeHtml(c.pltu) + '" data-kontrak="' + escapeHtml(c.kontrak || '') + '">';
     html += '<div class="kontrak-card-head">';
     html += '<div><div class="kontrak-card-pltu">' + escapeHtml(c.pltu) + '</div>';
     html += '<div class="kontrak-card-mitra"><span style="color:var(--accent);font-weight:500">' + escapeHtml(c.pemasok) + '</span> <span style="font-size:9px;opacity:.5">tap for details</span></div></div>';
