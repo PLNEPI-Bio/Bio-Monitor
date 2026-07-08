@@ -5786,6 +5786,21 @@ html,body{
 .laporan-save-lbl{display:block;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim);margin:8px 0 4px}
 .laporan-input{width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;color:var(--text-bright);font-size:12px;padding:7px 9px;font-family:inherit}
 .laporan-input:focus{outline:none;border-color:#2e7d47}
+.laporan-form-card{margin-top:16px;padding:14px 16px;background:var(--panel-3);border:1px solid var(--border);border-radius:8px}
+.laporan-form-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.laporan-form-grid-wrap{margin:12px 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.laporan-form-table{border-collapse:collapse;font-size:11px;min-width:100%}
+.laporan-form-table th,.laporan-form-table td{border:1px solid var(--border);padding:5px 7px;text-align:right;white-space:nowrap}
+.laporan-form-table th{background:var(--panel-2);color:var(--text-dim);font-weight:600;position:sticky;top:0}
+.laporan-form-table th.pltu,.laporan-form-table td.pltu{text-align:left;color:var(--text-bright);font-weight:500;position:sticky;left:0;background:var(--panel-3);z-index:1}
+.laporan-form-table td.ro{color:var(--text-dim);background:rgba(0,0,0,.06)}
+.laporan-form-table th.inp{color:#2e7d47}
+.laporan-form-table th.do-h{color:var(--warn)}
+.laporan-form-input{width:74px;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--border);border-radius:4px;color:var(--text-bright);font-size:11px;padding:4px 5px;text-align:right;font-family:inherit}
+.laporan-form-input:focus{outline:none;border-color:#2e7d47}
+.laporan-form-table tfoot td{font-weight:700;color:var(--text-bright);background:var(--panel-2)}
+.laporan-generate-btn{margin-top:12px}
+.laporan-alt-section{margin-top:22px;border-top:1px solid var(--border);padding-top:16px}
 .laporan-arsip-section{margin-bottom:22px}
 .laporan-arsip-groups{margin-top:12px;display:flex;flex-direction:column;gap:16px}
 .laporan-arsip-month{font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;letter-spacing:.4px;color:#2e7d47;text-transform:uppercase;display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -5823,9 +5838,8 @@ html,body{
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;width:100%">
         <div>
           <div class="real-title">Generate Laporan Infografis</div>
-          <div class="real-title-sub">Unduh template, isi data realisasi, upload, lalu unduh laporan sebagai PNG/PDF</div>
+          <div class="real-title-sub">Pilih wilayah &amp; tanggal checkpoint, isi prognosa + DO, lalu unduh laporan PNG/PDF</div>
         </div>
-        <button class="update-upload-btn" onclick="downloadLaporanTemplate()" title="Unduh template Excel kosong">⬇ Unduh Template Excel</button>
       </div>
     </div>
 
@@ -5837,13 +5851,37 @@ html,body{
       <div id="laporanArsipList" class="laporan-arsip-groups"><div class="laporan-hint">Memuat…</div></div>
     </div>
 
+    <!-- ===== Input laporan langsung di halaman ===== -->
+    <div class="laporan-form-card">
+      <div class="laporan-lbl" style="margin-top:0;font-size:13px">📝 Input Data Laporan</div>
+      <div class="laporan-form-row">
+        <div style="flex:1;min-width:160px">
+          <label class="laporan-save-lbl" for="laporanFormWilayah">Wilayah</label>
+          <select id="laporanFormWilayah" class="laporan-input" onchange="renderLaporanForm()">
+            <option value="">— Pilih wilayah —</option>
+            <option value="sumatera">Sumatera</option>
+            <option value="jawa">Jawa</option>
+            <option value="kalimantan">Kalimantan</option>
+            <option value="sulmapana">Sulmapana</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label class="laporan-save-lbl" for="laporanFormDate">Tanggal Checkpoint</label>
+          <input type="date" id="laporanFormDate" class="laporan-input" onchange="renderLaporanForm()">
+        </div>
+      </div>
+      <div id="laporanFormGridWrap" class="laporan-form-grid-wrap"><div class="laporan-hint">Pilih wilayah untuk menampilkan daftar PLTU.</div></div>
+      <label class="laporan-lbl" for="laporanKendala">Kendala (satu poin per baris)</label>
+      <textarea id="laporanKendala" class="laporan-textarea" rows="4" placeholder="Contoh:&#10;Keterbatasan armada transportasi." oninput="renderLaporanPreview()"></textarea>
+      <label class="laporan-lbl" for="laporanDukungan">Dukungan yang diperlukan (satu poin per baris)</label>
+      <textarea id="laporanDukungan" class="laporan-textarea" rows="4" placeholder="Contoh:&#10;Percepatan kontraktual di ..." oninput="renderLaporanPreview()"></textarea>
+      <button class="update-upload-btn laporan-generate-btn" onclick="generateLaporanFromForm()">🖼️ Buat / Perbarui Preview</button>
+      <div class="laporan-hint" id="laporanFormHint"></div>
+    </div>
+
     <div id="laporanEditor" style="display:none">
       <div class="laporan-grid">
         <div>
-          <label class="laporan-lbl" for="laporanKendala">Kendala (satu poin per baris)</label>
-          <textarea id="laporanKendala" class="laporan-textarea" rows="5" placeholder="Contoh:&#10;Keterbatasan armada transportasi." oninput="renderLaporanPreview()"></textarea>
-          <label class="laporan-lbl" for="laporanDukungan">Dukungan yang diperlukan (satu poin per baris)</label>
-          <textarea id="laporanDukungan" class="laporan-textarea" rows="5" placeholder="Contoh:&#10;Percepatan kontraktual di ..." oninput="renderLaporanPreview()"></textarea>
           <div class="laporan-actions">
             <button class="update-upload-btn" onclick="downloadLaporanPNG()">⬇ Unduh PNG</button>
             <button class="update-upload-btn" onclick="downloadLaporanPDF()">⬇ Unduh PDF</button>
@@ -5877,19 +5915,25 @@ html,body{
       </div>
     </div>
 
-    <div class="update-upload-grid laporan-upload-compact" style="grid-template-columns:1fr">
-      <div class="update-upload-zone" id="uploadZoneLaporan" data-kind="laporan">
-        <input type="file" accept=".xlsx,.xls" id="fileInputLaporan" style="display:none">
-        <div class="update-upload-icon">🖼️</div>
-        <div class="lap-up-text">
-          <div class="update-upload-title">Upload Data Laporan (template terisi)</div>
-          <div class="update-upload-sub">Excel dari template — wilayah, realisasi tahunan &amp; bulanan per PLTU, DO</div>
+    <div class="laporan-alt-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div class="laporan-lbl" style="margin:0">Alternatif: upload Excel</div>
+        <button class="laporan-mini-btn" onclick="downloadLaporanTemplate()" title="Unduh template Excel kosong">⬇ Unduh Template Excel</button>
+      </div>
+      <div class="update-upload-grid laporan-upload-compact" style="grid-template-columns:1fr;margin:0">
+        <div class="update-upload-zone" id="uploadZoneLaporan" data-kind="laporan">
+          <input type="file" accept=".xlsx,.xls" id="fileInputLaporan" style="display:none">
+          <div class="update-upload-icon">🖼️</div>
+          <div class="lap-up-text">
+            <div class="update-upload-title">Upload Data Laporan (template terisi)</div>
+            <div class="update-upload-sub">Excel dari template — wilayah, realisasi tahunan &amp; bulanan per PLTU, DO</div>
+          </div>
+          <div class="update-upload-cta">
+            <button class="update-upload-btn" data-trigger="laporan">Pilih file</button>
+            <span class="update-upload-or">atau seret ke sini</span>
+          </div>
+          <div class="update-upload-filename" id="filenameLaporan"></div>
         </div>
-        <div class="update-upload-cta">
-          <button class="update-upload-btn" data-trigger="laporan">Pilih file</button>
-          <span class="update-upload-or">atau seret ke sini</span>
-        </div>
-        <div class="update-upload-filename" id="filenameLaporan"></div>
       </div>
     </div>
   </div>
@@ -8009,6 +8053,19 @@ function buildLaporanCanvas(canvas, model, kendala, dukungan){
   ctx.fillText('PLTU Wilayah ', pad, y);
   const wlx = pad + ctx.measureText('PLTU Wilayah ').width;
   ctx.fillStyle = orange; ctx.fillText(model.wilayah, wlx, y);
+  // "Checkpoint <tanggal>" (dynamic per selected checkpoint date). Plain-text
+  // date (fmtKontrakDate returns HTML, unusable on canvas).
+  if (model.checkpoint_date){
+    const _pd = String(model.checkpoint_date).split('-');
+    let cpDate = model.checkpoint_date;
+    if (_pd.length === 3){
+      const _mi = parseInt(_pd[1], 10) - 1;
+      cpDate = parseInt(_pd[2], 10) + ' ' + (LAPORAN_MONTHS[_mi] || _pd[1]) + ' ' + _pd[0];
+    }
+    const cpx = wlx + ctx.measureText(model.wilayah).width + 14;
+    ctx.fillStyle = gray; ctx.font = font('500', 13);
+    ctx.fillText('Checkpoint ' + cpDate, cpx, y + 3);
+  }
   y += 30;
   ctx.strokeStyle = green; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
@@ -8170,7 +8227,9 @@ function drawLaporanTable(ctx, x, y, w, model, C){
   const pltuW = Math.min(200, Math.max(150, w - cols * 62));
   const colW = (w - pltuW) / cols;
   const headH = C.tableHeadH, rowH = C.tableRowH;
-  const doMonthIdx = model.lastMonth + 1;
+  // DO column month: form path pins DO to the checkpoint month (model.doMonthIdx);
+  // Excel path falls back to the month after the last realisasi month.
+  const doMonthIdx = (model.doMonthIdx != null) ? model.doMonthIdx : (model.lastMonth + 1);
   const doLabel = doMonthIdx <= 11 ? ('DO ' + LAPORAN_MONTHS[doMonthIdx]) : 'DO';
 
   // header
@@ -8283,6 +8342,122 @@ function downloadLaporanPDF(){
   pdf.save(_laporanFileStamp() + '.pdf');
 }
 window.downloadLaporanPDF = downloadLaporanPDF;
+
+// ============================================================
+// LAPORAN — input langsung di halaman (form). Pilih wilayah + tanggal
+// checkpoint → semua PLTU wilayah itu muncul: bulan berjalan (read-only, dari
+// data auto-update) + kolom isian prognosa & DO untuk bulan checkpoint. Data
+// 2023–2025 dari historical_real; 2026 = Σ(realisasi bulan berjalan) + prognosa.
+// Menghasilkan `laporanModel` yang sama bentuknya dengan path Excel (+ field
+// doMonthIdx & checkpoint_date), lalu dipakai ulang oleh renderer/simpan/ekspor.
+// ============================================================
+const LAPORAN_REGION_LABEL = { sumatera: 'Sumatera', jawa: 'Jawa', kalimantan: 'Kalimantan', sulmapana: 'Sulmapana' };
+
+// Plants of a region, sorted by their dashboard order (no).
+function _laporanRegionPlants(prov){
+  const plants = (typeof DATA !== 'undefined' && DATA && DATA.plants) ? DATA.plants : [];
+  return plants.filter(p => (typeof plantInProvince === 'function') && plantInProvince(p, prov))
+    .slice().sort((a, b) => (a.no || 0) - (b.no || 0));
+}
+
+// Build the editable PLTU grid for the selected wilayah + checkpoint month.
+function renderLaporanForm(){
+  const wrap = document.getElementById('laporanFormGridWrap');
+  if (!wrap) return;
+  const prov = document.getElementById('laporanFormWilayah').value;
+  const dateStr = document.getElementById('laporanFormDate').value;
+  const hint = document.getElementById('laporanFormHint');
+  if (hint) hint.textContent = '';
+  if (!prov){ wrap.innerHTML = '<div class="laporan-hint">Pilih wilayah untuk menampilkan daftar PLTU.</div>'; return; }
+  if (!dateStr){ wrap.innerHTML = '<div class="laporan-hint">Pilih tanggal checkpoint.</div>'; return; }
+  const ck = new Date(dateStr).getMonth(); // 0..11 = bulan checkpoint
+  const plants = _laporanRegionPlants(prov);
+  if (!plants.length){ wrap.innerHTML = '<div class="laporan-hint">Tidak ada PLTU untuk wilayah ini pada data saat ini.</div>'; return; }
+
+  const ckName = LAPORAN_MONTHS[ck];
+  let html = '<table class="laporan-form-table"><thead><tr><th class="pltu">PLTU</th>';
+  for (let m = 0; m < ck; m++) html += '<th>' + LAPORAN_MONTHS[m] + '</th>';
+  html += '<th class="inp">Prognosa ' + ckName + '</th><th class="do-h">DO ' + ckName + '</th></tr></thead><tbody>';
+  plants.forEach((p, i) => {
+    const real = p.real_2026 || [], doArr = p.do_2026 || [];
+    html += '<tr><td class="pltu">' + escapeHtml(p.name || '—') + '</td>';
+    for (let m = 0; m < ck; m++) html += '<td class="ro">' + fmtInt(real[m] || 0) + '</td>';
+    const pro = real[ck] || 0, dov = doArr[ck] || 0;
+    html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="prognosa" value="' + (pro || '') + '" placeholder="0"></td>';
+    html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="do" value="' + (dov || '') + '" placeholder="0"></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  if (hint) hint.textContent = plants.length + ' PLTU · bulan berjalan (Jan–' + (ck > 0 ? LAPORAN_MONTHS[ck - 1] : '—') + ') otomatis dari data dashboard; isi Prognosa & DO ' + ckName + '. Satuan: ton.';
+}
+window.renderLaporanForm = renderLaporanForm;
+
+// Assemble a laporanModel from the on-page form + dashboard data.
+function buildLaporanModelFromForm(){
+  const prov = document.getElementById('laporanFormWilayah').value;
+  const dateStr = document.getElementById('laporanFormDate').value;
+  if (!prov) return { error: 'Pilih wilayah dulu.' };
+  if (!dateStr) return { error: 'Pilih tanggal checkpoint dulu.' };
+  const ck = new Date(dateStr).getMonth();
+  const plants = _laporanRegionPlants(prov);
+  if (!plants.length) return { error: 'Tidak ada PLTU untuk wilayah ini.' };
+  const year = 2026;
+
+  // read inputs by row index
+  const inputs = {};
+  document.querySelectorAll('#laporanFormGridWrap .laporan-form-input').forEach(el => {
+    const r = el.getAttribute('data-row'), f = el.getAttribute('data-fld');
+    (inputs[r] = inputs[r] || {})[f] = parseFloat(el.value) || 0;
+  });
+
+  const rows = plants.map((p, i) => {
+    const real = p.real_2026 || [];
+    const months = [];
+    for (let m = 0; m < ck; m++) months.push(real[m] || 0);   // bulan berjalan (aktual)
+    months.push((inputs[i] && inputs[i].prognosa) || 0);       // bulan checkpoint = prognosa
+    return { pltu: p.name || '—', months, do: (inputs[i] && inputs[i].do) || 0 };
+  });
+
+  const monthlyTotals = [];
+  for (let m = 0; m <= ck; m++){ let s = 0; for (const r of rows) s += r.months[m] || 0; monthlyTotals.push(s); }
+  const doTotal = rows.reduce((s, r) => s + (r.do || 0), 0);
+  const real2026 = monthlyTotals.reduce((a, b) => a + b, 0);
+
+  const sumHist = (y) => plants.reduce((s, p) => s + (((p.historical_real && p.historical_real[y]) || []).reduce((a, b) => a + (b || 0), 0)), 0);
+  const annual = { '2023': sumHist('2023'), '2024': sumHist('2024'), '2025': sumHist('2025'), '2026': real2026 };
+  const years = [2023, 2024, 2025, 2026];
+  let maxAnnual = 0, maxYear = year;
+  years.forEach(y => { if (annual[y] >= maxAnnual){ maxAnnual = annual[y]; maxYear = y; } });
+  const akumulasi = years.reduce((a, y) => a + annual[y], 0);
+
+  const kendala = (document.getElementById('laporanKendala').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const dukungan = (document.getElementById('laporanDukungan').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+
+  return {
+    wilayah: LAPORAN_REGION_LABEL[prov] || prov, year, years, annual,
+    rows, lastMonth: ck, doMonthIdx: ck, monthlyTotals, doTotal, real2026,
+    maxAnnual, maxYear, akumulasi, kendala, dukungan, checkpoint_date: dateStr,
+  };
+}
+
+function generateLaporanFromForm(){
+  const hint = document.getElementById('laporanFormHint');
+  const model = buildLaporanModelFromForm();
+  if (model.error){ if (hint) hint.textContent = '⚠ ' + model.error; return; }
+  laporanModel = model;
+  // prefill "Simpan ke Library" form
+  const wEl = document.getElementById('laporanSaveWilayah');
+  const dtEl = document.getElementById('laporanSaveDate');
+  if (wEl) wEl.value = model.wilayah;
+  if (dtEl) dtEl.value = model.checkpoint_date || '';
+  const editor = document.getElementById('laporanEditor');
+  if (editor) editor.style.display = '';
+  renderLaporanPreview();
+  if (editor && editor.scrollIntoView) editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (hint) hint.textContent = '✓ Preview dibuat. Edit bila perlu, lalu unduh atau simpan ke library.';
+}
+window.generateLaporanFromForm = generateLaporanFromForm;
 
 // ============================================================
 // LAPORAN ARSIP (library) — save/list/open/delete via Supabase.
@@ -10839,6 +11014,9 @@ function switchTab(tab){
     if (typeof fetchLaporanArsip === 'function' && !laporanArsipState.fetched){
       fetchLaporanArsip().then(() => renderLaporanArsip()).catch(() => {});
     }
+    // default checkpoint date = today (once)
+    const _lfd = document.getElementById('laporanFormDate');
+    if (_lfd && !_lfd.value) _lfd.value = new Date().toISOString().slice(0, 10);
   }
 
   // V54: Show skeleton loading for tabs that haven't been initialized yet
