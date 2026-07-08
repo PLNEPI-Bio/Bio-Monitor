@@ -12058,13 +12058,45 @@ function closeKontrakBreakdown(){
 }
 window.closeKontrakBreakdown = closeKontrakBreakdown;
 
+// Build the dynamic "Real" columns for the Daftar Kontrak table, following the
+// Tahun/Bulan filters:
+//  - tahun=Y → only that year's column(s); tahun=all → current running year
+//    (plus 2023–2025 when the "Show old years" toggle is on).
+//  - bulan=all → one column "Real <Y>" (full-year total).
+//  - bulan=M   → TWO columns: "Real s.d <Mon> <Y>" (cumulative Jan–M) and
+//    "Real <Mon> <Y>" (that month only).
+function buildKontrakRealCols(){
+  const f = state.kontrakFilters;
+  const CUR = String(Math.min(2026, Math.max(2023, new Date().getFullYear())));
+  let years;
+  if (f.tahun && f.tahun !== 'all') years = [f.tahun];
+  else years = state.kontrakShowOldYears ? ['2023', '2024', '2025', CUR] : [CUR];
+  years = years.filter((y, i) => years.indexOf(y) === i); // dedupe
+  const mIdx = (f.bulan === 'all' || f.bulan == null) ? null : parseInt(f.bulan, 10);
+  const cols = [];
+  for (const y of years){
+    const isOld = (!f.tahun || f.tahun === 'all') && y !== CUR;
+    if (mIdx === null){
+      cols.push({ year: y, kind: 'total', label: 'Real ' + y, isOld });
+    } else {
+      cols.push({ year: y, kind: 'cum', month: mIdx, label: 'Real s.d ' + MONTHS[mIdx] + ' ' + y, isOld });
+      cols.push({ year: y, kind: 'single', month: mIdx, label: 'Real ' + MONTHS[mIdx] + ' ' + y, isOld });
+    }
+  }
+  return cols;
+}
+function _kontrakRealColValue(c, col){
+  if (col.kind === 'total') return (c.realisasi_total && c.realisasi_total[col.year]) || 0;
+  if (col.kind === 'cum') return getCumulativeRealisasi(c, col.year, col.month);
+  if (col.kind === 'single'){ const arr = (c.realisasi && c.realisasi[col.year]) || []; return arr[col.month] || 0; }
+  return 0;
+}
+
 function renderKontrakTable(){
   const container = document.getElementById('kontrak-table');
   if (!container) return;
   const contracts = filteredContracts();
-  const showOld = state.kontrakShowOldYears;
-  const yearsToShow = showOld ? ['2023','2024','2025','2026'] : ['2026'];
-  const oldYears = ['2023','2024','2025'];
+  const realCols = buildKontrakRealCols();
 
   const cntEl = document.getElementById('kontrak-count');
   if (cntEl) cntEl.textContent = contracts.length + ' contract' + (contracts.length !== 1 ? 's' : '');
@@ -12089,17 +12121,11 @@ function renderKontrakTable(){
   header += '<th>Jenis</th>';
   header += '<th>Sisa</th>';
   header += '<th>%</th>';
-  for (let i = 0; i < yearsToShow.length; i++){
-    const y = yearsToShow[i];
-    const isOld = oldYears.indexOf(y) >= 0;
-    header += '<th class="year-header' + (isOld ? ' old-year' : '') + '">Real ' + y + '</th>';
+  for (let i = 0; i < realCols.length; i++){
+    header += '<th class="year-header' + (realCols[i].isOld ? ' old-year' : '') + '">' + realCols[i].label + '</th>';
   }
   header += '<th>Amandemen</th>';
   header += '</tr></thead>';
-
-  // Determine cumulative cutoff month if filter is set
-  const monthFilterIdx = state.kontrakFilters.bulan === 'all' ? null : parseInt(state.kontrakFilters.bulan, 10);
-  const monthFilterApplied = monthFilterIdx !== null;
 
   // Body
   const rowParts = [];
@@ -12129,14 +12155,9 @@ function renderKontrakTable(){
     const sisaColor = displayedSisa < 0 ? 'var(--danger)' : (displayedSisa < vol * 0.1 ? 'var(--warn)' : 'var(--text-bright)');
     row += '<td class="num" style="color:' + sisaColor + '">' + fmtInt(displayedSisa) + '</td>';
     row += '<td style="text-align:center"><span class="kontrak-pct-badge ' + pctClass + '">' + displayedPct.toFixed(1) + '%</span></td>';
-    for (let i = 0; i < yearsToShow.length; i++){
-      const y = yearsToShow[i];
-      // Cumulative through filter month if month filter active, else full year total
-      const v = monthFilterApplied
-        ? getCumulativeRealisasi(c, y, monthFilterIdx)
-        : ((c.realisasi_total && c.realisasi_total[y]) || 0);
-      const isOld = oldYears.indexOf(y) >= 0;
-      const cellCls = 'year-real' + (v === 0 ? ' zero' : '') + (isOld ? ' old-year-cell' : '');
+    for (let i = 0; i < realCols.length; i++){
+      const v = _kontrakRealColValue(c, realCols[i]);
+      const cellCls = 'year-real' + (v === 0 ? ' zero' : '') + (realCols[i].isOld ? ' old-year-cell' : '');
       row += '<td class="' + cellCls + '">' + (v ? fmtInt(v) : '—') + '</td>';
     }
     if (c.amandemen){
@@ -12150,24 +12171,21 @@ function renderKontrakTable(){
   }
 
   // Footer (uses same filter logic as body)
-  let totalVol = 0, totalSisa = 0, totalAllReal = 0;
-  const totalRealByYear = {};
-  for (let i = 0; i < yearsToShow.length; i++) totalRealByYear[yearsToShow[i]] = 0;
+  let totalVol = 0, totalSisa = 0;
+  const totalByCol = realCols.map(() => 0);
   for (let i = 0; i < contracts.length; i++){
     const c = contracts[i];
     const v_vol = c.vol_mt || 0;
     const displayedReal = getFilteredRealisasiForContract(c);
     totalVol += v_vol;
     totalSisa += (v_vol - displayedReal);
-    for (let j = 0; j < yearsToShow.length; j++){
-      const y = yearsToShow[j];
-      const v = monthFilterApplied
-        ? getCumulativeRealisasi(c, y, monthFilterIdx)
-        : ((c.realisasi_total && c.realisasi_total[y]) || 0);
-      totalRealByYear[y] += v;
-      totalAllReal += v;
+    for (let j = 0; j < realCols.length; j++){
+      totalByCol[j] += _kontrakRealColValue(c, realCols[j]);
     }
   }
+  // Average achievement uses total realisasi (all filtered years/months) vs volume.
+  let totalAllReal = 0;
+  for (let i = 0; i < contracts.length; i++) totalAllReal += getFilteredRealisasiForContract(contracts[i]);
   const avgPct = totalVol > 0 ? (totalAllReal / totalVol * 100) : 0;
 
   let footer = '<tfoot><tr>';
@@ -12177,15 +12195,13 @@ function renderKontrakTable(){
   footer += '<td></td>';
   footer += '<td class="num"><b>' + fmtInt(totalSisa) + '</b></td>';
   footer += '<td style="text-align:center"><b>' + avgPct.toFixed(1) + '%</b></td>';
-  for (let i = 0; i < yearsToShow.length; i++){
-    const y = yearsToShow[i];
-    const isOld = oldYears.indexOf(y) >= 0;
-    footer += '<td class="num' + (isOld ? ' old-year-cell' : '') + '"><b>' + fmtInt(totalRealByYear[y]) + '</b></td>';
+  for (let i = 0; i < realCols.length; i++){
+    footer += '<td class="num' + (realCols[i].isOld ? ' old-year-cell' : '') + '"><b>' + fmtInt(totalByCol[i]) + '</b></td>';
   }
   footer += '<td></td>';
   footer += '</tr></tfoot>';
 
-  container.innerHTML = '<div class="kontrak-table-wrap"><table class="kontrak-table">' + header + '<tbody>' + rowParts.join('') + '</tbody>' + footer + '</table></div>' + buildKontrakCards(contracts, yearsToShow, monthFilterApplied, monthFilterIdx, totalVol, totalSisa, totalAllReal, avgPct, totalRealByYear);
+  container.innerHTML = '<div class="kontrak-table-wrap"><table class="kontrak-table">' + header + '<tbody>' + rowParts.join('') + '</tbody>' + footer + '</table></div>' + buildKontrakCards(contracts, realCols, totalByCol, totalVol, totalSisa, avgPct);
   // Wire card expand buttons
   container.querySelectorAll('.kontrak-card-expand').forEach(btn => {
     btn.onclick = (e) => {
@@ -12210,7 +12226,7 @@ function renderKontrakTable(){
   });
 }
 
-function buildKontrakCards(contracts, yearsToShow, monthFilterApplied, monthFilterIdx, totalVol, totalSisa, totalAllReal, avgPct, totalRealByYear){
+function buildKontrakCards(contracts, realCols, totalByCol, totalVol, totalSisa, avgPct){
   let html = '<div class="kontrak-cards">';
   for (let ci = 0; ci < contracts.length; ci++){
     const c = contracts[ci];
@@ -12232,11 +12248,10 @@ function buildKontrakCards(contracts, yearsToShow, monthFilterApplied, monthFilt
     html += '<div class="kontrak-card-grid">';
     html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Volume</span><span class="kontrak-card-val">' + fmtInt(vol) + ' MT</span></div>';
     html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Sisa</span><span class="kontrak-card-val" style="color:' + sisaColor + '">' + fmtInt(sisa) + ' MT</span></div>';
-    // Show realisasi per year
-    for (let j = 0; j < yearsToShow.length; j++){
-      const y = yearsToShow[j];
-      const v = monthFilterApplied ? getCumulativeRealisasi(c, y, monthFilterIdx) : ((c.realisasi_total && c.realisasi_total[y]) || 0);
-      html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Real ' + y + '</span><span class="kontrak-card-val" style="color:' + (v > 0 ? 'var(--accent)' : 'var(--text-dim)') + '">' + (v ? fmtInt(v) : '—') + '</span></div>';
+    // Show realisasi per dynamic column (follows Tahun/Bulan filter)
+    for (let j = 0; j < realCols.length; j++){
+      const v = _kontrakRealColValue(c, realCols[j]);
+      html += '<div class="kontrak-card-row"><span class="kontrak-card-label">' + realCols[j].label + '</span><span class="kontrak-card-val" style="color:' + (v > 0 ? 'var(--accent)' : 'var(--text-dim)') + '">' + (v ? fmtInt(v) : '—') + '</span></div>';
     }
     html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Achievement</span><span class="kontrak-pct-badge ' + pctClass + '" style="font-size:10px;padding:2px 8px">' + pct.toFixed(1) + '%</span></div>';
     html += '</div>';
@@ -12261,9 +12276,8 @@ function buildKontrakCards(contracts, yearsToShow, monthFilterApplied, monthFilt
   html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Total (' + contracts.length + ')</span></div><div></div>';
   html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Volume</span><span class="kontrak-card-val">' + fmtInt(totalVol) + ' MT</span></div>';
   html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Sisa</span><span class="kontrak-card-val">' + fmtInt(totalSisa) + ' MT</span></div>';
-  for (let j = 0; j < yearsToShow.length; j++){
-    const y = yearsToShow[j];
-    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Real ' + y + '</span><span class="kontrak-card-val" style="color:var(--accent)">' + fmtInt(totalRealByYear[y]) + '</span></div>';
+  for (let j = 0; j < realCols.length; j++){
+    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">' + realCols[j].label + '</span><span class="kontrak-card-val" style="color:var(--accent)">' + fmtInt(totalByCol[j]) + '</span></div>';
   }
   html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Avg %</span><span class="kontrak-card-val">' + avgPct.toFixed(1) + '%</span></div>';
   html += '</div>';
