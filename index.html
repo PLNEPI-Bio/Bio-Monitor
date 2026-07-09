@@ -252,6 +252,17 @@ html,body{
 .topbar-pause-btn.paused .pause-icon-play{display:inline !important}
 .topbar-pause-btn.busy{opacity:.6;pointer-events:none}
 
+/* DO SharePoint link-health warning (admin-only) */
+.do-link-warning{
+  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.55);color:#ef4444;
+  padding:6px 11px;display:none;align-items:center;gap:7px;
+  cursor:pointer;border-radius:4px;transition:all .15s ease;flex-shrink:0;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.3px;white-space:nowrap;max-width:340px;
+}
+.do-link-warning:hover{background:rgba(239,68,68,.2)}
+.do-link-warning .do-warn-text{overflow:hidden;text-overflow:ellipsis}
+
 /* V48: Calendar header button */
 .topbar-calendar-btn{
   background:transparent;border:1px solid var(--border);color:var(--text-dim);
@@ -3197,6 +3208,36 @@ html,body{
   background:var(--panel-3);color:var(--text-bright);font-weight:600;
   border-bottom:none;border-top:1px solid var(--border-bright);
 }
+/* DO editor (single-contract popup) */
+.do-editor-section{margin-top:14px;padding-top:12px;border-top:1px dashed var(--border)}
+.do-override-badge{
+  display:inline-block;margin-bottom:10px;padding:4px 10px;border-radius:4px;
+  background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.45);
+  color:#a855f7;font-size:10px;font-weight:700;letter-spacing:.3px;
+}
+.do-editor-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.do-editor-btn{
+  background:transparent;border:1px solid var(--accent);color:var(--accent);
+  padding:6px 14px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;
+  font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.3px;transition:all .15s ease;
+}
+.do-editor-btn:hover{background:var(--accent);color:#fff}
+.do-editor-btn.primary{background:var(--accent);color:#fff}
+.do-editor-btn.primary:hover{opacity:.85}
+.do-editor-btn.primary:disabled{opacity:.5;cursor:default}
+.do-editor-btn.ghost{border-color:var(--border);color:var(--text-dim)}
+.do-editor-btn.ghost:hover{background:var(--panel-3);color:var(--text-bright)}
+.do-editor-hint{font-size:9.5px;color:var(--text-dim)}
+.do-editor-wrap{margin-top:10px}
+.do-editor-title{font-size:11px;font-weight:700;color:var(--text-bright);margin-bottom:8px}
+.do-editor-table{min-width:460px}
+.do-editor-table td{padding:2px 4px}
+.do-editor-input{
+  width:86px;background:var(--panel-3);border:1px solid var(--border);color:var(--text-bright);
+  padding:4px 6px;border-radius:3px;font-size:10.5px;font-family:inherit;text-align:right;
+}
+.do-editor-input:focus{outline:none;border-color:var(--accent)}
+.do-editor-footer{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
 /* Split DO | Realisasi columns per year */
 .pemasok-monthly-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .pemasok-monthly-table-split{min-width:560px}
@@ -4723,6 +4764,11 @@ html,body{
     <div class="updated-indicator" id="updatedIndicator" title="Tanggal terakhir data di-refresh">
       <span class="updated-label">Updated per</span>
       <span class="updated-date" id="updatedDate">—</span>
+    </div>
+    <!-- DO SharePoint link-health warning — only visible to "Maulana - Admin" -->
+    <div class="do-link-warning" id="doLinkWarning" style="display:none" onclick="switchTab('kontrak')" title="Auto-update DO gagal">
+      <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M8 1.5 15 14H1L8 1.5zM8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>
+      <span class="do-warn-text">Link DO SharePoint tidak bisa diakses</span>
     </div>
     <!-- Auto-refresh pause switch — only visible to "Maulana - Admin" -->
     <button class="topbar-pause-btn" id="topbarPauseBtn" style="display:none" onclick="toggleAutoRefreshPause()" title="Jeda / lanjutkan auto-refresh data (setiap 10 menit)">
@@ -11497,14 +11543,40 @@ function escapeHtml(s){
 }
 
 // ====== PEMASOK DETAIL MODAL ======
-// Delivery Order (DO) lookup. DELIVERY_ORDERS is keyed by a contract
-// signature: normKontrak|loosePLTU|loosePemasok (mirrors the build script).
+// Delivery Order (DO) lookup. Keyed by a contract signature:
+// normKontrak|loosePLTU|loosePemasok. Three sources, merged per-year with this
+// precedence: manual overrides (DO_STORE.overrides) win over the weekly
+// SharePoint auto-refresh (DO_STORE.auto), which wins over the baked-in
+// DELIVERY_ORDERS snapshot (offline seed/fallback). See the do_data table +
+// the do-auto-refresh Edge Function.
+let DO_STORE = { auto: {}, overrides: {}, link_status: 'unknown', last_ok_at: null, last_error: null, last_error_at: null };
 function _doNormK(s){ return String(s||'').toUpperCase().replace(/\s+/g,''); }
 function _doLoose(s){ return String(s||'').toUpperCase().replace(/[ \-–—‑'’.()]/g,''); }
 function doSigForContract(c){ return c ? (_doNormK(c.kontrak)+'|'+_doLoose(c.pltu)+'|'+_doLoose(c.pemasok)) : ''; }
+// Returns the effective DO map for a contract: { '2024':[12], ... } or null.
+// Manual override years replace the corresponding auto/seed year entirely.
 function getContractDO(c){
-  if (typeof DELIVERY_ORDERS === 'undefined' || !DELIVERY_ORDERS) return null;
-  return DELIVERY_ORDERS[doSigForContract(c)] || null;
+  const sig = doSigForContract(c);
+  if (!sig) return null;
+  const seed = (typeof DELIVERY_ORDERS !== 'undefined' && DELIVERY_ORDERS) ? (DELIVERY_ORDERS[sig] || null) : null;
+  const auto = (DO_STORE.auto && DO_STORE.auto[sig]) || null;
+  const ovEntry = (DO_STORE.overrides && DO_STORE.overrides[sig]) || null;
+  const ov = ovEntry && ovEntry.do ? ovEntry.do : null;
+  const base = auto || seed;
+  if (!ov && !base) return null;
+  if (!ov) return base;
+  if (!base) return ov;
+  const out = {};
+  const years = new Set([...Object.keys(base), ...Object.keys(ov)]);
+  for (const y of years){
+    out[y] = (ov[y] ? ov[y].slice() : (base[y] ? base[y].slice() : new Array(12).fill(0)));
+  }
+  return out;
+}
+// Metadata for a contract's manual override (who/when), or null.
+function getContractDOOverride(c){
+  const sig = doSigForContract(c);
+  return (sig && DO_STORE.overrides && DO_STORE.overrides[sig]) || null;
 }
 
 // Opens the contract-detail modal. When kontrakNo (contract number) is given,
@@ -11542,6 +11614,11 @@ function openPemasokModal(pemasok, focusPltu, kontrakNo){
     }
     return a.pltu.localeCompare(b.pltu);
   });
+
+  // Remember how this modal was opened so the DO editor can re-render it after
+  // a save/revert, and which single contract (if any) the DO editor targets.
+  window._pemasokOpenArgs = [pemasok, focusPltu, kontrakNo];
+  window._pemasokActiveContract = (contracts.length === 1) ? contracts[0] : null;
 
   const titleEl = document.getElementById('pemasokModalTitle');
   const metaEl = document.getElementById('pemasokModalMeta');
@@ -11683,7 +11760,7 @@ function openPemasokModal(pemasok, focusPltu, kontrakNo){
       '</div>';
   }).join('');
 
-  bodyEl.innerHTML = blocks;
+  bodyEl.innerHTML = blocks + ((contracts.length === 1) ? _buildDoEditorSection(contracts[0]) : '');
   // Ensure close handlers are bound even when the modal is opened outside the
   // Daftar Kontrak tab (e.g. from a Jenis card in Map Cofiring), since the tab's
   // buildKontrakFilters() may not have run yet.
@@ -11722,6 +11799,126 @@ function closePemasokModal(){
   if (backdrop) backdrop.classList.remove('open');
   document.body.style.overflow = '';
 }
+
+// ====== DO EDITOR (inside the single-contract popup) ======
+// Shown only when the popup is scoped to exactly ONE contract. Editors
+// (DO_EDITOR_NAMES) can turn the DO sub-columns into editable inputs and save
+// the result to do_data.overrides — which permanently wins over the weekly
+// SharePoint auto-refresh for that contract (until reverted).
+const DO_EDITOR_YEARS = ['2023','2024','2025','2026'];
+function _buildDoEditorSection(c){
+  const user = (typeof getUserName === 'function' ? getUserName() : '') || '';
+  const ov = getContractDOOverride(c);
+  let html = '<div class="do-editor-section" id="doEditorSection">';
+
+  // Override marker — visible to everyone so the data source is transparent.
+  if (ov){
+    let at = '';
+    if (ov.at){
+      try { at = ' · ' + new Date(ov.at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }); } catch(e){}
+    }
+    html += '<div class="do-override-badge">● DO diedit manual' + (ov.by ? ' oleh ' + escapeHtml(ov.by) : '') + at + '</div>';
+  }
+
+  if (canEditDO(user)){
+    html += '<div class="do-editor-actions" id="doEditorActions">' +
+      '<button class="do-editor-btn" onclick="openDoEditor()">✎ Edit DO</button>' +
+      (ov ? '<button class="do-editor-btn ghost" onclick="revertDoEditor()">↺ Kembalikan ke auto</button>' : '') +
+      '<span class="do-editor-hint">DO tersimpan ke server; edit manual tidak ditimpa auto-update mingguan.</span>' +
+      '</div>';
+    html += '<div class="do-editor-wrap" id="doEditorWrap" style="display:none"></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function openDoEditor(){
+  const c = window._pemasokActiveContract;
+  const wrap = document.getElementById('doEditorWrap');
+  const actions = document.getElementById('doEditorActions');
+  if (!c || !wrap) return;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const cur = getContractDO(c) || {};
+  let t = '<div class="do-editor-title">Edit DO — ' + escapeHtml(c.pemasok) + ' · ' + escapeHtml(c.pltu) + ' <span style="font-weight:400;color:var(--text-dim)">(' + (c.kontrak ? escapeHtml(c.kontrak) : '—') + ')</span></div>';
+  t += '<div class="pemasok-monthly-scroll"><table class="pemasok-monthly-table do-editor-table"><thead><tr><th class="pm-th-month">Month</th>';
+  for (const y of DO_EDITOR_YEARS) t += '<th class="pm-th-year">DO ' + y + '</th>';
+  t += '</tr></thead><tbody>';
+  for (let mi = 0; mi < 12; mi++){
+    t += '<tr><td class="pm-td-month">' + months[mi] + '</td>';
+    for (const y of DO_EDITOR_YEARS){
+      const v = (cur[y] && cur[y][mi]) || 0;
+      t += '<td><input type="number" min="0" step="any" class="do-editor-input" id="doEd-' + y + '-' + mi + '" value="' + (v || 0) + '"></td>';
+    }
+    t += '</tr>';
+  }
+  t += '</tbody></table></div>';
+  t += '<div class="do-editor-footer">' +
+    '<button class="do-editor-btn primary" id="doEdSave" onclick="saveDoEditor()">💾 Simpan ke Server</button>' +
+    '<button class="do-editor-btn ghost" onclick="cancelDoEditor()">Batal</button>' +
+    '<span class="do-editor-hint">Satuan MT. Nilai berlaku sebagai override manual untuk kontrak ini.</span>' +
+    '</div>';
+  wrap.innerHTML = t;
+  wrap.style.display = 'block';
+  if (actions) actions.style.display = 'none';
+  wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+window.openDoEditor = openDoEditor;
+
+function cancelDoEditor(){
+  const wrap = document.getElementById('doEditorWrap');
+  const actions = document.getElementById('doEditorActions');
+  if (wrap){ wrap.style.display = 'none'; wrap.innerHTML = ''; }
+  if (actions) actions.style.display = 'flex';
+}
+window.cancelDoEditor = cancelDoEditor;
+
+async function saveDoEditor(){
+  const c = window._pemasokActiveContract;
+  if (!c) return;
+  const user = (typeof getUserName === 'function' ? getUserName() : '') || '';
+  if (!canEditDO(user)){ alert('Anda tidak memiliki akses untuk mengedit DO.'); return; }
+  const btn = document.getElementById('doEdSave');
+  if (btn){ btn.disabled = true; btn.textContent = 'Menyimpan…'; }
+  try {
+    const doMap = {};
+    for (const y of DO_EDITOR_YEARS){
+      const arr = new Array(12).fill(0);
+      let any = false;
+      for (let mi = 0; mi < 12; mi++){
+        const el = document.getElementById('doEd-' + y + '-' + mi);
+        const v = el ? parseFloat(el.value) : 0;
+        const n = (isNaN(v) || v < 0) ? 0 : Math.round(v * 100) / 100;
+        arr[mi] = n;
+        if (n) any = true;
+      }
+      if (any) doMap[y] = arr;
+    }
+    await saveDoOverride(doSigForContract(c), doMap);
+    // Re-render the popup from the stored open-args so the DO columns + marker refresh.
+    if (window._pemasokOpenArgs) openPemasokModal.apply(null, window._pemasokOpenArgs);
+  } catch(e){
+    console.error('[DO] save failed:', e);
+    alert('Gagal menyimpan DO: ' + (e && e.message ? e.message : e));
+    if (btn){ btn.disabled = false; btn.textContent = '💾 Simpan ke Server'; }
+  }
+}
+window.saveDoEditor = saveDoEditor;
+
+async function revertDoEditor(){
+  const c = window._pemasokActiveContract;
+  if (!c) return;
+  const user = (typeof getUserName === 'function' ? getUserName() : '') || '';
+  if (!canEditDO(user)){ alert('Anda tidak memiliki akses untuk mengedit DO.'); return; }
+  if (!confirm('Hapus edit manual DO untuk kontrak ini?\n\nDO akan kembali mengikuti tarikan otomatis mingguan dari SharePoint.')) return;
+  try {
+    await removeDoOverride(doSigForContract(c));
+    if (window._pemasokOpenArgs) openPemasokModal.apply(null, window._pemasokOpenArgs);
+  } catch(e){
+    console.error('[DO] revert failed:', e);
+    alert('Gagal menghapus override DO: ' + (e && e.message ? e.message : e));
+  }
+}
+window.revertDoEditor = revertDoEditor;
 
 function renderKontrakSummary(){
   const summaryEl = document.getElementById('kontrak-summary');
@@ -12496,6 +12693,8 @@ function renderLoginUI(){
   }
   // Refresh the admin-only auto-refresh pause control whenever identity changes.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();
+  // The DO link-health warning is also admin-gated → re-evaluate on identity change.
+  if (typeof renderDoLinkWarning === 'function') renderDoLinkWarning();
 }
 
 // =====================================================
@@ -12581,6 +12780,97 @@ async function toggleAutoRefreshPause(){
   }
 }
 window.toggleAutoRefreshPause = toggleAutoRefreshPause;
+
+// =====================================================
+// Delivery Order (DO) — server store, manual editing, link-health warning.
+// DO data lives in the `do_data` table (row id=1): `auto` (weekly SharePoint
+// refresh) + `overrides` (manual edits that always win). See getContractDO().
+// =====================================================
+// Who may edit DO in the contract popup: the Admin/Upload roles + Ridho - Upload.
+const DO_EDITOR_NAMES = (typeof UPDATE_ADMIN_NAMES !== 'undefined' ? UPDATE_ADMIN_NAMES : []).concat(['Ridho - Upload']);
+function canEditDO(name){ return !!name && DO_EDITOR_NAMES.indexOf(name) >= 0; }
+
+// Pull the DO store (auto + overrides + link health) once, on boot.
+async function fetchDoData(){
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('do_data')
+      .select('auto,overrides,link_status,last_ok_at,last_error,last_error_at')
+      .eq('id', 1).single();
+    if (error){ console.warn('[DO] fetch error:', error.message); return; }
+    if (data){
+      DO_STORE.auto = data.auto || {};
+      DO_STORE.overrides = data.overrides || {};
+      DO_STORE.link_status = data.link_status || 'unknown';
+      DO_STORE.last_ok_at = data.last_ok_at || null;
+      DO_STORE.last_error = data.last_error || null;
+      DO_STORE.last_error_at = data.last_error_at || null;
+    }
+    renderDoLinkWarning();
+    // Re-render the Daftar Kontrak table if it's currently showing, so DO-derived
+    // UI (and any freshly-loaded overrides) reflect the server data.
+    if (typeof renderKontrakTable === 'function' && document.querySelector('.view[data-view="kontrak"].active')){
+      try { renderKontrakTable(); } catch(e){}
+    }
+  } catch(e){ console.warn('[DO] fetch failed:', e); }
+}
+
+// Persist a manual DO override for one contract signature. doMap = {year:[12]}.
+// Re-reads current overrides first so concurrent edits by other admins aren't
+// clobbered, then merges this signature in.
+async function saveDoOverride(sig, doMap){
+  if (!supabaseClient) throw new Error('Koneksi Supabase belum siap.');
+  let overrides = {};
+  try {
+    const { data } = await supabaseClient.from('do_data').select('overrides').eq('id', 1).single();
+    overrides = (data && data.overrides) || {};
+  } catch(e){ overrides = Object.assign({}, DO_STORE.overrides); }
+  overrides[sig] = { do: doMap, by: (getUserName() || ''), at: new Date().toISOString() };
+  const { error } = await supabaseClient.from('do_data')
+    .update({ overrides: overrides, updated_at: new Date().toISOString() }).eq('id', 1);
+  if (error) throw error;
+  DO_STORE.overrides = overrides;
+}
+
+// Remove a manual override → the contract falls back to auto/seed DO.
+async function removeDoOverride(sig){
+  if (!supabaseClient) throw new Error('Koneksi Supabase belum siap.');
+  let overrides = {};
+  try {
+    const { data } = await supabaseClient.from('do_data').select('overrides').eq('id', 1).single();
+    overrides = (data && data.overrides) || {};
+  } catch(e){ overrides = Object.assign({}, DO_STORE.overrides); }
+  delete overrides[sig];
+  const { error } = await supabaseClient.from('do_data')
+    .update({ overrides: overrides, updated_at: new Date().toISOString() }).eq('id', 1);
+  if (error) throw error;
+  DO_STORE.overrides = overrides;
+}
+
+// Header warning shown ONLY to "Maulana - Admin" when the DO SharePoint link is
+// unreachable (link_status='dead'), so the source link can be rotated.
+function renderDoLinkWarning(){
+  const el = document.getElementById('doLinkWarning');
+  if (!el) return;
+  const isAdmin = (typeof getUserName === 'function' ? getUserName() : '') === AUTO_REFRESH_ADMIN;
+  if (isAdmin && DO_STORE.link_status === 'dead'){
+    let when = '';
+    if (DO_STORE.last_ok_at){
+      try {
+        const d = new Date(DO_STORE.last_ok_at);
+        when = ' · OK terakhir ' + d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch(e){}
+    }
+    const txt = el.querySelector('.do-warn-text');
+    if (txt) txt.textContent = 'Link DO SharePoint tidak bisa diakses' + when;
+    el.style.display = 'flex';
+    el.title = DO_STORE.last_error || 'Auto-update DO gagal — periksa/rotasi link SharePoint.';
+  } else {
+    el.style.display = 'none';
+  }
+}
+window.renderDoLinkWarning = renderDoLinkWarning;
 
 function toggleLoginDropdown(){
   const dd = document.getElementById('loginDropdown');
@@ -18977,6 +19267,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (supabaseClient){
     fetchAutoRefreshState();
     subscribeAutoRefreshState();
+    // DO store (auto + manual overrides + link health) — fetch once on boot.
+    if (typeof fetchDoData === 'function') fetchDoData();
   }
   // Reflect admin-only pause control on first paint.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();
