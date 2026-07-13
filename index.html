@@ -1212,7 +1212,7 @@ html,body{
 .real-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
 .real-card{background:var(--panel);border:1px solid var(--border);padding:20px;position:relative;border-radius:12px;transition:box-shadow .2s}
 /* V60: section divider above the "Komposisi Jenis Biomassa" chart */
-.real-section-divider{border:0;border-top:3px solid var(--border);margin:8px 0}
+.real-section-divider{border:0;border-top:3px solid var(--accent);margin:8px 0}
 .real-card:hover{box-shadow:var(--shadow-xs)}
 .real-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;font-weight:700;display:flex;align-items:center}
 .real-card h3::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--accent);margin-right:9px;vertical-align:middle}
@@ -5293,6 +5293,27 @@ html,body{
       </div>
     </div>
 
+    <hr class="real-section-divider">
+    <div class="real-card">
+      <div class="real-pltu-filter-head">
+        <div>
+          <h3 style="margin-bottom:0">Filter Wilayah · Achievement Ratio</h3>
+          <div class="real-pltu-filter-sub">Pengaruhi chart All PLTU by Achievement Ratio (2025 &amp; 2026 YTD)</div>
+        </div>
+      </div>
+      <div class="real-filter-row">
+        <div class="real-filter-cell">
+          <label class="real-filter-label">Wilayah</label>
+          <select id="achWilayahFilter" class="real-filter-select">
+            <option value="all">Semua Wilayah</option>
+            <option value="jawa">Jawa</option>
+            <option value="sumatera">Sumatera</option>
+            <option value="kalimantan">Kalimantan</option>
+            <option value="sulmapana">Sulmapana (Sulawesi · Papua · Nusa Tenggara)</option>
+          </select>
+        </div>
+      </div>
+    </div>
     <div class="real-card">
       <div class="real-card-head">
         <h3>All PLTU by Achievement Ratio (2025) · Ranked Real vs Target</h3>
@@ -6354,6 +6375,7 @@ const state = {
   // V26: simple single-select filters for Realisasi tab
   realPltuFilterPltu: 'all',       // PLTU code or 'all'
   realPltuFilterProvince: 'all',   // 'all' | 'jawa' | 'sumatera' | 'kalimantan' | 'sulmapana'
+  achWilayahFilter: 'all',         // 'all' | 'jawa' | 'sumatera' | 'kalimantan' | 'sulmapana' — Achievement Ranking charts
 };
 
 // ========= utils =========
@@ -9006,6 +9028,7 @@ function renderRealView(){
   function buildAchievementRanking(year, canvasId, chartKey, showValues){
     // Rank ALL PLTU by Real/Target ratio (plants without target go at the bottom with 0%)
     const ranked = DATA.plants
+      .filter(p => plantInProvince(p, state.achWilayahFilter))
       .map(p => {
         const real = (p.historical_real[year]||[]).reduce((a,b)=>a+b,0);
         const target = ((p.historical_target && p.historical_target[year])||[]).reduce((a,b)=>a+b,0);
@@ -9120,6 +9143,20 @@ function renderRealView(){
 
   buildAchievementRanking('2025', 'realTopChart', 'top', show25);
   buildAchievementRanking('2026', 'realTopChart26', 'top26', show26);
+
+  // Wire Wilayah filter (shared by both Achievement Ranking charts)
+  const achWilayahSel = document.getElementById('achWilayahFilter');
+  if (achWilayahSel){
+    achWilayahSel.value = state.achWilayahFilter;
+    if (!achWilayahSel.dataset.wired){
+      achWilayahSel.onchange = () => {
+        state.achWilayahFilter = achWilayahSel.value;
+        buildAchievementRanking('2025', 'realTopChart', 'top', ach25Toggle ? ach25Toggle.checked : false);
+        buildAchievementRanking('2026', 'realTopChart26', 'top26', ach26Toggle ? ach26Toggle.checked : false);
+      };
+      achWilayahSel.dataset.wired = '1';
+    }
+  }
 
   // Wire toggles to re-render
   if (ach25Toggle){
