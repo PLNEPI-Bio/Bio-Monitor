@@ -7856,40 +7856,63 @@ function _lpMatrix(sheet){ return XLSX.utils.sheet_to_json(sheet, { header: 1, r
 // ---- Build + download a blank (example-filled) template ----
 function downloadLaporanTemplate(){
   if (typeof XLSX === 'undefined'){ alert('Library Excel belum siap, coba lagi sebentar.'); return; }
+  // Dynamic template: follows the wilayah + checkpoint month picked in the form,
+  // pre-filled from dashboard data. Columns run only up to the running month and
+  // end with Realisasi <ck> saat ini · Prognosa <ck> · DO <ck> (mirrors the form).
+  const provEl = document.getElementById('laporanFormWilayah');
+  const dateEl = document.getElementById('laporanFormDate');
+  const prov = provEl ? provEl.value : '';
+  if (!prov){ alert('Pilih wilayah dulu di form "Input Data Laporan" di atas.'); return; }
+  const dateStr = (dateEl && dateEl.value) ? dateEl.value : new Date().toISOString().slice(0, 10);
+  const ck = new Date(dateStr).getMonth();
+  const ckName = LAPORAN_MONTHS[ck];
+  const label = LAPORAN_REGION_LABEL[prov] || prov;
+  const plants = _laporanRegionPlants(prov);
+  if (!plants.length){ alert('Tidak ada PLTU untuk wilayah ini pada data saat ini.'); return; }
+
+  const sumHist = (y) => plants.reduce((s, p) => s + (((p.historical_real && p.historical_real[y]) || []).reduce((a, b) => a + (b || 0), 0)), 0);
+
   const aoa = [];
-  aoa.push(['Wilayah', 'Sumatera']);
+  aoa.push(['Wilayah', label]);
   aoa.push(['Tahun Laporan', 2026]);
   aoa.push(['Satuan input', 'ton (ditampilkan sebagai ribu ton)']);
+  aoa.push(['Checkpoint', dateStr]);
   aoa.push([]);
   aoa.push(['REALISASI TAHUNAN (total wilayah, ton)']);
   aoa.push(['Tahun', 'Total']);
-  aoa.push([2023, 108290]);
-  aoa.push([2024, 307360]);
-  aoa.push([2025, 445750]);
+  aoa.push([2023, Math.round(sumHist('2023'))]);
+  aoa.push([2024, Math.round(sumHist('2024'))]);
+  aoa.push([2025, Math.round(sumHist('2025'))]);
   aoa.push(['(Tahun berjalan dihitung otomatis dari tabel bulanan di bawah)']);
   aoa.push([]);
-  aoa.push(['REALISASI BULANAN (per PLTU, ton) — kolom DO = rencana bulan berikutnya']);
-  aoa.push(['PLTU'].concat(LAPORAN_MONTHS).concat(['DO']));
-  // Example rows (Sumatera, angka contoh dalam ton). Isi 0 untuk bulan yang belum ada.
-  const ex = [
-    ['Labuhan Angin', 340, 1060, 1800, 2150, 1000, 2230, 0,0,0,0,0,0, 2990],
-    ['Ombilin', 4390, 3300, 2160, 0, 750, 1580, 0,0,0,0,0,0, 2500],
-    ['Teluk Sirih', 5660, 5550, 5550, 5560, 5790, 6920, 0,0,0,0,0,0, 6680],
-  ];
-  ex.forEach(r => aoa.push(r));
+  aoa.push(['REALISASI BULANAN ' + label + ' 2026 (per PLTU, ton) — s.d ' + (LAPORAN_MONTHS_FULL[ck] || ckName)]);
+  // Header: past months (read-only actual) + Realisasi <ck> saat ini + Prognosa <ck> + DO <ck>
+  const header = ['PLTU'];
+  for (let m = 0; m < ck; m++) header.push(LAPORAN_MONTHS[m]);
+  header.push('Realisasi ' + ckName + ' saat ini', 'Prognosa ' + ckName, 'DO ' + ckName);
+  aoa.push(header);
+  plants.forEach(p => {
+    const real = p.real_2026 || [], doArr = p.do_2026 || [];
+    const row = [p.name || '—'];
+    for (let m = 0; m < ck; m++) row.push(Math.round((real[m] || 0)));
+    row.push(Math.round(real[ck] || 0));   // Realisasi saat ini (pra-isi = aktual dashboard)
+    row.push(Math.round(real[ck] || 0));   // Prognosa (pra-isi = sama, silakan diubah)
+    row.push(Math.round(doArr[ck] || 0));  // DO bulan checkpoint
+    aoa.push(row);
+  });
   aoa.push([]);
   aoa.push(['KENDALA (satu poin per baris)']);
-  aoa.push(['Keterbatasan armada transportasi.']);
-  aoa.push(['Kelangkaan BBM yang membuat antrian menjadi panjang.']);
   aoa.push([]);
   aoa.push(['DUKUNGAN YANG DIPERLUKAN (satu poin per baris)']);
-  aoa.push(['Percepatan kontraktual di PLTU terkait.']);
+  aoa.push([]);
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{ wch: 22 }].concat(LAPORAN_MONTHS.map(() => ({ wch: 7 }))).concat([{ wch: 9 }]);
+  ws['!cols'] = [{ wch: 22 }]
+    .concat(Array.from({ length: ck }, () => ({ wch: 7 })))
+    .concat([{ wch: 20 }, { wch: 14 }, { wch: 10 }]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Laporan');
-  XLSX.writeFile(wb, 'Template_Laporan_Biomassa.xlsx');
+  XLSX.writeFile(wb, 'Template_Laporan_Biomassa_' + label.replace(/[^a-zA-Z0-9]+/g, '_') + '.xlsx');
 }
 window.downloadLaporanTemplate = downloadLaporanTemplate;
 
@@ -7898,12 +7921,20 @@ function parseLaporanTemplate(wb){
   const sheet = wb.Sheets['Laporan'] || wb.Sheets[wb.SheetNames[0]];
   if (!sheet) throw new Error('Sheet tidak ditemukan.');
   const m = _lpMatrix(sheet);
-  let wilayah = '', yearStr = '';
+  let wilayah = '', yearStr = '', checkpointStr = '';
   const annual = {};                 // year(number) -> ton
-  const rows = [];                   // { pltu, months:[12], do }
+  const rawRows = [];                // { pltu, row }
   const kendala = [], dukungan = [];
-  let monthCols = new Array(12).fill(null), doCol = -1;
+  let monthCols = new Array(12).fill(null), doCol = -1, realNowCol = -1, prognosaCol = -1;
+  let prognosaMonth = -1, doMonth = -1;
   let section = null;
+
+  // Find a month name occurring anywhere inside a header string.
+  const findMonth = (h) => {
+    const lc = String(h).toLowerCase();
+    for (let i = 0; i < 12; i++){ if (lc.indexOf(LAPORAN_MONTHS[i].toLowerCase()) >= 0) return i; }
+    return -1;
+  };
 
   for (let r = 0; r < m.length; r++){
     const row = m[r] || [];
@@ -7912,17 +7943,22 @@ function parseLaporanTemplate(wb){
     if (lc === 'wilayah'){ wilayah = _lpStr(row[1]); continue; }
     if (lc.indexOf('tahun laporan') === 0){ yearStr = _lpStr(row[1]); section = null; continue; }
     if (lc.indexOf('satuan input') === 0){ continue; }
+    if (lc === 'checkpoint'){ checkpointStr = _lpStr(row[1]); continue; }
     if (lc.indexOf('realisasi tahunan') === 0){ section = 'annual'; continue; }
     if (lc === 'tahun' && _lpStr(row[1]).toLowerCase() === 'total'){ continue; }
     if (lc.indexOf('realisasi bulanan') === 0){ continue; } // title line before header
     if (lc === 'pltu'){
       section = 'monthly';
-      monthCols = new Array(12).fill(null); doCol = -1;
+      monthCols = new Array(12).fill(null); doCol = -1; realNowCol = -1; prognosaCol = -1; prognosaMonth = -1; doMonth = -1;
       for (let c = 1; c < row.length; c++){
-        const h = _lpStr(row[c]).toLowerCase();
-        const mi = LAPORAN_MONTHS.findIndex(mm => mm.toLowerCase() === h);
-        if (mi >= 0) monthCols[mi] = c;
-        else if (h === 'do') doCol = c;
+        const h = _lpStr(row[c]); const hl = h.toLowerCase();
+        if (!hl) continue;
+        // Order matters: dynamic template adds "Realisasi <bln> saat ini",
+        // "Prognosa <bln>", "DO <bln>"; classify those before exact month names.
+        if (hl.indexOf('prognosa') >= 0){ prognosaCol = c; prognosaMonth = findMonth(h); }
+        else if (hl.indexOf('realisasi') >= 0){ realNowCol = c; }
+        else if (hl === 'do' || hl.indexOf('do ') === 0){ doCol = c; doMonth = findMonth(h); }
+        else { const mi = LAPORAN_MONTHS.findIndex(mm => mm.toLowerCase() === hl); if (mi >= 0) monthCols[mi] = c; }
       }
       continue;
     }
@@ -7935,9 +7971,7 @@ function parseLaporanTemplate(wb){
       if (y >= 2000 && y <= 2100) annual[y] = _lpNum(row[1]);
     } else if (section === 'monthly'){
       if (!c0) continue;
-      const months = monthCols.map(c => (c != null ? _lpNum(row[c]) : 0));
-      const dov = doCol >= 0 ? _lpNum(row[doCol]) : 0;
-      rows.push({ pltu: c0, months, do: dov });
+      rawRows.push({ pltu: c0, row });
     } else if (section === 'kendala'){
       if (c0) kendala.push(c0);
     } else if (section === 'dukungan'){
@@ -7945,17 +7979,35 @@ function parseLaporanTemplate(wb){
     }
   }
 
-  // Aggregates
-  let lastMonth = -1;
-  for (let mi = 0; mi < 12; mi++){
-    let s = 0; for (const rr of rows) s += rr.months[mi] || 0;
-    if (s > 0) lastMonth = mi;
+  // Dynamic (new) template = has a Prognosa column → checkpoint month `ck`; the
+  // monthly row is [past actual 0..ck-1, prognosa@ck] plus a realNow value.
+  const isNew = (prognosaCol >= 0);
+  const _ckFromDate = (checkpointStr && /^\d{4}-\d{2}-\d{2}/.test(checkpointStr)) ? (parseInt(checkpointStr.slice(5, 7), 10) - 1) : -1;
+  let ck = isNew ? (prognosaMonth >= 0 ? prognosaMonth : _ckFromDate) : -1;
+  if (isNew && ck < 0){ let mx = -1; for (let i = 0; i < 12; i++) if (monthCols[i] != null) mx = i; ck = mx + 1; }
+
+  const rows = rawRows.map(rr => {
+    const row = rr.row;
+    if (isNew){
+      const months = [];
+      for (let mm = 0; mm < ck; mm++) months.push(monthCols[mm] != null ? _lpNum(row[monthCols[mm]]) : 0);
+      months.push(prognosaCol >= 0 ? _lpNum(row[prognosaCol]) : 0);   // months[ck] = prognosa
+      return { pltu: rr.pltu, months, realNow: (realNowCol >= 0 ? _lpNum(row[realNowCol]) : 0), do: (doCol >= 0 ? _lpNum(row[doCol]) : 0) };
+    }
+    const months = monthCols.map(c => (c != null ? _lpNum(row[c]) : 0));
+    return { pltu: rr.pltu, months, do: (doCol >= 0 ? _lpNum(row[doCol]) : 0) };
+  });
+
+  // Aggregates (prognosa-based; realNow is display-only)
+  let lastMonth;
+  if (isNew){
+    lastMonth = ck;
+  } else {
+    lastMonth = -1;
+    for (let mi = 0; mi < 12; mi++){ let s = 0; for (const rr of rows) s += rr.months[mi] || 0; if (s > 0) lastMonth = mi; }
   }
   const monthlyTotals = [];
-  for (let mi = 0; mi <= lastMonth; mi++){
-    let s = 0; for (const rr of rows) s += rr.months[mi] || 0;
-    monthlyTotals.push(s);
-  }
+  for (let mi = 0; mi <= lastMonth; mi++){ let s = 0; for (const rr of rows) s += rr.months[mi] || 0; monthlyTotals.push(s); }
   const doTotal = rows.reduce((s, rr) => s + (rr.do || 0), 0);
   const real2026 = monthlyTotals.reduce((a, b) => a + b, 0);
   const yearNum = parseInt(yearStr, 10) || (new Date().getFullYear());
@@ -7966,11 +8018,19 @@ function parseLaporanTemplate(wb){
   years.forEach(y => { if (annual[y] >= maxAnnual){ maxAnnual = annual[y]; maxYear = y; } });
   const akumulasi = annualVals.reduce((a, b) => a + b, 0);
 
-  return {
-    wilayah: wilayah || '—', year: yearNum, years, annual,
+  const out = {
+    wilayah: wilayah || '—', prov: (_laporanProvFromLabel(wilayah) || undefined),
+    year: yearNum, years, annual,
     rows, lastMonth, monthlyTotals, doTotal, real2026,
     maxAnnual, maxYear, akumulasi, kendala, dukungan,
   };
+  if (isNew){
+    out.ckMonthIdx = ck;
+    out.doMonthIdx = (doMonth >= 0 ? doMonth : ck);
+    out.realNowTotal = rows.reduce((s, rr) => s + (rr.realNow || 0), 0);
+  }
+  if (checkpointStr) out.checkpoint_date = checkpointStr;
+  return out;
 }
 
 // ---- Upload handling ----
@@ -7997,7 +8057,7 @@ async function handleLaporanFile(file){
     const dtEl = document.getElementById('laporanSaveDate');
     const ketEl = document.getElementById('laporanSaveKeterangan');
     if (wEl) wEl.value = model.wilayah && model.wilayah !== '—' ? model.wilayah : '';
-    if (dtEl && !dtEl.value) dtEl.value = new Date().toISOString().slice(0, 10);
+    if (dtEl) dtEl.value = model.checkpoint_date || dtEl.value || new Date().toISOString().slice(0, 10);
     if (ketEl) ketEl.value = '';
     const shEl = document.getElementById('laporanSaveHint');
     if (shEl) shEl.textContent = '';
@@ -8057,10 +8117,15 @@ function buildLaporanCanvas(canvas, model, kendala, dukungan){
   const W = 900;               // logical width
   const pad = 40;
   const CW = W - pad * 2;
-  // palette (green/cream, matching the reference PDF)
-  const bg = '#f6f5ef', ink = '#14432b', green = '#2e7d47', greenLt = '#7cb342';
+  // Per-wilayah palette (Sumatera green, Jawa blue, Kalimantan amber, Sulmapana
+  // purple). Resolve from model.prov, else reverse-map the wilayah label, else
+  // default to Sumatera. green/greenLt/orange keep their variable names but now
+  // hold the theme's primary/primaryLt/accent so every draw fn themes automatically.
+  const _T = (typeof LAPORAN_THEMES !== 'undefined' &&
+    (LAPORAN_THEMES[model.prov] || LAPORAN_THEMES[_laporanProvFromLabel(model.wilayah)])) || LAPORAN_THEMES.sumatera;
+  const bg = _T.bg, ink = _T.ink, green = _T.primary, greenLt = _T.primaryLt;
   const gray = '#5f6b62', cardBg = '#ffffff', cardBorder = '#e4e3d9';
-  const orange = '#d98324', red = '#c0392b';
+  const orange = _T.accent, red = '#c0392b';
 
   const font = (wt, sz) => wt + ' ' + sz + "px 'Plus Jakarta Sans', sans-serif";
   // measuring ctx
@@ -8452,6 +8517,27 @@ window.downloadLaporanPDF = downloadLaporanPDF;
 // ============================================================
 const LAPORAN_REGION_LABEL = { sumatera: 'Sumatera', jawa: 'Jawa', kalimantan: 'Kalimantan', sulmapana: 'Sulmapana' };
 
+// Per-region infographic themes so each wilayah's report is visually distinct.
+// primary = headers/chart line/cards; primaryLt = chart fill + running-year accent;
+// accent = wilayah name + "REALISASI BULANAN" label + DO column + Prognosa header;
+// bg/ink = page background + body text tint. (red/gray/card* stay constant.)
+const LAPORAN_THEMES = {
+  sumatera:   { bg: '#f6f5ef', ink: '#14432b', primary: '#2e7d47', primaryLt: '#7cb342', accent: '#d98324' },
+  jawa:       { bg: '#eef3fa', ink: '#103a5e', primary: '#1f60a8', primaryLt: '#5aa4e0', accent: '#e08a2a' },
+  kalimantan: { bg: '#f8f3e9', ink: '#5a3a12', primary: '#b06a1f', primaryLt: '#e0ad4d', accent: '#2f9e6f' },
+  sulmapana:  { bg: '#f4eff9', ink: '#3c2160', primary: '#6b3fa0', primaryLt: '#a679d6', accent: '#d9683b' },
+};
+// Reverse-map a wilayah display label (or prov key) → prov key, for theming models
+// that only carry the label (older saved arsip / Excel path).
+function _laporanProvFromLabel(label){
+  if (!label) return null;
+  const l = String(label).toLowerCase().trim();
+  for (const k of Object.keys(LAPORAN_REGION_LABEL)){
+    if (k === l || LAPORAN_REGION_LABEL[k].toLowerCase() === l) return k;
+  }
+  return null;
+}
+
 // Plants of a region, sorted by their dashboard order (no).
 function _laporanRegionPlants(prov){
   const plants = (typeof DATA !== 'undefined' && DATA && DATA.plants) ? DATA.plants : [];
@@ -8538,7 +8624,7 @@ function buildLaporanModelFromForm(){
   const dukungan = (document.getElementById('laporanDukungan').value || '').split('\n').map(s => s.trim()).filter(Boolean);
 
   return {
-    wilayah: LAPORAN_REGION_LABEL[prov] || prov, year, years, annual,
+    wilayah: LAPORAN_REGION_LABEL[prov] || prov, prov, year, years, annual,
     rows, lastMonth: ck, doMonthIdx: ck, ckMonthIdx: ck, monthlyTotals, doTotal,
     realNowTotal, real2026,
     maxAnnual, maxYear, akumulasi, kendala, dukungan, checkpoint_date: dateStr,
