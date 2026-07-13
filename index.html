@@ -8127,7 +8127,7 @@ function buildLaporanCanvas(canvas, model, kendala, dukungan){
   const cards = [
     { val: model.maxAnnual, lbl: 'Realisasi tahunan tertinggi (' + model.maxYear + ')' },
     { val: model.akumulasi, lbl: 'Akumulasi realisasi ' + model.years[0] + ' – ' + model.year + ' (s.d ' + lastMonName + ')' },
-    { val: model.real2026, lbl: 'Realisasi ' + model.year + ' (s.d ' + lastMonName + ')' },
+    { val: model.real2026, lbl: 'Realisasi ' + model.year + ' (Prognosa ' + lastMonName + ')' },
   ];
   cards.forEach((c, i) => {
     const cx = pad + (cardW + gap) * i;
@@ -8262,7 +8262,7 @@ function drawLaporanChart(ctx, x, y, w, h, model, C){
     ctx.fillStyle = (i === n - 1) ? C.greenLt : C.ink; ctx.font = C.font('800', 13); ctx.textBaseline = 'top';
     ctx.fillText(String(years[i]), px, yBot + 8);
     ctx.fillStyle = C.gray; ctx.font = C.font('500', 9);
-    ctx.fillText(i === n - 1 ? ('s.d ' + (model.lastMonth >= 0 ? LAPORAN_MONTHS[model.lastMonth] : '—')) : 'Jan–Des', px, yBot + 24);
+    ctx.fillText(i === n - 1 ? ('Prognosa ' + (model.lastMonth >= 0 ? LAPORAN_MONTHS[model.lastMonth] : '—')) : 'Jan–Des', px, yBot + 24);
   }
   ctx.textAlign = 'left';
 }
@@ -8286,8 +8286,18 @@ function drawLaporanTable(ctx, x, y, w, model, C){
   ctx.fillText('PLTU', x + 10, y + headH / 2);
   ctx.textAlign = 'right';
   for (let mi = 0; mi < nMonths; mi++){
-    ctx.fillStyle = C.ink; ctx.font = C.font('700', 11);
-    ctx.fillText(LAPORAN_MONTHS[mi], x + pltuW + colW * mi + colW - 8, y + headH / 2);
+    const hx = x + pltuW + colW * mi + colW - 8;
+    if (mi === nMonths - 1){
+      // Bulan checkpoint = prognosa (belum realisasi aktual) → tandai "Prognosa <bln>".
+      // Kolom bulan sempit, jadi label "Prognosa" ditumpuk kecil di atas nama bulan.
+      ctx.fillStyle = C.orange; ctx.font = C.font('700', 8.5);
+      ctx.fillText('Prognosa', hx, y + headH / 2 - 7);
+      ctx.fillStyle = C.ink; ctx.font = C.font('800', 11);
+      ctx.fillText(LAPORAN_MONTHS[mi], hx, y + headH / 2 + 6);
+    } else {
+      ctx.fillStyle = C.ink; ctx.font = C.font('700', 11);
+      ctx.fillText(LAPORAN_MONTHS[mi], hx, y + headH / 2);
+    }
   }
   ctx.fillStyle = '#fff'; ctx.font = C.font('800', 11);
   ctx.fillText(doLabel, x + pltuW + colW * nMonths + colW - 8, y + headH / 2);
