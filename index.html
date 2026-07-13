@@ -8291,55 +8291,77 @@ function drawLaporanChart(ctx, x, y, w, h, model, C){
 
 function drawLaporanTable(ctx, x, y, w, model, C){
   const nMonths = model.lastMonth + 1;
-  const cols = nMonths + 1; // months + DO
-  const pltuW = Math.min(200, Math.max(150, w - cols * 62));
-  const colW = (w - pltuW) / cols;
-  const headH = C.tableHeadH, rowH = C.tableRowH;
   // DO column month: form path pins DO to the checkpoint month (model.doMonthIdx);
   // Excel path falls back to the month after the last realisasi month.
   const doMonthIdx = (model.doMonthIdx != null) ? model.doMonthIdx : (model.lastMonth + 1);
   const doLabel = doMonthIdx <= 11 ? ('DO ' + LAPORAN_MONTHS[doMonthIdx]) : 'DO';
+  // The last realisasi column is the checkpoint month → label it "Prognosa <bln>"
+  // (matches the running-year chart axis + the "Realisasi (Prognosa …)" card).
+  // When the form supplies current-month actuals, a "Realisasi <bln> saat ini"
+  // column is inserted to its LEFT.
+  const prognosaIdx = nMonths - 1;
+  const hasRealNow = (model.realNowTotal != null);
 
-  // header
+  // Build an explicit column list so inserting the realNow column stays tidy.
+  // Each col: { h1, h2?, get(row), total, headColor?, cellStrong?, orange? }
+  const cols = [];
+  for (let mi = 0; mi < nMonths; mi++){
+    if (mi === prognosaIdx){
+      if (hasRealNow){
+        cols.push({ h1: 'Realisasi', h2: LAPORAN_MONTHS[mi], headColor: C.green,
+          get: (r) => r.realNow || 0, total: model.realNowTotal || 0 });
+      }
+      cols.push({ h1: 'Prognosa', h2: LAPORAN_MONTHS[mi], headColor: C.orange,
+        get: (r) => r.months[mi] || 0, total: model.monthlyTotals[mi] || 0 });
+    } else {
+      cols.push({ h1: LAPORAN_MONTHS[mi], get: (r) => r.months[mi] || 0, total: model.monthlyTotals[mi] || 0 });
+    }
+  }
+  cols.push({ h1: doLabel, orange: true, cellStrong: true, get: (r) => r.do || 0, total: model.doTotal || 0 });
+
+  const nCols = cols.length;
+  const pltuW = Math.min(190, Math.max(120, w - nCols * 54));
+  const colW = (w - pltuW) / nCols;
+  const headH = C.tableHeadH, rowH = C.tableRowH;
+  const colX = (ci) => x + pltuW + colW * ci;
+
+  // header band
   ctx.fillStyle = '#eaf1e6'; ctx.fillRect(x, y, w, headH);
-  ctx.fillStyle = C.orange; ctx.fillRect(x + pltuW + colW * nMonths, y, colW, headH);
+  const doColIdx = nCols - 1;
+  ctx.fillStyle = C.orange; ctx.fillRect(colX(doColIdx), y, colW, headH);
   ctx.textBaseline = 'middle';
   ctx.fillStyle = C.ink; ctx.font = C.font('700', 11); ctx.textAlign = 'left';
   ctx.fillText('PLTU', x + 10, y + headH / 2);
   ctx.textAlign = 'right';
-  for (let mi = 0; mi < nMonths; mi++){
-    const hx = x + pltuW + colW * mi + colW - 8;
-    if (mi === nMonths - 1){
-      // Bulan checkpoint = prognosa (belum realisasi aktual) → tandai "Prognosa <bln>".
-      // Kolom bulan sempit, jadi label "Prognosa" ditumpuk kecil di atas nama bulan.
-      ctx.fillStyle = C.orange; ctx.font = C.font('700', 8.5);
-      ctx.fillText('Prognosa', hx, y + headH / 2 - 7);
-      ctx.fillStyle = C.ink; ctx.font = C.font('800', 11);
-      ctx.fillText(LAPORAN_MONTHS[mi], hx, y + headH / 2 + 6);
+  cols.forEach((c, ci) => {
+    const rx = colX(ci) + colW - 8;
+    if (c.orange){ ctx.fillStyle = '#fff'; ctx.font = C.font('800', 11); ctx.fillText(c.h1, rx, y + headH / 2); return; }
+    if (c.h2){ // two-line header (Realisasi / Prognosa + month)
+      ctx.fillStyle = c.headColor || C.ink; ctx.font = C.font('700', 8.5);
+      ctx.fillText(c.h1, rx, y + headH / 2 - 7);
+      ctx.font = C.font('800', 10.5);
+      ctx.fillText(c.h2, rx, y + headH / 2 + 6);
     } else {
-      ctx.fillStyle = C.ink; ctx.font = C.font('700', 11);
-      ctx.fillText(LAPORAN_MONTHS[mi], hx, y + headH / 2);
+      ctx.fillStyle = c.headColor || C.ink; ctx.font = C.font('700', 11);
+      ctx.fillText(c.h1, rx, y + headH / 2);
     }
-  }
-  ctx.fillStyle = '#fff'; ctx.font = C.font('800', 11);
-  ctx.fillText(doLabel, x + pltuW + colW * nMonths + colW - 8, y + headH / 2);
+  });
 
   // rows
-  ctx.font = C.font('400', 11);
   for (let ri = 0; ri < model.rows.length; ri++){
     const rr = model.rows[ri];
     const ry = y + headH + rowH * ri;
     if (ri % 2 === 1){ ctx.fillStyle = '#faf9f4'; ctx.fillRect(x, ry, w, rowH); }
-    ctx.fillStyle = C.orange; ctx.globalAlpha = 0.06; ctx.fillRect(x + pltuW + colW * nMonths, ry, colW, rowH); ctx.globalAlpha = 1;
+    ctx.fillStyle = C.orange; ctx.globalAlpha = 0.06; ctx.fillRect(colX(doColIdx), ry, colW, rowH); ctx.globalAlpha = 1;
     ctx.fillStyle = C.ink; ctx.font = C.font('600', 11); ctx.textAlign = 'left';
     ctx.fillText(rr.pltu, x + 10, ry + rowH / 2);
-    ctx.font = C.font('400', 11); ctx.textAlign = 'right';
-    for (let mi = 0; mi < nMonths; mi++){
-      ctx.fillStyle = (rr.months[mi] ? C.ink : '#b9b9ad');
-      ctx.fillText(_lpRT(rr.months[mi] || 0), x + pltuW + colW * mi + colW - 8, ry + rowH / 2);
-    }
-    ctx.fillStyle = C.ink; ctx.font = C.font('700', 11);
-    ctx.fillText(_lpRT(rr.do || 0), x + pltuW + colW * nMonths + colW - 8, ry + rowH / 2);
+    ctx.textAlign = 'right';
+    cols.forEach((c, ci) => {
+      const v = c.get(rr) || 0;
+      ctx.font = C.font(c.cellStrong ? '700' : '400', 11);
+      ctx.fillStyle = c.cellStrong ? C.ink : (v ? C.ink : '#b9b9ad');
+      ctx.fillText(_lpRT(v), colX(ci) + colW - 8, ry + rowH / 2);
+    });
     ctx.strokeStyle = '#ecebe1'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(x, ry + rowH); ctx.lineTo(x + w, ry + rowH); ctx.stroke();
   }
@@ -8351,10 +8373,9 @@ function drawLaporanTable(ctx, x, y, w, model, C){
   ctx.fillStyle = C.ink; ctx.font = C.font('800', 11); ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
   ctx.fillText('Total', x + 10, ty + rowH / 2);
   ctx.textAlign = 'right';
-  for (let mi = 0; mi < nMonths; mi++){
-    ctx.fillText(_lpRT(model.monthlyTotals[mi] || 0), x + pltuW + colW * mi + colW - 8, ty + rowH / 2);
-  }
-  ctx.fillText(_lpRT(model.doTotal || 0), x + pltuW + colW * nMonths + colW - 8, ty + rowH / 2);
+  cols.forEach((c, ci) => {
+    ctx.fillText(_lpRT(c.total || 0), colX(ci) + colW - 8, ty + rowH / 2);
+  });
 
   ctx.strokeStyle = C.cardBorder; ctx.lineWidth = 1; ctx.strokeRect(x, y, w, headH + rowH * (model.rows.length + 1));
   ctx.textAlign = 'left';
@@ -8455,19 +8476,20 @@ function renderLaporanForm(){
   const ckName = LAPORAN_MONTHS[ck];
   let html = '<table class="laporan-form-table"><thead><tr><th class="pltu">PLTU</th>';
   for (let m = 0; m < ck; m++) html += '<th>' + LAPORAN_MONTHS[m] + '</th>';
-  html += '<th class="inp">Prognosa ' + ckName + '</th><th class="do-h">DO ' + ckName + '</th></tr></thead><tbody>';
+  html += '<th class="inp">Realisasi ' + ckName + ' saat ini</th><th class="inp">Prognosa ' + ckName + '</th><th class="do-h">DO ' + ckName + '</th></tr></thead><tbody>';
   plants.forEach((p, i) => {
     const real = p.real_2026 || [], doArr = p.do_2026 || [];
     html += '<tr><td class="pltu">' + escapeHtml(p.name || '—') + '</td>';
     for (let m = 0; m < ck; m++) html += '<td class="ro">' + fmtInt(real[m] || 0) + '</td>';
-    const pro = real[ck] || 0, dov = doArr[ck] || 0;
+    const cur = real[ck] || 0, pro = real[ck] || 0, dov = doArr[ck] || 0;
+    html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="realnow" value="' + (cur || '') + '" placeholder="0"></td>';
     html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="prognosa" value="' + (pro || '') + '" placeholder="0"></td>';
     html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="do" value="' + (dov || '') + '" placeholder="0"></td>';
     html += '</tr>';
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
-  if (hint) hint.textContent = plants.length + ' PLTU · bulan berjalan (Jan–' + (ck > 0 ? LAPORAN_MONTHS[ck - 1] : '—') + ') otomatis dari data dashboard; isi Prognosa & DO ' + ckName + '. Satuan: ton.';
+  if (hint) hint.textContent = plants.length + ' PLTU · bulan berjalan (Jan–' + (ck > 0 ? LAPORAN_MONTHS[ck - 1] : '—') + ') otomatis dari data dashboard; isi Realisasi saat ini, Prognosa & DO ' + ckName + '. Satuan: ton.';
 }
 window.renderLaporanForm = renderLaporanForm;
 
@@ -8494,12 +8516,15 @@ function buildLaporanModelFromForm(){
     const months = [];
     for (let m = 0; m < ck; m++) months.push(real[m] || 0);   // bulan berjalan (aktual)
     months.push((inputs[i] && inputs[i].prognosa) || 0);       // bulan checkpoint = prognosa
-    return { pltu: p.name || '—', months, do: (inputs[i] && inputs[i].do) || 0 };
+    // Realisasi bulan checkpoint "saat ini" (aktual sejauh ini) — kolom informatif
+    // di sebelah kiri Prognosa; tidak mengubah agregat prognosa-based.
+    return { pltu: p.name || '—', months, realNow: (inputs[i] && inputs[i].realnow) || 0, do: (inputs[i] && inputs[i].do) || 0 };
   });
 
   const monthlyTotals = [];
   for (let m = 0; m <= ck; m++){ let s = 0; for (const r of rows) s += r.months[m] || 0; monthlyTotals.push(s); }
   const doTotal = rows.reduce((s, r) => s + (r.do || 0), 0);
+  const realNowTotal = rows.reduce((s, r) => s + (r.realNow || 0), 0);
   const real2026 = monthlyTotals.reduce((a, b) => a + b, 0);
 
   const sumHist = (y) => plants.reduce((s, p) => s + (((p.historical_real && p.historical_real[y]) || []).reduce((a, b) => a + (b || 0), 0)), 0);
@@ -8514,7 +8539,8 @@ function buildLaporanModelFromForm(){
 
   return {
     wilayah: LAPORAN_REGION_LABEL[prov] || prov, year, years, annual,
-    rows, lastMonth: ck, doMonthIdx: ck, monthlyTotals, doTotal, real2026,
+    rows, lastMonth: ck, doMonthIdx: ck, ckMonthIdx: ck, monthlyTotals, doTotal,
+    realNowTotal, real2026,
     maxAnnual, maxYear, akumulasi, kendala, dukungan, checkpoint_date: dateStr,
   };
 }
