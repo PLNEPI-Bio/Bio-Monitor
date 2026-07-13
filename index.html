@@ -9142,7 +9142,8 @@ function renderRealView(){
 
   function buildGencoChart(showValues){
     if (realCharts.genco) realCharts.genco.destroy();
-    // Plugin to draw segment values centered in each stacked bar
+    // Plugin to draw segment values centered in each stacked bar. Segments too
+    // thin to fit their label (e.g. UIW/UIK slivers) get stacked above the bar instead.
     const gencoValuesPlugin = {
       id: 'gencoValues',
       afterDatasetsDraw: function(chart){
@@ -9150,26 +9151,43 @@ function renderRealView(){
         const ctx = chart.ctx;
         ctx.save();
         ctx.font = "bold 10px 'Plus Jakarta Sans', sans-serif";
-        ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
+        const barTops = {};  // bar idx -> y of the topmost segment edge
+        const overflow = {}; // bar idx -> [{x,label,color}] for segments too thin to label inline
         chart.data.datasets.forEach((ds, dsIdx) => {
           const meta = chart.getDatasetMeta(dsIdx);
           if (!meta || meta.hidden) return;
           meta.data.forEach((bar, idx) => {
             const value = ds.data[idx];
-            if (!value || value <= 0) return;
             const x = bar.x;
             const y = bar.y;
             const yBase = bar.base;
+            const top = Math.min(y, yBase);
+            if (barTops[idx] === undefined || top < barTops[idx]) barTops[idx] = top;
+            if (!value || value <= 0) return;
             const segHeight = Math.abs(yBase - y);
-            // Only draw if segment is tall enough to fit label
-            if (segHeight < 16) return;
-            ctx.fillStyle = '#ffffff';
             const label = fmtInt(value);
-            // Draw with subtle shadow for readability
+            if (segHeight >= 16){
+              ctx.fillStyle = '#ffffff';
+              ctx.textBaseline = 'middle';
+              ctx.shadowColor = 'rgba(0,0,0,0.5)';
+              ctx.shadowBlur = 2;
+              ctx.fillText(label, x, (y + yBase) / 2);
+              ctx.shadowBlur = 0;
+            } else {
+              (overflow[idx] = overflow[idx] || []).push({ x, label, color: ds.backgroundColor });
+            }
+          });
+        });
+        // Stack overflow labels above the bar, closest segment first
+        ctx.textBaseline = 'bottom';
+        Object.keys(overflow).forEach(idx => {
+          const top = barTops[idx] || 0;
+          overflow[idx].forEach((it, i) => {
+            ctx.fillStyle = it.color;
             ctx.shadowColor = 'rgba(0,0,0,0.5)';
             ctx.shadowBlur = 2;
-            ctx.fillText(label, x, (y + yBase) / 2);
+            ctx.fillText(it.label, it.x, top - 4 - i * 12);
             ctx.shadowBlur = 0;
           });
         });
@@ -9190,6 +9208,7 @@ function renderRealView(){
       },
       options:{
         responsive:true, maintainAspectRatio:false,
+        layout:{ padding:{ top: showValues ? 28 : 0 } },
         plugins:{
           legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:12, boxHeight:12, padding:14 } },
           tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${fmtInt(c.parsed.y)} ton` } }
