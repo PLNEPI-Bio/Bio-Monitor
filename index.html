@@ -10397,8 +10397,8 @@ function wireBnForm(){
 //   }
 
 const paretoState = {
-  monthSel: '3',
-  showValues: true,     // default: last data month (April). 'ytd' = sum across Jan-Apr.
+  monthSel: 'ytd',
+  showValues: true,     // default: YTD (sum across Jan-last data month).
   gencoSel: 'all',   // 'all' | 'PNP' | 'PIP' | 'UIW'
 };
 
@@ -10447,8 +10447,8 @@ function renderParetoView(){
     }
     monthSel.innerHTML = opts;
     if (!monthSel.dataset.wired){
-      // First render: default to the latest month with data.
-      paretoState.monthSel = String(safeIdx);
+      // First render: default to YTD (sum across Jan-last data month).
+      paretoState.monthSel = 'ytd';
       monthSel.onchange = () => { paretoState.monthSel = monthSel.value; renderParetoAll(); };
       monthSel.dataset.wired = '1';
     } else if (paretoState.monthSel !== 'ytd' && parseInt(paretoState.monthSel, 10) > safeIdx){
