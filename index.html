@@ -5885,7 +5885,8 @@ html,body{
 .laporan-mini-btn{background:var(--panel-3);border:1px solid var(--border);color:var(--text-dim);font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer}
 .laporan-mini-btn:hover{border-color:#2e7d47;color:var(--text-bright)}
 .laporan-arsip-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px}
-.laporan-arsip-card{background:var(--panel-3);border:1px solid var(--border);border-left:3px solid #2e7d47;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.laporan-arsip-card{background:var(--panel-3);border:1px solid var(--border);border-left:3px solid #2e7d47;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
+.laporan-arsip-card:hover{border-color:#2e7d47;box-shadow:0 4px 14px rgba(46,125,71,.15);transform:translateY(-1px)}
 .laporan-arsip-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .laporan-arsip-wilayah{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;color:var(--text-bright)}
 .laporan-arsip-date{font-size:11px;font-weight:600;color:#2e7d47;white-space:nowrap}
@@ -5897,6 +5898,12 @@ html,body{
 .laporan-arsip-del{background:transparent;color:var(--danger)}
 .laporan-arsip-del:hover{background:rgba(192,57,43,.1)}
 .laporan-arsip-empty{font-size:12px;color:var(--text-dim);padding:8px 0}
+/* preview popup for a saved library item */
+.laporan-modal-actions{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.laporan-modal-actions .update-upload-btn{margin:0}
+.laporan-modal-edit-btn{background:#d98324!important;border-color:#d98324!important;color:#fff!important}
+.laporan-edit-banner{margin-top:12px;padding:8px 12px;background:rgba(217,131,36,.12);border:1px solid #d98324;border-radius:8px;font-size:12px;color:var(--text-bright);display:none;align-items:center;gap:8px}
+.laporan-edit-banner.on{display:flex}
 @media (max-width:768px){ .laporan-grid{grid-template-columns:1fr} }
 </style>
 <div class="view" data-view="laporan">
@@ -5956,7 +5963,10 @@ html,body{
           <div class="laporan-hint" id="laporanHint"></div>
 
           <div class="laporan-save-card">
-            <div class="laporan-lbl" style="margin-top:0">Simpan ke Library</div>
+            <div class="laporan-lbl" style="margin-top:0" id="laporanSaveCardTitle">Simpan ke Library</div>
+            <div class="laporan-edit-banner" id="laporanEditBanner">
+              <span>✏️ Mode edit: <b id="laporanEditBannerLabel">—</b>. Ubah data lalu klik "Perbarui".</span>
+            </div>
             <div class="laporan-save-row">
               <div style="flex:1;min-width:120px">
                 <label class="laporan-save-lbl" for="laporanSaveWilayah">Wilayah</label>
@@ -5969,7 +5979,9 @@ html,body{
             </div>
             <label class="laporan-save-lbl" for="laporanSaveKeterangan">Keterangan</label>
             <input type="text" id="laporanSaveKeterangan" class="laporan-input" placeholder="mis. Laporan mingguan realisasi biomassa">
-            <button class="update-upload-btn" style="margin-top:10px" onclick="saveLaporanArsip()">💾 Simpan ke Library</button>
+            <button class="update-upload-btn" id="laporanSaveBtn" style="margin-top:10px" onclick="saveLaporanArsip()">💾 Simpan ke Library</button>
+            <button class="update-upload-btn laporan-modal-edit-btn" id="laporanUpdateBtn" style="margin-top:10px;display:none" onclick="updateLaporanArsip()">🔄 Perbarui Laporan</button>
+            <button class="laporan-mini-btn" id="laporanCancelEditBtn" style="margin-top:10px;display:none" onclick="cancelLaporanEdit()">Keluar mode edit</button>
             <div class="laporan-hint" id="laporanSaveHint"></div>
           </div>
         </div>
@@ -6001,6 +6013,30 @@ html,body{
           </div>
           <div class="update-upload-filename" id="filenameLaporan"></div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Laporan preview popup (klik item library) ===== -->
+<div class="pemasok-modal-backdrop" id="laporanPreviewModal">
+  <div class="pemasok-modal" style="max-width:1000px">
+    <div class="pemasok-modal-head">
+      <div class="pemasok-modal-title-wrap">
+        <div class="pemasok-modal-eyebrow">Laporan Infografis</div>
+        <div class="pemasok-modal-title" id="laporanModalTitle">—</div>
+        <div class="pemasok-modal-meta" id="laporanModalMeta"></div>
+      </div>
+      <button class="pemasok-modal-close" onclick="closeLaporanPreviewModal()" title="Tutup">× TUTUP</button>
+    </div>
+    <div class="pemasok-modal-body">
+      <div class="laporan-modal-actions">
+        <button class="update-upload-btn" onclick="downloadLaporanModalPNG()">⬇ Unduh PNG</button>
+        <button class="update-upload-btn" onclick="downloadLaporanModalPDF()">⬇ Unduh PDF</button>
+        <button class="update-upload-btn laporan-modal-edit-btn" onclick="editLaporanFromModal()">✏️ Edit</button>
+      </div>
+      <div class="laporan-preview-wrap" style="margin-top:14px">
+        <canvas id="laporanModalCanvas" class="laporan-preview-canvas"></canvas>
       </div>
     </div>
   </div>
@@ -8474,36 +8510,46 @@ function renderLaporanPreview(){
 }
 window.renderLaporanPreview = renderLaporanPreview;
 
-function _laporanFileStamp(){
-  const w = (laporanModel && laporanModel.wilayah ? laporanModel.wilayah : 'Wilayah').replace(/[^a-zA-Z0-9]+/g, '_');
+function _laporanFileStamp(model){
+  const m = model || laporanModel;
+  const w = (m && m.wilayah ? m.wilayah : 'Wilayah').replace(/[^a-zA-Z0-9]+/g, '_');
   const d = new Date();
   const stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
   return 'Laporan_Biomassa_' + w + '_' + stamp;
 }
-function downloadLaporanPNG(){
-  const canvas = document.getElementById('laporanPreviewCanvas');
-  if (!canvas || !laporanModel){ alert('Upload data laporan dulu.'); return; }
+// Shared exporters — work on any rendered laporan canvas + its model.
+function _exportLaporanPNG(canvas, model){
+  if (!canvas){ alert('Preview belum siap.'); return; }
   canvas.toBlob((blob) => {
     if (!blob) return;
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.download = _laporanFileStamp() + '.png';
+    link.download = _laporanFileStamp(model) + '.png';
     link.href = url; document.body.appendChild(link); link.click(); document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, 'image/png');
 }
-window.downloadLaporanPNG = downloadLaporanPNG;
-
-function downloadLaporanPDF(){
-  const canvas = document.getElementById('laporanPreviewCanvas');
-  if (!canvas || !laporanModel){ alert('Upload data laporan dulu.'); return; }
+function _exportLaporanPDF(canvas, model){
+  if (!canvas){ alert('Preview belum siap.'); return; }
   const jspdfNS = window.jspdf || window.jsPDF;
   const JsPDF = jspdfNS && (jspdfNS.jsPDF || jspdfNS);
   if (!JsPDF){ alert('Library PDF belum siap, coba lagi sebentar.'); return; }
   const imgW = canvas.width / 2, imgH = canvas.height / 2; // logical pts
   const pdf = new JsPDF({ orientation: imgH >= imgW ? 'portrait' : 'landscape', unit: 'pt', format: [imgW, imgH] });
   pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH);
-  pdf.save(_laporanFileStamp() + '.pdf');
+  pdf.save(_laporanFileStamp(model) + '.pdf');
+}
+function downloadLaporanPNG(){
+  const canvas = document.getElementById('laporanPreviewCanvas');
+  if (!canvas || !laporanModel){ alert('Upload data laporan dulu.'); return; }
+  _exportLaporanPNG(canvas, laporanModel);
+}
+window.downloadLaporanPNG = downloadLaporanPNG;
+
+function downloadLaporanPDF(){
+  const canvas = document.getElementById('laporanPreviewCanvas');
+  if (!canvas || !laporanModel){ alert('Upload data laporan dulu.'); return; }
+  _exportLaporanPDF(canvas, laporanModel);
 }
 window.downloadLaporanPDF = downloadLaporanPDF;
 
@@ -8631,10 +8677,11 @@ function buildLaporanModelFromForm(){
   };
 }
 
-function generateLaporanFromForm(){
+function generateLaporanFromForm(opts){
+  opts = opts || {};
   const hint = document.getElementById('laporanFormHint');
   const model = buildLaporanModelFromForm();
-  if (model.error){ if (hint) hint.textContent = '⚠ ' + model.error; return; }
+  if (model.error){ if (hint) hint.textContent = '⚠ ' + model.error; return false; }
   laporanModel = model;
   // prefill "Simpan ke Library" form
   const wEl = document.getElementById('laporanSaveWilayah');
@@ -8644,8 +8691,9 @@ function generateLaporanFromForm(){
   const editor = document.getElementById('laporanEditor');
   if (editor) editor.style.display = '';
   renderLaporanPreview();
-  if (editor && editor.scrollIntoView) editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!opts.noScroll && editor && editor.scrollIntoView) editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
   if (hint) hint.textContent = '✓ Preview dibuat. Edit bila perlu, lalu unduh atau simpan ke library.';
+  return true;
 }
 window.generateLaporanFromForm = generateLaporanFromForm;
 
@@ -8701,7 +8749,7 @@ function _laporanArsipCardHtml(it){
   const dt = it.checkpoint_date ? fmtKontrakDate(it.checkpoint_date) : '—';
   const savedAt = it.created_at ? new Date(it.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '';
   const by = it.created_by ? escapeHtml(it.created_by) : 'Anonim';
-  return '<div class="laporan-arsip-card">' +
+  return '<div class="laporan-arsip-card" onclick="openLaporanPreview(\'' + it.id + '\')" title="Klik untuk melihat preview">' +
     '<div class="laporan-arsip-card-top">' +
       '<span class="laporan-arsip-wilayah">' + escapeHtml(it.wilayah || '—') + '</span>' +
       '<span class="laporan-arsip-date">📅 ' + dt + '</span>' +
@@ -8709,8 +8757,8 @@ function _laporanArsipCardHtml(it){
     (it.keterangan ? '<div class="laporan-arsip-ket">' + escapeHtml(it.keterangan) + '</div>' : '') +
     '<div class="laporan-arsip-meta">oleh ' + by + (savedAt ? ' · ' + savedAt : '') + '</div>' +
     '<div class="laporan-arsip-actions">' +
-      '<button class="laporan-arsip-open" onclick="openLaporanArsip(\'' + it.id + '\')">Buka</button>' +
-      '<button class="laporan-arsip-del" onclick="deleteLaporanArsip(\'' + it.id + '\')">Hapus</button>' +
+      '<button class="laporan-arsip-open" onclick="event.stopPropagation();openLaporanPreview(\'' + it.id + '\')">👁 Lihat</button>' +
+      '<button class="laporan-arsip-del" onclick="event.stopPropagation();deleteLaporanArsip(\'' + it.id + '\')">Hapus</button>' +
     '</div>' +
   '</div>';
 }
@@ -8764,30 +8812,174 @@ async function saveLaporanArsip(){
 }
 window.saveLaporanArsip = saveLaporanArsip;
 
-async function openLaporanArsip(id){
+// State for the preview popup (a saved library item shown read-only) and for the
+// edit flow (which library row is currently being edited on the form, if any).
+let laporanPreviewModel = null;   // model shown in the popup
+let laporanPreviewMeta = null;    // { id, wilayah, checkpoint_date, keterangan }
+let laporanEditingId = null;      // id being edited on the form (null = creating new)
+
+// Klik item library → tampilkan preview di pop-up dengan opsi PNG/PDF/Edit.
+async function openLaporanPreview(id){
   if (!supabaseClient){ alert('Koneksi Supabase belum siap.'); return; }
   try {
     const { data, error } = await supabaseClient
       .from('laporan_arsip').select('model,wilayah,checkpoint_date,keterangan').eq('id', id).single();
     if (error || !data || !data.model){ alert('Gagal memuat laporan: ' + (error ? error.message : 'data kosong')); return; }
-    laporanModel = data.model;
-    const kEl = document.getElementById('laporanKendala');
-    const dEl = document.getElementById('laporanDukungan');
-    if (kEl) kEl.value = (data.model.kendala || []).join('\n');
-    if (dEl) dEl.value = (data.model.dukungan || []).join('\n');
-    const wEl = document.getElementById('laporanSaveWilayah');
-    const dtEl = document.getElementById('laporanSaveDate');
-    const ketEl = document.getElementById('laporanSaveKeterangan');
-    if (wEl) wEl.value = data.wilayah || data.model.wilayah || '';
-    if (dtEl) dtEl.value = data.checkpoint_date || '';
-    if (ketEl) ketEl.value = data.keterangan || '';
-    const editor = document.getElementById('laporanEditor');
-    if (editor) editor.style.display = '';
-    renderLaporanPreview();
-    if (editor && editor.scrollIntoView) editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    laporanPreviewModel = data.model;
+    laporanPreviewMeta = { id, wilayah: data.wilayah, checkpoint_date: data.checkpoint_date, keterangan: data.keterangan };
+    const titleEl = document.getElementById('laporanModalTitle');
+    const metaEl = document.getElementById('laporanModalMeta');
+    if (titleEl) titleEl.textContent = data.wilayah || data.model.wilayah || 'Laporan';
+    if (metaEl){
+      const parts = [];
+      if (data.checkpoint_date) parts.push('📅 ' + fmtKontrakDate(data.checkpoint_date));
+      if (data.keterangan) parts.push(escapeHtml(data.keterangan));
+      metaEl.innerHTML = parts.join(' · ');
+    }
+    const canvas = document.getElementById('laporanModalCanvas');
+    if (canvas) buildLaporanCanvas(canvas, data.model, data.model.kendala || [], data.model.dukungan || []);
+    const modal = document.getElementById('laporanPreviewModal');
+    if (modal) modal.classList.add('open');
   } catch(e){ alert('Gagal memuat laporan: ' + (e && e.message ? e.message : e)); }
 }
-window.openLaporanArsip = openLaporanArsip;
+window.openLaporanPreview = openLaporanPreview;
+
+function closeLaporanPreviewModal(){
+  const modal = document.getElementById('laporanPreviewModal');
+  if (modal) modal.classList.remove('open');
+}
+window.closeLaporanPreviewModal = closeLaporanPreviewModal;
+
+function downloadLaporanModalPNG(){
+  _exportLaporanPNG(document.getElementById('laporanModalCanvas'), laporanPreviewModel);
+}
+window.downloadLaporanModalPNG = downloadLaporanModalPNG;
+function downloadLaporanModalPDF(){
+  _exportLaporanPDF(document.getElementById('laporanModalCanvas'), laporanPreviewModel);
+}
+window.downloadLaporanModalPDF = downloadLaporanModalPDF;
+
+// Tombol "Edit" di pop-up → muat data ke form pengisian, aktifkan tombol Perbarui.
+function editLaporanFromModal(){
+  if (!laporanPreviewModel || !laporanPreviewMeta) return;
+  const model = laporanPreviewModel, meta = laporanPreviewMeta;
+  closeLaporanPreviewModal();
+  loadLaporanIntoForm(model, meta.id, meta);
+}
+window.editLaporanFromModal = editLaporanFromModal;
+
+// Muat sebuah laporanModel tersimpan ke form pengisian (wilayah, tanggal, grid
+// PLTU, narasi) dan siapkan mode edit. id = baris library yang sedang diedit.
+function loadLaporanIntoForm(model, id, meta){
+  const prov = model.prov || _laporanProvFromLabel(model.wilayah) || '';
+  const wSel = document.getElementById('laporanFormWilayah');
+  const dEl = document.getElementById('laporanFormDate');
+  if (wSel) wSel.value = prov;
+  if (dEl) dEl.value = model.checkpoint_date || (meta && meta.checkpoint_date) || '';
+  const kEl = document.getElementById('laporanKendala');
+  const duEl = document.getElementById('laporanDukungan');
+  if (kEl) kEl.value = (model.kendala || []).join('\n');
+  if (duEl) duEl.value = (model.dukungan || []).join('\n');
+
+  // build the PLTU grid for this wilayah + checkpoint, then prefill editable cells
+  renderLaporanForm();
+  const ck = (typeof model.ckMonthIdx === 'number') ? model.ckMonthIdx
+    : (typeof model.doMonthIdx === 'number') ? model.doMonthIdx : model.lastMonth;
+  const plants = _laporanRegionPlants(prov);
+  const idxByName = {};
+  plants.forEach((p, i) => { idxByName[(p.name || '').trim()] = i; });
+  (model.rows || []).forEach(r => {
+    const i = idxByName[(r.pltu || '').trim()];
+    if (i === undefined) return;
+    const setVal = (fld, val) => {
+      const el = document.querySelector('#laporanFormGridWrap .laporan-form-input[data-row="' + i + '"][data-fld="' + fld + '"]');
+      if (el) el.value = (val || val === 0) ? (val || '') : '';
+    };
+    const prognosa = (r.months && typeof ck === 'number') ? (r.months[ck] || 0) : 0;
+    setVal('realnow', r.realNow || 0);
+    setVal('prognosa', prognosa);
+    setVal('do', r.do || 0);
+  });
+
+  // rebuild preview from the freshly-populated form + show the editor (no scroll —
+  // we want the user on the form itself)
+  const ok = generateLaporanFromForm({ noScroll: true });
+  if (!ok) return;
+  const ketEl = document.getElementById('laporanSaveKeterangan');
+  if (ketEl) ketEl.value = (meta && meta.keterangan) || '';
+  _setLaporanEditMode(id, model.wilayah || (meta && meta.wilayah) || prov);
+  const formCard = document.querySelector('.laporan-form-card');
+  if (formCard && formCard.scrollIntoView) formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.loadLaporanIntoForm = loadLaporanIntoForm;
+
+// Toggle the save-card between "create new" and "update existing" modes.
+function _setLaporanEditMode(id, label){
+  laporanEditingId = id || null;
+  const editing = !!laporanEditingId;
+  const saveBtn = document.getElementById('laporanSaveBtn');
+  const updBtn = document.getElementById('laporanUpdateBtn');
+  const cancelBtn = document.getElementById('laporanCancelEditBtn');
+  const banner = document.getElementById('laporanEditBanner');
+  const bannerLbl = document.getElementById('laporanEditBannerLabel');
+  const title = document.getElementById('laporanSaveCardTitle');
+  if (saveBtn) saveBtn.style.display = editing ? 'none' : '';
+  if (updBtn) updBtn.style.display = editing ? '' : 'none';
+  if (cancelBtn) cancelBtn.style.display = editing ? '' : 'none';
+  if (banner) banner.classList.toggle('on', editing);
+  if (bannerLbl) bannerLbl.textContent = label || '—';
+  if (title) title.textContent = editing ? 'Perbarui Laporan di Library' : 'Simpan ke Library';
+}
+
+function cancelLaporanEdit(){
+  _setLaporanEditMode(null);
+  const hint = document.getElementById('laporanSaveHint');
+  if (hint) hint.textContent = '';
+}
+window.cancelLaporanEdit = cancelLaporanEdit;
+
+// Perbarui baris library yang sedang diedit (bukan menyimpan sebagai baru).
+async function updateLaporanArsip(){
+  const hint = document.getElementById('laporanSaveHint');
+  const setHint = (msg) => { if (hint) hint.textContent = msg; };
+  if (!laporanEditingId){ setHint('⚠ Tidak ada laporan yang sedang diedit.'); return; }
+  // capture current form edits into a fresh model
+  const built = buildLaporanModelFromForm();
+  if (built.error){ setHint('⚠ ' + built.error); return; }
+  laporanModel = built;
+  renderLaporanPreview();
+  const wilayah = (document.getElementById('laporanSaveWilayah').value || '').trim() || built.wilayah || '—';
+  const checkpoint = document.getElementById('laporanSaveDate').value || null;
+  const keterangan = (document.getElementById('laporanSaveKeterangan').value || '').trim();
+  const kendala = (document.getElementById('laporanKendala').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const dukungan = (document.getElementById('laporanDukungan').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const model = Object.assign({}, built, { wilayah, kendala, dukungan });
+
+  if (!supabaseClient){ setHint('⚠ Koneksi Supabase belum siap, coba lagi sebentar.'); return; }
+  setHint('Memperbarui…');
+  try {
+    const { error } = await supabaseClient.from('laporan_arsip')
+      .update({ wilayah, checkpoint_date: checkpoint, keterangan, model })
+      .eq('id', laporanEditingId);
+    if (error){ setHint('⚠ Gagal memperbarui: ' + error.message); return; }
+  } catch(e){ setHint('⚠ Gagal memperbarui: ' + (e && e.message ? e.message : e)); return; }
+  // sync local metadata list
+  const it = (laporanArsipState.items || []).find(x => x.id === laporanEditingId);
+  if (it){ it.wilayah = wilayah; it.checkpoint_date = checkpoint; it.keterangan = keterangan; }
+  _laporanArsipCache(laporanArsipState.items);
+  renderLaporanArsip();
+  setHint('✓ Laporan diperbarui di library.');
+}
+window.updateLaporanArsip = updateLaporanArsip;
+
+// Close the preview popup on backdrop click or Escape.
+(function initLaporanPreviewModal(){
+  const modal = document.getElementById('laporanPreviewModal');
+  if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeLaporanPreviewModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal && modal.classList.contains('open')) closeLaporanPreviewModal();
+  });
+})();
 
 async function deleteLaporanArsip(id){
   const it = (laporanArsipState.items || []).find(x => x.id === id);
