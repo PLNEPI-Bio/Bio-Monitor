@@ -5884,17 +5884,30 @@ html,body{
 .laporan-upload-compact .update-upload-filename{flex-basis:100%}
 .laporan-mini-btn{background:var(--panel-3);border:1px solid var(--border);color:var(--text-dim);font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer}
 .laporan-mini-btn:hover{border-color:#2e7d47;color:var(--text-bright)}
-.laporan-arsip-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px}
-.laporan-arsip-card{background:var(--panel-3);border:1px solid var(--border);border-left:3px solid #2e7d47;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
-.laporan-arsip-card:hover{border-color:#2e7d47;box-shadow:0 4px 14px rgba(46,125,71,.15);transform:translateY(-1px)}
+/* toolbar: title + search + reload */
+.laporan-arsip-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.laporan-arsip-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.laporan-arsip-search{width:280px;max-width:100%;padding:7px 11px}
+/* wilayah filter chips */
+.laporan-arsip-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.laporan-chip{display:inline-flex;align-items:center;gap:6px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;padding:5px 12px;border-radius:999px;cursor:pointer;background:var(--panel-3);border:1px solid var(--border);color:var(--text);transition:all .15s}
+.laporan-chip:hover{border-color:var(--chip,#2e7d47);color:var(--text-bright)}
+.laporan-chip.active{background:var(--chip,#2e7d47);border-color:var(--chip,#2e7d47)!important;color:#fff}
+.laporan-chip-dot{width:8px;height:8px;border-radius:50%;background:var(--chip,#2e7d47);flex-shrink:0}
+.laporan-chip.active .laporan-chip-dot{background:rgba(255,255,255,.9)}
+.laporan-chip-cnt{font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:rgba(128,128,128,.2)}
+.laporan-chip.active .laporan-chip-cnt{background:rgba(255,255,255,.28)}
+.laporan-arsip-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:12px}
+.laporan-arsip-card{background:var(--panel-3);border:1px solid var(--border);border-left:3px solid var(--wcolor,#2e7d47);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
+.laporan-arsip-card:hover{border-color:var(--wcolor,#2e7d47);box-shadow:0 4px 14px rgba(0,0,0,.14);transform:translateY(-1px)}
 .laporan-arsip-card-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.laporan-arsip-wilayah{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;color:var(--text-bright)}
-.laporan-arsip-date{font-size:11px;font-weight:600;color:#2e7d47;white-space:nowrap}
+.laporan-arsip-wilayah{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;color:var(--wcolor,var(--text-bright))}
+.laporan-arsip-date{font-size:11px;font-weight:600;color:var(--wcolor,#2e7d47);white-space:nowrap}
 .laporan-arsip-ket{font-size:12px;color:var(--text);line-height:1.4}
 .laporan-arsip-meta{font-size:10px;color:var(--text-dim)}
 .laporan-arsip-actions{display:flex;gap:8px;margin-top:4px}
 .laporan-arsip-actions button{flex:1;font-size:11px;font-weight:600;padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--border)}
-.laporan-arsip-open{background:#2e7d47;color:#fff;border-color:#2e7d47!important}
+.laporan-arsip-open{background:var(--wcolor,#2e7d47);color:#fff;border-color:var(--wcolor,#2e7d47)!important}
 .laporan-arsip-del{background:transparent;color:var(--danger)}
 .laporan-arsip-del:hover{background:rgba(192,57,43,.1)}
 .laporan-arsip-empty{font-size:12px;color:var(--text-dim);padding:8px 0}
@@ -5918,10 +5931,14 @@ html,body{
     </div>
 
     <div class="laporan-arsip-section">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div class="laporan-arsip-toolbar">
         <div class="laporan-lbl" style="font-size:13px;margin:0">📚 Arsip Laporan Tersimpan</div>
-        <button class="laporan-mini-btn" onclick="fetchLaporanArsip().then(renderLaporanArsip)" title="Muat ulang daftar">↻ Muat ulang</button>
+        <div class="laporan-arsip-tools">
+          <input id="laporanArsipSearch" class="laporan-input laporan-arsip-search" type="search" placeholder="🔍 Cari wilayah, keterangan, atau nama…" oninput="onLaporanArsipSearch(this.value)">
+          <button class="laporan-mini-btn" onclick="fetchLaporanArsip().then(function(){renderLaporanArsipFilters();renderLaporanArsip();})" title="Muat ulang daftar">↻ Muat ulang</button>
+        </div>
       </div>
+      <div id="laporanArsipFilterChips" class="laporan-arsip-chips"></div>
       <div id="laporanArsipList" class="laporan-arsip-groups"><div class="laporan-hint">Memuat…</div></div>
     </div>
 
@@ -8706,6 +8723,18 @@ window.generateLaporanFromForm = generateLaporanFromForm;
 // ============================================================
 const LAPORAN_ARSIP_KEY = 'biomassa_laporan_arsip_cache';
 const laporanArsipState = { items: [], fetched: false };
+// Library view filters (wilayah chip + free-text search). Keep the list scannable
+// as the archive grows.
+const laporanArsipFilter = { wilayah: 'all', q: '' };
+const LAPORAN_ARSIP_ORDER = ['sumatera', 'jawa', 'kalimantan', 'sulmapana'];
+
+// Theme color for a wilayah label (per-region palette; grey fallback for legacy
+// labels that don't map to a known region).
+function _laporanWilayahColor(wilayah){
+  const prov = _laporanProvFromLabel(wilayah);
+  const t = prov && (typeof LAPORAN_THEMES !== 'undefined') && LAPORAN_THEMES[prov];
+  return (t && t.primary) || '#5f6b62';
+}
 
 function _laporanArsipCache(items){ try { localStorage.setItem(LAPORAN_ARSIP_KEY, JSON.stringify(items)); } catch(e){} }
 function _laporanArsipReadCache(){ try { return JSON.parse(localStorage.getItem(LAPORAN_ARSIP_KEY) || '[]'); } catch(e){ return []; } }
@@ -8749,7 +8778,8 @@ function _laporanArsipCardHtml(it){
   const dt = it.checkpoint_date ? fmtKontrakDate(it.checkpoint_date) : '—';
   const savedAt = it.created_at ? new Date(it.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '';
   const by = it.created_by ? escapeHtml(it.created_by) : 'Anonim';
-  return '<div class="laporan-arsip-card" onclick="openLaporanPreview(\'' + it.id + '\')" title="Klik untuk melihat preview">' +
+  const color = _laporanWilayahColor(it.wilayah);
+  return '<div class="laporan-arsip-card" style="--wcolor:' + color + '" onclick="openLaporanPreview(\'' + it.id + '\')" title="Klik untuk melihat preview">' +
     '<div class="laporan-arsip-card-top">' +
       '<span class="laporan-arsip-wilayah">' + escapeHtml(it.wilayah || '—') + '</span>' +
       '<span class="laporan-arsip-date">📅 ' + dt + '</span>' +
@@ -8763,6 +8793,62 @@ function _laporanArsipCardHtml(it){
   '</div>';
 }
 
+// Apply the active wilayah chip + search box to the archive items.
+function _laporanArsipVisible(){
+  const items = laporanArsipState.items || [];
+  const w = laporanArsipFilter.wilayah;
+  const q = (laporanArsipFilter.q || '').trim().toLowerCase();
+  return items.filter(it => {
+    if (w !== 'all'){
+      const prov = _laporanProvFromLabel(it.wilayah) || 'lainnya';
+      if (prov !== w) return false;
+    }
+    if (q){
+      const hay = ((it.wilayah || '') + ' ' + (it.keterangan || '') + ' ' + (it.created_by || '')).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+}
+
+// Wilayah filter chips with per-region counts (counts reflect all items, not the
+// search box, so they stay stable while typing).
+function renderLaporanArsipFilters(){
+  const box = document.getElementById('laporanArsipFilterChips');
+  if (!box) return;
+  const items = laporanArsipState.items || [];
+  if (!items.length){ box.innerHTML = ''; return; }
+  const counts = {};
+  items.forEach(it => { const p = _laporanProvFromLabel(it.wilayah) || 'lainnya'; counts[p] = (counts[p] || 0) + 1; });
+  const chip = (key, label, count, color) => {
+    const active = laporanArsipFilter.wilayah === key;
+    return '<button class="laporan-chip' + (active ? ' active' : '') + '" style="--chip:' + color + '" ' +
+      'onclick="setLaporanArsipWilayah(\'' + key + '\')">' +
+      (key === 'all' ? '' : '<span class="laporan-chip-dot"></span>') +
+      escapeHtml(label) + ' <span class="laporan-chip-cnt">' + count + '</span></button>';
+  };
+  const chips = [chip('all', 'Semua', items.length, '#5f6b62')];
+  LAPORAN_ARSIP_ORDER.forEach(p => {
+    if (counts[p]) chips.push(chip(p, LAPORAN_REGION_LABEL[p] || p, counts[p], (LAPORAN_THEMES[p] && LAPORAN_THEMES[p].primary) || '#5f6b62'));
+  });
+  if (counts['lainnya']) chips.push(chip('lainnya', 'Lainnya', counts['lainnya'], '#5f6b62'));
+  box.innerHTML = chips.join('');
+}
+window.renderLaporanArsipFilters = renderLaporanArsipFilters;
+
+function setLaporanArsipWilayah(w){
+  laporanArsipFilter.wilayah = w;
+  renderLaporanArsipFilters();
+  renderLaporanArsip();
+}
+window.setLaporanArsipWilayah = setLaporanArsipWilayah;
+
+function onLaporanArsipSearch(v){
+  laporanArsipFilter.q = v || '';
+  renderLaporanArsip();
+}
+window.onLaporanArsipSearch = onLaporanArsipSearch;
+
 function renderLaporanArsip(){
   const wrap = document.getElementById('laporanArsipList');
   if (!wrap) return;
@@ -8771,7 +8857,13 @@ function renderLaporanArsip(){
     wrap.innerHTML = '<div class="laporan-arsip-empty">Belum ada laporan tersimpan. Upload data lalu klik "Simpan ke Library".</div>';
     return;
   }
-  const groups = _laporanArsipGroups(items);
+  const visible = _laporanArsipVisible();
+  if (!visible.length){
+    wrap.innerHTML = '<div class="laporan-arsip-empty">Tidak ada laporan yang cocok dengan filter. ' +
+      '<a href="#" onclick="resetLaporanArsipFilter();return false;" style="color:#2e7d47;font-weight:600">Reset filter</a></div>';
+    return;
+  }
+  const groups = _laporanArsipGroups(visible);
   wrap.innerHTML = groups.map(g =>
     '<div class="laporan-arsip-group">' +
       '<div class="laporan-arsip-month">' + escapeHtml(g.label) + ' <span class="cnt">' + g.items.length + ' laporan</span></div>' +
@@ -8780,6 +8872,16 @@ function renderLaporanArsip(){
   ).join('');
 }
 window.renderLaporanArsip = renderLaporanArsip;
+
+function resetLaporanArsipFilter(){
+  laporanArsipFilter.wilayah = 'all';
+  laporanArsipFilter.q = '';
+  const s = document.getElementById('laporanArsipSearch');
+  if (s) s.value = '';
+  renderLaporanArsipFilters();
+  renderLaporanArsip();
+}
+window.resetLaporanArsipFilter = resetLaporanArsipFilter;
 
 async function saveLaporanArsip(){
   const hint = document.getElementById('laporanSaveHint');
@@ -8807,6 +8909,7 @@ async function saveLaporanArsip(){
   const meta = { id, wilayah, checkpoint_date: checkpoint, keterangan, created_by: name, created_at: row.created_at };
   laporanArsipState.items.unshift(meta);
   _laporanArsipCache(laporanArsipState.items);
+  renderLaporanArsipFilters();
   renderLaporanArsip();
   setHint('✓ Tersimpan ke library.');
 }
@@ -8967,6 +9070,7 @@ async function updateLaporanArsip(){
   const it = (laporanArsipState.items || []).find(x => x.id === laporanEditingId);
   if (it){ it.wilayah = wilayah; it.checkpoint_date = checkpoint; it.keterangan = keterangan; }
   _laporanArsipCache(laporanArsipState.items);
+  renderLaporanArsipFilters();
   renderLaporanArsip();
   setHint('✓ Laporan diperbarui di library.');
 }
@@ -8993,6 +9097,7 @@ async function deleteLaporanArsip(id){
   }
   laporanArsipState.items = (laporanArsipState.items || []).filter(x => x.id !== id);
   _laporanArsipCache(laporanArsipState.items);
+  renderLaporanArsipFilters();
   renderLaporanArsip();
 }
 window.deleteLaporanArsip = deleteLaporanArsip;
@@ -11428,7 +11533,7 @@ function switchTab(tab){
   if (tab === 'laporan'){
     if (typeof wireLaporanUpload === 'function') wireLaporanUpload();
     if (typeof fetchLaporanArsip === 'function' && !laporanArsipState.fetched){
-      fetchLaporanArsip().then(() => renderLaporanArsip()).catch(() => {});
+      fetchLaporanArsip().then(() => { renderLaporanArsipFilters(); renderLaporanArsip(); }).catch(() => {});
     }
     // default checkpoint date = today (once)
     const _lfd = document.getElementById('laporanFormDate');
