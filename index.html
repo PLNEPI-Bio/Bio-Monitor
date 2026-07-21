@@ -2002,6 +2002,19 @@ html,body{
   color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600;
 }
 .kontrak-table td.year-real.zero{color:var(--text-dim);opacity:.5;font-weight:400}
+/* DO columns — amber, paired just before each Real column */
+.kontrak-table th.do-header{background:rgba(217,131,36,.1);color:#c07d1a}
+.kontrak-table td.year-real.do-cell{color:#c07d1a}
+.kontrak-table td.year-real.do-cell.zero{color:var(--text-dim);opacity:.5;font-weight:400}
+/* Data-quality flag: realisasi ada tetapi DO kosong */
+.kontrak-table td.year-real.do-missing{background:rgba(239,68,68,.12);color:var(--danger)!important;opacity:1;font-weight:700}
+.kontrak-table td.year-real.do-missing .do-missing-mark{font-size:13px}
+.kontrak-table tbody tr.row-do-anom td{background:rgba(239,68,68,.05)}
+.kontrak-table tbody tr.row-do-anom:hover td{background:rgba(239,68,68,.1)}
+.do-anom-badge{display:inline-block;font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:700;letter-spacing:.3px;
+  padding:2px 7px;border-radius:20px;background:rgba(239,68,68,.14);color:var(--danger);border:1px solid rgba(239,68,68,.35);white-space:nowrap;cursor:help;vertical-align:middle}
+.do-anom-badge.active{background:var(--danger);color:#fff;border-color:var(--danger)}
+.kontrak-card.card-do-anom{border-color:rgba(239,68,68,.45);box-shadow:0 0 0 1px rgba(239,68,68,.15)}
 .kontrak-table td.old-year-cell{color:var(--text-dim);border-left:1px solid var(--border)}
 .kontrak-table tbody tr{transition:background .1s}
 /* V64: give EVERY cell (odd + even) an explicit opaque background so rows never
@@ -5659,7 +5672,7 @@ html,body{
 
     <div class="real-recap-wrap">
       <h3>
-        <span>Kontrak Mitra <span class="recap-count" id="kontrak-count"></span></span>
+        <span>Kontrak Mitra <span class="recap-count" id="kontrak-count"></span> <span class="do-anom-badge" id="kontrak-do-anom-count" style="display:none;cursor:pointer" title="Kontrak dengan realisasi tetapi DO kosong — klik untuk menyaring"></span></span>
       </h3>
       <div class="real-recap-filters">
         <div class="real-recap-filter">
@@ -6419,6 +6432,8 @@ const state = {
   kontrakFilters: { regional: 'all', genco: 'all', pltu: 'all', mitra: 'all', jenis: 'all', tahun: 'all', bulan: 'all' },
   kontrakShowOldYears: false,
   kontrakOnlyActive: true,
+  kontrakDoAnomOnly: false, // table filter: only contracts with realisasi but empty DO
+
   paretoShowLoss: true,
   paretoShowCumPct: true,
   trendShowValues: false,
@@ -12746,32 +12761,80 @@ function buildKontrakRealCols(){
   years = years.filter((y, i) => years.indexOf(y) === i); // dedupe
   const mIdx = (f.bulan === 'all' || f.bulan == null) ? null : parseInt(f.bulan, 10);
   const cols = [];
+  // Each Real column is preceded by its matching DO column (same year/kind/month)
+  // so the table reads "DO [periode]" then "Real [periode]" per year.
   for (const y of years){
     const isOld = (!f.tahun || f.tahun === 'all') && y !== CUR;
     if (mIdx === null){
-      cols.push({ year: y, kind: 'total', label: 'Real ' + y, isOld });
+      cols.push({ year: y, kind: 'total', metric: 'do',   label: 'DO ' + y, isOld });
+      cols.push({ year: y, kind: 'total', metric: 'real', label: 'Real ' + y, isOld });
     } else {
-      cols.push({ year: y, kind: 'cum', month: mIdx, label: 'Real s.d ' + MONTHS[mIdx] + ' ' + y, isOld });
-      cols.push({ year: y, kind: 'single', month: mIdx, label: 'Real ' + MONTHS[mIdx] + ' ' + y, isOld });
+      cols.push({ year: y, kind: 'cum',    metric: 'do',   month: mIdx, label: 'DO s.d ' + MONTHS[mIdx] + ' ' + y, isOld });
+      cols.push({ year: y, kind: 'cum',    metric: 'real', month: mIdx, label: 'Real s.d ' + MONTHS[mIdx] + ' ' + y, isOld });
+      cols.push({ year: y, kind: 'single', metric: 'do',   month: mIdx, label: 'DO ' + MONTHS[mIdx] + ' ' + y, isOld });
+      cols.push({ year: y, kind: 'single', metric: 'real', month: mIdx, label: 'Real ' + MONTHS[mIdx] + ' ' + y, isOld });
     }
   }
   return cols;
 }
+// Sum a contract's DO (from getContractDO — same source as the pemasok popup)
+// for a given column (year total / cumulative-to-month / single month).
+function _kontrakColDOValue(c, col){
+  const doMap = (typeof getContractDO === 'function') ? getContractDO(c) : null;
+  const arr = doMap && doMap[col.year];
+  if (!arr) return 0;
+  if (col.kind === 'total') return arr.reduce((a, b) => a + (b || 0), 0);
+  if (col.kind === 'cum'){ let s = 0; for (let m = 0; m <= col.month; m++) s += arr[m] || 0; return s; }
+  if (col.kind === 'single') return arr[col.month] || 0;
+  return 0;
+}
 function _kontrakRealColValue(c, col){
+  if (col.metric === 'do') return _kontrakColDOValue(c, col);
   if (col.kind === 'total') return (c.realisasi_total && c.realisasi_total[col.year]) || 0;
   if (col.kind === 'cum') return getCumulativeRealisasi(c, col.year, col.month);
   if (col.kind === 'single'){ const arr = (c.realisasi && c.realisasi[col.year]) || []; return arr[col.month] || 0; }
   return 0;
 }
+// Data-quality flag: a contract has realisasi in a period but its DO is empty —
+// which shouldn't happen. Checked per displayed DO column (respects the active
+// Tahun/Bulan filter). Returns { anomaly, periods:[labels] }.
+function _kontrakDoAnomaly(c, realCols){
+  const periods = [];
+  for (const col of realCols){
+    if (col.metric !== 'do') continue;
+    const doV = _kontrakColDOValue(c, col);
+    const realV = _kontrakRealColValue(c, Object.assign({}, col, { metric: 'real' }));
+    if (doV === 0 && realV > 0) periods.push(col.label.replace(/^DO\s*/, ''));
+  }
+  return { anomaly: periods.length > 0, periods };
+}
 
 function renderKontrakTable(){
   const container = document.getElementById('kontrak-table');
   if (!container) return;
-  const contracts = filteredContracts();
   const realCols = buildKontrakRealCols();
+  let contracts = filteredContracts();
+
+  // Count "realisasi ada tapi DO kosong" over the filtered set, and optionally
+  // narrow the table to only those contracts (toggled via the ⚠ badge).
+  let doAnomCount = 0;
+  for (const c of contracts) if (_kontrakDoAnomaly(c, realCols).anomaly) doAnomCount++;
+  if (state.kontrakDoAnomOnly) contracts = contracts.filter(c => _kontrakDoAnomaly(c, realCols).anomaly);
 
   const cntEl = document.getElementById('kontrak-count');
   if (cntEl) cntEl.textContent = contracts.length + ' contract' + (contracts.length !== 1 ? 's' : '');
+  const anomEl = document.getElementById('kontrak-do-anom-count');
+  if (anomEl){
+    if (doAnomCount > 0){
+      anomEl.style.display = '';
+      anomEl.textContent = '⚠ ' + doAnomCount + ' DO kosong';
+      anomEl.classList.toggle('active', !!state.kontrakDoAnomOnly);
+      anomEl.onclick = () => { state.kontrakDoAnomOnly = !state.kontrakDoAnomOnly; renderKontrakTable(); };
+    } else {
+      anomEl.style.display = 'none';
+      state.kontrakDoAnomOnly = false;
+    }
+  }
 
   // Render summary card (always uses the active filter regardless of other filters)
   renderKontrakSummary();
@@ -12794,7 +12857,7 @@ function renderKontrakTable(){
   header += '<th>Sisa</th>';
   header += '<th>%</th>';
   for (let i = 0; i < realCols.length; i++){
-    header += '<th class="year-header' + (realCols[i].isOld ? ' old-year' : '') + '">' + realCols[i].label + '</th>';
+    header += '<th class="year-header' + (realCols[i].metric === 'do' ? ' do-header' : '') + (realCols[i].isOld ? ' old-year' : '') + '">' + realCols[i].label + '</th>';
   }
   header += '<th>Amandemen</th>';
   header += '</tr></thead>';
@@ -12815,10 +12878,16 @@ function renderKontrakTable(){
     // Encode pemasok name safely for click handler
     const pemasokAttr = (c.pemasok || '').replace(/'/g, "&#39;");
 
-    let row = '<tr>';
+    // Flag: realisasi ada tetapi DO kosong (per periode yang ditampilkan)
+    const doAnom = _kontrakDoAnomaly(c, realCols);
+    const doAnomBadge = doAnom.anomaly
+      ? ' <span class="do-anom-badge" title="Ada realisasi tetapi DO kosong pada: ' + escapeHtml(doAnom.periods.join(', ')) + '. Data DO perlu dilengkapi.">⚠ DO kosong</span>'
+      : '';
+
+    let row = '<tr' + (doAnom.anomaly ? ' class="row-do-anom"' : '') + '>';
     row += '<td><span class="kontrak-genco-pill" style="color:' + gcColor + ';border-color:' + gcColor + '40">' + c.genco + '</span></td>';
     row += '<td class="wrap" style="color:var(--text-bright);font-weight:500">' + escapeHtml(c.pltu) + '</td>';
-    row += '<td class="wrap"><a href="#" class="kontrak-pemasok-link" data-pemasok="' + escapeHtml(pemasokAttr) + '" data-pltu="' + escapeHtml(c.pltu) + '" data-kontrak="' + escapeHtml(c.kontrak || '') + '">' + escapeHtml(c.pemasok) + '</a></td>';
+    row += '<td class="wrap"><a href="#" class="kontrak-pemasok-link" data-pemasok="' + escapeHtml(pemasokAttr) + '" data-pltu="' + escapeHtml(c.pltu) + '" data-kontrak="' + escapeHtml(c.kontrak || '') + '">' + escapeHtml(c.pemasok) + '</a>' + doAnomBadge + '</td>';
     row += '<td class="num">' + fmtInt(vol) + '</td>';
     row += '<td class="wrap" style="font-size:9px;color:var(--text-dim);line-height:1.4">' + (c.kontrak ? escapeHtml(c.kontrak) : '—') + '</td>';
     row += '<td>' + fmtKontrakDate(c.awal) + '</td>';
@@ -12828,9 +12897,18 @@ function renderKontrakTable(){
     row += '<td class="num" style="color:' + sisaColor + '">' + fmtInt(displayedSisa) + '</td>';
     row += '<td style="text-align:center"><span class="kontrak-pct-badge ' + pctClass + '">' + displayedPct.toFixed(1) + '%</span></td>';
     for (let i = 0; i < realCols.length; i++){
-      const v = _kontrakRealColValue(c, realCols[i]);
-      const cellCls = 'year-real' + (v === 0 ? ' zero' : '') + (realCols[i].isOld ? ' old-year-cell' : '');
-      row += '<td class="' + cellCls + '">' + (v ? fmtInt(v) : '—') + '</td>';
+      const col = realCols[i];
+      const v = _kontrakRealColValue(c, col);
+      // DO cell is anomalous when it's empty but the paired Real has a value.
+      let doMissing = false;
+      if (col.metric === 'do' && v === 0){
+        const realV = _kontrakRealColValue(c, Object.assign({}, col, { metric: 'real' }));
+        doMissing = realV > 0;
+      }
+      const cellCls = 'year-real' + (col.metric === 'do' ? ' do-cell' : '') +
+        (v === 0 ? ' zero' : '') + (col.isOld ? ' old-year-cell' : '') + (doMissing ? ' do-missing' : '');
+      const cellContent = doMissing ? '<span class="do-missing-mark" title="Realisasi ada, DO kosong">⚠</span>' : (v ? fmtInt(v) : '—');
+      row += '<td class="' + cellCls + '">' + cellContent + '</td>';
     }
     if (c.amandemen){
       const amText = escapeHtml(c.amandemen).split('\n').join('<br>');
@@ -12868,7 +12946,7 @@ function renderKontrakTable(){
   footer += '<td class="num"><b>' + fmtInt(totalSisa) + '</b></td>';
   footer += '<td style="text-align:center"><b>' + avgPct.toFixed(1) + '%</b></td>';
   for (let i = 0; i < realCols.length; i++){
-    footer += '<td class="num' + (realCols[i].isOld ? ' old-year-cell' : '') + '"><b>' + fmtInt(totalByCol[i]) + '</b></td>';
+    footer += '<td class="num year-real' + (realCols[i].metric === 'do' ? ' do-cell' : '') + (realCols[i].isOld ? ' old-year-cell' : '') + '"><b>' + fmtInt(totalByCol[i]) + '</b></td>';
   }
   footer += '<td></td>';
   footer += '</tr></tfoot>';
@@ -12910,9 +12988,10 @@ function buildKontrakCards(contracts, realCols, totalByCol, totalVol, totalSisa,
     const pctClass = pctBadgeClass(pct);
     const sisaColor = sisa < 0 ? 'var(--danger)' : sisa < vol * 0.1 ? 'var(--warn)' : 'var(--text-bright)';
 
-    html += '<div class="kontrak-card" data-pemasok="' + escapeHtml((c.pemasok||'').replace(/'/g,"&#39;")) + '" data-pltu="' + escapeHtml(c.pltu) + '" data-kontrak="' + escapeHtml(c.kontrak || '') + '">';
+    const cardAnom = _kontrakDoAnomaly(c, realCols);
+    html += '<div class="kontrak-card' + (cardAnom.anomaly ? ' card-do-anom' : '') + '" data-pemasok="' + escapeHtml((c.pemasok||'').replace(/'/g,"&#39;")) + '" data-pltu="' + escapeHtml(c.pltu) + '" data-kontrak="' + escapeHtml(c.kontrak || '') + '">';
     html += '<div class="kontrak-card-head">';
-    html += '<div><div class="kontrak-card-pltu">' + escapeHtml(c.pltu) + '</div>';
+    html += '<div><div class="kontrak-card-pltu">' + escapeHtml(c.pltu) + (cardAnom.anomaly ? ' <span class="do-anom-badge" title="Ada realisasi tetapi DO kosong pada: ' + escapeHtml(cardAnom.periods.join(', ')) + '">⚠ DO kosong</span>' : '') + '</div>';
     html += '<div class="kontrak-card-mitra"><span style="color:var(--accent);font-weight:500">' + escapeHtml(c.pemasok) + '</span> <span style="font-size:9px;opacity:.5">tap for details</span></div></div>';
     html += '<div class="kontrak-card-genco"><span class="kontrak-genco-pill" style="color:' + gcColor + ';border-color:' + gcColor + '40">' + c.genco + '</span></div>';
     html += '</div>';
@@ -12922,8 +13001,15 @@ function buildKontrakCards(contracts, realCols, totalByCol, totalVol, totalSisa,
     html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Sisa</span><span class="kontrak-card-val" style="color:' + sisaColor + '">' + fmtInt(sisa) + ' MT</span></div>';
     // Show realisasi per dynamic column (follows Tahun/Bulan filter)
     for (let j = 0; j < realCols.length; j++){
-      const v = _kontrakRealColValue(c, realCols[j]);
-      html += '<div class="kontrak-card-row"><span class="kontrak-card-label">' + realCols[j].label + '</span><span class="kontrak-card-val" style="color:' + (v > 0 ? 'var(--accent)' : 'var(--text-dim)') + '">' + (v ? fmtInt(v) : '—') + '</span></div>';
+      const col = realCols[j];
+      const v = _kontrakRealColValue(c, col);
+      let doMissing = false;
+      if (col.metric === 'do' && v === 0){
+        doMissing = _kontrakRealColValue(c, Object.assign({}, col, { metric: 'real' })) > 0;
+      }
+      const valColor = doMissing ? 'var(--danger)' : (v > 0 ? (col.metric === 'do' ? '#c07d1a' : 'var(--accent)') : 'var(--text-dim)');
+      const valTxt = doMissing ? '⚠ kosong' : (v ? fmtInt(v) : '—');
+      html += '<div class="kontrak-card-row"><span class="kontrak-card-label">' + col.label + '</span><span class="kontrak-card-val" style="color:' + valColor + '">' + valTxt + '</span></div>';
     }
     html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Achievement</span><span class="kontrak-pct-badge ' + pctClass + '" style="font-size:10px;padding:2px 8px">' + pct.toFixed(1) + '%</span></div>';
     html += '</div>';
@@ -12949,7 +13035,7 @@ function buildKontrakCards(contracts, realCols, totalByCol, totalVol, totalSisa,
   html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Volume</span><span class="kontrak-card-val">' + fmtInt(totalVol) + ' MT</span></div>';
   html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Sisa</span><span class="kontrak-card-val">' + fmtInt(totalSisa) + ' MT</span></div>';
   for (let j = 0; j < realCols.length; j++){
-    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">' + realCols[j].label + '</span><span class="kontrak-card-val" style="color:var(--accent)">' + fmtInt(totalByCol[j]) + '</span></div>';
+    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">' + realCols[j].label + '</span><span class="kontrak-card-val" style="color:' + (realCols[j].metric === 'do' ? '#c07d1a' : 'var(--accent)') + '">' + fmtInt(totalByCol[j]) + '</span></div>';
   }
   html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Avg %</span><span class="kontrak-card-val">' + avgPct.toFixed(1) + '%</span></div>';
   html += '</div>';
@@ -13044,7 +13130,7 @@ function setUserName(name){
 
 // V55: Flexible access check for Usulan Kontrak.
 // Allows admins (exact) + whitelisted first names (partial, case-insensitive).
-const USULAN_ALLOWED_NAMES = ['erfan', 'febri', 'yoga', 'aidah'];
+const USULAN_ALLOWED_NAMES = ['erfan', 'febri', 'yoga', 'aidah', 'mahmut', 'ibnu', 'haris'];
 // V59: view-only users — can open Usulan Kontrak but cannot edit/add/delete.
 const USULAN_VIEWONLY_NAMES = ['hokkop'];
 // Match if any name in `list` appears as a whole word in `name` (case-insensitive).
