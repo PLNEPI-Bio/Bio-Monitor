@@ -5933,6 +5933,16 @@ html,body{
 .laporan-modal-edit-btn{background:#d98324!important;border-color:#d98324!important;color:#fff!important}
 .laporan-edit-banner{margin-top:12px;padding:8px 12px;background:rgba(217,131,36,.12);border:1px solid #d98324;border-radius:8px;font-size:12px;color:var(--text-bright);display:none;align-items:center;gap:8px}
 .laporan-edit-banner.on{display:flex}
+/* sub-menu tabs: Library / Input Baru */
+.laporan-subnav{display:flex;gap:4px;margin:16px 0 4px;border-bottom:1px solid var(--border)}
+.laporan-subtab{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;padding:9px 18px;border:none;background:transparent;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
+.laporan-subtab:hover{color:var(--text-bright)}
+.laporan-subtab.active{color:#2e7d47;border-bottom-color:#2e7d47}
+.laporan-subpanel{margin-top:14px}
+/* library: wilayah sub-group inside each month */
+.laporan-arsip-wgroup{margin-top:10px}
+.laporan-arsip-wilayah-head{display:flex;align-items:center;gap:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3px;color:var(--wcolor,#2e7d47);text-transform:uppercase;margin:10px 0 2px;padding-left:8px;border-left:3px solid var(--wcolor,#2e7d47)}
+.laporan-arsip-wilayah-head .cnt{font-weight:600;color:var(--text-dim);font-size:10px}
 @media (max-width:768px){ .laporan-grid{grid-template-columns:1fr} }
 </style>
 <div class="view" data-view="laporan">
@@ -5946,6 +5956,13 @@ html,body{
       </div>
     </div>
 
+    <!-- Sub-menu: Library / Input Baru -->
+    <div class="laporan-subnav">
+      <button class="laporan-subtab active" data-laptab="library" onclick="setLaporanSubtab('library')">📚 Library</button>
+      <button class="laporan-subtab" data-laptab="input" onclick="setLaporanSubtab('input')">📝 Input Baru</button>
+    </div>
+
+    <div class="laporan-subpanel" data-lappanel="library">
     <div class="laporan-arsip-section">
       <div class="laporan-arsip-toolbar">
         <div class="laporan-lbl" style="font-size:13px;margin:0">📚 Arsip Laporan Tersimpan</div>
@@ -5957,7 +5974,9 @@ html,body{
       <div id="laporanArsipFilterChips" class="laporan-arsip-chips"></div>
       <div id="laporanArsipList" class="laporan-arsip-groups"><div class="laporan-hint">Memuat…</div></div>
     </div>
+    </div><!-- /laporan-subpanel library -->
 
+    <div class="laporan-subpanel" data-lappanel="input" style="display:none">
     <!-- ===== Input laporan langsung di halaman ===== -->
     <div class="laporan-form-card">
       <div class="laporan-lbl" style="margin-top:0;font-size:13px">📝 Input Data Laporan</div>
@@ -6051,6 +6070,7 @@ html,body{
         </div>
       </div>
     </div>
+    </div><!-- /laporan-subpanel input -->
   </div>
 </div>
 
@@ -6439,6 +6459,7 @@ const state = {
   kontrakShowOldYears: false,
   kontrakOnlyActive: true,
   kontrakDoAnomOnly: false, // table filter: only contracts with realisasi but empty DO
+  laporanSubtab: 'library', // Laporan tab sub-menu: 'library' | 'input'
 
   paretoShowLoss: true,
   paretoShowCumPct: true,
@@ -8643,6 +8664,20 @@ function renderLaporanForm(){
   const plants = _laporanRegionPlants(prov);
   if (!plants.length){ wrap.innerHTML = '<div class="laporan-hint">Tidak ada PLTU untuk wilayah ini pada data saat ini.</div>'; return; }
 
+  // Preserve any values the user already entered (realnow/prognosa/do), keyed by
+  // PLTU name, so a re-render (e.g. after changing the checkpoint date) does NOT
+  // reset prognosa back to the realisasi default. Only rebuilds the running-month
+  // read-only columns.
+  const prevVals = {};
+  wrap.querySelectorAll('.laporan-form-table tbody tr').forEach(tr => {
+    const nameCell = tr.querySelector('td.pltu');
+    if (!nameCell) return;
+    const name = (nameCell.textContent || '').trim();
+    const v = {};
+    tr.querySelectorAll('.laporan-form-input').forEach(el => { v[el.getAttribute('data-fld')] = el.value; });
+    prevVals[name] = v;
+  });
+
   const ckName = LAPORAN_MONTHS[ck];
   let html = '<table class="laporan-form-table"><thead><tr><th class="pltu">PLTU</th>';
   for (let m = 0; m < ck; m++) html += '<th>' + LAPORAN_MONTHS[m] + '</th>';
@@ -8651,10 +8686,15 @@ function renderLaporanForm(){
     const real = p.real_2026 || [], doArr = p.do_2026 || [];
     html += '<tr><td class="pltu">' + escapeHtml(p.name || '—') + '</td>';
     for (let m = 0; m < ck; m++) html += '<td class="ro">' + fmtInt(real[m] || 0) + '</td>';
-    const cur = real[ck] || 0, pro = real[ck] || 0, dov = doArr[ck] || 0;
-    html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="realnow" value="' + (cur || '') + '" placeholder="0"></td>';
-    html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="prognosa" value="' + (pro || '') + '" placeholder="0"></td>';
-    html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="do" value="' + (dov || '') + '" placeholder="0"></td>';
+    // Keep the user's entered values on re-render; only fall back to the data
+    // default (realisasi bulan berjalan / DO) for a fresh, untouched row.
+    const saved = prevVals[(p.name || '—').trim()];
+    const curV = (saved && saved.realnow !== undefined) ? saved.realnow : (real[ck] || '');
+    const proV = (saved && saved.prognosa !== undefined) ? saved.prognosa : (real[ck] || '');
+    const dovV = (saved && saved.do !== undefined) ? saved.do : (doArr[ck] || '');
+    html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="realnow" value="' + curV + '" placeholder="0"></td>';
+    html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="prognosa" value="' + proV + '" placeholder="0"></td>';
+    html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="do" value="' + dovV + '" placeholder="0"></td>';
     html += '</tr>';
   });
   html += '</tbody></table>';
@@ -8757,6 +8797,14 @@ function _laporanWilayahColor(wilayah){
   return (t && t.primary) || '#5f6b62';
 }
 
+// Switch the Laporan tab sub-menu: 'library' (arsip) or 'input' (form baru).
+function setLaporanSubtab(tab){
+  state.laporanSubtab = (tab === 'input') ? 'input' : 'library';
+  document.querySelectorAll('.laporan-subtab').forEach(b => b.classList.toggle('active', b.dataset.laptab === state.laporanSubtab));
+  document.querySelectorAll('.laporan-subpanel').forEach(p => { p.style.display = (p.dataset.lappanel === state.laporanSubtab) ? '' : 'none'; });
+}
+window.setLaporanSubtab = setLaporanSubtab;
+
 function _laporanArsipCache(items){ try { localStorage.setItem(LAPORAN_ARSIP_KEY, JSON.stringify(items)); } catch(e){} }
 function _laporanArsipReadCache(){ try { return JSON.parse(localStorage.getItem(LAPORAN_ARSIP_KEY) || '[]'); } catch(e){ return []; } }
 
@@ -8793,6 +8841,25 @@ function _laporanArsipGroups(items){
     map.get(key).items.push(it);
   });
   return Array.from(map.values()).sort((a, b) => a.key < b.key ? 1 : a.key > b.key ? -1 : 0);
+}
+
+// Sub-group a month's items by wilayah, ordered by the standard region order
+// (Sumatera, Jawa, Kalimantan, Sulmapana, then Lainnya).
+function _laporanArsipByWilayah(items){
+  const map = new Map(); // prov -> items
+  (items || []).forEach(it => {
+    const prov = _laporanProvFromLabel(it.wilayah) || 'lainnya';
+    if (!map.has(prov)) map.set(prov, []);
+    map.get(prov).push(it);
+  });
+  const out = [];
+  LAPORAN_ARSIP_ORDER.concat(['lainnya']).forEach(prov => {
+    if (!map.has(prov)) return;
+    const label = prov === 'lainnya' ? 'Lainnya' : (LAPORAN_REGION_LABEL[prov] || prov);
+    const color = prov === 'lainnya' ? '#5f6b62' : ((LAPORAN_THEMES[prov] && LAPORAN_THEMES[prov].primary) || '#5f6b62');
+    out.push({ key: prov, label, color, items: map.get(prov) });
+  });
+  return out;
 }
 
 function _laporanArsipCardHtml(it){
@@ -8884,13 +8951,21 @@ function renderLaporanArsip(){
       '<a href="#" onclick="resetLaporanArsipFilter();return false;" style="color:#2e7d47;font-weight:600">Reset filter</a></div>';
     return;
   }
+  // Two-level layout: month → wilayah → cards.
   const groups = _laporanArsipGroups(visible);
-  wrap.innerHTML = groups.map(g =>
-    '<div class="laporan-arsip-group">' +
+  wrap.innerHTML = groups.map(g => {
+    const wGroups = _laporanArsipByWilayah(g.items);
+    const inner = wGroups.map(wg =>
+      '<div class="laporan-arsip-wgroup">' +
+        '<div class="laporan-arsip-wilayah-head" style="--wcolor:' + wg.color + '">' + escapeHtml(wg.label) + ' <span class="cnt">' + wg.items.length + ' laporan</span></div>' +
+        '<div class="laporan-arsip-list">' + wg.items.map(_laporanArsipCardHtml).join('') + '</div>' +
+      '</div>'
+    ).join('');
+    return '<div class="laporan-arsip-group">' +
       '<div class="laporan-arsip-month">' + escapeHtml(g.label) + ' <span class="cnt">' + g.items.length + ' laporan</span></div>' +
-      '<div class="laporan-arsip-list">' + g.items.map(_laporanArsipCardHtml).join('') + '</div>' +
-    '</div>'
-  ).join('');
+      inner +
+    '</div>';
+  }).join('');
 }
 window.renderLaporanArsip = renderLaporanArsip;
 
@@ -8995,6 +9070,8 @@ window.editLaporanFromModal = editLaporanFromModal;
 // Muat sebuah laporanModel tersimpan ke form pengisian (wilayah, tanggal, grid
 // PLTU, narasi) dan siapkan mode edit. id = baris library yang sedang diedit.
 function loadLaporanIntoForm(model, id, meta){
+  // Edit terjadi di sub-menu Input Baru — pindah ke sana dulu.
+  setLaporanSubtab('input');
   const prov = model.prov || _laporanProvFromLabel(model.wilayah) || '';
   const wSel = document.getElementById('laporanFormWilayah');
   const dEl = document.getElementById('laporanFormDate');
