@@ -12755,12 +12755,14 @@ function wireKontrakJenisYearSel(){
 // Module state so the genco filter chips can re-render the same modal in place.
 let kontrakBreakdownType = 'sisa';
 let kontrakBreakdownGenco = 'all';
+let kontrakBreakdownSort = { col: null, dir: 'desc' }; // null col → default by type
 
 function showKontrakBreakdown(type){
   const backdrop = document.getElementById('kontrakBreakdownBackdrop');
   if (!backdrop) return;
   kontrakBreakdownType = type;
   kontrakBreakdownGenco = 'all'; // reset filter each time the modal opens
+  kontrakBreakdownSort = { col: null, dir: 'desc' };
   renderKontrakBreakdownBody();
   backdrop.classList.add('open');
   // Close on backdrop click
@@ -12774,6 +12776,16 @@ function setKontrakBreakdownGenco(g){
   renderKontrakBreakdownBody();
 }
 window.setKontrakBreakdownGenco = setKontrakBreakdownGenco;
+
+// Click a column header to sort. Same col → flip direction; new col → desc first
+// (asc first for text columns pltu/pemasok/genco/jenis/akhir).
+function setKontrakBreakdownSort(col){
+  const s = kontrakBreakdownSort;
+  if (s.col === col){ s.dir = (s.dir === 'desc') ? 'asc' : 'desc'; }
+  else { s.col = col; s.dir = (col === 'pltu' || col === 'pemasok' || col === 'genco' || col === 'jenis' || col === 'akhir') ? 'asc' : 'desc'; }
+  renderKontrakBreakdownBody();
+}
+window.setKontrakBreakdownSort = setKontrakBreakdownSort;
 
 function renderKontrakBreakdownBody(){
   const type = kontrakBreakdownType;
@@ -12794,86 +12806,82 @@ function renderKontrakBreakdownBody(){
     ? activeAll
     : activeAll.filter(c => (c.genco || '') === kontrakBreakdownGenco);
 
-  // Compute per-contract stats
+  // Per-contract stats (realisasi = jumlah 2023–2026).
   const rows = active.map(c => {
     const vol = c.vol_mt || 0;
     const yt = c.realisasi_total || {};
     const totalReal = (yt['2023']||0) + (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
     const sisa = vol - totalReal;
-    const pct = vol > 0 ? (totalReal / vol * 100) : 0;
     return {
-      genco: c.genco || '—',
-      pltu: c.pltu || '—',
-      pemasok: c.pemasok || '—',
-      jenis: c.jenis || '—',
-      akhir: c.akhir || '—',
-      vol, totalReal, sisa, pct,
+      genco: c.genco || '—', pltu: c.pltu || '—', pemasok: c.pemasok || '—',
+      jenis: c.jenis || '—', akhir: c.akhir || '—',
+      vol, totalReal, sisa,
+      pct: vol > 0 ? (totalReal / vol * 100) : 0,
     };
   });
 
-  // Sort by the clicked metric
-  if (type === 'vol'){
-    rows.sort((a, b) => b.vol - a.vol);
-    titleEl.textContent = 'Total Volume Kontrak Aktif';
-    eyebrowEl.textContent = 'Detail Breakdown · Volume';
-  } else if (type === 'sisa'){
-    rows.sort((a, b) => b.sisa - a.sisa);
-    titleEl.textContent = 'Total Sisa Kontrak Aktif';
-    eyebrowEl.textContent = 'Detail Breakdown · Sisa';
-  } else {
-    // 'active' — sort by akhir kontrak ascending (soonest expiring first)
-    rows.sort((a, b) => (a.akhir || '').localeCompare(b.akhir || ''));
-    titleEl.textContent = 'Daftar Kontrak Aktif';
-    eyebrowEl.textContent = 'Detail Breakdown · Active Contracts';
-  }
+  if (type === 'vol'){ titleEl.textContent = 'Total Volume Kontrak Aktif'; eyebrowEl.textContent = 'Detail Breakdown · Volume'; }
+  else if (type === 'sisa'){ titleEl.textContent = 'Total Sisa Kontrak Aktif'; eyebrowEl.textContent = 'Detail Breakdown · Sisa'; }
+  else { titleEl.textContent = 'Daftar Kontrak Aktif'; eyebrowEl.textContent = 'Detail Breakdown · Active Contracts'; }
 
+  // Sort: explicit clicked column, else default per card type.
+  const textCols = { pltu: 1, pemasok: 1, genco: 1, jenis: 1, akhir: 1 };
+  const defaultCol = type === 'vol' ? 'vol' : type === 'sisa' ? 'sisa' : 'akhir';
+  const sortCol = kontrakBreakdownSort.col || defaultCol;
+  const sortDir = kontrakBreakdownSort.col ? kontrakBreakdownSort.dir : (defaultCol === 'akhir' ? 'asc' : 'desc');
+  rows.sort((a, b) => {
+    const av = a[sortCol], bv = b[sortCol];
+    const cmp = textCols[sortCol] ? String(av || '').localeCompare(String(bv || '')) : ((av || 0) - (bv || 0));
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  // Totals
   const totalVol = rows.reduce((s, r) => s + r.vol, 0);
   const totalReal = rows.reduce((s, r) => s + r.totalReal, 0);
-  // Clamp per-contract sisa at 0 so over-fulfilled contracts don't offset the
-  // total (matches the "Total Sisa Kontrak Aktif" card). Terminated contracts
-  // are already excluded (isContractActive). Per-row column still shows actual.
   const totalSisa = rows.reduce((s, r) => s + Math.max(0, r.sisa), 0);
   const gencoSuffix = kontrakBreakdownGenco === 'all' ? '' : ' · Genco ' + kontrakBreakdownGenco;
-  metaEl.textContent = active.length + ' kontrak aktif (akhir ≥ ' + today + ')' + gencoSuffix + ' · Total Vol ' + fmtInt(totalVol) + ' MT · Total Realisasi ' + fmtInt(totalReal) + ' MT · Sisa (min 0/kontrak) ' + fmtInt(totalSisa) + ' MT';
+  metaEl.textContent = rows.length + ' kontrak aktif (akhir ≥ ' + today + ')' + gencoSuffix +
+    ' · Total Vol ' + fmtInt(totalVol) + ' MT · Total Realisasi ' + fmtInt(totalReal) + ' MT · Sisa (min 0/kontrak) ' + fmtInt(totalSisa) + ' MT';
 
   // Genco filter chips (Semua / PNP / PIP / UIW) — re-render the modal in place.
+  const chipStyle = (on) => 'padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ' +
+    (on ? 'var(--accent)' : 'var(--border)') + ';background:' + (on ? 'var(--accent)' : 'transparent') +
+    ';color:' + (on ? '#fff' : 'var(--text-dim)') + ';';
   const gencoOptions = [['all', 'Semua'], ['PNP', 'PNP'], ['PIP', 'PIP'], ['UIW', 'UIW']];
   let html = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">';
   html += '<span style="font-size:10px;color:var(--text-dim);font-weight:600;margin-right:2px">GENCO:</span>';
   for (const [g, label] of gencoOptions){
-    const on = kontrakBreakdownGenco === g;
-    const style = 'padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ' +
-      (on ? 'var(--accent)' : 'var(--border)') + ';background:' + (on ? 'var(--accent)' : 'transparent') +
-      ';color:' + (on ? '#fff' : 'var(--text-dim)') + ';';
-    html += '<button type="button" onclick="setKontrakBreakdownGenco(\'' + g + '\')" style="' + style + '">' +
+    html += '<button type="button" onclick="setKontrakBreakdownGenco(\'' + g + '\')" style="' + chipStyle(kontrakBreakdownGenco === g) + '">' +
       label + ' <span style="opacity:.7">(' + fmtInt(gencoCounts[g] || 0) + ')</span></button>';
   }
   html += '</div>';
 
-  // Build table
+  // Table (sortable headers)
+  const arrow = (col) => sortCol === col ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  const th = (col, label) => '<th style="cursor:pointer;user-select:none;white-space:nowrap' +
+    (sortCol === col ? ';color:var(--accent)' : '') + '" onclick="setKontrakBreakdownSort(\'' + col + '\')" title="Klik untuk sortir">' + label + arrow(col) + '</th>';
   html += '<div style="overflow:auto;max-height:500px;border:1px solid var(--border)">';
   html += '<table class="kontrak-table" style="font-size:9px">';
-  html += '<thead><tr>';
-  html += '<th>#</th><th>Genco</th><th>PLTU</th><th>Pemasok</th><th>Jenis</th><th>Akhir</th>';
-  html += '<th>Vol (MT)</th><th>Realisasi</th><th>Sisa</th><th>%</th>';
+  html += '<thead><tr><th>#</th>';
+  html += th('genco', 'Genco') + th('pltu', 'PLTU') + th('pemasok', 'Pemasok') + th('jenis', 'Jenis') + th('akhir', 'Akhir');
+  html += th('vol', 'Vol (MT)') + th('totalReal', 'Realisasi') + th('sisa', 'Sisa') + th('pct', '%');
   html += '</tr></thead><tbody>';
 
+  const badgeClass = (p) => p >= 100 ? 'over' : p >= 80 ? 'high' : p >= 40 ? 'mid' : 'low';
   for (let i = 0; i < rows.length; i++){
     const r = rows[i];
-    const pctClass = r.pct >= 100 ? 'over' : r.pct >= 80 ? 'high' : r.pct >= 40 ? 'mid' : 'low';
     const sisaColor = r.sisa < 0 ? 'var(--danger)' : 'var(--text-bright)';
-    const highlightCol = type === 'vol' ? 'vol' : type === 'sisa' ? 'sisa' : 'akhir';
     html += '<tr>';
     html += '<td style="color:var(--text-dim)">' + (i + 1) + '</td>';
     html += '<td>' + escapeHtml(r.genco) + '</td>';
     html += '<td style="font-weight:500;color:var(--text-bright)">' + escapeHtml(r.pltu) + '</td>';
     html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(r.pemasok) + '">' + escapeHtml(r.pemasok) + '</td>';
     html += '<td>' + escapeHtml(r.jenis) + '</td>';
-    html += '<td style="white-space:nowrap' + (highlightCol === 'akhir' ? ';font-weight:700;color:var(--accent)' : '') + '">' + fmtKontrakDate(r.akhir) + '</td>';
-    html += '<td class="num"' + (highlightCol === 'vol' ? ' style="font-weight:700;color:var(--accent)"' : '') + '>' + fmtInt(r.vol) + '</td>';
+    html += '<td style="white-space:nowrap">' + fmtKontrakDate(r.akhir) + '</td>';
+    html += '<td class="num">' + fmtInt(r.vol) + '</td>';
     html += '<td class="num">' + fmtInt(r.totalReal) + '</td>';
-    html += '<td class="num"' + (highlightCol === 'sisa' ? ' style="font-weight:700;color:' + sisaColor + '"' : ' style="color:' + sisaColor + '"') + '>' + fmtInt(r.sisa) + '</td>';
-    html += '<td style="text-align:center"><span class="kontrak-pct-badge ' + pctClass + '" style="font-size:9px;padding:2px 5px;min-width:40px">' + r.pct.toFixed(1) + '%</span></td>';
+    html += '<td class="num" style="color:' + sisaColor + '">' + fmtInt(r.sisa) + '</td>';
+    html += '<td style="text-align:center"><span class="kontrak-pct-badge ' + badgeClass(r.pct) + '" style="font-size:9px;padding:2px 5px;min-width:40px">' + r.pct.toFixed(1) + '%</span></td>';
     html += '</tr>';
   }
 
