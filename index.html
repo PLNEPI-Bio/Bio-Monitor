@@ -4923,6 +4923,10 @@ html,body{
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12v10H2zM2 6h12M5 8h6M5 10h4"/></svg>
     Usulan Kontrak
   </button>
+  <button class="mobile-more-item" onclick="mobNav('laporan')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12v12H2zM2 10l3-3 3 3 5-5"/></svg>
+    Laporan
+  </button>
   <button class="mobile-more-item" onclick="mobNav('berita')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h10v10H2zM12 5h2v8a1 1 0 0 1-1 1H4M4 6h6M4 8h6M4 10h4"/></svg>
     Berita
@@ -5933,6 +5937,10 @@ html,body{
 .laporan-modal-edit-btn{background:#d98324!important;border-color:#d98324!important;color:#fff!important}
 .laporan-edit-banner{margin-top:12px;padding:8px 12px;background:rgba(217,131,36,.12);border:1px solid #d98324;border-radius:8px;font-size:12px;color:var(--text-bright);display:none;align-items:center;gap:8px}
 .laporan-edit-banner.on{display:flex}
+/* Laporan tab stacks header → subnav → panels; default .real-view grid
+   (auto/1fr) would drop the subnav into the 1fr row and hide it. Use block flow. */
+.view[data-view="laporan"] .real-view{display:block}
+.view[data-view="laporan"] .real-view > *{margin-bottom:18px}
 /* sub-menu tabs: Library / Input Baru */
 .laporan-subnav{display:flex;gap:4px;margin:16px 0 4px;border-bottom:1px solid var(--border)}
 .laporan-subtab{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;padding:9px 18px;border:none;background:transparent;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s}
@@ -5943,7 +5951,22 @@ html,body{
 .laporan-arsip-wgroup{margin-top:10px}
 .laporan-arsip-wilayah-head{display:flex;align-items:center;gap:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3px;color:var(--wcolor,#2e7d47);text-transform:uppercase;margin:10px 0 2px;padding-left:8px;border-left:3px solid var(--wcolor,#2e7d47)}
 .laporan-arsip-wilayah-head .cnt{font-weight:600;color:var(--text-dim);font-size:10px}
-@media (max-width:768px){ .laporan-grid{grid-template-columns:1fr} }
+@media (max-width:768px){
+  .laporan-grid{grid-template-columns:1fr}
+  /* clear the fixed bottom nav so the last card is fully scrollable */
+  .view[data-view="laporan"] .real-view{padding:16px 14px calc(76px + env(safe-area-inset-bottom,0))}
+  /* keep Library/Input Baru toggle reachable while scrolling */
+  .laporan-subnav{position:sticky;top:0;z-index:6;background:var(--bg);margin-top:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .laporan-subtab{flex:1 0 auto;white-space:nowrap;padding:11px 12px;font-size:13px}
+  .laporan-arsip-toolbar{flex-direction:column;align-items:stretch}
+  .laporan-arsip-tools{width:100%}
+  .laporan-arsip-search{flex:1;width:auto;min-width:0}
+  .laporan-arsip-list{grid-template-columns:1fr}
+  .laporan-generate-row{flex-direction:column}
+  .laporan-generate-row .update-upload-btn{width:100%;box-sizing:border-box}
+  .laporan-form-input{width:64px}
+  .laporan-alt-section .update-upload-zone{flex-direction:column;align-items:stretch}
+}
 </style>
 <div class="view" data-view="laporan">
   <div class="real-view">
@@ -21585,7 +21608,7 @@ function mobNav(tab){
     b.classList.toggle('active', b.dataset.mobTab === tab);
   });
   // If tab is in "More" menu, highlight the More button
-  const moreTabs1 = ['pareto','mou-timeline','usulan','berita','pembangkit','fasilitas'];
+  const moreTabs1 = ['pareto','mou-timeline','usulan','berita','pembangkit','fasilitas','laporan'];
   if (moreTabs1.includes(tab)){
     document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
     const moreBtn = document.querySelector('[data-mob-tab="more"]');
@@ -21629,7 +21652,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (t === 'more') return;
         b.classList.toggle('active', t === tab);
       });
-      const moreTabs2 = ['pareto','mou-timeline','usulan','berita','pembangkit','fasilitas'];
+      const moreTabs2 = ['pareto','mou-timeline','usulan','berita','pembangkit','fasilitas','laporan'];
       if (moreTabs2.includes(tab)){
         document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
         const moreBtn = document.querySelector('[data-mob-tab="more"]');
