@@ -5879,7 +5879,10 @@ html,body{
 .laporan-form-input{width:74px;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--border);border-radius:4px;color:var(--text-bright);font-size:11px;padding:4px 5px;text-align:right;font-family:inherit}
 .laporan-form-input:focus{outline:none;border-color:#2e7d47}
 .laporan-form-table tfoot td{font-weight:700;color:var(--text-bright);background:var(--panel-2)}
-.laporan-generate-btn{margin-top:12px}
+.laporan-generate-btn{margin-top:0}
+.laporan-generate-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.laporan-saveas-btn{background:var(--panel-3)!important;color:var(--text-bright)!important;border:1px solid #d98324!important}
+.laporan-saveas-btn:hover{background:rgba(217,131,36,.12)!important}
 .laporan-alt-section{margin-top:22px;border-top:1px solid var(--border);padding-top:16px}
 .laporan-arsip-section{margin-bottom:22px}
 .laporan-arsip-groups{margin-top:12px;display:flex;flex-direction:column;gap:16px}
@@ -5979,7 +5982,10 @@ html,body{
       <textarea id="laporanKendala" class="laporan-textarea" rows="4" placeholder="Contoh:&#10;Keterbatasan armada transportasi." oninput="renderLaporanPreview()"></textarea>
       <label class="laporan-lbl" for="laporanDukungan">Dukungan yang diperlukan (satu poin per baris)</label>
       <textarea id="laporanDukungan" class="laporan-textarea" rows="4" placeholder="Contoh:&#10;Percepatan kontraktual di ..." oninput="renderLaporanPreview()"></textarea>
-      <button class="update-upload-btn laporan-generate-btn" onclick="generateLaporanFromForm()">🖼️ Buat / Perbarui Preview</button>
+      <div class="laporan-generate-row">
+        <button class="update-upload-btn laporan-generate-btn" onclick="generateLaporanFromForm()">🖼️ Buat / Perbarui Preview</button>
+        <button class="update-upload-btn laporan-saveas-btn" id="laporanSaveAsBtn" style="display:none" onclick="saveLaporanAsNew()" title="Simpan data form saat ini sebagai laporan baru (duplikat), tanpa mengubah laporan asli">📄 Simpan sebagai Baru</button>
+      </div>
       <div class="laporan-hint" id="laporanFormHint"></div>
     </div>
 
@@ -9041,9 +9047,11 @@ function _setLaporanEditMode(id, label){
   const banner = document.getElementById('laporanEditBanner');
   const bannerLbl = document.getElementById('laporanEditBannerLabel');
   const title = document.getElementById('laporanSaveCardTitle');
+  const saveAsBtn = document.getElementById('laporanSaveAsBtn');
   if (saveBtn) saveBtn.style.display = editing ? 'none' : '';
   if (updBtn) updBtn.style.display = editing ? '' : 'none';
   if (cancelBtn) cancelBtn.style.display = editing ? '' : 'none';
+  if (saveAsBtn) saveAsBtn.style.display = editing ? '' : 'none';
   if (banner) banner.classList.toggle('on', editing);
   if (bannerLbl) bannerLbl.textContent = label || '—';
   if (title) title.textContent = editing ? 'Perbarui Laporan di Library' : 'Simpan ke Library';
@@ -9090,6 +9098,48 @@ async function updateLaporanArsip(){
   setHint('✓ Laporan diperbarui di library.');
 }
 window.updateLaporanArsip = updateLaporanArsip;
+
+// "Save As" — simpan data form saat ini sebagai laporan BARU (duplikat) tanpa
+// mengubah laporan asli yang sedang diedit. Menangkap semua edit di form
+// (tanggal, DO, realisasi, prognosa, kendala, dukungan). Setelah tersimpan,
+// mode edit beralih ke salinan baru sehingga "Perbarui" berikutnya menyasar
+// salinan itu, bukan laporan asli.
+async function saveLaporanAsNew(){
+  const hint = document.getElementById('laporanFormHint');
+  const setHint = (msg) => { if (hint) hint.textContent = msg; };
+  const name = (typeof getUserName === 'function' && getUserName()) || '';
+  if (!name){ setHint('⚠ Isi nama Anda dulu (login) untuk menyimpan salinan.'); return; }
+  const built = buildLaporanModelFromForm();
+  if (built.error){ setHint('⚠ ' + built.error); return; }
+  laporanModel = built;
+  const editor = document.getElementById('laporanEditor');
+  if (editor) editor.style.display = '';
+  renderLaporanPreview();
+  const wilayah = (document.getElementById('laporanSaveWilayah').value || '').trim() || built.wilayah || '—';
+  const checkpoint = document.getElementById('laporanSaveDate').value || built.checkpoint_date || null;
+  const keterangan = (document.getElementById('laporanSaveKeterangan').value || '').trim();
+  const kendala = (document.getElementById('laporanKendala').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const dukungan = (document.getElementById('laporanDukungan').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+  const model = Object.assign({}, built, { wilayah, kendala, dukungan });
+  const id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('lap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8));
+  const row = { id, wilayah, checkpoint_date: checkpoint, keterangan, model, created_by: name, created_at: new Date().toISOString() };
+
+  if (!supabaseClient){ setHint('⚠ Koneksi Supabase belum siap, coba lagi sebentar.'); return; }
+  setHint('Menyimpan salinan…');
+  try {
+    const { error } = await supabaseClient.from('laporan_arsip').insert(row);
+    if (error){ setHint('⚠ Gagal menyimpan salinan: ' + error.message); return; }
+  } catch(e){ setHint('⚠ Gagal menyimpan salinan: ' + (e && e.message ? e.message : e)); return; }
+  const meta = { id, wilayah, checkpoint_date: checkpoint, keterangan, created_by: name, created_at: row.created_at };
+  laporanArsipState.items.unshift(meta);
+  _laporanArsipCache(laporanArsipState.items);
+  renderLaporanArsipFilters();
+  renderLaporanArsip();
+  // beralih mengedit salinan baru (bukan lagi laporan asli)
+  _setLaporanEditMode(id, wilayah);
+  setHint('✓ Salinan tersimpan sebagai laporan baru. Anda kini mengedit salinan tersebut.');
+}
+window.saveLaporanAsNew = saveLaporanAsNew;
 
 // Close the preview popup on backdrop click or Escape.
 (function initLaporanPreviewModal(){
