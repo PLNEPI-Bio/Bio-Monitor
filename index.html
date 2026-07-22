@@ -6976,7 +6976,9 @@ function _plantContractItemHtml(item){
   const annTag = item.years > 1 ? ' <span class="jenis-ann-tag" title="Volume disetahunkan: ' + fmtInt(+c.vol_mt || 0) + ' ÷ ' + item.years + ' thn">÷' + item.years + ' thn</span>' : '';
   const awal = c.awal ? fmtKontrakDate(c.awal) : '<span style="opacity:.45">—</span>';
   // Terminated contracts: akhir date is ignored (contract cut short), show a label.
-  const akhir = item.terminated
+  const akhir = c.cancelled
+    ? '<span style="opacity:.6">Dibatalkan</span>'
+    : item.terminated
     ? '<span style="opacity:.6">Diterminasi</span>'
     : (c.akhir ? fmtKontrakDate(c.akhir) : '<span style="opacity:.45">—</span>');
   let html = '<div class="jenis-item jenis-item-clickable' + (item.expired ? ' jenis-item-expired' : '') + '"' +
@@ -6986,7 +6988,8 @@ function _plantContractItemHtml(item){
     ' onclick="openJenisContract(this)" title="Klik untuk lihat detail realisasi kontrak">';
   html += '<div class="jenis-row">';
   html += '<span class="jenis-name">' + escapeHtml(c.pemasok || 'Tanpa Nama') +
-    (item.terminated ? ' <span class="jenis-expired-tag">DITERMINASI</span>'
+    (c.cancelled ? ' <span class="jenis-expired-tag">DIBATALKAN</span>'
+      : item.terminated ? ' <span class="jenis-expired-tag">DITERMINASI</span>'
       : item.expired ? ' <span class="jenis-expired-tag">EXPIRED</span>' : '') + '</span>';
   html += '<span class="jenis-meta">' + escapeHtml(c.jenis || '—') + annTag + '</span>';
   html += '</div>';
@@ -7055,6 +7058,23 @@ const PLTU_NAME_ALIASES = {
 function canonPltuName(name){
   const n = (name || '').toLowerCase().trim();
   return PLTU_NAME_ALIASES[n] || n;
+}
+// Contracts cancelled after signing. The source Excel has no marker for these
+// (unlike terminated = struck-through row), so they are patched in here after
+// every data load. `terminated` makes every active-contract filter skip them;
+// `cancelled` only switches the label to "Dibatalkan".
+const CONTRACT_CANCELLED = [
+  { pltu: 'ropa', pemasok: 'cv izam mandiri grup' },
+];
+function applyCancelledContracts(){
+  if (!DATA || !Array.isArray(DATA.contracts)) return;
+  for (const c of DATA.contracts){
+    const cp = canonPltuName(c.pltu);
+    const cs = (c.pemasok || '').toLowerCase().trim();
+    const hit = CONTRACT_CANCELLED.some(o =>
+      (cp === o.pltu || cp.startsWith(o.pltu) || o.pltu.startsWith(cp)) && cs === o.pemasok);
+    if (hit){ c.terminated = true; c.cancelled = true; }
+  }
 }
 function matchPlantContracts(plant, activeOnly){
   const out = [];
@@ -15431,6 +15451,7 @@ function applyDashboardData(newData, meta){
   });
   // V63: server pembangkit payload replaces DATA.pembangkit — re-merge diesel (PLTD).
   if (typeof applyDieselPembangkit === 'function') applyDieselPembangkit();
+  applyCancelledContracts();
   // Patch hardcoded coordinates that may be stale in Supabase data
   const COORD_OVERRIDES = {
     'Tarahan':        { lat: -5.468, lon: 105.322 },
