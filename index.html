@@ -1209,33 +1209,37 @@ html,body{
 .real-year-toggle button.active{color:var(--text-bright);background:var(--panel-3)}
 .real-year-toggle button:hover{color:var(--text)}
 
-.real-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
 .real-card{background:var(--panel);border:1px solid var(--border);padding:20px;position:relative;border-radius:12px;transition:box-shadow .2s}
-/* V60: section divider above the "Komposisi Jenis Biomassa" chart */
-.real-section-divider{border:0;border-top:3px solid var(--accent);margin:8px 0}
 .real-card:hover{box-shadow:var(--shadow-xs)}
 .real-card h3{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:14px;font-weight:700;display:flex;align-items:center}
 .real-card h3::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--accent);margin-right:9px;vertical-align:middle}
 
-/* Card head row: title + inline toggle.
+/* Card head row: title (left) + controls (right).
    V33: padding-right reserves space for the absolutely-positioned download
-   button (32px wide @ right:14px) so the "Show values" toggle doesn't
-   visually collide with it. Larger padding = clearer separation. */
+   button (32px wide @ right:14px) so the controls don't collide with it.
+   V65: single head component for every chart card in the Realisasi tab. */
 .real-card-head{
-  display:flex;justify-content:space-between;align-items:center;gap:14px;
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
   margin-bottom:14px;flex-wrap:wrap;padding-right:56px;
 }
-.real-card-head h3{margin-bottom:0}
+.real-card-head h3{margin-bottom:0;flex:1 1 auto;min-width:0}
+.real-card-head-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+/* V65: toggles are pills so they read as controls, not stray labels */
 .real-toggle-mini{
-  display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;
+  display:inline-flex;align-items:center;gap:7px;cursor:pointer;user-select:none;
   font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
-  letter-spacing:1px;text-transform:uppercase;
-  margin-right:14px; /* extra breathing room before the download button */
+  letter-spacing:1px;text-transform:uppercase;white-space:nowrap;
+  padding:6px 11px;border:1px solid var(--border);border-radius:999px;
+  background:var(--panel-3);transition:color .15s,border-color .15s;
 }
 .real-toggle-mini input[type="checkbox"]{
   width:13px;height:13px;cursor:pointer;accent-color:var(--accent);margin:0;
 }
-.real-toggle-mini:hover{color:var(--text-bright)}
+.real-toggle-mini:hover{color:var(--text-bright);border-color:var(--accent)}
+.real-card-note{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);
+  margin:-6px 0 14px;letter-spacing:.2px;
+}
 
 /* Chart download button */
 .chart-download-btn{
@@ -1782,24 +1786,6 @@ html,body{
   .chart-wrap.h360{height:280px}
 }
 
-/* Generic chart card head with toggles (used in Realisasi tab) */
-.chart-card-head{
-  display:flex;justify-content:space-between;align-items:center;gap:18px;
-  margin-bottom:16px;flex-wrap:wrap;padding-right:56px;
-}
-.chart-card-head h3{flex-shrink:0;min-width:0}
-.chart-toggle-group{
-  display:flex;flex-wrap:wrap;gap:6px 14px;
-  padding:7px 12px;background:var(--panel-3);border:1px solid var(--border);border-radius:8px;
-  margin-left:auto;margin-right:14px;
-}
-.chart-toggle{
-  display:inline-flex;align-items:center;gap:6px;cursor:pointer;
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;
-  color:var(--text);letter-spacing:1px;text-transform:uppercase;user-select:none;
-}
-.chart-toggle input[type="checkbox"]{width:14px;height:14px;cursor:pointer;accent-color:var(--accent)}
-
 /* Trend chart's optional data table (under Multi-Year Comparison chart) */
 .trend-table-wrap{display:none;margin-top:14px;border:1px solid var(--border);background:var(--panel-2)}
 .trend-table-wrap.shown{display:block}
@@ -1938,19 +1924,6 @@ html,body{
   background:var(--panel);border:1px solid var(--border);
   padding:18px 20px;margin-bottom:16px;border-radius:3px;
 }
-.kontrak-jenis-chart-head{
-  display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:14px;gap:14px;flex-wrap:wrap;
-}
-.kontrak-jenis-chart-head h3{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
-  color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;font-weight:600;
-}
-.kontrak-jenis-chart-head h3::before{
-  content:"";display:inline-block;width:10px;height:1px;
-  background:var(--accent);margin-right:8px;vertical-align:middle;
-}
-.kontrak-jenis-controls{display:flex;align-items:center;gap:10px}
 .kontrak-jenis-chart-grid{
   display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;
 }
@@ -3330,7 +3303,6 @@ html,body{
   .map-view.detail-open{grid-template-columns:220px 1fr 300px}
   .trends-panel{max-width:380px}
   .trends-panel.collapsed{max-width:200px}
-  .real-grid{grid-template-columns:1fr}
   .summary-stats{grid-template-columns:repeat(2,1fr)}
   .bn-view{grid-template-columns:1fr 320px 0px}
   .bn-view.bn-detail-open{grid-template-columns:1fr 320px 360px}
@@ -3344,6 +3316,8 @@ html,body{
   .updated-indicator{display:none}
   .real-grid-2{grid-template-columns:1fr}
   .real-view,.pareto-view{padding:16px}
+  .view[data-view="realisasi"] .real-header{padding:16px 0 10px}
+  .real-stickyhead{margin:0 -16px;padding:10px 16px 0}
   .recap-table th,.recap-table td{font-size:9px;padding:4px 3px}
 }
 
@@ -3478,6 +3452,7 @@ html,body{
   .chart-wrap.h280{height:220px}
   .chart-wrap.h220{height:180px}
   .chart-wrap.h-allpltu{height:720px}
+  .chart-wrap.h-allpltu-tall{height:820px}
   .real-recap-filters{gap:6px}
   .real-recap-filter{min-width:auto;flex:1 1 calc(50% - 3px)}
   .real-recap-filter select{min-width:auto;width:100%}
@@ -3772,26 +3747,53 @@ html,body{
   .alert-filter-btn{padding:5px 10px;font-size:9px;flex-shrink:0}
 }
 
-/* Realisasi tab: PLTU filter card (V26: dropdown layout) */
-.real-pltu-filter-card{padding:18px 22px;border-radius:12px}
-.real-pltu-filter-head{
-  margin-bottom:14px;
+/* Realisasi tab (V65): one sticky filter toolbar + section sub-tabs.
+   The toolbar scope applies to EVERY chart in the tab, ranking charts included. */
+/* Scroll-area top padding is moved onto the header so the sticky head below can
+   pin at y=0 with nothing showing above it. */
+.view[data-view="realisasi"] .real-view{display:block;padding-top:0}
+.view[data-view="realisasi"] .real-header{padding:20px 0 12px}
+/* Filter + sub-menu freeze together at the very top of the scroll area, flush
+   against the main tab bar. Negative side margins make the sticky background
+   bleed over the .real-view padding so cards never peek out beside it.
+   z-index must beat .real-card (position:relative, auto z-index). */
+.real-stickyhead{
+  position:sticky;top:0;z-index:30;background:var(--bg);
+  margin:0 -24px;padding:12px 24px 0;
+  box-shadow:0 10px 12px -12px rgba(0,0,0,.5);
 }
-.real-pltu-filter-head h3{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:2px;
-  color:var(--text-dim);text-transform:uppercase;font-weight:500;
+.real-toolbar{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  padding-bottom:12px;border-bottom:1px solid var(--border);
 }
-.real-pltu-filter-head h3::before{
-  content:"";display:inline-block;width:10px;height:1px;
-  background:var(--accent);margin-right:8px;vertical-align:middle;
+.real-toolbar-filters{display:flex;gap:12px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+.real-toolbar-filters .real-filter-cell{min-width:170px}
+.real-toolbar-filters .real-filter-cell:last-child{min-width:230px;flex:1 1 230px}
+.real-toolbar-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.real-toolbar-summary{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);
+  letter-spacing:.5px;
 }
-.real-pltu-filter-sub{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
-  letter-spacing:.3px;margin-top:4px;text-transform:none;
+.real-reset-btn{
+  background:var(--panel-3);border:1px solid var(--border);color:var(--text-dim);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;letter-spacing:1px;
+  text-transform:uppercase;padding:9px 14px;border-radius:8px;cursor:pointer;
+  transition:color .15s,border-color .15s;
 }
-.real-filter-row{
-  display:grid;grid-template-columns:1fr 2fr;gap:14px;
+.real-reset-btn:hover{color:var(--accent);border-color:var(--accent)}
+/* Section sub-tabs — same interaction as the Laporan tab's sub-menu */
+.real-subnav{display:flex;gap:4px;margin:0;border-bottom:1px solid var(--border)}
+.real-subtab{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;
+  padding:10px 18px;border:none;background:transparent;color:var(--text-dim);
+  cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color .15s,border-color .15s;
 }
+.real-subtab:hover{color:var(--text-bright)}
+.real-subtab.active{color:#10b981;border-bottom-color:#10b981}
+.real-subpanel{display:flex;flex-direction:column;gap:16px;margin-top:18px;padding-bottom:8px}
+/* Intelligence lives in its own panel now — drop the old inline separator */
+.real-subpanel .insights-inline-section{margin-top:0;padding-top:0;border-top:none}
 .real-filter-cell{display:flex;flex-direction:column;gap:5px}
 .real-filter-label{
   font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
@@ -3806,13 +3808,23 @@ html,body{
   background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;
 }
 .real-filter-select:hover,.real-filter-select:focus{border-color:var(--accent)}
-.real-pltu-filter-summary{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
-  margin-top:12px;text-align:right;letter-spacing:.5px;
-}
+.real-filter-select-sm{padding:7px 10px;padding-right:28px;font-size:10px;min-width:110px}
 @media (max-width:768px){
-  .real-filter-row{grid-template-columns:1fr;gap:10px}
-  .real-pltu-filter-card{padding:14px}
+  /* clear the fixed bottom nav so the last card stays scrollable */
+  .view[data-view="realisasi"] .real-view{padding-bottom:calc(76px + env(safe-area-inset-bottom,0))}
+  /* keep the frozen head compact: two selects side by side, no summary text */
+  .view[data-view="realisasi"] .real-header{padding:12px 0 8px}
+  .real-stickyhead{margin:0 -12px;padding:8px 12px 0}
+  .real-toolbar{gap:8px;padding-bottom:8px}
+  .real-toolbar-filters{gap:8px;width:100%}
+  .real-toolbar-filters .real-filter-cell,
+  .real-toolbar-filters .real-filter-cell:last-child{min-width:0;flex:1 1 40%}
+  .real-toolbar-summary{display:none}
+  .real-subnav{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .real-subtab{flex:1 0 auto;white-space:nowrap;padding:11px 14px;font-size:12px}
+  .real-card-head{padding-right:44px;gap:10px}
+  .real-card-head-controls{gap:6px}
+  .real-toggle-mini{padding:5px 9px;font-size:8px}
 }
 
 /* ================================================================
@@ -5201,16 +5213,13 @@ html,body{
       </div>
     </div>
 
-    <div class="real-card real-pltu-filter-card">
-      <div class="real-pltu-filter-head">
-        <div>
-          <h3 style="margin-bottom:0">Filter</h3>
-          <div class="real-pltu-filter-sub">Pengaruhi chart Multi-Year Comparison, Annual Total, Cumulative Realisasi, dan Contribution by Genco</div>
-        </div>
-      </div>
-      <div class="real-filter-row">
+    <!-- V65: toolbar filter + sub-menu membeku bersama di puncak area scroll,
+         menempel pada bar tab utama. Filter berlaku untuk SELURUH tab. -->
+    <div class="real-stickyhead">
+    <div class="real-toolbar">
+      <div class="real-toolbar-filters">
         <div class="real-filter-cell">
-          <label class="real-filter-label">Wilayah</label>
+          <label class="real-filter-label" for="realProvinceFilter">Wilayah</label>
           <select id="realProvinceFilter" class="real-filter-select">
             <option value="all">Semua Wilayah</option>
             <option value="jawa">Jawa</option>
@@ -5220,53 +5229,78 @@ html,body{
           </select>
         </div>
         <div class="real-filter-cell">
-          <label class="real-filter-label">PLTU</label>
+          <label class="real-filter-label" for="realPltuFilter">PLTU</label>
           <select id="realPltuFilter" class="real-filter-select">
             <option value="all">Semua PLTU</option>
           </select>
         </div>
       </div>
-      <div class="real-pltu-filter-summary" id="realPltuFilterSummary">—</div>
+      <div class="real-toolbar-right">
+        <span class="real-toolbar-summary" id="realPltuFilterSummary">—</span>
+        <button type="button" class="real-reset-btn" id="realFilterReset" title="Kembalikan ke Semua Wilayah &amp; Semua PLTU">↺ Reset</button>
+      </div>
     </div>
 
-    <div class="real-card">
-      <h3>Annual Summary</h3>
-      <div class="summary-stats" id="real-summary"></div>
+    <!-- Sub-menu seksi -->
+    <div class="real-subnav">
+      <button class="real-subtab active" data-realtab="ringkasan" onclick="setRealSubtab('ringkasan')">Ringkasan</button>
+      <button class="real-subtab" data-realtab="peringkat" onclick="setRealSubtab('peringkat')">Peringkat PLTU</button>
+      <button class="real-subtab" data-realtab="intel" onclick="setRealSubtab('intel')">Intelligence</button>
+    </div>
     </div>
 
-    <div class="real-grid">
+    <!-- ---------- Panel: Ringkasan ---------- -->
+    <div class="real-subpanel" data-realpanel="ringkasan">
       <div class="real-card">
-        <div class="chart-card-head">
-          <h3 style="margin-bottom:0">Monthly Realisasi · Multi-Year Comparison</h3>
-          <div class="chart-toggle-group">
-            <label class="chart-toggle">
-              <input type="checkbox" id="trend-show-values"> Show values
+        <h3>Annual Summary</h3>
+        <div class="summary-stats" id="real-summary"></div>
+      </div>
+
+      <div class="real-card">
+        <div class="real-card-head">
+          <h3>Monthly Realisasi · Multi-Year Comparison</h3>
+          <div class="real-card-head-controls">
+            <label class="real-toggle-mini">
+              <input type="checkbox" id="trend-show-values">
+              <span>Show values</span>
             </label>
-            <label class="chart-toggle">
-              <input type="checkbox" id="trend-show-points" checked> Show points
+            <label class="real-toggle-mini">
+              <input type="checkbox" id="trend-show-points" checked>
+              <span>Show points</span>
             </label>
-            <label class="chart-toggle">
-              <input type="checkbox" id="trend-show-table"> Show table
+            <label class="real-toggle-mini">
+              <input type="checkbox" id="trend-show-table">
+              <span>Show table</span>
             </label>
           </div>
         </div>
         <div class="chart-wrap h320"><canvas id="realTrendChart"></canvas></div>
         <div class="trend-table-wrap" id="trend-table-wrap"></div>
       </div>
-      <div class="real-card">
-        <div class="chart-card-head">
-          <h3 style="margin-bottom:0">Annual Total</h3>
-          <div class="chart-toggle-group">
-            <label class="chart-toggle">
-              <input type="checkbox" id="annual-show-values" checked> Show values
+
+      <div class="real-grid-2">
+        <div class="real-card">
+          <div class="real-card-head">
+            <h3>Annual Total</h3>
+            <label class="real-toggle-mini">
+              <input type="checkbox" id="annual-show-values" checked>
+              <span>Show values</span>
             </label>
           </div>
+          <div class="chart-wrap h320"><canvas id="realAnnualChart"></canvas></div>
         </div>
-        <div class="chart-wrap h320"><canvas id="realAnnualChart"></canvas></div>
+        <div class="real-card">
+          <div class="real-card-head">
+            <h3>Contribution by Genco</h3>
+            <label class="real-toggle-mini">
+              <input type="checkbox" id="gencoToggleValues">
+              <span>Show values</span>
+            </label>
+          </div>
+          <div class="chart-wrap h320"><canvas id="realGencoChart"></canvas></div>
+        </div>
       </div>
-    </div>
 
-    <div class="real-grid-2">
       <div class="real-card">
         <div class="real-card-head">
           <h3>Cumulative Realisasi</h3>
@@ -5275,83 +5309,57 @@ html,body{
             <span>Show values</span>
           </label>
         </div>
-        <div class="chart-wrap h280"><canvas id="realCumChart"></canvas></div>
+        <div class="chart-wrap h320"><canvas id="realCumChart"></canvas></div>
       </div>
+
+      <!-- V46: Pie chart — Komposisi Jenis Biomassa (moved from Daftar Kontrak) -->
       <div class="real-card">
         <div class="real-card-head">
-          <h3>Contribution by Genco</h3>
+          <h3>Komposisi Jenis Biomassa (Realisasi)</h3>
+          <div class="real-card-head-controls">
+            <label class="real-filter-label" for="kontrakJenisYearSel">Tahun</label>
+            <select id="kontrakJenisYearSel" class="real-filter-select real-filter-select-sm">
+              <option value="all">Semua</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+          </div>
+        </div>
+        <div class="real-card-note">Sumber: data Daftar Kontrak (nasional) — tidak mengikuti filter Wilayah/PLTU di atas.</div>
+        <div class="kontrak-jenis-chart-grid">
+          <div class="chart-wrap h320"><canvas id="kontrakJenisPieCanvas"></canvas></div>
+          <div class="kontrak-jenis-legend" id="kontrakJenisLegend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- Panel: Peringkat PLTU ---------- -->
+    <div class="real-subpanel" data-realpanel="peringkat" style="display:none">
+      <div class="real-card">
+        <div class="real-card-head">
+          <h3>All PLTU by Achievement Ratio (2025) · Ranked Real vs Target</h3>
           <label class="real-toggle-mini">
-            <input type="checkbox" id="gencoToggleValues">
+            <input type="checkbox" id="achToggleValues25">
             <span>Show values</span>
           </label>
         </div>
-        <div class="chart-wrap h280"><canvas id="realGencoChart"></canvas></div>
+        <div class="chart-wrap h-allpltu-tall"><canvas id="realTopChart"></canvas></div>
+      </div>
+      <div class="real-card">
+        <div class="real-card-head">
+          <h3>All PLTU by Achievement Ratio (2026 YTD) · Ranked Real vs Target</h3>
+          <label class="real-toggle-mini">
+            <input type="checkbox" id="achToggleValues26">
+            <span>Show values</span>
+          </label>
+        </div>
+        <div class="chart-wrap h-allpltu-tall"><canvas id="realTopChart26"></canvas></div>
       </div>
     </div>
 
-    <!-- V46: Pie chart — Komposisi Jenis Biomassa (moved from Daftar Kontrak) -->
-    <hr class="real-section-divider">
-    <div class="real-card">
-      <div class="kontrak-jenis-chart-head">
-        <h3 style="margin:0">Komposisi Jenis Biomassa (Realisasi)</h3>
-        <div class="kontrak-jenis-controls">
-          <label class="pareto-control-label">Tahun</label>
-          <select id="kontrakJenisYearSel" class="pareto-month-select" style="min-width:100px">
-            <option value="all">Semua</option>
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-            <option value="2026" selected>2026</option>
-          </select>
-        </div>
-      </div>
-      <div class="kontrak-jenis-chart-grid">
-        <div class="chart-wrap h320"><canvas id="kontrakJenisPieCanvas"></canvas></div>
-        <div class="kontrak-jenis-legend" id="kontrakJenisLegend"></div>
-      </div>
-    </div>
-
-    <hr class="real-section-divider">
-    <div class="real-card">
-      <div class="real-pltu-filter-head">
-        <div>
-          <h3 style="margin-bottom:0">Filter Wilayah · Achievement Ratio</h3>
-          <div class="real-pltu-filter-sub">Pengaruhi chart All PLTU by Achievement Ratio (2025 &amp; 2026 YTD)</div>
-        </div>
-      </div>
-      <div class="real-filter-row">
-        <div class="real-filter-cell">
-          <label class="real-filter-label">Wilayah</label>
-          <select id="achWilayahFilter" class="real-filter-select">
-            <option value="all">Semua Wilayah</option>
-            <option value="jawa">Jawa</option>
-            <option value="sumatera">Sumatera</option>
-            <option value="kalimantan">Kalimantan</option>
-            <option value="sulmapana">Sulmapana (Sulawesi · Papua · Nusa Tenggara)</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="real-card">
-      <div class="real-card-head">
-        <h3>All PLTU by Achievement Ratio (2025) · Ranked Real vs Target</h3>
-        <label class="real-toggle-mini">
-          <input type="checkbox" id="achToggleValues25">
-          <span>Show values</span>
-        </label>
-      </div>
-      <div class="chart-wrap h-allpltu-tall"><canvas id="realTopChart"></canvas></div>
-    </div>
-    <div class="real-card">
-      <div class="real-card-head">
-        <h3>All PLTU by Achievement Ratio (2026 YTD) · Ranked Real vs Target</h3>
-        <label class="real-toggle-mini">
-          <input type="checkbox" id="achToggleValues26">
-          <span>Show values</span>
-        </label>
-      </div>
-      <div class="chart-wrap h-allpltu-tall"><canvas id="realTopChart26"></canvas></div>
-    </div>
-
+    <!-- ---------- Panel: Intelligence ---------- -->
+    <div class="real-subpanel" data-realpanel="intel" style="display:none">
     <!-- V47: Insights content moved here from standalone tab -->
     <div class="insights-inline-section">
       <div class="insights-header">
@@ -5413,6 +5421,7 @@ html,body{
         </div>
         <div class="alert-feed" id="alertFeed"></div>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -6493,7 +6502,8 @@ const state = {
   // V26: simple single-select filters for Realisasi tab
   realPltuFilterPltu: 'all',       // PLTU code or 'all'
   realPltuFilterProvince: 'all',   // 'all' | 'jawa' | 'sumatera' | 'kalimantan' | 'sulmapana'
-  achWilayahFilter: 'all',         // 'all' | 'jawa' | 'sumatera' | 'kalimantan' | 'sulmapana' — Achievement Ranking charts
+  // V65: Realisasi tab section sub-menu — 'ringkasan' | 'tren' | 'peringkat' | 'intel'
+  realSubtab: 'ringkasan',
 };
 
 // ========= utils =========
@@ -9359,8 +9369,37 @@ function buildRealPltuFilter(){
     };
     pltuSel.dataset.wired = '1';
   }
+  const resetBtn = document.getElementById('realFilterReset');
+  if (resetBtn && !resetBtn.dataset.wired){
+    resetBtn.onclick = () => {
+      state.realPltuFilterProvince = 'all';
+      state.realPltuFilterPltu = 'all';
+      provSel.value = 'all';
+      populatePltuOptions();
+      rerenderRealCharts();
+    };
+    resetBtn.dataset.wired = '1';
+  }
   populatePltuOptions();
 }
+
+// V65: Realisasi tab section sub-menu (same interaction as setLaporanSubtab).
+// Charts are (re)built after the panel is visible so canvases get real sizes.
+const REAL_SUBTABS = ['ringkasan','peringkat','intel'];
+function setRealSubtab(tab){
+  state.realSubtab = REAL_SUBTABS.includes(tab) ? tab : 'ringkasan';
+  document.querySelectorAll('.real-subtab').forEach(b =>
+    b.classList.toggle('active', b.dataset.realtab === state.realSubtab));
+  document.querySelectorAll('.real-subpanel').forEach(p => {
+    p.style.display = (p.dataset.realpanel === state.realSubtab) ? '' : 'none';
+  });
+  rerenderRealCharts();
+  // Newly revealed cards need their PNG download button injected.
+  if (typeof window.refreshDownloadButtons === 'function'){
+    setTimeout(window.refreshDownloadButtons, 60);
+  }
+}
+window.setRealSubtab = setRealSubtab;
 
 // Get the list of plants that pass the Realisasi tab filters
 function realFilteredPlants(){
@@ -9382,6 +9421,9 @@ function rerenderRealCharts(){
   renderRealView();
 }
 
+// V65: renders the Realisasi tab. Only the charts of the ACTIVE sub-tab are
+// built — a hidden canvas has no size, so building it there would produce a
+// squashed chart. setRealSubtab() re-runs this after switching panels.
 function renderRealView(){
   // V26: PLTU + Province filter - if a subset is selected, only aggregate those.
   const filteredPlants = realFilteredPlants();
@@ -9397,7 +9439,15 @@ function renderRealView(){
 
   // Build & wire the PLTU filter UI (idempotent)
   buildRealPltuFilter();
+  const subtab = state.realSubtab;
+  realInit = true;
 
+  if (subtab === 'intel'){
+    if (typeof renderInsightsView === 'function') renderInsightsView();
+  }
+
+  // ===== Sub-tab: Ringkasan — summary cards, Annual Total, Contribution by Genco =====
+  if (subtab === 'ringkasan'){
   // Summary stats
   const stats = [
     { label:'2023 Total', value: yearSums['2023'], prev: null, color:'#64748b' },
@@ -9441,7 +9491,7 @@ function renderRealView(){
       }
     });
   }
-
+  // ----- Monthly Realisasi · Multi-Year Comparison (+ optional data table) -----
   // Plugin: draw values above each line point (theme-aware, color matches dataset)
   const trendValuesPlugin = {
     id: 'trendValues',
@@ -9454,7 +9504,7 @@ function renderRealView(){
       ctx.textBaseline = 'bottom';
       data.datasets.forEach((ds, dsIdx) => {
         const meta = chart.getDatasetMeta(dsIdx);
-        const color = ds.borderColor || '#cbd5e1';
+        const color = ds.borderColor || (isLight() ? '#0F496E' : '#cbd5e1');
         ctx.fillStyle = color;
         ds.data.forEach((v, i) => {
           if (v === null || v === undefined || v === 0) return;
@@ -9485,12 +9535,13 @@ function renderRealView(){
       interaction:{ mode:'index', intersect:false },
       layout:{ padding:{ top: 14 } },
       plugins:{
-        legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:11, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:16, boxHeight:2, padding:16 } },
+        // colors omitted → Chart.defaults from applyChartThemeDefaults() (theme-aware)
+        legend:{ display:true, position:'bottom', labels:{ font:{size:11, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:16, boxHeight:2, padding:16 } },
         tooltip:{ callbacks:{ label: c => c.dataset.label + ': ' + fmtInt(c.parsed.y) + ' ton' } }
       },
       scales:{
-        x:{ grid:{ color:'#1a2530',drawBorder:false }, ticks:{ color:'#64748b', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"} } },
-        y:{ grid:{ color:'#1a2530',drawBorder:false }, ticks:{ color:'#64748b', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, callback: v => fmt(v) } }
+        x:{ grid:{ drawBorder:false }, ticks:{ font:{size:10, family:"'Plus Jakarta Sans', sans-serif"} } },
+        y:{ grid:{ drawBorder:false }, ticks:{ font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, callback: v => fmt(v) } }
       }
     },
     plugins: [trendValuesPlugin]
@@ -9499,6 +9550,7 @@ function renderRealView(){
   // Render data table under the chart (visibility toggled via state.trendShowTable)
   renderTrendTable(yearTotals);
 
+  // ----- Annual Total -----
   // Plugin: draw values above bars in Annual Total chart
   const annualValuesPlugin = {
     id: 'annualValues',
@@ -9514,7 +9566,7 @@ function renderRealView(){
         if (v === null || v === undefined) return;
         const bar = meta.data[i];
         if (!bar) return;
-        const color = (data.datasets[0].backgroundColor && data.datasets[0].backgroundColor[i]) || '#cbd5e1';
+        const color = (data.datasets[0].backgroundColor && data.datasets[0].backgroundColor[i]) || (isLight() ? '#0F496E' : '#cbd5e1');
         ctx.fillStyle = color;
         ctx.fillText(fmtInt(v), bar.x, bar.y - 6);
       });
@@ -9542,13 +9594,14 @@ function renderRealView(){
         tooltip:{ callbacks:{ label: c => fmtInt(c.parsed.y) + ' ton' } }
       },
       scales:{
-        x:{ grid:{ display:false }, ticks:{ color:'#cbd5e1', font:{size:11, family:"'Plus Jakarta Sans', sans-serif"} } },
-        y:{ grid:{ color:'#1a2530',drawBorder:false }, ticks:{ color:'#64748b', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, callback: v => fmt(v) } }
+        x:{ grid:{ display:false }, ticks:{ font:{size:11, family:"'Plus Jakarta Sans', sans-serif"} } },
+        y:{ grid:{ drawBorder:false }, ticks:{ font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, callback: v => fmt(v) } }
       }
     },
     plugins: [annualValuesPlugin]
   });
 
+  // ----- Cumulative Realisasi -----
   // Cumulative chart - wrapped in function so toggle can re-render
   const cumMk = arr => { let s=0; return arr.map(v => (s+=v, s)); };
   function buildCumChart(showValues){
@@ -9600,12 +9653,12 @@ function renderRealView(){
         interaction:{ mode:'index', intersect:false },
         layout: { padding: { right: showValues ? 70 : 12 } },
         plugins:{
-          legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:14, boxHeight:2, padding:12 } },
+          legend:{ display:true, position:'bottom', labels:{ font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:14, boxHeight:2, padding:12 } },
           tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${fmtInt(c.parsed.y)} ton` } }
         },
         scales:{
-          x:{ grid:{ display:false }, ticks:{ color:'#64748b', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"} } },
-          y:{ grid:{ color:'#1a2530' }, ticks:{ color:'#64748b', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, callback: v => fmt(v) } }
+          x:{ grid:{ display:false }, ticks:{ font:{size:10, family:"'Plus Jakarta Sans', sans-serif"} } },
+          y:{ ticks:{ font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, callback: v => fmt(v) } }
         }
       },
       plugins: [cumValuesPlugin]
@@ -9617,12 +9670,14 @@ function renderRealView(){
     cumToggle.onchange = () => buildCumChart(cumToggle.checked);
     cumToggle.dataset.wired = '1';
   }
+  } // end Ringkasan (summary, trend, annual, cumulative — Genco + pie below)
 
-  // Top 10 plants by Achievement Ratio (Real/Target) - helper
+  // ===== Sub-tab: Peringkat PLTU — Achievement Ratio 2025 & 2026 YTD =====
+  if (subtab === 'peringkat'){
+  // Rank every filtered PLTU by Achievement Ratio (Real/Target) - helper
   function buildAchievementRanking(year, canvasId, chartKey, showValues){
-    // Rank ALL PLTU by Real/Target ratio (plants without target go at the bottom with 0%)
-    const ranked = DATA.plants
-      .filter(p => plantInProvince(p, state.achWilayahFilter))
+    // V65: same Wilayah/PLTU scope as the rest of the tab (single global filter)
+    const ranked = realFilteredPlants()
       .map(p => {
         const real = (p.historical_real[year]||[]).reduce((a,b)=>a+b,0);
         const target = ((p.historical_target && p.historical_target[year])||[]).reduce((a,b)=>a+b,0);
@@ -9738,20 +9793,6 @@ function renderRealView(){
   buildAchievementRanking('2025', 'realTopChart', 'top', show25);
   buildAchievementRanking('2026', 'realTopChart26', 'top26', show26);
 
-  // Wire Wilayah filter (shared by both Achievement Ranking charts)
-  const achWilayahSel = document.getElementById('achWilayahFilter');
-  if (achWilayahSel){
-    achWilayahSel.value = state.achWilayahFilter;
-    if (!achWilayahSel.dataset.wired){
-      achWilayahSel.onchange = () => {
-        state.achWilayahFilter = achWilayahSel.value;
-        buildAchievementRanking('2025', 'realTopChart', 'top', ach25Toggle ? ach25Toggle.checked : false);
-        buildAchievementRanking('2026', 'realTopChart26', 'top26', ach26Toggle ? ach26Toggle.checked : false);
-      };
-      achWilayahSel.dataset.wired = '1';
-    }
-  }
-
   // Wire toggles to re-render
   if (ach25Toggle){
     ach25Toggle.onchange = () => buildAchievementRanking('2025', 'realTopChart', 'top', ach25Toggle.checked);
@@ -9759,7 +9800,10 @@ function renderRealView(){
   if (ach26Toggle){
     ach26Toggle.onchange = () => buildAchievementRanking('2026', 'realTopChart26', 'top26', ach26Toggle.checked);
   }
+  } // end Achievement Ranking
 
+  // ===== Sub-tab: Ringkasan (cont.) — Contribution by Genco =====
+  if (subtab === 'ringkasan'){
   // Genco breakdown per year — respects the Wilayah/PLTU filter (uses filteredPlants).
   const gencos = ['PNP','PIP','UIW','UIK'];
   const yearGencoTotals = {};
@@ -9841,12 +9885,12 @@ function renderRealView(){
         responsive:true, maintainAspectRatio:false,
         layout:{ padding:{ top: showValues ? 28 : 0 } },
         plugins:{
-          legend:{ display:true, position:'bottom', labels:{ color:'#cbd5e1', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:12, boxHeight:12, padding:14 } },
+          legend:{ display:true, position:'bottom', labels:{ font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:12, boxHeight:12, padding:14 } },
           tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${fmtInt(c.parsed.y)} ton` } }
         },
         scales:{
-          x:{ stacked:true, grid:{ display:false }, ticks:{ color:'#cbd5e1', font:{size:11, family:"'Plus Jakarta Sans', sans-serif"} } },
-          y:{ stacked:true, grid:{ color:'#1a2530' }, ticks:{ color:'#64748b', font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, callback: v => fmt(v) } }
+          x:{ stacked:true, grid:{ display:false }, ticks:{ font:{size:11, family:"'Plus Jakarta Sans', sans-serif"} } },
+          y:{ stacked:true, ticks:{ font:{size:10, family:"'Plus Jakarta Sans', sans-serif"}, callback: v => fmt(v) } }
         }
       },
       plugins: [gencoValuesPlugin]
@@ -9858,6 +9902,13 @@ function renderRealView(){
     gencoToggle.onchange = () => buildGencoChart(gencoToggle.checked);
     gencoToggle.dataset.wired = '1';
   }
+  // Pie "Komposisi Jenis Biomassa" also lives in this panel. Rebuilt on every
+  // visit because a chart drawn while its panel was hidden keeps a 0-size canvas.
+  if (typeof renderKontrakJenisPie === 'function'){
+    wireKontrakJenisYearSel();
+    renderKontrakJenisPie();
+  }
+  } // end Contribution by Genco
 
   // Wire toggle checkboxes for trend & annual chart labels (first-time bind only)
   const trendValuesChk = document.getElementById('trend-show-values');
@@ -11674,6 +11725,9 @@ function fmtK(v){
 
 // ========= TAB SWITCHING =========
 let rekapInit = false;
+// V65: Realisasi tab lazy-init flag. Can't key off realCharts.trend anymore —
+// the trend chart lives in a sub-tab that isn't the default one.
+let realInit = false;
 let kontrakInit = false;
 let usulanInit = false;
 let updateInit = false;
@@ -11726,7 +11780,7 @@ function switchTab(tab){
   }
 
   // V54: Show skeleton loading for tabs that haven't been initialized yet
-  if (tab === 'realisasi' && !realCharts.trend){
+  if (tab === 'realisasi' && !realInit){
     const rs = document.getElementById('real-summary');
     if (rs) rs.innerHTML = skeletonHTML('cards');
   }
@@ -11740,13 +11794,8 @@ function switchTab(tab){
   }
 
   // Lazy init - MUST happen after view becomes visible so maps get proper dimensions
-  if (tab === 'realisasi' && !realCharts.trend){
-    setTimeout(() => {
-      renderRealView();
-      wireKontrakJenisYearSel();
-      renderKontrakJenisPie();
-      if (typeof renderInsightsView === 'function') renderInsightsView();
-    }, 30);
+  if (tab === 'realisasi' && !realInit){
+    setTimeout(() => { renderRealView(); }, 30);
   }
   if (tab === 'rekap' && !rekapInit){
     buildRealFilters();
@@ -19821,6 +19870,8 @@ window.addEventListener('DOMContentLoaded', () => {
   function refreshDownloadButtons(){
     document.querySelectorAll('.real-view .real-card, .pareto-view .real-card').forEach(injectDownloadButton);
   }
+  // V65: setRealSubtab() calls this after revealing a section's cards.
+  window.refreshDownloadButtons = refreshDownloadButtons;
   // Inject on tab clicks (after lazy init has painted the charts)
   document.querySelectorAll('.tab').forEach(tabBtn => {
     tabBtn.addEventListener('click', () => {
@@ -19933,7 +19984,7 @@ window.addEventListener('DOMContentLoaded', () => {
       // Re-render charts that are already on screen with new colors
       applyChartThemeDefaults(next);
       // Re-render Realisasi and Pareto if those views have been initialized
-      if (realCharts.trend) { try { renderRealView(); } catch(e){ console.error(e); } }
+      if (realInit) { try { renderRealView(); } catch(e){ console.error(e); } }
       if (paretoCharts.main) { try { renderParetoView(); } catch(e){ console.error(e); } }
     };
   }
