@@ -3069,6 +3069,7 @@ html,body{
 .fas-vol-table td.podt-do{color:#a855f7}
 .fas-vol-table td.podt-real{color:var(--accent)}
 .fas-vol-table td.dim{color:var(--text-dim);opacity:.4}
+.fas-vol-table td.man{text-decoration:underline dotted;text-underline-offset:3px;text-decoration-thickness:1px}
 .fas-vol-table tfoot td{font-weight:700;border-top:2px solid var(--accent);background:var(--panel-3)}
 .fas-vol-table input{
   width:72px;text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
@@ -5300,7 +5301,7 @@ html,body{
       <div class="fas-modal-body">
         <label class="fas-field" style="max-width:180px"><span>Tahun</span>
           <select id="fasVolYearSel"></select></label>
-        <div class="fas-vol-note">DO &amp; Realisasi dalam ton. Kosongkan bila belum ada data.</div>
+        <div class="fas-vol-note">DO &amp; Realisasi dalam ton. Angka <b>⟳</b> pucat = nilai otomatis dari kontrak — biarkan kosong untuk memakainya, atau isi untuk <b>menimpa</b> (mis. bulan yang realisasinya masih kosong).</div>
         <table class="fas-vol-table" id="fasVolTable"></table>
         <div class="fas-modal-err" id="fasVolModalErr"></div>
       </div>
@@ -18063,6 +18064,7 @@ const FAS_VOL_YEARS = ['2023','2024','2025','2026'];
 let fasDetailVolYear = '2026';   // tahun aktif di panel detail
 let fasVolTarget = null;         // fasilitas yang volumenya sedang diedit
 let fasVolWorking = {};          // salinan kerja { tahun: {do:[], real:[]} }
+let fasVolAutoRef = null;        // V70: cache auto-volume utk placeholder di modal
 let fasVolWired = false;
 
 function _fasExt(nama){ return (fasilitasCustomData && fasilitasCustomData[nama]) || {}; }
@@ -18200,7 +18202,7 @@ function fasKontrakVolumeSectionsHTML(f){
     ? '<span class="fas-vol-badge auto">⟳ Otomatis · ' + auto.matched.length + ' kontrak</span>'
     : '<span class="fas-vol-badge manual">Manual</span>';
   const volNote = auto
-    ? 'Ditarik otomatis dari Daftar Kontrak — dicocokkan lewat Nomor Kontrak + PLTU Terpasok.'
+    ? 'Ditarik otomatis dari Daftar Kontrak (cocok Nomor Kontrak + PLTU). Nilai bergaris bawah = input manual yang menimpa bulan kosong. Klik “Edit Volume” untuk menambah.'
     : 'Belum ada kontrak cocok di Daftar Kontrak. Isi manual via “Edit Volume”, atau samakan Nomor Kontrak & PLTU Terpasok dengan Daftar Kontrak.';
   html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
   html += '<div class="fas-vol-head">';
@@ -18208,7 +18210,7 @@ function fasKontrakVolumeSectionsHTML(f){
   html += '<div style="display:flex;align-items:center;gap:6px">';
   html += '<select class="fas-vol-yearsel" id="fasDetailVolYearSel">' +
     FAS_VOL_YEARS.map(y => '<option value="' + y + '"' + (y === fasDetailVolYear ? ' selected' : '') + '>' + y + '</option>').join('') + '</select>';
-  if (!auto) html += '<button class="fas-vol-edit-btn" id="fasVolEditBtn">✎ Edit Volume</button>';
+  html += '<button class="fas-vol-edit-btn" id="fasVolEditBtn">✎ Edit Volume</button>';
   html += '</div></div>';
   html += '<div class="fas-vol-note">' + volNote + '</div>';
   html += '<div id="fasVolDetailTableWrap">' + fasVolDetailTableHTML(f.nama, fasDetailVolYear) + '</div>';
@@ -18217,28 +18219,42 @@ function fasKontrakVolumeSectionsHTML(f){
   return html;
 }
 
-// Tabel volume (read-only) untuk panel detail.
-// V68: bila ada kontrak cocok di Daftar Kontrak, data ditarik otomatis;
-// jika tidak, jatuh ke data manual (fasilitasCustomData.volume).
-function fasVolDetailTableHTML(nama, year){
+// V70: Nilai efektif per bulan = gabungan otomatis (kontrak) + manual.
+// Manual (>0) MENIMPA nilai otomatis di bulan itu — dipakai mengisi bulan
+// yang realisasi otomatisnya masih kosong. src: 'manual' | 'auto' | 'none'.
+function fasVolEffective(nama, year){
   const auto = fasAutoVolume(nama);
-  let doArr, realArr;
-  if (auto){
-    const v = auto.byYear[year] || {};
-    doArr = v.do || []; realArr = v.real || [];
-  } else {
-    const ext = _fasExt(nama);
-    const v = (ext.volume && ext.volume[year]) || {};
-    doArr = v.do || []; realArr = v.real || [];
+  const aY = auto ? (auto.byYear[year] || {}) : {};
+  const aDo = aY.do || [], aReal = aY.real || [];
+  const man = (_fasExt(nama).volume || {})[year] || {};
+  const mDo = man.do || [], mReal = man.real || [];
+  const doArr = [], realArr = [], doSrc = [], realSrc = [];
+  for (let i = 0; i < 12; i++){
+    const md = +mDo[i] || 0, ad = +aDo[i] || 0;
+    const mr = +mReal[i] || 0, ar = +aReal[i] || 0;
+    doArr[i]   = md > 0 ? md : ad;  doSrc[i]   = md > 0 ? 'manual' : (ad > 0 ? 'auto' : 'none');
+    realArr[i] = mr > 0 ? mr : ar;  realSrc[i] = mr > 0 ? 'manual' : (ar > 0 ? 'auto' : 'none');
   }
+  return { doArr, realArr, doSrc, realSrc, hasAuto: !!auto };
+}
+
+// Tabel volume (read-only) untuk panel detail. V70: sel manual ditandai.
+function fasVolDetailTableHTML(nama, year){
+  const eff = fasVolEffective(nama, year);
+  const { doArr, realArr, doSrc, realSrc } = eff;
+  const cell = (val, src, cls) => {
+    const man = src === 'manual';
+    const c = cls + (val ? '' : ' dim') + (man ? ' man' : '');
+    const tip = man ? ' title="Input manual"' : '';
+    return '<td class="' + c + '"' + tip + '>' + (val ? fmtInt(val) : '—') + '</td>';
+  };
   let doTot = 0, realTot = 0;
   let h = '<table class="fas-vol-table"><thead><tr><th>Bulan</th><th>DO</th><th>Real</th></tr></thead><tbody>';
   for (let i = 0; i < 12; i++){
-    const d = doArr[i] || 0, r = realArr[i] || 0;
-    doTot += d; realTot += r;
+    doTot += doArr[i] || 0; realTot += realArr[i] || 0;
     h += '<tr><td>' + MONTHS[i] + '</td>' +
-      '<td class="podt-do' + (d ? '' : ' dim') + '">' + (d ? fmtInt(d) : '—') + '</td>' +
-      '<td class="podt-real' + (r ? '' : ' dim') + '">' + (r ? fmtInt(r) : '—') + '</td></tr>';
+      cell(doArr[i] || 0, doSrc[i], 'podt-do') +
+      cell(realArr[i] || 0, realSrc[i], 'podt-real') + '</tr>';
   }
   h += '</tbody><tfoot><tr><td>Total</td>' +
     '<td class="podt-do' + (doTot ? '' : ' dim') + '">' + (doTot ? fmtInt(doTot) : '—') + '</td>' +
@@ -18273,6 +18289,7 @@ function buildFasPltuTerpasokOptions(selected){
 function openFasVolModal(f){
   fasVolTarget = f;
   const ext = _fasExt(f.nama);
+  fasVolAutoRef = fasAutoVolume(f.nama); // V70: utk placeholder nilai otomatis
   fasVolWorking = {};
   FAS_VOL_YEARS.forEach(y => {
     const v = (ext.volume && ext.volume[y]) || {};
@@ -18310,11 +18327,16 @@ function renderFasVolModalTable(year){
   const tbl = document.getElementById('fasVolTable');
   if (!tbl) return;
   const w = fasVolWorking[year] || { do: [], real: [] };
+  // V70: nilai otomatis (dari kontrak) ditampilkan sebagai placeholder — biarkan
+  // input kosong untuk memakai nilai otomatis; isi untuk menimpa bulan tsb.
+  const aY = fasVolAutoRef ? (fasVolAutoRef.byYear[year] || {}) : {};
+  const aDo = aY.do || [], aReal = aY.real || [];
+  const ph = (v) => (v ? ' placeholder="⟳ ' + fmtInt(v) + '" title="Nilai otomatis dari kontrak: ' + fmtInt(v) + ' — kosongkan untuk memakainya"' : '');
   let h = '<thead><tr><th>Bulan</th><th>DO</th><th>Real</th></tr></thead><tbody>';
   for (let i = 0; i < 12; i++){
     h += '<tr><td>' + MONTHS[i] + '</td>' +
-      '<td><input type="number" step="any" min="0" id="fasVolDo_' + i + '" value="' + (w.do[i] || '') + '"></td>' +
-      '<td><input type="number" step="any" min="0" id="fasVolReal_' + i + '" value="' + (w.real[i] || '') + '"></td></tr>';
+      '<td><input type="number" step="any" min="0" id="fasVolDo_' + i + '" value="' + (w.do[i] || '') + '"' + ph(aDo[i] || 0) + '></td>' +
+      '<td><input type="number" step="any" min="0" id="fasVolReal_' + i + '" value="' + (w.real[i] || '') + '"' + ph(aReal[i] || 0) + '></td></tr>';
   }
   h += '</tbody>';
   tbl.innerHTML = h;
