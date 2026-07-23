@@ -3049,6 +3049,9 @@ html,body{
   padding:3px 6px;border:1px solid var(--border);border-radius:5px;background:var(--panel);color:var(--text);
 }
 .fas-vol-note{font-size:10px;color:var(--text-dim);margin:6px 0 2px}
+.fas-vol-badge{font-size:8.5px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding:2px 7px;border-radius:10px;white-space:nowrap}
+.fas-vol-badge.auto{color:var(--accent);background:rgba(20,184,166,.14);border:1px solid rgba(20,184,166,.35)}
+.fas-vol-badge.manual{color:var(--text-dim);background:var(--panel-3);border:1px solid var(--border)}
 .fas-vol-edit-btn{
   padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;
   color:var(--text-dim);font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;cursor:pointer;
@@ -18048,6 +18051,43 @@ let fasVolWired = false;
 
 function _fasExt(nama){ return (fasilitasCustomData && fasilitasCustomData[nama]) || {}; }
 
+// V68: Kontrak di Daftar Kontrak yang cocok dengan fasilitas ini —
+// dicocokkan lewat Nomor Kontrak (wajib) + PLTU Terpasok (bila diisi).
+// Normalisasi memakai helper yang sama dgn modul DO (_doNormK) & PLTU (canonPltuName).
+function fasMatchedContracts(nama){
+  const ext = _fasExt(nama);
+  const nomor = (ext.kontrak && ext.kontrak.nomor) ? String(ext.kontrak.nomor).trim() : '';
+  if (!nomor) return [];
+  const key = _doNormK(nomor);
+  const pltuList = Array.isArray(ext.pltuTerpasok) ? ext.pltuTerpasok : [];
+  const pltuSet = pltuList.length ? new Set(pltuList.map(p => canonPltuName(p))) : null;
+  const all = (DATA && DATA.contracts) || [];
+  return all.filter(c => _doNormK(c.kontrak) === key &&
+    (!pltuSet || pltuSet.has(canonPltuName(c.pltu))));
+}
+
+// V68: Volume terpasok yang ditarik otomatis dari kontrak-kontrak cocok.
+// Menjumlahkan DO efektif (getContractDO) & Realisasi per bulan per tahun.
+// Mengembalikan { byYear:{tahun:{do:[12],real:[12]}}, matched:[...] } atau null.
+function fasAutoVolume(nama){
+  const matched = fasMatchedContracts(nama);
+  if (!matched.length) return null;
+  const byYear = {};
+  FAS_VOL_YEARS.forEach(y => { byYear[y] = { do: new Array(12).fill(0), real: new Array(12).fill(0) }; });
+  matched.forEach(c => {
+    const doMap = getContractDO(c) || {};
+    FAS_VOL_YEARS.forEach(y => {
+      const rArr = (c.realisasi && c.realisasi[y]) || [];
+      const dArr = doMap[y] || [];
+      for (let i = 0; i < 12; i++){
+        byYear[y].do[i] += (+dArr[i] || 0);
+        byYear[y].real[i] += (+rArr[i] || 0);
+      }
+    });
+  });
+  return { byYear, matched };
+}
+
 // HTML tiga seksi baru untuk panel detail (dipakai curated + added).
 function fasKontrakVolumeSectionsHTML(f){
   const ext = _fasExt(f.nama);
@@ -18076,16 +18116,24 @@ function fasKontrakVolumeSectionsHTML(f){
   }
   html += '</div></div>';
 
-  // --- Volume terpasok (pemilih tahun + tombol edit) ---
+  // --- Volume terpasok (pemilih tahun; V68: otomatis dari Daftar Kontrak) ---
   if (!FAS_VOL_YEARS.includes(fasDetailVolYear)) fasDetailVolYear = FAS_VOL_YEARS[FAS_VOL_YEARS.length - 1];
+  const auto = fasAutoVolume(f.nama);
+  const volBadge = auto
+    ? '<span class="fas-vol-badge auto">⟳ Otomatis · ' + auto.matched.length + ' kontrak</span>'
+    : '<span class="fas-vol-badge manual">Manual</span>';
+  const volNote = auto
+    ? 'Ditarik otomatis dari Daftar Kontrak — dicocokkan lewat Nomor Kontrak + PLTU Terpasok.'
+    : 'Belum ada kontrak cocok di Daftar Kontrak. Isi manual via “Edit Volume”, atau samakan Nomor Kontrak & PLTU Terpasok dengan Daftar Kontrak.';
   html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
   html += '<div class="fas-vol-head">';
-  html += '<div class="pembangkit-detail-cell-label" style="margin:0">Volume Terpasok</div>';
+  html += '<div class="pembangkit-detail-cell-label" style="margin:0;display:flex;align-items:center;gap:7px">Volume Terpasok ' + volBadge + '</div>';
   html += '<div style="display:flex;align-items:center;gap:6px">';
   html += '<select class="fas-vol-yearsel" id="fasDetailVolYearSel">' +
     FAS_VOL_YEARS.map(y => '<option value="' + y + '"' + (y === fasDetailVolYear ? ' selected' : '') + '>' + y + '</option>').join('') + '</select>';
-  html += '<button class="fas-vol-edit-btn" id="fasVolEditBtn">✎ Edit Volume</button>';
+  if (!auto) html += '<button class="fas-vol-edit-btn" id="fasVolEditBtn">✎ Edit Volume</button>';
   html += '</div></div>';
+  html += '<div class="fas-vol-note">' + volNote + '</div>';
   html += '<div id="fasVolDetailTableWrap">' + fasVolDetailTableHTML(f.nama, fasDetailVolYear) + '</div>';
   html += '</div></div>';
 
@@ -18093,10 +18141,19 @@ function fasKontrakVolumeSectionsHTML(f){
 }
 
 // Tabel volume (read-only) untuk panel detail.
+// V68: bila ada kontrak cocok di Daftar Kontrak, data ditarik otomatis;
+// jika tidak, jatuh ke data manual (fasilitasCustomData.volume).
 function fasVolDetailTableHTML(nama, year){
-  const ext = _fasExt(nama);
-  const v = (ext.volume && ext.volume[year]) || {};
-  const doArr = v.do || [], realArr = v.real || [];
+  const auto = fasAutoVolume(nama);
+  let doArr, realArr;
+  if (auto){
+    const v = auto.byYear[year] || {};
+    doArr = v.do || []; realArr = v.real || [];
+  } else {
+    const ext = _fasExt(nama);
+    const v = (ext.volume && ext.volume[year]) || {};
+    doArr = v.do || []; realArr = v.real || [];
+  }
   let doTot = 0, realTot = 0;
   let h = '<table class="fas-vol-table"><thead><tr><th>Bulan</th><th>DO</th><th>Real</th></tr></thead><tbody>';
   for (let i = 0; i < 12; i++){
