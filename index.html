@@ -3226,7 +3226,7 @@ html,body{
 .do-editor-footer{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
 /* Split DO | Realisasi columns per year */
 .pemasok-monthly-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.pemasok-monthly-table-split{min-width:560px}
+.pemasok-monthly-table-split{min-width:780px}
 .pemasok-monthly-table-split th.pm-th-year{
   text-align:center;border-left:1px solid var(--border-bright);
   color:var(--text-bright);letter-spacing:.5px;
@@ -3237,12 +3237,15 @@ html,body{
 }
 .pemasok-monthly-table-split th.pm-th-do{color:#a855f7;border-left:1px solid var(--border-bright)}
 .pemasok-monthly-table-split th.pm-th-real{color:var(--accent)}
+.pemasok-monthly-table-split th.pm-th-pct{color:var(--text-dim);text-align:center}
 .pemasok-monthly-table-split th.pm-th-month{vertical-align:middle}
 .pemasok-monthly-table-split td.pm-td-month{text-align:left;color:var(--text-dim);font-size:9px;text-transform:uppercase;letter-spacing:1px}
 .pemasok-monthly-table-split td.pm-cell-do{text-align:center;color:#a855f7;border-left:1px solid var(--border-bright);font-weight:600}
 .pemasok-monthly-table-split td.pm-cell-real{text-align:center;color:var(--accent);font-weight:500}
+.pemasok-monthly-table-split td.pm-cell-pct{text-align:center;color:var(--text-dim);font-weight:500;font-size:9px}
 .pemasok-monthly-table-split td.pm-cell-do.zero,
-.pemasok-monthly-table-split td.pm-cell-real.zero{color:var(--text-dim);opacity:.35;font-weight:400}
+.pemasok-monthly-table-split td.pm-cell-real.zero,
+.pemasok-monthly-table-split td.pm-cell-pct.zero{color:var(--text-dim);opacity:.35;font-weight:400}
 .pemasok-monthly-table-split tfoot td.pm-cell-do{color:#c084fc}
 .pemasok-monthly-legend{
   display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:8px;
@@ -12386,20 +12389,28 @@ function openPemasokModal(pemasok, focusPltu, kontrakNo){
     let monthlyTable = doLegend + '<table class="pemasok-monthly-table pemasok-monthly-table-split"><thead>';
     // Row 1: year group headers (each spans DO + Realisasi)
     monthlyTable += '<tr><th rowspan="2" class="pm-th-month">Month</th>';
-    for (let i = 0; i < years.length; i++) monthlyTable += '<th colspan="2" class="pm-th-year">' + years[i] + '</th>';
-    monthlyTable += '<th colspan="2" class="pm-th-year">Total</th></tr>';
-    // Row 2: DO / Realisasi sub-headers
+    for (let i = 0; i < years.length; i++) monthlyTable += '<th colspan="3" class="pm-th-year">' + years[i] + '</th>';
+    monthlyTable += '<th colspan="3" class="pm-th-year">Total</th></tr>';
+    // Row 2: DO / Realisasi / % sub-headers
     monthlyTable += '<tr>';
     for (let i = 0; i <= years.length; i++){
-      monthlyTable += '<th class="pm-th-do">DO</th><th class="pm-th-real pm-col-end">Real</th>';
+      monthlyTable += '<th class="pm-th-do">DO</th><th class="pm-th-real">Real</th><th class="pm-th-pct pm-col-end">% SR</th>';
     }
     monthlyTable += '</tr></thead><tbody>';
-    // Two cells per year: DO then Realisasi
+    // Three cells per year: DO, Realisasi, then % (Real / DO)
     const pairCells = (real, dov) => {
       const doCls = dov ? 'pm-cell-do has-value' : 'pm-cell-do zero';
-      const rCls = real ? 'pm-cell-real has-value pm-col-end' : 'pm-cell-real zero pm-col-end';
+      const rCls = real ? 'pm-cell-real has-value' : 'pm-cell-real zero';
+      // % SR = Realisasi / DO. Only meaningful when a DO exists.
+      const pct = dov ? (real / dov * 100) : null;
+      const pCls = pct !== null ? 'pm-cell-pct has-value pm-col-end' : 'pm-cell-pct zero pm-col-end';
+      // Warna dinamis mengikuti ambang badge achievement (pctBadgeClass).
+      const pStyle = pct !== null
+        ? ' style="color:' + (pct > 100 ? '#8b5cf6' : pct >= 70 ? '#10b981' : pct >= 30 ? '#f59e0b' : '#ef4444') + '"'
+        : '';
       return '<td class="' + doCls + '">' + (dov ? fmtInt(dov) : '—') + '</td>' +
-             '<td class="' + rCls + '">' + (real ? fmtInt(real) : '—') + '</td>';
+             '<td class="' + rCls + '">' + (real ? fmtInt(real) : '—') + '</td>' +
+             '<td class="' + pCls + '"' + pStyle + '>' + (pct !== null ? pct.toFixed(0) + '%' : '—') + '</td>';
     };
     for (let mi = 0; mi < 12; mi++){
       monthlyTable += '<tr><td class="pm-td-month">' + months[mi] + '</td>';
