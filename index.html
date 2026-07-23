@@ -12933,6 +12933,7 @@ function wireKontrakJenisYearSel(){
 let kontrakBreakdownType = 'sisa';
 let kontrakBreakdownGenco = 'all';
 let kontrakBreakdownSort = { col: null, dir: 'desc' }; // null col → default by type
+let kontrakBreakdownGroupMitra = false; // V67: gabungkan baris dengan pemasok sama
 
 function showKontrakBreakdown(type){
   const backdrop = document.getElementById('kontrakBreakdownBackdrop');
@@ -12940,6 +12941,7 @@ function showKontrakBreakdown(type){
   kontrakBreakdownType = type;
   kontrakBreakdownGenco = 'all'; // reset filter each time the modal opens
   kontrakBreakdownSort = { col: null, dir: 'desc' };
+  kontrakBreakdownGroupMitra = false;
   renderKontrakBreakdownBody();
   backdrop.classList.add('open');
   // Close on backdrop click
@@ -12953,6 +12955,13 @@ function setKontrakBreakdownGenco(g){
   renderKontrakBreakdownBody();
 }
 window.setKontrakBreakdownGenco = setKontrakBreakdownGenco;
+
+// Toggle: gabungkan semua kontrak dengan pemasok sama menjadi satu baris.
+function setKontrakBreakdownGroupMitra(on){
+  kontrakBreakdownGroupMitra = !!on;
+  renderKontrakBreakdownBody();
+}
+window.setKontrakBreakdownGroupMitra = setKontrakBreakdownGroupMitra;
 
 // Click a column header to sort. Same col → flip direction; new col → desc first
 // (asc first for text columns pltu/pemasok/genco/jenis/akhir).
@@ -12984,7 +12993,8 @@ function renderKontrakBreakdownBody(){
     : activeAll.filter(c => (c.genco || '') === kontrakBreakdownGenco);
 
   // Per-contract stats (realisasi = jumlah 2023–2026).
-  const rows = active.map(c => {
+  const contractCount = active.length;
+  let rows = active.map(c => {
     const vol = c.vol_mt || 0;
     const yt = c.realisasi_total || {};
     const totalReal = (yt['2023']||0) + (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
@@ -12992,10 +13002,38 @@ function renderKontrakBreakdownBody(){
     return {
       genco: c.genco || '—', pltu: c.pltu || '—', pemasok: c.pemasok || '—',
       jenis: c.jenis || '—', akhir: c.akhir || '—',
-      vol, totalReal, sisa,
+      vol, totalReal, sisa, n: 1,
       pct: vol > 0 ? (totalReal / vol * 100) : 0,
     };
   });
+
+  // V67: gabungkan semua kontrak dengan pemasok sama menjadi satu baris.
+  // Vol & Realisasi dijumlah; Sisa & % dihitung ulang. Kolom PLTU/Genco/Jenis
+  // menampilkan nilai tunggal bila seragam, atau ringkasan ("Multi"/"N PLTU").
+  if (kontrakBreakdownGroupMitra){
+    const byMitra = new Map();
+    for (const r of rows){
+      const key = r.pemasok;
+      let g = byMitra.get(key);
+      if (!g){
+        g = { pemasok: r.pemasok, akhir: r.akhir, vol: 0, totalReal: 0, n: 0,
+              pltuSet: new Set(), gencoSet: new Set(), jenisSet: new Set() };
+        byMitra.set(key, g);
+      }
+      g.vol += r.vol; g.totalReal += r.totalReal; g.n += 1;
+      g.pltuSet.add(r.pltu); g.gencoSet.add(r.genco); g.jenisSet.add(r.jenis);
+      if ((r.akhir || '') > (g.akhir || '')) g.akhir = r.akhir; // tanggal akhir terjauh
+    }
+    const one = (set, plural) => set.size === 1 ? [...set][0] : (plural || 'Multi');
+    rows = Array.from(byMitra.values()).map(g => ({
+      genco: one(g.gencoSet), pltu: one(g.pltuSet, g.pltuSet.size + ' PLTU'),
+      pemasok: g.pemasok, jenis: one(g.jenisSet), akhir: g.akhir,
+      vol: g.vol, totalReal: g.totalReal, sisa: g.vol - g.totalReal, n: g.n,
+      pct: g.vol > 0 ? (g.totalReal / g.vol * 100) : 0,
+      // Daftar PLTU (untuk tooltip saat pemasok terkontrak di >1 PLTU).
+      pltuList: [...g.pltuSet].sort((a, b) => String(a).localeCompare(String(b))),
+    }));
+  }
 
   if (type === 'vol'){ titleEl.textContent = 'Total Volume Kontrak Aktif'; eyebrowEl.textContent = 'Detail Breakdown · Volume'; }
   else if (type === 'sisa'){ titleEl.textContent = 'Total Sisa Kontrak Aktif'; eyebrowEl.textContent = 'Detail Breakdown · Sisa'; }
@@ -13017,7 +13055,10 @@ function renderKontrakBreakdownBody(){
   const totalReal = rows.reduce((s, r) => s + r.totalReal, 0);
   const totalSisa = rows.reduce((s, r) => s + Math.max(0, r.sisa), 0);
   const gencoSuffix = kontrakBreakdownGenco === 'all' ? '' : ' · Genco ' + kontrakBreakdownGenco;
-  metaEl.textContent = rows.length + ' kontrak aktif (akhir ≥ ' + today + ')' + gencoSuffix +
+  const scopeLabel = kontrakBreakdownGroupMitra
+    ? rows.length + ' mitra (gabungan ' + contractCount + ' kontrak aktif, akhir ≥ ' + today + ')'
+    : rows.length + ' kontrak aktif (akhir ≥ ' + today + ')';
+  metaEl.textContent = scopeLabel + gencoSuffix +
     ' · Total Vol ' + fmtInt(totalVol) + ' MT · Total Realisasi ' + fmtInt(totalReal) + ' MT · Sisa (min 0/kontrak) ' + fmtInt(totalSisa) + ' MT';
 
   // Genco filter chips (Semua / PNP / PIP / UIW) — re-render the modal in place.
@@ -13031,6 +13072,10 @@ function renderKontrakBreakdownBody(){
     html += '<button type="button" onclick="setKontrakBreakdownGenco(\'' + g + '\')" style="' + chipStyle(kontrakBreakdownGenco === g) + '">' +
       label + ' <span style="opacity:.7">(' + fmtInt(gencoCounts[g] || 0) + ')</span></button>';
   }
+  // V67: toggle gabungkan mitra sama
+  html += '<label style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--text-dim);cursor:pointer;user-select:none" title="Jumlahkan semua kontrak dari pemasok yang sama menjadi satu baris">' +
+    '<input type="checkbox" ' + (kontrakBreakdownGroupMitra ? 'checked' : '') + ' onchange="setKontrakBreakdownGroupMitra(this.checked)" style="cursor:pointer;accent-color:var(--accent)">' +
+    'Gabungkan mitra sama</label>';
   html += '</div>';
 
   // Table (sortable headers)
@@ -13051,8 +13096,16 @@ function renderKontrakBreakdownBody(){
     html += '<tr>';
     html += '<td style="color:var(--text-dim)">' + (i + 1) + '</td>';
     html += '<td>' + escapeHtml(r.genco) + '</td>';
-    html += '<td style="font-weight:500;color:var(--text-bright)">' + escapeHtml(r.pltu) + '</td>';
-    html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(r.pemasok) + '">' + escapeHtml(r.pemasok) + '</td>';
+    // Sel PLTU: bila gabungan >1 PLTU, tampilkan tooltip daftar PLTU-nya.
+    if (r.pltuList && r.pltuList.length > 1){
+      const pltuTip = r.pltuList.map(p => '• ' + p).join('\n');
+      html += '<td style="font-weight:500;color:var(--text-bright);cursor:help;text-decoration:underline dotted;text-underline-offset:2px" title="Terkontrak di ' + r.pltuList.length + ' PLTU:\n' + escapeHtml(pltuTip) + '">' + escapeHtml(r.pltu) + '</td>';
+    } else {
+      html += '<td style="font-weight:500;color:var(--text-bright)">' + escapeHtml(r.pltu) + '</td>';
+    }
+    const pemasokExtra = (kontrakBreakdownGroupMitra && r.n > 1)
+      ? '<span style="color:var(--text-dim);font-size:8px;font-weight:400"> · ' + r.n + ' kontrak</span>' : '';
+    html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(r.pemasok) + '">' + escapeHtml(r.pemasok) + pemasokExtra + '</td>';
     html += '<td>' + escapeHtml(r.jenis) + '</td>';
     html += '<td style="white-space:nowrap">' + fmtKontrakDate(r.akhir) + '</td>';
     html += '<td class="num">' + fmtInt(r.vol) + '</td>';
@@ -13064,7 +13117,7 @@ function renderKontrakBreakdownBody(){
 
   // Footer totals
   html += '</tbody><tfoot><tr style="font-weight:700;background:var(--panel-3)">';
-  html += '<td colspan="6" style="text-align:right;padding-right:10px">TOTAL (' + rows.length + ' kontrak)</td>';
+  html += '<td colspan="6" style="text-align:right;padding-right:10px">TOTAL (' + rows.length + (kontrakBreakdownGroupMitra ? ' mitra' : ' kontrak') + ')</td>';
   html += '<td class="num" style="color:var(--accent)">' + fmtInt(totalVol) + '</td>';
   html += '<td class="num">' + fmtInt(totalReal) + '</td>';
   html += '<td class="num" style="color:var(--text-bright)">' + fmtInt(totalSisa) + '</td>';
