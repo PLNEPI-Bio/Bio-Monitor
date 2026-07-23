@@ -3015,12 +3015,38 @@ html,body{
 
 /* V67: Kontrak / PLTU terpasok / Volume terpasok (Fasilitas Produksi) */
 .fas-file-current{display:block;margin-top:4px;font-size:10px;color:var(--text-dim);font-style:italic}
+/* V69: multi-kontrak editor rows */
+.fas-kontrak-rows{display:flex;flex-direction:column;gap:10px}
+.fas-kontrak-row{
+  display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;
+  padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--panel-2);
+}
+.fas-kontrak-row .fas-kontrak-fields{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fas-kontrak-row input[type=text],.fas-kontrak-row input[type=file]{
+  width:100%;box-sizing:border-box;padding:8px 10px;font-size:12px;font-family:inherit;color:var(--text);
+  background:var(--panel);border:1.4px solid var(--border);border-radius:7px;outline:none;
+}
+.fas-kontrak-row input:focus{border-color:var(--accent)}
+.fas-kontrak-del{
+  align-self:center;background:transparent;border:1px solid var(--border);color:#d33;
+  border-radius:7px;width:30px;height:30px;font-size:16px;line-height:1;cursor:pointer;flex-shrink:0;
+}
+.fas-kontrak-del:hover{border-color:#d33;background:rgba(211,51,51,.08)}
+.fas-kontrak-add{
+  margin-top:8px;align-self:flex-start;background:var(--panel-3);border:1.4px dashed var(--border);
+  color:var(--text);border-radius:8px;padding:8px 14px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;
+}
+.fas-kontrak-add:hover{border-color:var(--accent);color:var(--accent)}
+.fas-kontrak-empty{font-size:11px;color:var(--text-dim);font-style:italic;padding:4px 0}
 .fas-kontrak-link{
   display:inline-flex;align-items:center;gap:6px;margin-top:4px;
   font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--accent);
   text-decoration:none;font-weight:600;
 }
 .fas-kontrak-link:hover{text-decoration:underline}
+.fas-kontrak-list{display:flex;flex-direction:column;gap:8px;margin-top:2px}
+.fas-kontrak-item{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:var(--panel-2)}
+.fas-kontrak-no{font-family:'Plus Jakarta Sans',sans-serif;font-size:11.5px;color:var(--text-bright);font-weight:600;word-break:break-word}
 .fas-pltu-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
 .fas-pltu-chip{
   display:inline-block;padding:3px 9px;border-radius:12px;
@@ -5226,12 +5252,12 @@ html,body{
             <input type="text" id="fasFormProduk" placeholder="cth: Sawdust"></label>
           <label class="fas-field"><span>Skema Utilisasi</span>
             <input type="text" id="fasFormSkema" placeholder="cth: Service Provider"></label>
-          <!-- V67: Kontrak + PLTU terpasok -->
-          <label class="fas-field fas-field-full"><span>Nomor Kontrak</span>
-            <input type="text" id="fasFormKontrakNomor" placeholder="cth: 001.PJB/DAN.01.01/2026"></label>
-          <label class="fas-field fas-field-full"><span>File Kontrak (PDF/gambar)</span>
-            <input type="file" id="fasFormKontrakFile" accept="application/pdf,image/*">
-            <span class="fas-file-current" id="fasFormKontrakFileCurrent"></span></label>
+          <!-- V69: Kontrak (bisa lebih dari satu) + PLTU terpasok -->
+          <div class="fas-field fas-field-full">
+            <span>Kontrak <span style="font-weight:400;opacity:.7">(bisa lebih dari satu — semua digabung ke tabel volume)</span></span>
+            <div id="fasKontrakRows" class="fas-kontrak-rows"></div>
+            <button type="button" class="fas-kontrak-add" id="fasKontrakAddBtn">+ Tambah Kontrak</button>
+          </div>
           <label class="fas-field fas-field-full"><span>PLTU Terpasok <span style="font-weight:400;opacity:.7">(tahan Ctrl/klik untuk pilih beberapa)</span></span>
             <select id="fasFormPltuTerpasok" multiple size="6"></select></label>
           <label class="fas-field"><span>Jenis Ikon</span>
@@ -17806,10 +17832,8 @@ function openFasAddModal(){
   set('fasFormStatus','operational'); set('fasFormJenis','Main Hub');
   set('fasFormIconType','factory'); set('fasFormIconColor','#0F496E');
   const im = document.getElementById('fasFormImage'); if (im) im.value = '';
-  // V67: reset kontrak + PLTU terpasok
-  set('fasFormKontrakNomor','');
-  const kfAdd = document.getElementById('fasFormKontrakFile'); if (kfAdd) kfAdd.value = '';
-  const kfCurAdd = document.getElementById('fasFormKontrakFileCurrent'); if (kfCurAdd) kfCurAdd.textContent = '';
+  // V69: reset kontrak (bisa >1) + PLTU terpasok
+  initFasKontrakRows({});
   buildFasPltuTerpasokOptions([]);
   const err = document.getElementById('fasModalErr'); if (err) err.textContent = '';
   const namaEl = document.getElementById('fasFormNama'); if (namaEl) namaEl.disabled = false;
@@ -17842,12 +17866,9 @@ function openFasEditModal(f){
   set('fasFormLat', isFinite(f.lat) ? f.lat : '');
   set('fasFormLon', isFinite(f.lon) ? f.lon : '');
   const im = document.getElementById('fasFormImage'); if (im) im.value = '';
-  // V67: kontrak + PLTU terpasok
+  // V69: kontrak (bisa >1) + PLTU terpasok
   const ext = _fasExt(f.nama);
-  set('fasFormKontrakNomor', (ext.kontrak && ext.kontrak.nomor) || '');
-  const kfEdit = document.getElementById('fasFormKontrakFile'); if (kfEdit) kfEdit.value = '';
-  const kfCurEdit = document.getElementById('fasFormKontrakFileCurrent');
-  if (kfCurEdit) kfCurEdit.textContent = (ext.kontrak && ext.kontrak.fileName) ? ('File tersimpan: ' + ext.kontrak.fileName) : '';
+  initFasKontrakRows(ext);
   buildFasPltuTerpasokOptions((ext.pltuTerpasok) || []);
   const err = document.getElementById('fasModalErr'); if (err) err.textContent = '';
   // Curated facilities keep their name (it is the storage key); added points can be renamed.
@@ -17893,25 +17914,17 @@ async function onFasSavePoint(){
     lat, lon,
   };
 
-  // V67: extended data (kontrak nomor/file + PLTU terpasok), keyed by nama.
-  const kontrakNomorEl = document.getElementById('fasFormKontrakNomor');
-  const kontrakNomor = kontrakNomorEl ? kontrakNomorEl.value.trim() : null;
+  // V69: extended data — daftar kontrak (bisa >1) + PLTU terpasok, keyed by nama.
+  const kontrakList = fasKontrakEditRows
+    .map(k => ({ nomor: (k.nomor || '').trim(), fileName: k.fileName || '', fileData: k.fileData || '' }))
+    .filter(k => k.nomor || k.fileData);
   const pltuSelEl = document.getElementById('fasFormPltuTerpasok');
   const pltuTerpasok = pltuSelEl ? Array.from(pltuSelEl.selectedOptions).map(o => o.value) : null;
-  let newKontrakFile = null;
-  const kfEl = document.getElementById('fasFormKontrakFile');
-  if (kfEl && kfEl.files && kfEl.files[0]){
-    try {
-      const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(kfEl.files[0]); });
-      newKontrakFile = { name: kfEl.files[0].name, data };
-    } catch(e){}
-  }
   // Merge into fasilitasCustomData[nama] (curated branch saves it below; added/add
   // branches call saveFasilitasCustom() explicitly).
   const extCur = fasilitasCustomData[nama] || {};
-  extCur.kontrak = extCur.kontrak || {};
-  if (kontrakNomor !== null) extCur.kontrak.nomor = kontrakNomor;
-  if (newKontrakFile){ extCur.kontrak.fileName = newKontrakFile.name; extCur.kontrak.fileData = newKontrakFile.data; }
+  extCur.kontrakList = kontrakList;
+  delete extCur.kontrak; // migrasi dari format lama (kontrak tunggal)
   if (pltuTerpasok !== null) extCur.pltuTerpasok = pltuTerpasok;
   fasilitasCustomData[nama] = extCur;
 
@@ -17989,6 +18002,7 @@ function wireFasilitasAddPoint(){
     modal.classList.add('open');
   };
   const saveBtn = document.getElementById('fasModalSave'); if (saveBtn) saveBtn.onclick = onFasSavePoint;
+  const kAddBtn = document.getElementById('fasKontrakAddBtn'); if (kAddBtn) kAddBtn.onclick = fasKontrakAddRow; // V69
   updateFasIconPreview();
   wireFasVolModal(); // V67: volume terpasok modal
 }
@@ -18052,18 +18066,69 @@ let fasVolWired = false;
 
 function _fasExt(nama){ return (fasilitasCustomData && fasilitasCustomData[nama]) || {}; }
 
+// V69: normalisasi daftar kontrak fasilitas ke array. Dukung data lama
+// (ext.kontrak tunggal) maupun baru (ext.kontrakList: [{nomor,fileName,fileData}]).
+function fasKontrakList(ext){
+  if (ext && Array.isArray(ext.kontrakList)) return ext.kontrakList;
+  if (ext && ext.kontrak && (ext.kontrak.nomor || ext.kontrak.fileData)) return [ext.kontrak];
+  return [];
+}
+
+// ---- Editor multi-kontrak (salinan kerja saat modal edit terbuka) ----
+let fasKontrakEditRows = [];
+function _fasBlankKontrak(){ return { nomor: '', fileName: '', fileData: '' }; }
+function initFasKontrakRows(ext){
+  fasKontrakEditRows = fasKontrakList(ext).map(k => ({ nomor: k.nomor || '', fileName: k.fileName || '', fileData: k.fileData || '' }));
+  if (!fasKontrakEditRows.length) fasKontrakEditRows = [_fasBlankKontrak()];
+  renderFasKontrakRows();
+}
+function renderFasKontrakRows(){
+  const box = document.getElementById('fasKontrakRows');
+  if (!box) return;
+  if (!fasKontrakEditRows.length){
+    box.innerHTML = '<div class="fas-kontrak-empty">Belum ada kontrak. Klik “+ Tambah Kontrak”.</div>';
+    return;
+  }
+  box.innerHTML = fasKontrakEditRows.map((k, i) =>
+    '<div class="fas-kontrak-row">' +
+      '<div class="fas-kontrak-fields">' +
+        '<input type="text" placeholder="Nomor kontrak, cth: 001.PJB/DAN.01.01/2026" value="' + escapeHtml(k.nomor || '') + '" oninput="fasKontrakSetNomor(' + i + ', this.value)">' +
+        '<input type="file" accept="application/pdf,image/*" onchange="fasKontrakSetFile(' + i + ', this)">' +
+        (k.fileName ? '<span class="fas-file-current">File: ' + escapeHtml(k.fileName) + '</span>' : '') +
+      '</div>' +
+      '<button type="button" class="fas-kontrak-del" title="Hapus kontrak ini" onclick="fasKontrakRemoveRow(' + i + ')">×</button>' +
+    '</div>'
+  ).join('');
+}
+function fasKontrakSetNomor(i, v){ if (fasKontrakEditRows[i]) fasKontrakEditRows[i].nomor = v; }
+function fasKontrakAddRow(){ fasKontrakEditRows.push(_fasBlankKontrak()); renderFasKontrakRows(); }
+function fasKontrakRemoveRow(i){ fasKontrakEditRows.splice(i, 1); renderFasKontrakRows(); }
+async function fasKontrakSetFile(i, input){
+  if (!fasKontrakEditRows[i] || !input.files || !input.files[0]) return;
+  const file = input.files[0];
+  try {
+    const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(file); });
+    fasKontrakEditRows[i].fileName = file.name;
+    fasKontrakEditRows[i].fileData = data;
+    renderFasKontrakRows();
+  } catch(e){}
+}
+window.fasKontrakSetNomor = fasKontrakSetNomor;
+window.fasKontrakRemoveRow = fasKontrakRemoveRow;
+window.fasKontrakSetFile = fasKontrakSetFile;
+
 // V68: Kontrak di Daftar Kontrak yang cocok dengan fasilitas ini —
 // dicocokkan lewat Nomor Kontrak (wajib) + PLTU Terpasok (bila diisi).
 // Normalisasi memakai helper yang sama dgn modul DO (_doNormK) & PLTU (canonPltuName).
 function fasMatchedContracts(nama){
   const ext = _fasExt(nama);
-  const nomor = (ext.kontrak && ext.kontrak.nomor) ? String(ext.kontrak.nomor).trim() : '';
-  if (!nomor) return [];
-  const key = _doNormK(nomor);
+  // V69: cocokkan terhadap SEMUA nomor kontrak yang dimasukkan.
+  const keys = new Set(fasKontrakList(ext).map(k => _doNormK(k.nomor)).filter(Boolean));
+  if (!keys.size) return [];
   const pltuList = Array.isArray(ext.pltuTerpasok) ? ext.pltuTerpasok : [];
   const pltuSet = pltuList.length ? new Set(pltuList.map(p => canonPltuName(p))) : null;
   const all = (DATA && DATA.contracts) || [];
-  return all.filter(c => _doNormK(c.kontrak) === key &&
+  return all.filter(c => keys.has(_doNormK(c.kontrak)) &&
     (!pltuSet || pltuSet.has(canonPltuName(c.pltu))));
 }
 
@@ -18092,17 +18157,27 @@ function fasAutoVolume(nama){
 // HTML tiga seksi baru untuk panel detail (dipakai curated + added).
 function fasKontrakVolumeSectionsHTML(f){
   const ext = _fasExt(f.nama);
-  const k = ext.kontrak || {};
+  const kList = fasKontrakList(ext);
   let html = '';
 
-  // --- Kontrak ---
+  // --- Kontrak (bisa lebih dari satu) ---
   html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
-  html += '<div class="pembangkit-detail-cell-label">Nomor Kontrak</div>';
-  html += '<div class="pembangkit-detail-cell-value text">' + (k.nomor ? escapeHtml(k.nomor) : '—') + '</div>';
-  if (k.fileData){
-    const fn = k.fileName ? escapeHtml(k.fileName) : 'kontrak';
-    html += '<a class="fas-kontrak-link" href="' + k.fileData + '" download="' + fn + '" target="_blank" rel="noopener">' +
-      '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2.5 13h11"/></svg> ' + fn + '</a>';
+  html += '<div class="pembangkit-detail-cell-label">Kontrak' + (kList.length > 1 ? ' (' + kList.length + ')' : '') + '</div>';
+  if (kList.length){
+    html += '<div class="fas-kontrak-list">';
+    kList.forEach(k => {
+      html += '<div class="fas-kontrak-item">';
+      html += '<span class="fas-kontrak-no">' + (k.nomor ? escapeHtml(k.nomor) : '—') + '</span>';
+      if (k.fileData){
+        const fn = k.fileName ? escapeHtml(k.fileName) : 'kontrak';
+        html += '<a class="fas-kontrak-link" href="' + k.fileData + '" download="' + fn + '" target="_blank" rel="noopener">' +
+          '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2.5 13h11"/></svg> ' + fn + '</a>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="pembangkit-detail-cell-value text">—</div>';
   }
   html += '</div></div>';
 
