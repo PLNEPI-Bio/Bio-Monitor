@@ -1872,6 +1872,12 @@ html,body{
 .recap-table td.num.grand-total{background:rgba(245,158,11,.04);color:var(--warn);font-weight:700}
 .recap-table tfoot td{background:var(--panel-3);border-top:2px solid var(--accent);color:var(--text-bright);padding:8px 6px;position:sticky;bottom:0;z-index:2}
 .recap-table tfoot td.pltu-cell{background:var(--panel-3);color:var(--text-bright);font-weight:700;letter-spacing:2px;font-size:10px}
+/* V66: per-PLTU DO/Real monthly table (Ringkasan) */
+.real-podt-scroll{overflow:auto;max-height:560px;border:1px solid var(--border);border-radius:8px;margin-top:10px}
+.recap-table th.podt-mgroup,.recap-table td.podt-do{border-left:1px solid var(--border-bright)}
+.recap-table th.podt-do,.recap-table td.podt-do{color:#a855f7}
+.recap-table th.podt-real,.recap-table td.podt-real{color:var(--accent)}
+.recap-table td.podt-do.dim,.recap-table td.podt-real.dim{color:var(--text-dim);opacity:.4}
 
 /* Kontrak Mitra tab styles */
 .kontrak-toggle-row{margin-bottom:12px;padding:10px 14px;background:var(--panel-3);border-left:2px solid var(--accent);display:flex;flex-wrap:wrap;gap:18px;align-items:center}
@@ -5335,6 +5341,24 @@ html,body{
           <div class="kontrak-jenis-legend" id="kontrakJenisLegend"></div>
         </div>
       </div>
+
+      <!-- V66: Realisasi & DO per PLTU — bulanan, dengan filter tahun sendiri -->
+      <div class="real-card">
+        <div class="real-card-head">
+          <h3>Realisasi &amp; DO per PLTU · Bulanan</h3>
+          <div class="real-card-head-controls">
+            <label class="real-filter-label" for="realPodtYearSel">Tahun</label>
+            <select id="realPodtYearSel" class="real-filter-select real-filter-select-sm">
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+          </div>
+        </div>
+        <div class="real-card-note">Mengikuti filter Wilayah/PLTU di atas. DO = Delivery Order, Real = Realisasi (ton).</div>
+        <div class="real-podt-scroll"><div id="real-podt-table"></div></div>
+      </div>
     </div>
 
     <!-- ---------- Panel: Peringkat PLTU ---------- -->
@@ -6507,6 +6531,8 @@ const state = {
   realPltuFilterProvince: 'all',   // 'all' | 'jawa' | 'sumatera' | 'kalimantan' | 'sulmapana'
   // V65: Realisasi tab section sub-menu — 'ringkasan' | 'tren' | 'peringkat' | 'intel'
   realSubtab: 'ringkasan',
+  // V66: year filter khusus untuk tabel DO/Real per PLTU di Ringkasan
+  realPodtYear: '2026',
 };
 
 // ========= utils =========
@@ -9911,6 +9937,8 @@ function renderRealView(){
     wireKontrakJenisYearSel();
     renderKontrakJenisPie();
   }
+  // V66: tabel DO vs Realisasi per PLTU (bulanan) — ikut filter Wilayah/PLTU
+  renderRealPodtTable();
   } // end Contribution by Genco
 
   // Wire toggle checkboxes for trend & annual chart labels (first-time bind only)
@@ -10118,6 +10146,75 @@ function renderRealRecap(){
   // Update count indicator
   const cnt = document.getElementById('real-recap-count');
   if (cnt) cnt.textContent = `${plants.length} PLTU`;
+}
+
+// V66: Tabel DO vs Realisasi per PLTU (bulanan) untuk submenu Ringkasan.
+// Mengikuti filter Wilayah/PLTU global (realFilteredPlants) + filter tahun sendiri.
+function renderRealPodtTable(){
+  // Wire the year filter once (idempotent).
+  const sel = document.getElementById('realPodtYearSel');
+  if (sel && !sel.dataset.wired){
+    sel.value = state.realPodtYear || '2026';
+    sel.onchange = () => { state.realPodtYear = sel.value; renderRealPodtTable(); };
+    sel.dataset.wired = '1';
+  }
+  const container = document.getElementById('real-podt-table');
+  if (!container) return;
+
+  const year = state.realPodtYear || '2026';
+  const plants = realFilteredPlants().slice().sort((a, b) => a.name.localeCompare(b.name));
+
+  // ----- Header: two rows (month group over DO/Real sub-columns) -----
+  let header = '<thead><tr><th class="pltu-col" rowspan="2">PLTU</th><th rowspan="2">Genco</th>';
+  MONTHS.forEach(m => { header += `<th class="num podt-mgroup" colspan="2">${m}</th>`; });
+  header += '<th class="num year-total podt-mgroup" colspan="2">Total</th></tr><tr>';
+  for (let i = 0; i <= 12; i++){
+    const tot = i === 12 ? ' year-total' : '';
+    header += `<th class="num podt-do podt-mgroup${tot}">DO</th><th class="num podt-real${tot}">Real</th>`;
+  }
+  header += '</tr></thead>';
+
+  // One month's DO + Real cells.
+  const pair = (dov, real, extra) => {
+    const dc = `num podt-do podt-mgroup${extra}${dov ? '' : ' dim'}`;
+    const rc = `num podt-real${extra}${real ? '' : ' dim'}`;
+    return `<td class="${dc}">${dov ? fmtInt(dov) : '—'}</td>` +
+           `<td class="${rc}">${real ? fmtInt(real) : '—'}</td>`;
+  };
+
+  // Column totals for footer.
+  const doColSum = new Array(12).fill(0), realColSum = new Array(12).fill(0);
+
+  const rowsHtml = plants.map(p => {
+    const doArr = (p.historical_do && p.historical_do[year]) || [];
+    const realArr = (p.historical_real && p.historical_real[year]) || [];
+    let row = `<td class="pltu-cell">${escapeHtml(p.name)}<span class="code">${escapeHtml(p.code)}</span></td>` +
+      `<td><span class="kontrak-genco-pill" style="color:${gencoColor(p.genco)};border-color:${gencoColor(p.genco)}40">${p.genco}</span></td>`;
+    let doTot = 0, realTot = 0;
+    for (let mi = 0; mi < 12; mi++){
+      const dov = doArr[mi] || 0, real = realArr[mi] || 0;
+      doTot += dov; realTot += real;
+      doColSum[mi] += dov; realColSum[mi] += real;
+      row += pair(dov, real, '');
+    }
+    row += pair(doTot, realTot, ' year-total');
+    return `<tr>${row}</tr>`;
+  }).join('');
+
+  // ----- Footer: column totals -----
+  let footer = '<tfoot><tr><td class="pltu-cell" colspan="2"><b>TOTAL</b></td>';
+  let grandDo = 0, grandReal = 0;
+  for (let mi = 0; mi < 12; mi++){
+    grandDo += doColSum[mi]; grandReal += realColSum[mi];
+    footer += pair(doColSum[mi], realColSum[mi], '');
+  }
+  footer += pair(grandDo, grandReal, ' year-total') + '</tr></tfoot>';
+
+  const body = plants.length
+    ? `<tbody>${rowsHtml}</tbody>`
+    : '<tbody><tr><td class="pltu-cell" colspan="28" style="text-align:center;color:var(--text-dim);padding:16px">Tidak ada PLTU sesuai filter.</td></tr></tbody>';
+
+  container.innerHTML = `<table class="recap-table">${header}${body}${footer}</table>`;
 }
 
 // ========= TAB 3: BOTTLENECK VIEW =========
