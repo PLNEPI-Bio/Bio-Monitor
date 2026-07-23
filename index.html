@@ -3013,6 +3013,48 @@ html,body{
   background:rgba(245,158,11,0.08);color:#b45309;
 }
 
+/* V67: Kontrak / PLTU terpasok / Volume terpasok (Fasilitas Produksi) */
+.fas-file-current{display:block;margin-top:4px;font-size:10px;color:var(--text-dim);font-style:italic}
+.fas-kontrak-link{
+  display:inline-flex;align-items:center;gap:6px;margin-top:4px;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--accent);
+  text-decoration:none;font-weight:600;
+}
+.fas-kontrak-link:hover{text-decoration:underline}
+.fas-pltu-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.fas-pltu-chip{
+  display:inline-block;padding:3px 9px;border-radius:12px;
+  background:rgba(20,184,166,.12);border:1px solid rgba(20,184,166,.35);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-bright);white-space:nowrap;
+}
+.fas-vol-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+.fas-vol-yearsel{
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;padding:3px 8px;
+  border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);
+}
+.fas-vol-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;margin-top:8px}
+.fas-vol-table th{
+  text-align:right;padding:6px 8px;color:var(--text-dim);font-weight:600;font-size:9px;
+  letter-spacing:.5px;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--panel-3);
+}
+.fas-vol-table th:first-child{text-align:left}
+.fas-vol-table td{padding:4px 8px;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums}
+.fas-vol-table td:first-child{text-align:left;color:var(--text-dim);text-transform:uppercase;font-size:9px;letter-spacing:.5px}
+.fas-vol-table td.podt-do{color:#a855f7}
+.fas-vol-table td.podt-real{color:var(--accent)}
+.fas-vol-table td.dim{color:var(--text-dim);opacity:.4}
+.fas-vol-table tfoot td{font-weight:700;border-top:2px solid var(--accent);background:var(--panel-3)}
+.fas-vol-table input{
+  width:72px;text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
+  padding:3px 6px;border:1px solid var(--border);border-radius:5px;background:var(--panel);color:var(--text);
+}
+.fas-vol-note{font-size:10px;color:var(--text-dim);margin:6px 0 2px}
+.fas-vol-edit-btn{
+  padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;
+  color:var(--text-dim);font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;cursor:pointer;
+}
+.fas-vol-edit-btn:hover{border-color:var(--accent);color:var(--accent)}
+
 /* Pembangkit detail panel content */
 .pembangkit-detail-content{
   padding:18px 16px;display:flex;flex-direction:column;gap:14px;
@@ -5181,6 +5223,14 @@ html,body{
             <input type="text" id="fasFormProduk" placeholder="cth: Sawdust"></label>
           <label class="fas-field"><span>Skema Utilisasi</span>
             <input type="text" id="fasFormSkema" placeholder="cth: Service Provider"></label>
+          <!-- V67: Kontrak + PLTU terpasok -->
+          <label class="fas-field fas-field-full"><span>Nomor Kontrak</span>
+            <input type="text" id="fasFormKontrakNomor" placeholder="cth: 001.PJB/DAN.01.01/2026"></label>
+          <label class="fas-field fas-field-full"><span>File Kontrak (PDF/gambar)</span>
+            <input type="file" id="fasFormKontrakFile" accept="application/pdf,image/*">
+            <span class="fas-file-current" id="fasFormKontrakFileCurrent"></span></label>
+          <label class="fas-field fas-field-full"><span>PLTU Terpasok <span style="font-weight:400;opacity:.7">(tahan Ctrl/klik untuk pilih beberapa)</span></span>
+            <select id="fasFormPltuTerpasok" multiple size="6"></select></label>
           <label class="fas-field"><span>Jenis Ikon</span>
             <select id="fasFormIconType">
               <option value="factory">Pabrik / Hub</option>
@@ -5207,6 +5257,27 @@ html,body{
       <div class="fas-modal-foot">
         <button class="fas-cancel-btn" id="fasModalCancel">Batal</button>
         <button class="fas-save-btn" id="fasModalSave">Simpan Titik</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- V67: Volume Terpasok edit modal (form terpisah) -->
+  <div class="fas-modal-backdrop" id="fasVolModal">
+    <div class="fas-modal">
+      <div class="fas-modal-head">
+        <span id="fasVolModalTitle">Edit Volume Terpasok</span>
+        <button class="fas-modal-close" id="fasVolModalClose" title="Tutup">×</button>
+      </div>
+      <div class="fas-modal-body">
+        <label class="fas-field" style="max-width:180px"><span>Tahun</span>
+          <select id="fasVolYearSel"></select></label>
+        <div class="fas-vol-note">DO &amp; Realisasi dalam ton. Kosongkan bila belum ada data.</div>
+        <table class="fas-vol-table" id="fasVolTable"></table>
+        <div class="fas-modal-err" id="fasVolModalErr"></div>
+      </div>
+      <div class="fas-modal-foot">
+        <button class="fas-cancel-btn" id="fasVolModalCancel">Batal</button>
+        <button class="fas-save-btn" id="fasVolModalSave">Simpan Volume</button>
       </div>
     </div>
   </div>
@@ -17549,6 +17620,9 @@ function renderFasilitasDetail(f){
     html += '</div>';
   }
 
+  // V67: Kontrak, PLTU terpasok, dan tabel volume terpasok.
+  html += fasKontrakVolumeSectionsHTML(f);
+
   // V66: Edit opens the SAME modal used for "Tambah Titik" (identical fields).
   html += '<button class="fas-edit-toggle-btn" id="fasEditToggle"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 1.5l3 3L5 14H2v-3z"/></svg> Edit Detail</button>';
 
@@ -17561,6 +17635,7 @@ function renderFasilitasDetail(f){
 
   const editToggle = document.getElementById('fasEditToggle');
   if (editToggle) editToggle.onclick = () => openFasEditModal(f);
+  wireFasKontrakVolumeSections(f);
 }
 
 // ============================================================
@@ -17727,6 +17802,11 @@ function openFasAddModal(){
   set('fasFormStatus','operational'); set('fasFormJenis','Main Hub');
   set('fasFormIconType','factory'); set('fasFormIconColor','#0F496E');
   const im = document.getElementById('fasFormImage'); if (im) im.value = '';
+  // V67: reset kontrak + PLTU terpasok
+  set('fasFormKontrakNomor','');
+  const kfAdd = document.getElementById('fasFormKontrakFile'); if (kfAdd) kfAdd.value = '';
+  const kfCurAdd = document.getElementById('fasFormKontrakFileCurrent'); if (kfCurAdd) kfCurAdd.textContent = '';
+  buildFasPltuTerpasokOptions([]);
   const err = document.getElementById('fasModalErr'); if (err) err.textContent = '';
   const namaEl = document.getElementById('fasFormNama'); if (namaEl) namaEl.disabled = false;
   const title = document.getElementById('fasModalTitle'); if (title) title.textContent = 'Tambah Titik Fasilitas Produksi';
@@ -17758,6 +17838,13 @@ function openFasEditModal(f){
   set('fasFormLat', isFinite(f.lat) ? f.lat : '');
   set('fasFormLon', isFinite(f.lon) ? f.lon : '');
   const im = document.getElementById('fasFormImage'); if (im) im.value = '';
+  // V67: kontrak + PLTU terpasok
+  const ext = _fasExt(f.nama);
+  set('fasFormKontrakNomor', (ext.kontrak && ext.kontrak.nomor) || '');
+  const kfEdit = document.getElementById('fasFormKontrakFile'); if (kfEdit) kfEdit.value = '';
+  const kfCurEdit = document.getElementById('fasFormKontrakFileCurrent');
+  if (kfCurEdit) kfCurEdit.textContent = (ext.kontrak && ext.kontrak.fileName) ? ('File tersimpan: ' + ext.kontrak.fileName) : '';
+  buildFasPltuTerpasokOptions((ext.pltuTerpasok) || []);
   const err = document.getElementById('fasModalErr'); if (err) err.textContent = '';
   // Curated facilities keep their name (it is the storage key); added points can be renamed.
   const namaEl = document.getElementById('fasFormNama'); if (namaEl) namaEl.disabled = !f._added;
@@ -17802,6 +17889,28 @@ async function onFasSavePoint(){
     lat, lon,
   };
 
+  // V67: extended data (kontrak nomor/file + PLTU terpasok), keyed by nama.
+  const kontrakNomorEl = document.getElementById('fasFormKontrakNomor');
+  const kontrakNomor = kontrakNomorEl ? kontrakNomorEl.value.trim() : null;
+  const pltuSelEl = document.getElementById('fasFormPltuTerpasok');
+  const pltuTerpasok = pltuSelEl ? Array.from(pltuSelEl.selectedOptions).map(o => o.value) : null;
+  let newKontrakFile = null;
+  const kfEl = document.getElementById('fasFormKontrakFile');
+  if (kfEl && kfEl.files && kfEl.files[0]){
+    try {
+      const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = ev => res(ev.target.result); r.onerror = rej; r.readAsDataURL(kfEl.files[0]); });
+      newKontrakFile = { name: kfEl.files[0].name, data };
+    } catch(e){}
+  }
+  // Merge into fasilitasCustomData[nama] (curated branch saves it below; added/add
+  // branches call saveFasilitasCustom() explicitly).
+  const extCur = fasilitasCustomData[nama] || {};
+  extCur.kontrak = extCur.kontrak || {};
+  if (kontrakNomor !== null) extCur.kontrak.nomor = kontrakNomor;
+  if (newKontrakFile){ extCur.kontrak.fileName = newKontrakFile.name; extCur.kontrak.fileData = newKontrakFile.data; }
+  if (pltuTerpasok !== null) extCur.pltuTerpasok = pltuTerpasok;
+  fasilitasCustomData[nama] = extCur;
+
   // ----- EDIT mode -----
   if (fasModalMode === 'edit' && fasEditTarget){
     const f = fasEditTarget;
@@ -17812,6 +17921,7 @@ async function onFasSavePoint(){
       if (!ok){ if (err) err.textContent = 'Gagal menyimpan ke server. Coba lagi.'; restore(); return; }
       Object.assign(f, { nama }, fields);
       if (newImage != null) f.image = newImage;
+      await saveFasilitasCustom(); // V67: persist kontrak/pltu terpasok
     } else {
       // Curated: keep the name (it is the storage key); store field overrides + image.
       Object.assign(f, fields);
@@ -17842,6 +17952,7 @@ async function onFasSavePoint(){
   restore();
   if (!ok){ if (err) err.textContent = 'Gagal menyimpan ke server. Coba lagi.'; return; }
   fasilitasAddedPoints.push(point);
+  await saveFasilitasCustom(); // V67: persist kontrak/pltu terpasok
   closeFasAddModal();
   renderFasilitasMarkers();
   if (fasilitasMap) fasilitasMap.setView([lat, lon], Math.max(fasilitasMap.getZoom() || 8, 9));
@@ -17875,6 +17986,7 @@ function wireFasilitasAddPoint(){
   };
   const saveBtn = document.getElementById('fasModalSave'); if (saveBtn) saveBtn.onclick = onFasSavePoint;
   updateFasIconPreview();
+  wireFasVolModal(); // V67: volume terpasok modal
 }
 
 function renderFasilitasAddedDetail(f, panel){
@@ -17900,11 +18012,13 @@ function renderFasilitasAddedDetail(f, panel){
   if (f.image){
     html += '<div class="fas-img-section"><div class="fas-img-preview"><img src="' + f.image + '" alt="' + escapeHtml(f.nama) + '" style="width:100%;border-radius:3px;max-height:200px;object-fit:cover"></div></div>';
   }
+  html += fasKontrakVolumeSectionsHTML(f);
   html += '<button class="fas-edit-toggle-btn" id="fasEditAddedBtn"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 1.5l3 3L5 14H2v-3z"/></svg> Edit Detail</button>';
   html += '<button id="fasDeletePointBtn" style="width:100%;margin-top:8px;border:1px solid #d33;color:#d33;background:transparent;padding:9px;border-radius:8px;font-weight:600;cursor:pointer;font-family:Plus Jakarta Sans,sans-serif;font-size:11px">Hapus Titik Ini</button>';
   html += '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:9px;color:var(--text-dim);text-align:right;letter-spacing:.5px;margin-top:8px">COORD: ' + f.lat.toFixed(4) + '°, ' + f.lon.toFixed(4) + '°</div>';
   html += '</div>';
   panel.innerHTML = html;
+  wireFasKontrakVolumeSections(f);
   const editAddedBtn = document.getElementById('fasEditAddedBtn');
   if (editAddedBtn) editAddedBtn.onclick = () => openFasEditModal(f);
   const delBtn = document.getElementById('fasDeletePointBtn');
@@ -17917,6 +18031,205 @@ function renderFasilitasAddedDetail(f, panel){
     closeFasilitasDetail();
     renderFasilitasMarkers();
   };
+}
+
+// ============================================================
+// V67: Kontrak, PLTU terpasok, dan Volume Terpasok (Fasilitas Produksi)
+// Disimpan di fasilitasCustomData[nama] (Supabase fasilitas_custom):
+//   .kontrak      = { nomor, fileName, fileData(base64) }
+//   .pltuTerpasok = [namaPLTU, ...]
+//   .volume       = { '<tahun>': { do:[12], real:[12] } }
+// ============================================================
+const FAS_VOL_YEARS = ['2023','2024','2025','2026'];
+let fasDetailVolYear = '2026';   // tahun aktif di panel detail
+let fasVolTarget = null;         // fasilitas yang volumenya sedang diedit
+let fasVolWorking = {};          // salinan kerja { tahun: {do:[], real:[]} }
+let fasVolWired = false;
+
+function _fasExt(nama){ return (fasilitasCustomData && fasilitasCustomData[nama]) || {}; }
+
+// HTML tiga seksi baru untuk panel detail (dipakai curated + added).
+function fasKontrakVolumeSectionsHTML(f){
+  const ext = _fasExt(f.nama);
+  const k = ext.kontrak || {};
+  let html = '';
+
+  // --- Kontrak ---
+  html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
+  html += '<div class="pembangkit-detail-cell-label">Nomor Kontrak</div>';
+  html += '<div class="pembangkit-detail-cell-value text">' + (k.nomor ? escapeHtml(k.nomor) : '—') + '</div>';
+  if (k.fileData){
+    const fn = k.fileName ? escapeHtml(k.fileName) : 'kontrak';
+    html += '<a class="fas-kontrak-link" href="' + k.fileData + '" download="' + fn + '" target="_blank" rel="noopener">' +
+      '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v9M4.5 6.5L8 10l3.5-3.5M2.5 13h11"/></svg> ' + fn + '</a>';
+  }
+  html += '</div></div>';
+
+  // --- PLTU terpasok ---
+  const pltu = Array.isArray(ext.pltuTerpasok) ? ext.pltuTerpasok : [];
+  html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
+  html += '<div class="pembangkit-detail-cell-label">PLTU Terpasok</div>';
+  if (pltu.length){
+    html += '<div class="fas-pltu-chips">' + pltu.map(p => '<span class="fas-pltu-chip">' + escapeHtml(p) + '</span>').join('') + '</div>';
+  } else {
+    html += '<div class="pembangkit-detail-cell-value text">—</div>';
+  }
+  html += '</div></div>';
+
+  // --- Volume terpasok (pemilih tahun + tombol edit) ---
+  if (!FAS_VOL_YEARS.includes(fasDetailVolYear)) fasDetailVolYear = FAS_VOL_YEARS[FAS_VOL_YEARS.length - 1];
+  html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
+  html += '<div class="fas-vol-head">';
+  html += '<div class="pembangkit-detail-cell-label" style="margin:0">Volume Terpasok</div>';
+  html += '<div style="display:flex;align-items:center;gap:6px">';
+  html += '<select class="fas-vol-yearsel" id="fasDetailVolYearSel">' +
+    FAS_VOL_YEARS.map(y => '<option value="' + y + '"' + (y === fasDetailVolYear ? ' selected' : '') + '>' + y + '</option>').join('') + '</select>';
+  html += '<button class="fas-vol-edit-btn" id="fasVolEditBtn">✎ Edit Volume</button>';
+  html += '</div></div>';
+  html += '<div id="fasVolDetailTableWrap">' + fasVolDetailTableHTML(f.nama, fasDetailVolYear) + '</div>';
+  html += '</div></div>';
+
+  return html;
+}
+
+// Tabel volume (read-only) untuk panel detail.
+function fasVolDetailTableHTML(nama, year){
+  const ext = _fasExt(nama);
+  const v = (ext.volume && ext.volume[year]) || {};
+  const doArr = v.do || [], realArr = v.real || [];
+  let doTot = 0, realTot = 0;
+  let h = '<table class="fas-vol-table"><thead><tr><th>Bulan</th><th>DO</th><th>Real</th></tr></thead><tbody>';
+  for (let i = 0; i < 12; i++){
+    const d = doArr[i] || 0, r = realArr[i] || 0;
+    doTot += d; realTot += r;
+    h += '<tr><td>' + MONTHS[i] + '</td>' +
+      '<td class="podt-do' + (d ? '' : ' dim') + '">' + (d ? fmtInt(d) : '—') + '</td>' +
+      '<td class="podt-real' + (r ? '' : ' dim') + '">' + (r ? fmtInt(r) : '—') + '</td></tr>';
+  }
+  h += '</tbody><tfoot><tr><td>Total</td>' +
+    '<td class="podt-do' + (doTot ? '' : ' dim') + '">' + (doTot ? fmtInt(doTot) : '—') + '</td>' +
+    '<td class="podt-real' + (realTot ? '' : ' dim') + '">' + (realTot ? fmtInt(realTot) : '—') + '</td></tr></tfoot></table>';
+  return h;
+}
+
+// Pasang handler pada seksi (dipanggil setelah panel.innerHTML).
+function wireFasKontrakVolumeSections(f){
+  const yearSel = document.getElementById('fasDetailVolYearSel');
+  if (yearSel){
+    yearSel.onchange = () => {
+      fasDetailVolYear = yearSel.value;
+      const wrap = document.getElementById('fasVolDetailTableWrap');
+      if (wrap) wrap.innerHTML = fasVolDetailTableHTML(f.nama, fasDetailVolYear);
+    };
+  }
+  const editBtn = document.getElementById('fasVolEditBtn');
+  if (editBtn) editBtn.onclick = () => openFasVolModal(f);
+}
+
+// Isi dropdown PLTU terpasok (multi-select) dari DATA.plants.
+function buildFasPltuTerpasokOptions(selected){
+  const sel = document.getElementById('fasFormPltuTerpasok');
+  if (!sel) return;
+  const chosen = new Set(selected || []);
+  const names = ((DATA && DATA.plants) || []).map(p => p.name).sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = names.map(n => '<option value="' + escapeHtml(n) + '"' + (chosen.has(n) ? ' selected' : '') + '>' + escapeHtml(n) + '</option>').join('');
+}
+
+// ---- Volume Terpasok edit modal (form terpisah) ----
+function openFasVolModal(f){
+  fasVolTarget = f;
+  const ext = _fasExt(f.nama);
+  fasVolWorking = {};
+  FAS_VOL_YEARS.forEach(y => {
+    const v = (ext.volume && ext.volume[y]) || {};
+    const doA = (v.do || []).slice(0, 12), reA = (v.real || []).slice(0, 12);
+    while (doA.length < 12) doA.push(0);
+    while (reA.length < 12) reA.push(0);
+    fasVolWorking[y] = { do: doA, real: reA };
+  });
+  const yearSel = document.getElementById('fasVolYearSel');
+  const startYear = FAS_VOL_YEARS.includes(fasDetailVolYear) ? fasDetailVolYear : FAS_VOL_YEARS[FAS_VOL_YEARS.length - 1];
+  if (yearSel){
+    yearSel.innerHTML = FAS_VOL_YEARS.map(y => '<option value="' + y + '">' + y + '</option>').join('');
+    yearSel.value = startYear;
+    yearSel.dataset.cur = startYear;
+  }
+  const title = document.getElementById('fasVolModalTitle');
+  if (title) title.textContent = 'Edit Volume Terpasok — ' + f.nama;
+  const err = document.getElementById('fasVolModalErr'); if (err) err.textContent = '';
+  renderFasVolModalTable(startYear);
+  const modal = document.getElementById('fasVolModal'); if (modal) modal.classList.add('open');
+}
+
+// Baca input tabel ke working copy untuk satu tahun.
+function _readFasVolInputs(year){
+  if (!fasVolWorking[year]) fasVolWorking[year] = { do: new Array(12).fill(0), real: new Array(12).fill(0) };
+  for (let i = 0; i < 12; i++){
+    const de = document.getElementById('fasVolDo_' + i);
+    const re = document.getElementById('fasVolReal_' + i);
+    fasVolWorking[year].do[i] = de ? (parseFloat(de.value) || 0) : 0;
+    fasVolWorking[year].real[i] = re ? (parseFloat(re.value) || 0) : 0;
+  }
+}
+
+function renderFasVolModalTable(year){
+  const tbl = document.getElementById('fasVolTable');
+  if (!tbl) return;
+  const w = fasVolWorking[year] || { do: [], real: [] };
+  let h = '<thead><tr><th>Bulan</th><th>DO</th><th>Real</th></tr></thead><tbody>';
+  for (let i = 0; i < 12; i++){
+    h += '<tr><td>' + MONTHS[i] + '</td>' +
+      '<td><input type="number" step="any" min="0" id="fasVolDo_' + i + '" value="' + (w.do[i] || '') + '"></td>' +
+      '<td><input type="number" step="any" min="0" id="fasVolReal_' + i + '" value="' + (w.real[i] || '') + '"></td></tr>';
+  }
+  h += '</tbody>';
+  tbl.innerHTML = h;
+}
+
+async function saveFasVol(){
+  if (!fasVolTarget) return;
+  const yearSel = document.getElementById('fasVolYearSel');
+  const curYear = yearSel ? yearSel.value : fasDetailVolYear;
+  _readFasVolInputs(curYear); // simpan tahun yang sedang tampil
+  const saveBtn = document.getElementById('fasVolModalSave');
+  if (saveBtn){ saveBtn.disabled = true; saveBtn.textContent = 'Menyimpan...'; }
+  const key = fasVolTarget.nama;
+  const cur = fasilitasCustomData[key] || {};
+  cur.volume = {};
+  FAS_VOL_YEARS.forEach(y => {
+    const w = fasVolWorking[y];
+    if (w && (w.do.some(x => x) || w.real.some(x => x))){
+      cur.volume[y] = { do: w.do.slice(0, 12), real: w.real.slice(0, 12) };
+    }
+  });
+  fasilitasCustomData[key] = cur;
+  await saveFasilitasCustom();
+  if (saveBtn){ saveBtn.disabled = false; saveBtn.textContent = 'Simpan Volume'; }
+  fasDetailVolYear = curYear;
+  closeFasVolModal();
+  renderFasilitasDetail(fasVolTarget);
+}
+
+function closeFasVolModal(){
+  const modal = document.getElementById('fasVolModal'); if (modal) modal.classList.remove('open');
+}
+
+function wireFasVolModal(){
+  if (fasVolWired) return;
+  const modal = document.getElementById('fasVolModal');
+  if (!modal) return;
+  fasVolWired = true;
+  const closeBtn = document.getElementById('fasVolModalClose'); if (closeBtn) closeBtn.onclick = closeFasVolModal;
+  const cancelBtn = document.getElementById('fasVolModalCancel'); if (cancelBtn) cancelBtn.onclick = closeFasVolModal;
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeFasVolModal(); });
+  const yearSel = document.getElementById('fasVolYearSel');
+  if (yearSel) yearSel.onchange = () => {
+    const prev = yearSel.dataset.cur || yearSel.value;
+    _readFasVolInputs(prev);           // simpan input tahun sebelumnya
+    yearSel.dataset.cur = yearSel.value;
+    renderFasVolModalTable(yearSel.value);
+  };
+  const saveBtn = document.getElementById('fasVolModalSave'); if (saveBtn) saveBtn.onclick = saveFasVol;
 }
 
 function wireFasilitasSidebarCollapse(){ /* V45.1: stub, sidebar removed */ }
