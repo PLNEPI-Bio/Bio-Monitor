@@ -18207,11 +18207,11 @@ function fasKontrakVolumeSectionsHTML(f){
   html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
   html += '<div class="fas-vol-head">';
   html += '<div class="pembangkit-detail-cell-label" style="margin:0;display:flex;align-items:center;gap:7px">Volume Terpasok ' + volBadge + '</div>';
-  html += '<div style="display:flex;align-items:center;gap:6px">';
   html += '<select class="fas-vol-yearsel" id="fasDetailVolYearSel">' +
     FAS_VOL_YEARS.map(y => '<option value="' + y + '"' + (y === fasDetailVolYear ? ' selected' : '') + '>' + y + '</option>').join('') + '</select>';
-  html += '<button class="fas-vol-edit-btn" id="fasVolEditBtn">✎ Edit Volume</button>';
-  html += '</div></div>';
+  html += '</div>';
+  // V70.1: tombol edit dipindah ke bawah head (di dalam view) agar tak terpotong.
+  html += '<button class="fas-vol-edit-btn" id="fasVolEditBtn" style="width:100%;margin-top:10px">✎ Edit Volume</button>';
   html += '<div class="fas-vol-note">' + volNote + '</div>';
   html += '<div id="fasVolDetailTableWrap">' + fasVolDetailTableHTML(f.nama, fasDetailVolYear) + '</div>';
   html += '</div></div>';
