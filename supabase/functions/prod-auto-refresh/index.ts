@@ -55,6 +55,8 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
     pembangkit: [],
     gcv: {},
     gcv_national: { "2023": 3008, "2024": 3093, "2025": 3137, "2026": 0 },
+    target_fgd_2026: 0,
+    target_fgd_2026_monthly: [] as number[],
   };
 
   // Preserve lat/lon/meta from existing plants so coordinates aren't lost.
@@ -290,6 +292,21 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
     }
   }
 
+  // Target FGD nasional 2026 — sheet "Target 2026 FGD", baris grand-total (Excel row 55).
+  // sheet_to_json({header:1}) meng-index RELATIF terhadap origin range sheet, dan
+  // used-range sheet ini mulai di B2. Jadi: baris 55 → idx 55-2 = 53.
+  //   Kolom bulanan Jan–Des = H..S (abs 7..18) → idx 6..17.
+  //   Kolom total tahunan T (abs 19) → idx 18 (= SUM(T56:T58), dipakai kartu "Target FGD").
+  if (wb.Sheets["Target 2026 FGD"]) {
+    const fgd = _sheetToMatrix(wb.Sheets["Target 2026 FGD"]);
+    const fgdRow = fgd[53] || [];
+    const fgdTotal = _safeNum(fgdRow[18]);
+    if (fgdTotal > 0) result.target_fgd_2026 = Math.round(fgdTotal);
+    const fgdMonthly: number[] = [];
+    for (let m = 0; m < 12; m++) fgdMonthly.push(_safeNum(fgdRow[6 + m]));
+    if (fgdMonthly.some((v) => v > 0)) result.target_fgd_2026_monthly = fgdMonthly;
+  }
+
   return result;
 }
 
@@ -361,12 +378,12 @@ Deno.serve(async (_req: Request) => {
     log.push(`Downloaded ${(buf.length / 1024).toFixed(0)} KB`);
 
     // 2) Parse
-    // Memory-frugal read: only the 3 sheets the prod parser needs, and skip all
+    // Memory-frugal read: only the sheets the prod parser needs, and skip all
     // per-cell metadata (styles/number-formats/formulas/HTML). Parsing every
     // sheet of the full workbook blows the Edge Function memory limit.
     const wb = XLSX.read(buf, {
       type: "array",
-      sheets: ["Rekap", "Data KIT", "Rekap Kalor"],
+      sheets: ["Rekap", "Data KIT", "Rekap Kalor", "Target 2026 FGD"],
       cellDates: false,
       cellFormula: false,
       cellHTML: false,
@@ -392,7 +409,7 @@ Deno.serve(async (_req: Request) => {
 
     // 4) Parse prod fields
     const parsed = parseProdExcel(wb, existingPlants);
-    log.push(`Parsed: ${parsed.plants.length} plants · ${parsed.pembangkit.length} pembangkit · ${Object.keys(parsed.gcv).length} GCV`);
+    log.push(`Parsed: ${parsed.plants.length} plants · ${parsed.pembangkit.length} pembangkit · ${Object.keys(parsed.gcv).length} GCV · FGD ${parsed.target_fgd_2026}`);
 
     // SAFETY: never overwrite with an empty parse
     if (!parsed.plants.length) {
@@ -408,6 +425,8 @@ Deno.serve(async (_req: Request) => {
       pembangkit: (parsed.pembangkit && parsed.pembangkit.length) ? parsed.pembangkit : (existing.pembangkit || []),
       gcv: (parsed.gcv && Object.keys(parsed.gcv).length) ? parsed.gcv : (existing.gcv || {}),
       gcv_national: parsed.gcv_national || existing.gcv_national,
+      target_fgd_2026: (parsed.target_fgd_2026 && parsed.target_fgd_2026 > 0) ? parsed.target_fgd_2026 : (existing.target_fgd_2026 || 0),
+      target_fgd_2026_monthly: (parsed.target_fgd_2026_monthly && parsed.target_fgd_2026_monthly.length) ? parsed.target_fgd_2026_monthly : (existing.target_fgd_2026_monthly || []),
       last_updated: today,
     };
 
@@ -426,7 +445,9 @@ Deno.serve(async (_req: Request) => {
       stableStringify(merged.monthly) === stableStringify(existing.monthly) &&
       stableStringify(merged.pembangkit) === stableStringify(existing.pembangkit) &&
       stableStringify(merged.gcv) === stableStringify(existing.gcv) &&
-      stableStringify(merged.gcv_national) === stableStringify(existing.gcv_national);
+      stableStringify(merged.gcv_national) === stableStringify(existing.gcv_national) &&
+      stableStringify(merged.target_fgd_2026) === stableStringify(existing.target_fgd_2026) &&
+      stableStringify(merged.target_fgd_2026_monthly) === stableStringify(existing.target_fgd_2026_monthly);
     if (sameData) {
       log.push(`↔ No change vs stored data — skipped write (saves egress). ${summary}`);
       return out(true);
