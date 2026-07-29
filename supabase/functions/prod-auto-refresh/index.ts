@@ -57,6 +57,7 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
     gcv_national: { "2023": 3008, "2024": 3093, "2025": 3137, "2026": 0 },
     target_fgd_2026: 0,
     target_fgd_2026_monthly: [] as number[],
+    target_fgd_2026_plants: {} as Record<string, unknown>,
   };
 
   // Preserve lat/lon/meta from existing plants so coordinates aren't lost.
@@ -297,9 +298,37 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
   // used-range sheet ini mulai di B2. Jadi: baris 55 → idx 55-2 = 53.
   //   Kolom bulanan Jan–Des = H..S (abs 7..18) → idx 6..17.
   //   Kolom total tahunan T (abs 19) → idx 18 (= SUM(T56:T58), dipakai kartu "Target FGD").
+  // V71: sheet ini juga memuat RINCIAN PER-PLTU (baris 4–54, 51 PLTU) di atas baris
+  // grand-total. Layout (idx relatif origin B2): B=No(0) · C=PLTU(1) · D=Genco(2) ·
+  // E=Kode(3) · H..S=Jan..Des(6..17) · T=Total(18). Kode di kolom E identik dengan
+  // kolom "Kode" sheet Rekap. MIRROR dari parseProdExcel di index.html — jaga tetap sama.
   if (wb.Sheets["Target 2026 FGD"]) {
     const fgd = _sheetToMatrix(wb.Sheets["Target 2026 FGD"]);
-    const fgdRow = fgd[53] || [];
+    // Header dicari dinamis supaya sisipan baris di atas tabel tidak menggeser parsing.
+    let fgdHdr = -1;
+    for (let r = 0; r < Math.min(12, fgd.length); r++) {
+      const row = fgd[r] || [];
+      if (_safeStr(row[1]).toLowerCase() === "pltu" && _safeStr(row[3]).toLowerCase() === "kode") { fgdHdr = r; break; }
+    }
+    // Hanya di-parse bila header ketemu — kalau layout berubah, lebih baik peta ini
+    // kosong daripada memetakan kolom yang salah jadi angka target.
+    let fgdTotalRow = -1;
+    const fgdPlants: Record<string, unknown> = {};
+    if (fgdHdr >= 0) {
+      for (let r = fgdHdr + 1; r < fgd.length; r++) {
+        const row = fgd[r] || [];
+        if (_safeStr(row[0]).toLowerCase() === "total") { fgdTotalRow = r; break; }
+        const code = _safeStr(row[3]);
+        if (!code) continue;
+        const monthly: number[] = [];
+        for (let m = 0; m < 12; m++) monthly.push(_safeNum(row[6 + m]));
+        const tot = _safeNum(row[18]);
+        if (tot <= 0 && !monthly.some((v) => v > 0)) continue;
+        fgdPlants[code] = { name: _safeStr(row[1]), total: Math.round(tot), monthly: monthly };
+      }
+    }
+    if (Object.keys(fgdPlants).length) result.target_fgd_2026_plants = fgdPlants;
+    const fgdRow = fgd[fgdTotalRow >= 0 ? fgdTotalRow : 53] || [];
     const fgdTotal = _safeNum(fgdRow[18]);
     if (fgdTotal > 0) result.target_fgd_2026 = Math.round(fgdTotal);
     const fgdMonthly: number[] = [];
@@ -427,6 +456,9 @@ Deno.serve(async (_req: Request) => {
       gcv_national: parsed.gcv_national || existing.gcv_national,
       target_fgd_2026: (parsed.target_fgd_2026 && parsed.target_fgd_2026 > 0) ? parsed.target_fgd_2026 : (existing.target_fgd_2026 || 0),
       target_fgd_2026_monthly: (parsed.target_fgd_2026_monthly && parsed.target_fgd_2026_monthly.length) ? parsed.target_fgd_2026_monthly : (existing.target_fgd_2026_monthly || []),
+      // V71: Target FGD per-PLTU (dipakai tooltip peta). Parse kosong tidak menimpa.
+      // `kontrak_pasokan_2026` ikut terbawa lewat `...existing` — jangan disentuh di sini.
+      target_fgd_2026_plants: (parsed.target_fgd_2026_plants && Object.keys(parsed.target_fgd_2026_plants).length) ? parsed.target_fgd_2026_plants : (existing.target_fgd_2026_plants || {}),
       last_updated: today,
     };
 
@@ -447,7 +479,8 @@ Deno.serve(async (_req: Request) => {
       stableStringify(merged.gcv) === stableStringify(existing.gcv) &&
       stableStringify(merged.gcv_national) === stableStringify(existing.gcv_national) &&
       stableStringify(merged.target_fgd_2026) === stableStringify(existing.target_fgd_2026) &&
-      stableStringify(merged.target_fgd_2026_monthly) === stableStringify(existing.target_fgd_2026_monthly);
+      stableStringify(merged.target_fgd_2026_monthly) === stableStringify(existing.target_fgd_2026_monthly) &&
+      stableStringify(merged.target_fgd_2026_plants) === stableStringify(existing.target_fgd_2026_plants);
     if (sameData) {
       log.push(`↔ No change vs stored data — skipped write (saves egress). ${summary}`);
       return out(true);

@@ -15,6 +15,8 @@ index.html                                    ← 21.786 baris / 1,6 MB — SELU
   ~6440–akhir <script> vanilla JS, semua fungsi global
 supabase/functions/do-auto-refresh/index.ts   ← Deno cron: SharePoint DO → tabel do_data
 supabase/functions/prod-auto-refresh/index.ts ← Deno cron: data produksi
+supabase/functions/kontrak-auto-refresh/index.ts ← Deno cron: 48 workbook "Profil Pasokan"
+                                                   per PLTU → dashboard_data.kontrak_pasokan_2026
 docs/agent-teams.md                           ← referensi agent teams
 ```
 
