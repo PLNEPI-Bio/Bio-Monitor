@@ -13714,7 +13714,8 @@ function setUserName(name){
 
 // V55: Flexible access check for Usulan Kontrak.
 // Allows admins (exact) + whitelisted first names (partial, case-insensitive).
-const USULAN_ALLOWED_NAMES = ['erfan', 'febri', 'yoga', 'aidah', 'mahmut', 'ibnu', 'haris'];
+// V67: tambah akses Usulan Kontrak — habib, fikri, ardan, pandu.
+const USULAN_ALLOWED_NAMES = ['erfan', 'febri', 'yoga', 'aidah', 'mahmut', 'ibnu', 'haris', 'habib', 'fikri', 'ardan', 'pandu'];
 // V59: view-only users — can open Usulan Kontrak but cannot edit/add/delete.
 const USULAN_VIEWONLY_NAMES = ['hokkop'];
 // Match if any name in `list` appears as a whole word in `name` (case-insensitive).
