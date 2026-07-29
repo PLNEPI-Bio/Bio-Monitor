@@ -71,13 +71,25 @@ select status_code, content from net._http_response order by id desc limit 1;
 
 ## Jadwal (pg_cron)
 
-Aktif sebagai `kontrak-auto-refresh-monthly`, **tanggal 1 tiap bulan pukul 01:00 UTC =
-08:00 WIB**. Jam UTC sengaja dipilih agar tanggalnya tetap tanggal 1 di WIB maupun UTC.
+Aktif sebagai `kontrak-auto-refresh-monthly`, **tanggal 1 tiap bulan pukul 01:10 UTC =
+08:10 WIB**. Jam UTC sengaja dipilih agar tanggalnya tetap tanggal 1 di WIB maupun UTC.
+
+> ⚠ **Menit 10 itu disengaja — jangan diubah ke menit 0.**
+> `prod-auto-refresh` berjalan pada menit 0, 20, 40 di jam UTC 23 dan 0–14, jadi menit 0
+> jam 1 akan menabraknya. Kedua fungsi melakukan baca-ubah-tulis pada blob
+> `dashboard_data.data` yang sama (~900 KB); bila jalan bersamaan, yang menulis belakangan
+> menimpa dengan snapshot yang sudah usang dan field milik fungsi lain hilang. Ini pernah
+> terjadi: `kontrak_pasokan_2026` sempat hilang pada 2026-07-29. Menit 10 memberi jarak
+> aman (tiap run hanya ~5 detik).
+>
+> Perbaikan yang benar adalah memindahkan `kontrak_pasokan_2026` ke kolom/tabel sendiri
+> supaya penulisan blob tidak bisa menyentuhnya — selama itu belum dilakukan, jarak jadwal
+> ini adalah satu-satunya pelindung.
 
 ```sql
 select cron.schedule(
   'kontrak-auto-refresh-monthly',
-  '0 1 1 * *',
+  '10 1 1 * *',
   $job$
   select net.http_post(
     url := 'https://emezjgefsgpsxucqfypa.supabase.co/functions/v1/kontrak-auto-refresh',
