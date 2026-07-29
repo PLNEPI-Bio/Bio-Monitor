@@ -6979,7 +6979,9 @@ function setDetailBasis(basis){
 }
 
 // Kontrak / rencana pasokan tahun berjalan per PLTU, dikunci dengan kode PLTU.
-// Diisi oleh edge function `kontrak-auto-refresh`, yang membaca workbook "Profil Pasokan"
+// V77: sumbernya tabel `kontrak_pasokan` (dimuat oleh fetchKontrakPasokan saat boot),
+// BUKAN dashboard_data.data. Diisi oleh edge function `kontrak-auto-refresh`, yang
+// membaca workbook "Profil Pasokan"
 // per PLTU di SharePoint dan mengambil baris "TOTAL RENCANA PASOKAN BULANAN" (kolom S)
 // dari bagian "2. RENCANA PASOKAN BULANAN — per Mitra".
 // 3 dari 51 PLTU (unit ekspansi UIK: Lontar 4, Asam Asam 5-6, Barru 3) tidak punya
@@ -7121,8 +7123,8 @@ function refreshMarkers(){
     const size = Math.max(22, Math.min(44, 20 + Math.sqrt(sizeBase || 0) / 30));
 
     // V71: tanda seru = kontrak tahun berjalan tidak menutup Target FGD (aturan lama:
-    // sisa kontrak < sisa target). Badge DORMAN selama DATA.kontrak_pasokan_2026 masih
-    // null — lihat plantKontrakBerjalan().
+    // sisa kontrak < sisa target). Badge hanya muncul setelah fetchKontrakPasokan()
+    // selesai memuat tabel `kontrak_pasokan` — lihat plantKontrakBerjalan().
     const hasShortfall = plantKontrakShortfall(p);
 
     const warningBadge = hasShortfall
@@ -14182,6 +14184,30 @@ async function fetchDoData(){
   } catch(e){ console.warn('[DO] fetch failed:', e); }
 }
 
+// V77: Kontrak / Rencana Pasokan per PLTU hidup di tabel `kontrak_pasokan` (row id=1),
+// BUKAN di dalam dashboard_data.data. Blob itu ditulis ulang UTUH oleh prod-auto-refresh
+// tiap 20 menit lewat baca-ubah-tulis, sehingga field milik penulis lain bisa terhapus
+// bila dua penulis berjalan berdekatan — persis yang terjadi 2026-07-29. Tabel terpisah
+// menghilangkan kelas bug itu, sama seperti alasan `do_data` juga terpisah.
+async function fetchKontrakPasokan(){
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('kontrak_pasokan')
+      .select('data,n_pltu,last_ok_at,last_error')
+      .eq('id', 1).single();
+    if (error){ console.warn('[Kontrak] fetch error:', error.message); return; }
+    if (data && data.data && Object.keys(data.data).length){
+      DATA.kontrak_pasokan_2026 = data.data;
+      // Tooltip peta + badge "!" membaca peta ini saat marker digambar, jadi marker
+      // perlu dibuat ulang bila peta sudah terlanjur ter-render tanpa data kontrak.
+      if (typeof refreshMarkers === 'function' && typeof markerLayer !== 'undefined' && markerLayer){
+        try { refreshMarkers(); } catch(e){}
+      }
+    }
+  } catch(e){ console.warn('[Kontrak] fetch failed:', e); }
+}
+
 // Persist a manual DO override for one contract signature. doMap = {year:[12]}.
 // Re-reads current overrides first so concurrent edits by other admins aren't
 // clobbered, then merges this signature in.
@@ -16042,7 +16068,10 @@ function applyDashboardData(newData, meta){
   if (!newData || typeof newData !== 'object') return;
   // Replace top-level DATA fields by mutation (since DATA is const)
   // V16: include 'pembangkit' so Data KIT data refreshes too
-  ['plants', 'monthly', 'bottlenecks', 'pareto', 'contracts', 'pembangkit', 'gcv', 'gcv_national', 'target_fgd_2026', 'target_fgd_2026_monthly', 'target_fgd_2026_plants', 'kontrak_pasokan_2026'].forEach(k => {
+  // V77: 'kontrak_pasokan_2026' SENGAJA tidak ada di daftar ini — sumbernya tabel
+  // `kontrak_pasokan` (lihat fetchKontrakPasokan). Payload dashboard_data lama masih
+  // bisa memuat field itu; membiarkannya di sini akan menimpa data tabel dengan nilai basi.
+  ['plants', 'monthly', 'bottlenecks', 'pareto', 'contracts', 'pembangkit', 'gcv', 'gcv_national', 'target_fgd_2026', 'target_fgd_2026_monthly', 'target_fgd_2026_plants'].forEach(k => {
     // V61: once the live bottleneck sync has loaded from `bottleneck_entries`,
     // never let a dashboard_data payload overwrite the live bottleneck list.
     if (k === 'bottlenecks' && bnSupabaseLoaded) return;
@@ -16792,10 +16821,9 @@ async function doProcessAndUpload(){
     // V71: Target FGD per-PLTU (tooltip peta). Sama seperti field FGD lain: parse kosong
     // tidak boleh menimpa data lama.
     target_fgd_2026_plants: prodUploaded && prodData.target_fgd_2026_plants && Object.keys(prodData.target_fgd_2026_plants).length ? prodData.target_fgd_2026_plants : (DATA.target_fgd_2026_plants || {}),
-    // V71: Kontrak/rencana pasokan tahun berjalan per PLTU. Diisi oleh edge function
-    // `kontrak-auto-refresh`, BUKAN oleh upload Excel — jadi di sini hanya dilestarikan
-    // supaya tidak terhapus saat admin mengunggah file prod.
-    kontrak_pasokan_2026: DATA.kontrak_pasokan_2026 || null,
+    // V77: `kontrak_pasokan_2026` TIDAK lagi ditulis ke dalam blob ini — datanya
+    // tinggal di tabel `kontrak_pasokan`. Menuliskannya kembali ke sini akan
+    // menghidupkan lagi bentrokan penulis yang membuatnya hilang pada 2026-07-29.
     last_updated: today,
   };
   // Warn user if a parsed category came up empty (unexpected for an uploaded file)
@@ -21035,6 +21063,8 @@ window.addEventListener('DOMContentLoaded', () => {
     subscribeAutoRefreshState();
     // DO store (auto + manual overrides + link health) — fetch once on boot.
     if (typeof fetchDoData === 'function') fetchDoData();
+    // V77: Kontrak pasokan per PLTU — tabel sendiri, dimuat sekali saat boot.
+    if (typeof fetchKontrakPasokan === 'function') fetchKontrakPasokan();
   }
   // Reflect admin-only pause control on first paint.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();

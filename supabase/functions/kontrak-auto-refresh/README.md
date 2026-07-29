@@ -1,8 +1,33 @@
 # kontrak-auto-refresh
 
 Scheduled Supabase Edge Function yang menarik **Daftar Kontrak / Rencana Pasokan** per
-PLTU dari folder SharePoint dan menyimpannya ke `dashboard_data` id=1 pada field
-`kontrak_pasokan_2026` (peta `{ kode_pltu: ton }`).
+PLTU dari folder SharePoint dan menyimpannya ke tabel **`kontrak_pasokan`** row id=1,
+kolom `data` (peta `{ kode_pltu: ton }`).
+
+## Kenapa tabel sendiri
+
+Awalnya data ini disimpan sebagai field di dalam `dashboard_data.data`. Itu keliru:
+blob tersebut (~900 KB) ditulis ulang **utuh** oleh `prod-auto-refresh` tiap 20 menit
+lewat baca-ubah-tulis. Bila dua penulis berjalan berdekatan, yang menulis belakangan
+memakai snapshot usang dan field milik penulis lain lenyap — `kontrak_pasokan_2026`
+benar-benar hilang karena ini pada 2026-07-29.
+
+Tabel terpisah menghapus kelas bug itu sepenuhnya: `prod-auto-refresh` secara struktural
+tidak bisa menyentuhnya. Fungsi ini tetap **membaca** `dashboard_data` (hanya
+`data->plants`, ~109 KB, untuk memetakan nama file → kode PLTU) tetapi tidak pernah
+menulisnya.
+
+Skema:
+
+| Kolom | Isi |
+| :--- | :--- |
+| `data` | `{ kode_pltu: ton }` |
+| `n_pltu` | jumlah PLTU pada parse terakhir |
+| `source_url` | link share yang dipakai |
+| `last_ok_at` / `last_error` | kesehatan run terakhir |
+
+RLS: baca publik (dashboard memakai anon key), **tanpa policy write** — penulisan hanya
+lewat service-role di edge function. Klien memuatnya via `fetchKontrakPasokan()`.
 
 Dipakai oleh tooltip Map Cofiring sebagai baris **"Kontrak 2026"**, dan menjadi dasar
 **tanda seru** pada ikon PLTU (muncul bila Kontrak < Target FGD).
@@ -74,17 +99,10 @@ select status_code, content from net._http_response order by id desc limit 1;
 Aktif sebagai `kontrak-auto-refresh-monthly`, **tanggal 1 tiap bulan pukul 01:10 UTC =
 08:10 WIB**. Jam UTC sengaja dipilih agar tanggalnya tetap tanggal 1 di WIB maupun UTC.
 
-> ⚠ **Menit 10 itu disengaja — jangan diubah ke menit 0.**
-> `prod-auto-refresh` berjalan pada menit 0, 20, 40 di jam UTC 23 dan 0–14, jadi menit 0
-> jam 1 akan menabraknya. Kedua fungsi melakukan baca-ubah-tulis pada blob
-> `dashboard_data.data` yang sama (~900 KB); bila jalan bersamaan, yang menulis belakangan
-> menimpa dengan snapshot yang sudah usang dan field milik fungsi lain hilang. Ini pernah
-> terjadi: `kontrak_pasokan_2026` sempat hilang pada 2026-07-29. Menit 10 memberi jarak
-> aman (tiap run hanya ~5 detik).
->
-> Perbaikan yang benar adalah memindahkan `kontrak_pasokan_2026` ke kolom/tabel sendiri
-> supaya penulisan blob tidak bisa menyentuhnya — selama itu belum dilakukan, jarak jadwal
-> ini adalah satu-satunya pelindung.
+> Menit 10 dipilih agar tidak berbarengan dengan `prod-auto-refresh` (menit 0, 20, 40 di
+> jam UTC 23 dan 0–14). Sejak data pindah ke tabel sendiri, tabrakan jadwal **tidak lagi
+> merusak data** — keduanya menulis tabel berbeda. Jarak ini sekarang sekadar menghindari
+> dua fungsi berat berjalan serempak, bukan pengaman korupsi data.
 
 ```sql
 select cron.schedule(

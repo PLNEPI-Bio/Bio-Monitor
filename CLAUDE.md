@@ -53,7 +53,11 @@ supabase-js 2.45.4, xlsx 0.18.5, xlsx-js-style 1.2.0, jsPDF 2.5.1. Font Plus Jak
 - Chart.js: instance di registry `realCharts.*`, `paretoCharts.*`, `insightsCharts.*`,
   `trendChart`, `kontrakJenisPieChart`. **Selalu `.destroy()` sebelum `new Chart()` di canvas sama.**
 - Supabase: `dashboard_data`, `upload_log`, `bottleneck_entries`, `laporan_arsip`,
-  `usulan_base`/`usulan_tahap`, `do_data`, `app_control`.
+  `usulan_base`/`usulan_tahap`, `do_data`, `kontrak_pasokan`, `app_control`.
+- **`dashboard_data.data` (~900 KB) ditulis ulang UTUH oleh `prod-auto-refresh` tiap 20
+  menit.** Jangan menaruh data yang ditulis proses lain di dalamnya — dua penulis
+  baca-ubah-tulis akan saling menimpa dan field bisa lenyap (terjadi 2026-07-29). Data
+  milik proses lain masuk tabel sendiri: `do_data`, `kontrak_pasokan`.
 - `do_data`: kolom `auto` (hasil cron) + `overrides` (manual admin) digabung saat render.
   **Jalur otomatis tidak boleh menyentuh `overrides`.**
 - Auth berbasis nama di klien (`UPDATE_ADMIN_NAMES`, `isAdminRole()`). Keamanan sebenarnya
