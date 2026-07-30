@@ -1205,11 +1205,16 @@ html,body{
 }
 
 /* Popup */
-.plant-popup{padding:12px 14px;min-width:220px;max-width:280px}
+.plant-popup{padding:12px 14px;min-width:220px;max-width:320px}
 .plant-popup-name{font-size:14px;font-weight:700;color:var(--text-bright);margin-bottom:2px}
 /* V71: identitas Genco · Boiler · Regional diringkas jadi satu subjudul */
 .plant-popup-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 .plant-popup-row{display:flex;justify-content:space-between;gap:12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text);margin-bottom:3px}
+/* V81: tiap baris wajib satu baris. Flex item default boleh menyusut (flex-shrink:1),
+   jadi label panjang seperti "KEBUTUHAN BATUBARA" terbungkus jadi dua baris begitu
+   label+nilai melebihi lebar tooltip. nowrap + flex-shrink:0 mematikan itu; max-width
+   .plant-popup dinaikkan agar teks yang kini tidak boleh wrap tetap muat di dalam kotak. */
+.plant-popup-row span{white-space:nowrap;flex-shrink:0}
 .plant-popup-row span:first-child{color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
 .plant-popup-action{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
 /* V75: kelas terpisah (BUKAN .plant-popup) supaya popup Bottleneck tidak ikut terpengaruh.
