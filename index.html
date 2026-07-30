@@ -7228,6 +7228,13 @@ function renderPopup(p){
   // sampai 8 digit, jadi dipakai fmt() yang meringkas ke "3.49M" — fmtInt akan
   // melebarkan tooltip. Ke-51 PLTU punya nilai bukan-nol.
   const batubara = p.kebutuhan_batubara || 0;
+  // V84: % Cofiring = realisasi s.d. bulan berjalan dibagi kebutuhan batubara yang
+  // diprorata ke jumlah bulan yang sudah berjalan. runningMonthIdx() 0-based, jadi
+  // bulan berjalan = +1 (Juli → 7) dan pembaginya (batubara / 12) * 7.
+  // null bila batubara 0 — rasionya tidak terdefinisi, tampilkan "—" bukan 0% atau Infinity.
+  const bulanBerjalan = runningMonthIdx() + 1;
+  const cofiringBase = (batubara / 12) * bulanBerjalan;
+  const cofiringPct = cofiringBase > 0 ? (ytd.real / cofiringBase * 100) : null;
   const shortfall = plantKontrakShortfall(p);
   // V83: pasangan kebalikan dari shortfall. Syaratnya dicerminkan persis
   // (kontrak ada + fgd > 0) supaya PLTU tanpa data kontrak atau tanpa Target FGD
@@ -7254,6 +7261,7 @@ function renderPopup(p){
     <div class="plant-popup-row"><span>Kontrak ${yr}</span><span style="color:${kontrak === null ? 'var(--text-dim)' : shortfall ? '#ef4444' : '#10b981'}">${kontrak === null ? 'belum tersedia' : fmtInt(kontrak) + ' ton'}</span></div>
     <div class="plant-popup-row"><span>Sisa Kontrak ${yr}</span><span${sisaKontrak === null ? ' style="color:var(--text-dim)"' : ''}>${sisaKontrak === null ? 'belum tersedia' : fmtInt(sisaKontrak) + ' ton'}</span></div>
     <div class="plant-popup-row"><span>Kebutuhan Batubara</span><span>${fmt(batubara)} ton</span></div>
+    <div class="plant-popup-row"><span>% Cofiring</span><span>${cofiringPct === null ? '—' : cofiringPct.toFixed(1) + '%'}</span></div>
     ${shortfall ? `<div class="plant-popup-warning">⚠ Kontrak &lt; Target FGD: kurang ${fmtInt(fgd - kontrak)} ton</div>` : ''}
     ${surplus ? `<div class="plant-popup-surplus">✓ Kontrak &gt; Target FGD: lebih ${fmtInt(kontrak - fgd)} ton</div>` : ''}
   </div>`;
