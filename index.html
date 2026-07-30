@@ -953,6 +953,16 @@ html,body{
   font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.3px;
   line-height:1.4;
 }
+/* V83: kebalikan dari .plant-popup-warning — Kontrak melampaui Target FGD.
+   Bentuknya sengaja identik, hanya warnanya hijau, supaya kedua kondisi terbaca
+   sebagai satu pasangan. Sengaja BUKAN varian .plant-popup-warning agar popup
+   Bottleneck yang memakai kelas itu tidak ikut terpengaruh. */
+.plant-popup-surplus{
+  margin-top:8px;padding:6px 8px;background:rgba(16,185,129,.15);
+  border-left:2px solid #10b981;color:#10b981;font-weight:600;
+  font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.3px;
+  line-height:1.4;
+}
 
 /* ===== RIGHT PANEL ===== */
 .detail-panel{background:var(--panel-2);border-left:1px solid var(--border);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;opacity:0;transition:opacity .2s ease;pointer-events:none}
@@ -7219,6 +7229,11 @@ function renderPopup(p){
   // melebarkan tooltip. Ke-51 PLTU punya nilai bukan-nol.
   const batubara = p.kebutuhan_batubara || 0;
   const shortfall = plantKontrakShortfall(p);
+  // V83: pasangan kebalikan dari shortfall. Syaratnya dicerminkan persis
+  // (kontrak ada + fgd > 0) supaya PLTU tanpa data kontrak atau tanpa Target FGD
+  // tidak mendapat catatan apa pun. Saat kontrak == fgd keduanya false — tidak ada
+  // kelebihan maupun kekurangan untuk dilaporkan.
+  const surplus = (kontrak !== null) && fgd > 0 && kontrak > fgd;
   // Warna realisasi memakai ambang yang sama dengan plantPeriodStatus, tetapi dihitung
   // terhadap target Jan–bulan berjalan (bukan target setahun penuh) agar sebanding.
   const pct = ytd.pct * 100;
@@ -7240,6 +7255,7 @@ function renderPopup(p){
     <div class="plant-popup-row"><span>Sisa Kontrak ${yr}</span><span${sisaKontrak === null ? ' style="color:var(--text-dim)"' : ''}>${sisaKontrak === null ? 'belum tersedia' : fmtInt(sisaKontrak) + ' ton'}</span></div>
     <div class="plant-popup-row"><span>Kebutuhan Batubara</span><span>${fmt(batubara)} ton</span></div>
     ${shortfall ? `<div class="plant-popup-warning">⚠ Kontrak &lt; Target FGD: kurang ${fmtInt(fgd - kontrak)} ton</div>` : ''}
+    ${surplus ? `<div class="plant-popup-surplus">✓ Kontrak &gt; Target FGD: lebih ${fmtInt(kontrak - fgd)} ton</div>` : ''}
   </div>`;
 }
 
