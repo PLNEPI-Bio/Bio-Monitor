@@ -7187,6 +7187,10 @@ function renderPopup(p){
   const kontrak = plantKontrakBerjalan(p);
   // V78: rencana pasokan − realisasi DO. Boleh negatif; lihat plantSisaKontrakPasokan().
   const sisaKontrak = plantSisaKontrakPasokan(p);
+  // V80: kebutuhan batubara dari sheet Rekap (terisi untuk ke-51 PLTU). Nilainya bisa
+  // sampai 8 digit, jadi dipakai fmt() yang meringkas ke "3.49M" — fmtInt akan
+  // melebarkan tooltip. Ke-51 PLTU punya nilai bukan-nol.
+  const batubara = p.kebutuhan_batubara || 0;
   const shortfall = plantKontrakShortfall(p);
   // Warna realisasi memakai ambang yang sama dengan plantPeriodStatus, tetapi dihitung
   // terhadap target Jan–bulan berjalan (bukan target setahun penuh) agar sebanding.
@@ -7207,6 +7211,7 @@ function renderPopup(p){
     <div class="plant-popup-row"><span>Realisasi s.d. ${mLabel}</span><span style="color:${statusColor(status)}">${fmtInt(ytd.real)} ton</span></div>
     <div class="plant-popup-row"><span>Kontrak ${yr}</span><span style="color:${kontrak === null ? 'var(--text-dim)' : shortfall ? '#ef4444' : '#10b981'}">${kontrak === null ? 'belum tersedia' : fmtInt(kontrak) + ' ton'}</span></div>
     <div class="plant-popup-row"><span>Sisa Kontrak ${yr}</span><span${sisaKontrak === null ? ' style="color:var(--text-dim)"' : ''}>${sisaKontrak === null ? 'belum tersedia' : fmtInt(sisaKontrak) + ' ton'}</span></div>
+    <div class="plant-popup-row"><span>Kebutuhan Batubara</span><span>${fmt(batubara)} ton</span></div>
     ${shortfall ? `<div class="plant-popup-warning">⚠ Kontrak &lt; Target FGD: kurang ${fmtInt(fgd - kontrak)} ton</div>` : ''}
   </div>`;
 }
