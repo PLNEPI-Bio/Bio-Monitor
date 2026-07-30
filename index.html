@@ -859,8 +859,11 @@ html,body{
   white-space:normal!important;max-width:280px!important;
   pointer-events:none;
 }
-/* V64: cofiring popup is interactive — let the mouse rest on it so it stays visible */
-.leaflet-tooltip.plant-tooltip.plant-tooltip-interactive{pointer-events:auto}
+/* V86: tooltip TIDAK boleh menangkap pointer. Sejak V82 tooltip menetap sampai peta
+   diklik, jadi pointer-events:auto (warisan V64, saat tooltip masih tertutup on mouseout)
+   kehilangan alasannya dan justru merugikan: panel selebar 320px itu melayang di atas
+   markerPane dan memblokir klik ke marker mana pun di belakangnya — penyebab utama klik
+   terasa "tidak kena". Dengan none, klik menembus ke marker/peta di bawahnya. */
 .leaflet-tooltip.plant-tooltip::before{display:none!important}
 :root[data-theme="light"] .leaflet-tooltip.plant-tooltip{
   box-shadow:0 6px 18px rgba(15,23,42,.15)!important;
@@ -914,10 +917,30 @@ html,body{
 /* Plant icon marker */
 .plant-icon{
   width:28px;height:32px;position:relative;cursor:pointer;
-  transition:transform .15s;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));
+  transition:transform .12s ease-out;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));
 }
+/* V86: bidang klik dijamin minimal 44×44px (ambang target sentuh WCAG) lewat pseudo-element
+   di belakang ikon — ukuran visual ikon TIDAK berubah, hanya area tangkapnya. Ikon terkecil
+   di peta cuma 22px dan sebagian besar kotaknya terisi asap transparan, jadi tanpa ini
+   pengguna harus membidik badan pabriknya. Pseudo-element ini juga jadi halo yang menyala
+   saat hover, supaya jelas marker MANA yang akan terklik sebelum tombol ditekan. Digambar
+   sebelum <svg> dalam urutan cat, jadi selalu berada di belakang ikon tanpa perlu z-index. */
+.plant-icon::before{
+  content:'';position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:max(100%,44px);height:max(100%,44px);
+  border-radius:50%;background:currentColor;
+  opacity:0;transition:opacity .12s ease-out;
+}
+/* Bidang klik di atas meluber keluar kotak marker Leaflet, jadi induknya tidak boleh
+   memangkasnya. Dibatasi :has() agar hanya kena marker PLTU, bukan marker peta lain. */
+.leaflet-marker-icon:has(> .plant-icon){overflow:visible}
 .plant-icon:hover{transform:scale(1.25)}
+.plant-icon:hover::before{opacity:.22}
 .plant-icon.selected{transform:scale(1.4);filter:drop-shadow(0 0 8px currentColor)}
+.plant-icon.selected::before{opacity:.28}
+/* Umpan balik tekan. Ditaruh setelah .selected supaya menang saat spesifisitasnya seri. */
+.plant-icon:active{transform:scale(1.1)}
 
 .plant-icon svg{width:100%;height:100%}
 
@@ -1227,11 +1250,8 @@ html,body{
 .plant-popup-row span{white-space:nowrap;flex-shrink:0}
 .plant-popup-row span:first-child{color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
 .plant-popup-action{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
-/* V75: kelas terpisah (BUKAN .plant-popup) supaya popup Bottleneck tidak ikut terpengaruh.
-   V76: baris "Klik untuk detail lengkap" dihapus dari tooltip; tooltipnya tetap bisa diklik,
-   jadi garis bawah pada nama + kursor pointer kini satu-satunya penanda bahwa ia interaktif. */
-.plant-popup-clickable{cursor:pointer}
-.plant-popup-clickable:hover .plant-popup-name{text-decoration:underline;text-underline-offset:3px}
+/* V86: .plant-popup-clickable (V75/V76) dihapus seluruhnya — tooltip kini
+   pointer-events:none, jadi tidak pernah menerima hover maupun klik. */
 
 /* ===== TAB 2: REALISASI VIEW ===== */
 .real-view{display:grid;grid-template-rows:auto 1fr;height:100%;overflow-y:auto;padding:20px 24px;gap:20px;background:var(--bg)}
@@ -5113,6 +5133,11 @@ html,body{
           <div class="kpi-value" id="kpi-gcv">—</div>
           <div class="kpi-meta">kCal/kg</div>
         </div>
+        <div class="kpi accent" id="kpi-card-cofiring">
+          <div class="kpi-label">% Cofiring</div>
+          <div class="kpi-value" id="kpi-cofiring">—</div>
+          <div class="kpi-meta" id="kpi-cofiring-meta">REALISASI VS KEBUTUHAN BATUBARA</div>
+        </div>
       </div>
 
       <h3>Filter · Genco</h3>
@@ -7141,13 +7166,11 @@ function initMainMap(){
   map.on('tooltipclose', () => { if (_cofiringLegend) _cofiringLegend.classList.remove('legend-behind-tooltip'); });
   // V82: tooltip PLTU hanya tertutup oleh klik di area peta lain. Klik pada marker
   // tidak sampai ke sini — Leaflet menghentikan propagasi untuk layer interaktif —
-  // jadi handler ini hanya kena klik latar peta. Klik DI DALAM tooltip dikecualikan
-  // supaya tooltip tidak menutup dirinya sendiri saat diklik untuk membuka detail.
-  map.on('click', (e) => {
-    const t = e.originalEvent && e.originalEvent.target;
-    if (t && t.closest && t.closest('.leaflet-tooltip')) return;
-    closeAllPlantTooltips();
-  });
+  // jadi handler ini hanya kena klik latar peta.
+  // V86: pengecualian untuk klik di dalam tooltip dihapus. Tooltip kini
+  // pointer-events:none, jadi klik "di atas" tooltip sebenarnya mendarat di peta di
+  // belakangnya — dan menutupnya, persis seperti klik latar peta lainnya.
+  map.on('click', () => closeAllPlantTooltips());
   // Prevent Leaflet from capturing click/touch on overlays inside map-area
   document.querySelectorAll('.map-overlay, .sidebar-show-btn, .trends-panel, .trends-show-btn').forEach(el => {
     if (el) L.DomEvent.disableClickPropagation(el);
@@ -7161,19 +7184,77 @@ function closeAllPlantTooltips(){
   }
 }
 
+// V86: dorongan z-index untuk marker yang sedang di-hover. Leaflet memberi tiap marker
+// zIndex = posisi-y layar, yang bisa mencapai ribuan saat peta di-zoom, jadi angkanya
+// dibuat jauh di atas itu. Aman sebesar apa pun: markerPane punya konteks penumpukan
+// sendiri, sehingga nilai ini tidak bisa menembus ke atas tooltip atau kontrol peta.
+const MARKER_RISE_Z = 100000;
+
+// V87: ===== pemisahan marker satu lokasi =====
+// Enam pasang PLTU berbagi satu tapak dan hanya terpisah 0,012° bujur (±1,3 km):
+// Suralaya 1-7/8, Paiton 1-2/9, Lontar/Lontar 4, Asam Asam/Asam Asam 5-6,
+// Barru/Barru 3, Nii Tanasa/Nii Tanasa 3. Peta ini maxZoom-nya 12; di situ pun 0,012°
+// hanya ≈35 px, masih lebih sempit dari ikon terbesar (44 px) — artinya pasangan ini
+// TIDAK PERNAH bisa dipisahkan dengan cara zoom, berapa pun zoom-nya. Karena itu
+// pergeserannya dibuat dalam PIKSEL (lewat iconAnchor), bukan dalam derajat: jaraknya
+// tetap sama di semua tingkat zoom. Bandingkan dengan pergeseran berbasis derajat yang
+// dulu dipakai peta Bottleneck — ia menyusut jadi tak berguna begitu peta di-zoom keluar.
+// Ambang 0,03° sengaja sempit: hanya menangkap PLTU yang benar-benar satu tapak.
+// Kepadatan biasa (mis. pantai utara Jawa, jarak antar-PLTU >0,12°) sengaja dibiarkan —
+// itu memang selesai dengan zoom, dan menggesernya justru memalsukan letak geografis.
+const SITE_GROUP_DEG = 0.03;
+// Jari-jari sebar. Minimal 22 px supaya bidang klik 44 px (lihat .plant-icon::before)
+// milik dua marker bersebelahan hanya bersinggungan, tidak saling tindih.
+const SITE_SPREAD_MIN_R = 22;
+
+// Mengembalikan { kode → {dx, dy} } dalam piksel untuk PLTU yang berbagi tapak.
+// PLTU yang berdiri sendiri tidak masuk hasil. `sizeOf` memberi lebar ikon dalam px.
+function computeSiteSpread(plants, sizeOf){
+  const out = {};
+  const taken = new Array(plants.length).fill(false);
+  for (let i = 0; i < plants.length; i++){
+    if (taken[i]) continue;
+    const group = [i];
+    taken[i] = true;
+    for (let j = i + 1; j < plants.length; j++){
+      if (taken[j]) continue;
+      const dLat = plants[i].lat - plants[j].lat;
+      const dLon = plants[i].lon - plants[j].lon;
+      if (Math.sqrt(dLat * dLat + dLon * dLon) < SITE_GROUP_DEG){ group.push(j); taken[j] = true; }
+    }
+    // Sisa satu berarti pasangannya tersaring filter — biarkan di posisi aslinya.
+    if (group.length < 2) continue;
+    const maxSize = Math.max(...group.map(g => sizeOf(plants[g])));
+    const r = Math.max(SITE_SPREAD_MIN_R, maxSize / 2 + 4);
+    // Disebar merata di lingkaran, mulai dari arah jam 9. Untuk pasangan (semua kasus
+    // nyata saat ini) sudutnya jadi 180° dan 360° — murni kiri-kanan, tanpa geser tegak.
+    group.forEach((gi, k) => {
+      const a = Math.PI + (2 * Math.PI * k / group.length);
+      out[plants[gi].code] = { dx: Math.round(r * Math.cos(a)), dy: Math.round(r * Math.sin(a)) };
+    });
+  }
+  return out;
+}
+
+// Lebar ikon marker peta Cofiring, sebanding dengan target periode (atau realisasi
+// untuk tahun lampau). Dipisah jadi fungsi karena computeSiteSpread juga memerlukannya.
+function cofiringMarkerSize(p){
+  const totals = plantPeriodTotals(p);
+  const sizeBase = state.mapPeriod.year === '2026' ? totals.target : totals.real;
+  return Math.max(22, Math.min(44, 20 + Math.sqrt(sizeBase || 0) / 30));
+}
+
 function refreshMarkers(){
   if (!markerLayer) return;
   markerLayer.clearLayers();
   markers = {};
-  const plants = currentPlants();
+  const plants = currentPlants().filter(p => p.lat);
+  const spread = computeSiteSpread(plants, cofiringMarkerSize);
   plants.forEach(p => {
-    if (!p.lat) return;
     const color = gencoColor(p.genco);
     const isSelected = state.selected === p.code;
-    // Size proportional to period target (or period real for past years)
-    const totals = plantPeriodTotals(p);
-    const sizeBase = state.mapPeriod.year === '2026' ? totals.target : totals.real;
-    const size = Math.max(22, Math.min(44, 20 + Math.sqrt(sizeBase || 0) / 30));
+    const size = cofiringMarkerSize(p);
+    const off = spread[p.code] || { dx: 0, dy: 0 };
 
     // V71: tanda seru = kontrak tahun berjalan tidak menutup Target FGD (aturan lama:
     // sisa kontrak < sisa target). Badge hanya muncul setelah fetchKontrakPasokan()
@@ -7185,17 +7266,32 @@ function refreshMarkers(){
       : '';
 
     const html = `<div class="plant-icon${isSelected?' selected':''}" style="width:${size}px;height:${size*1.15}px;color:${color}">${plantIconSvg(color, isSelected)}${warningBadge}</div>`;
+    // V87: iconAnchor = titik pada ikon yang dipakukan ke koordinat. Menguranginya
+    // sebesar off menggeser ikon ke arah berlawanan, yakni +dx/+dy di layar. Koordinat
+    // marker sendiri TIDAK diubah, jadi data, panel detail, dan ekspor tetap memakai
+    // letak asli — yang bergeser hanya gambarnya.
     const icon = L.divIcon({
       html, className:'',
       iconSize:[size, size*1.15],
-      iconAnchor:[size/2, size*1.15],
+      iconAnchor:[size/2 - off.dx, size*1.15 - off.dy],
     });
-    const m = L.marker([p.lat, p.lon], { icon, title: p.name });
+    // V86: PLTU terpilih ikut diangkat ke depan. Ia membesar 1,4× sehingga paling mungkin
+    // tertutup tetangganya, dan setelah selectPlant() memanggil refreshMarkers() marker ini
+    // adalah elemen DOM yang BARU — kursor sudah diam di atasnya, jadi tak ada mouseover
+    // susulan yang akan mengangkatnya.
+    const baseZ = isSelected ? MARKER_RISE_Z : 0;
+    const m = L.marker([p.lat, p.lon], { icon, title: p.name, zIndexOffset: baseZ });
     // V17: bindTooltip (no auto-pan) instead of bindPopup (which pans the map)
-    // V64: interactive:true so the tooltip stays while the mouse is over it
+    // V86: interactive:false — tooltip murni overlay tampilan. Selain melepas
+    // pointer-events (lihat CSS .plant-tooltip), ini juga mencegah Leaflet mendaftarkan
+    // container tooltip sebagai target interaktif, yang tadinya menghentikan klik
+    // sebelum sampai ke peta.
+    // V87: tooltip diposisikan Leaflet dari koordinat marker, bukan dari iconAnchor,
+    // jadi pergeseran ikon harus dititipkan ulang di sini agar tooltip tetap muncul
+    // di atas ikonnya — bukan mengambang di antara dua marker sepasang.
     m.bindTooltip(renderPopup(p), {
-      direction: 'top', offset: [0, -8], opacity: 1, sticky: false,
-      className: 'plant-tooltip plant-tooltip-interactive', interactive: true,
+      direction: 'top', offset: [off.dx, off.dy - 8], opacity: 1, sticky: false,
+      className: 'plant-tooltip', interactive: false,
     });
     // Klik marker: buka panel detail + tooltip (selectPlant memanggil openTooltip).
     m.on('click', () => selectPlant(p.code, true));
@@ -7207,6 +7303,15 @@ function refreshMarkers(){
     // dipanggil SETELAH addLayer (bukan setelah bindTooltip — di situ handler-nya
     // belum ada). Handler 'move'/'remove' milik Leaflet sengaja dibiarkan utuh.
     m.off('mouseover').off('mouseout');
+    // V86: marker yang di-hover diangkat ke depan. Kotak ikon (22–44px, sebagian besar
+    // asap transparan) saling menumpuk rapat di Jawa, dan urutan tumpukan bawaan Leaflet
+    // memakai lintang — jadi kotak transparan PLTU tetangga bisa menutupi badan pabrik
+    // yang sedang dibidik, dan klik mendarat di PLTU yang salah. Dengan ini, apa pun yang
+    // membesar & menyala di bawah kursor itulah yang akan terklik.
+    // Sengaja tidak memakai opsi riseOnHover Leaflet: opsi itu memasang handler
+    // mouseover/mouseout sendiri yang ikut tercabut oleh off() di baris atas.
+    m.on('mouseover', () => m.setZIndexOffset(MARKER_RISE_Z));
+    m.on('mouseout', () => m.setZIndexOffset(baseZ));
   });
 }
 
@@ -7247,10 +7352,10 @@ function renderPopup(p){
   const status = !ytd.target ? (ytd.real > 0 ? 'on_track' : 'no_data')
     : pct >= 90 ? 'on_track' : pct >= 50 ? 'at_risk' : pct > 0 ? 'behind' : 'no_data';
   const sub = [p.boiler, p.regional].filter(Boolean).join(' · ');
-  // V75: seluruh tooltip dibuat bisa diklik. Sebelumnya handler klik hanya ada di marker,
-  // sementara tooltip ini interactive (pointer-events:auto) sehingga menutupi marker —
-  // akibatnya mengklik tulisan "Klik untuk detail lengkap" justru tidak melakukan apa pun.
-  return `<div class="plant-popup plant-popup-clickable" onclick="selectPlant('${p.code}', true)">
+  // V86: onclick (V75) + kelas -clickable dibuang. Tooltip ini hanya muncul untuk PLTU yang
+  // SUDAH terpilih, jadi mengkliknya cuma memilih ulang PLTU yang sama — tidak ada gunanya,
+  // sementara pointer-events yang dibutuhkannya memblokir klik ke marker di belakang tooltip.
+  return `<div class="plant-popup">
     <div class="plant-popup-name">${p.name}${shortfall ? ' <span class="popup-warn">!</span>' : ''}</div>
     <div class="plant-popup-sub"><b style="color:${color}">${p.genco || '—'}</b>${sub ? ' · ' + sub : ''}</div>
     <div class="plant-popup-row"><span>Periode</span><span style="color:var(--accent)">${yr}</span></div>
@@ -7432,6 +7537,43 @@ function updateKPIs(){
     const yr = state.mapPeriod.year || '2026';
     const gcvVal = gcvNat[yr];
     gcvEl.innerHTML = (gcvVal && gcvVal > 0) ? Number(gcvVal).toLocaleString('id-ID') : '—';
+  }
+  // V85: % Cofiring nasional — rumus yang sama dengan baris "% Cofiring" di tooltip PLTU
+  // (realisasi kumulatif ÷ kebutuhan batubara yang diprorata per bulan berjalan), hanya
+  // saja realisasi DAN kebutuhan batubara dijumlahkan lebih dulu untuk seluruh PLTU yang
+  // lolos filter. Menjumlah dulu baru membagi, bukan merata-ratakan persentase per PLTU:
+  // PLTU besar harus menimbang lebih berat.
+  // kebutuhan_batubara hanya tersedia sebagai satu angka tahunan tahun berjalan — tidak ada
+  // rincian historis — jadi kartu disembunyikan untuk tahun lain (pola sama dengan kartu
+  // Konfirmasi DO) daripada menampilkan rasio dengan pembagi tahun yang keliru.
+  const cofCard = document.getElementById('kpi-card-cofiring');
+  if (cofCard){
+    if (_tbYear !== String(RUNNING_YEAR)){
+      cofCard.style.display = 'none';
+    } else {
+      cofCard.style.display = '';
+      // Bulan 'all' → bulan berjalan menurut tanggal sistem, persis seperti tooltip, sehingga
+      // kartu ini setara penjumlahan seluruh tooltip. Bulan tertentu → Jan s/d bulan itu, agar
+      // kartu tetap menanggapi filter periode seperti kartu lain di grid. Sengaja BUKAN tbCutoff
+      // (bulan realisasi terakhir): pembagi harus mencerminkan bulan yang sudah berjalan, bukan
+      // bulan yang datanya sudah masuk — kalau tidak, keterlambatan input justru menaikkan %.
+      const cofCut = (_tbMonth === 'all') ? runningMonthIdx() : parseInt(_tbMonth, 10);
+      let cofReal = 0, cofBatubara = 0;
+      for (const p of plants){
+        const ra = p.real_2026 || [];
+        for (let m = 0; m <= cofCut; m++){ cofReal += (ra[m] || 0); }
+        cofBatubara += (p.kebutuhan_batubara || 0);
+      }
+      const cofBase = (cofBatubara / 12) * (cofCut + 1);
+      const cofEl = document.getElementById('kpi-cofiring');
+      const cofMeta = document.getElementById('kpi-cofiring-meta');
+      if (cofEl) cofEl.innerHTML = cofBase > 0
+        ? ((cofReal / cofBase * 100).toFixed(1) + '<span class="kpi-unit">%</span>')
+        : '—';
+      if (cofMeta) cofMeta.textContent = cofBase > 0
+        ? ('REALISASI JAN–' + (MONTHS[cofCut] || '').toUpperCase() + ' VS KEBUTUHAN BATUBARA')
+        : 'KEBUTUHAN BATUBARA BELUM ADA';
+    }
   }
   // V33: hide Konfirmasi DO KPI card for past years (only 2026 has confirmed DO context)
   const doCard = document.getElementById('kpi-card-do');
@@ -10805,33 +10947,29 @@ function refreshBnMap(){
 
   const byPlant = bottlenecksByPlant();
 
-  // V20: pairs of PLTU that are co-located and overlap visually at low zoom.
-  // Apply a small offset (in degrees) so both are clickable. Offsets are
-  // map-only — underlying plant.lat/lon stays unchanged.
-  const VISUAL_OFFSETS = {
-    'Paiton 1-2':   { dLat: -0.08, dLon: -0.10 },
-    'Paiton 9':     { dLat: +0.08, dLon: +0.10 },
-    'Suralaya 1-7': { dLat: -0.08, dLon: -0.10 },
-    'Suralaya 8':   { dLat: +0.08, dLon: +0.10 },
+  // V87: VISUAL_OFFSETS (V20) diganti computeSiteSpread. Yang lama menggeser koordinat
+  // dalam derajat dan hanya mencakup Paiton + Suralaya; karena derajat menyusut jadi
+  // piksel saat peta di-zoom keluar, pada tampilan awal kedua marker tetap menumpuk —
+  // sekaligus melesetkan letaknya ~13 km saat di-zoom masuk. Versi piksel memisahkan
+  // keduanya dengan jarak yang sama di semua zoom, dan mencakup keenam pasangan.
+  const bnPlants = DATA.plants.filter(p => p.lat);
+  const bnSizeOf = p => {
+    const c = (byPlant[p.name] || []).length;
+    return c > 0 ? Math.max(26, Math.min(44, 22 + c * 1.8)) : 22;
   };
+  const spread = computeSiteSpread(bnPlants, bnSizeOf);
 
   // Show a marker for every PLTU we have coordinates for; dim those without bottlenecks
-  DATA.plants.forEach(p => {
-    if (!p.lat) return;
+  bnPlants.forEach(p => {
     const color = gencoColor(p.genco);
     const count = (byPlant[p.name] || []).length;
     const isSelected = state.bnSelectedPltu === p.name;
     const hasBottlenecks = count > 0;
 
-    // Apply visual offset if this PLTU is in an overlap pair
-    const off = VISUAL_OFFSETS[p.name];
-    const markerLat = off ? p.lat + off.dLat : p.lat;
-    const markerLon = off ? p.lon + off.dLon : p.lon;
+    const off = spread[p.code] || { dx: 0, dy: 0 };
 
     // Size proportional to bottleneck count; plants without issues get minimum size
-    const size = hasBottlenecks
-      ? Math.max(26, Math.min(44, 22 + count * 1.8))
-      : 22;
+    const size = bnSizeOf(p);
 
     // Apply different visual treatment
     const opacity = hasBottlenecks ? 1 : 0.3;
@@ -10842,19 +10980,24 @@ function refreshBnMap(){
     const html = `<div class="plant-icon bn-plant-icon${isSelected?' selected':''}" style="width:${size}px;height:${size*1.15}px;color:${color};opacity:${opacity}">
       ${plantIconSvg(color, isSelected)}${badgeHtml}
     </div>`;
+    // V87: pergeseran satu-tapak dipasang lewat iconAnchor (piksel), jadi koordinat
+    // marker kembali ke letak sebenarnya — lihat catatan di computeSiteSpread.
     const icon = L.divIcon({
       html, className:'',
       iconSize:[size, size*1.15],
-      iconAnchor:[size/2, size*1.15],
+      iconAnchor:[size/2 - off.dx, size*1.15 - off.dy],
     });
-    const m = L.marker([markerLat, markerLon], { icon, title: p.name });
+    // V86: riseOnHover — marker yang di-hover naik ke depan supaya kotak transparan
+    // PLTU tetangga tidak mencuri kliknya. Di peta ini opsi bawaan Leaflet bisa dipakai
+    // langsung karena handler mouseover-nya tidak dicabut (beda dengan peta Cofiring).
+    const m = L.marker([p.lat, p.lon], { icon, title: p.name, riseOnHover: true });
     // V20: bindTooltip on hover (no auto-pan) instead of bindPopup
     m.bindTooltip(renderBnPopup(p, byPlant[p.name] || []), {
-      direction: 'top', offset: [0, -8], opacity: 1, sticky: false,
+      direction: 'top', offset: [off.dx, off.dy - 8], opacity: 1, sticky: false,
       className: 'plant-tooltip', interactive: false,
     });
     if (hasBottlenecks){
-      m.on('click', () => showBnPltuDetail({ pltu: p.name, lat: markerLat, lon: markerLon, items: byPlant[p.name] }));
+      m.on('click', () => showBnPltuDetail({ pltu: p.name, lat: p.lat, lon: p.lon, items: byPlant[p.name] }));
     } else {
       m.on('click', () => showBnPltuEmpty(p));
     }
