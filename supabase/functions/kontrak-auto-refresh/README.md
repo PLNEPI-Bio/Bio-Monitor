@@ -2,7 +2,23 @@
 
 Scheduled Supabase Edge Function yang menarik **Daftar Kontrak / Rencana Pasokan** per
 PLTU dari folder SharePoint dan menyimpannya ke tabel **`kontrak_pasokan`** row id=1,
-kolom `data` (peta `{ kode_pltu: ton }`).
+kolom `data`:
+
+```json
+{ "LBA": { "r": 25320, "d": 10541.87 } }
+```
+
+| Kunci | Isi | Dipakai tooltip sebagai |
+| :--- | :--- | :--- |
+| `r` | total **"TOTAL RENCANA PASOKAN BULANAN"** (section 2) | `Kontrak <tahun>` |
+| `d` | total **"TOTAL REALISASI DO"** (section 4) | — |
+| — | `r − d`, dihitung di klien | `Sisa Kontrak <tahun>` |
+
+`d` boleh `null` bila baris totalnya tidak ada; `Sisa Kontrak` lalu tampil "belum
+tersedia" sementara `Kontrak` tetap terisi. Per 2026-07-30 ke-48 file punya keduanya.
+
+**`r − d` bisa negatif** bila realisasi melampaui rencana — itu data yang sah (4 PLTU
+begitu: Malinau, Ropa, Tanjung Jati B, Tarahan), jadi jangan di-clamp ke 0.
 
 ## Kenapa tabel sendiri
 
@@ -41,13 +57,28 @@ Folder share anonim berisi dua subfolder:
 | `PIP` | 28 workbook (PIP + UIW + 2 UIK) | `Profil_Pasokan_<Nama PLTU>_<GENCO>_2026.xlsx` |
 | `PNP` | 20 workbook + 1 kertas kerja | `<NAMA PLTU>.xlsx` |
 
-Di tiap workbook: sheet **"Profil Pasokan"**, bagian *"2. RENCANA PASOKAN BULANAN — per
-Mitra"*. Baris totalnya berlabel **"TOTAL RENCANA PASOKAN BULANAN"** di kolom B; kolom
-G–R = Jan–Des, kolom **S = SUM**.
+Di tiap workbook, sheet **"Profil Pasokan"** memuat empat baris total di kolom B:
+
+| Label kolom B | Section | Dipakai? |
+| :--- | :--- | :--- |
+| `TOTAL RENCANA PASOKAN BULANAN` | 2. Rencana Pasokan Bulanan | ✅ → `r` |
+| `TOTAL DO` | 3. Delivery Order | ❌ |
+| `TOTAL REALISASI DO` | 4. Realisasi DO | ✅ → `d` |
+| `TOTAL RENCANA TAMBAHAN` | 5. Rencana Tambahan | ❌ |
+
+Kolom G–R = Jan–Des, kolom **S = SUM**.
 
 Baris total **tidak berada di posisi tetap** (teramati di baris 32, 33, dan 34 tergantung
 jumlah mitra), sehingga dicari berdasarkan **label**, bukan nomor baris. Kolom S dibaca
 lebih dulu; bila kosong, G–R dijumlahkan sebagai cadangan.
+
+> Perhatikan `TOTAL DO` vs `TOTAL REALISASI DO`: pola `/^TOTAL DO/` **tidak** cocok
+> dengan "TOTAL REALISASI DO", jadi keduanya tidak pernah tertukar.
+
+Hanya sheet "Profil Pasokan" yang di-parse (`sheets: ["Profil Pasokan"]`). Tiap workbook
+juga punya "Grafik" dan "Profil Pasokan FGD"; mem-parse semuanya untuk 48 file menembus
+batas memori edge runtime (`WORKER_RESOURCE_LIMIT`). Konkurensi unduhan juga diturunkan
+dari 6 ke 4 karena alasan yang sama.
 
 3 dari 51 PLTU tidak punya workbook (unit ekspansi UIK: Lontar 4, Asam Asam 5-6,
 Barru 3) — kodenya absen dari peta dan tooltip menampilkan "belum tersedia".

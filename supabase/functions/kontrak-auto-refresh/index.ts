@@ -100,23 +100,41 @@ async function getJson(url: string, cookie: string): Promise<any> {
   return await res.json();
 }
 
-// "TOTAL RENCANA PASOKAN BULANAN" row is located by LABEL (col B), never by row
-// number -- it sits at row 32/33/34 depending on how many mitra a plant has.
-// Column S (idx 18) is the SUM; G..R (idx 6..17) are Jan..Des as a fallback.
-function parseProfilPasokan(wb: XLSX.WorkBook): number | null {
-  const ws = wb.Sheets["Profil Pasokan"] || wb.Sheets[wb.SheetNames[0]];
-  if (!ws) return null;
-  const m = _sheetToMatrix(ws);
+// Total rows are located by their LABEL in column B, never by row number -- they sit
+// at different rows per plant depending on how many mitra it has (observed 32/33/34).
+// Column S (idx 18) holds the SUM; G..R (idx 6..17) are Jan..Des as a fallback.
+//
+// Labels used (all four exist in the sheet; the first two are what we need):
+//   "TOTAL RENCANA PASOKAN BULANAN"  <- section 2, the contracted supply plan
+//   "TOTAL REALISASI DO"             <- section 4, actually delivered
+//   "TOTAL DO"                       <- section 3, DO issued. NOT used; note that a
+//                                       /^TOTAL DO/ test does not match "TOTAL REALISASI
+//                                       DO", so the two never collide.
+//   "TOTAL RENCANA TAMBAHAN"         <- section 5, not used.
+function totalByLabel(m: any[][], labelRe: RegExp): number | null {
   for (let r = 0; r < m.length; r++) {
     const row = m[r] || [];
-    if (!/^TOTAL RENCANA PASOKAN BULANAN/i.test(_safeStr(row[1]))) continue;
+    if (!labelRe.test(_safeStr(row[1]))) continue;
     const s = _safeNum(row[18]);
     if (s > 0) return round2(s);
     let sum = 0;
     for (let c = 6; c <= 17; c++) sum += _safeNum(row[c]);
-    return sum > 0 ? round2(sum) : null;
+    // 0 is a legitimate value here (a plant with no realisasi yet), so distinguish
+    // "found the row, total is zero" from "row not found" -- only the latter is null.
+    return round2(sum);
   }
   return null;
+}
+
+// { rencana, realisasiDo } — either may be null when its total row is absent.
+function parseProfilPasokan(wb: XLSX.WorkBook): { rencana: number | null; realisasiDo: number | null } {
+  const ws = wb.Sheets["Profil Pasokan"] || wb.Sheets[wb.SheetNames[0]];
+  if (!ws) return { rencana: null, realisasiDo: null };
+  const m = _sheetToMatrix(ws);
+  return {
+    rencana: totalByLabel(m, /^TOTAL RENCANA PASOKAN BULANAN/i),
+    realisasiDo: totalByLabel(m, /^TOTAL REALISASI DO/i),
+  };
 }
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -196,10 +214,16 @@ Deno.serve(async (req: Request) => {
     const byName = new Map<string, string>();
     for (const p of plants) { if (p.name && p.code) byName.set(nameKey(p.name), p.code); }
 
-    const map: Record<string, number> = {};
+    // data[kode] = { r: total rencana pasokan, d: total realisasi DO }.
+    // Klien memakai r sebagai "Kontrak <tahun>" dan r-d sebagai "Sisa Kontrak <tahun>".
+    const map: Record<string, { r: number; d: number | null }> = {};
     const unmatched: string[] = [];
     const unparsed: string[] = [];
-    const CONC = 6;
+    const noRealisasi: string[] = [];
+    // V78: turun dari 6 ke 4. Bersama pembatasan `sheets` di XLSX.read, ini menjaga
+    // fungsi tetap di bawah batas memori edge runtime (pernah kena
+    // WORKER_RESOURCE_LIMIT saat masih 6 + parse seluruh sheet).
+    const CONC = 4;
     for (let i = 0; i < files.length; i += CONC) {
       await Promise.all(files.slice(i, i + CONC).map(async (f) => {
         const code = byName.get(nameKey(plantNameFromFile(f.name)));
@@ -208,14 +232,22 @@ Deno.serve(async (req: Request) => {
           const dl = await fetch(f.url, { headers: { "User-Agent": UA, "Cookie": cookie } });
           if (!dl.ok) { await dl.body?.cancel(); unparsed.push(`${f.name} (HTTP ${dl.status})`); return; }
           const buf = new Uint8Array(await dl.arrayBuffer());
+          // Hanya sheet "Profil Pasokan" yang di-parse. Tiap workbook juga punya
+          // "Grafik" dan "Profil Pasokan FGD"; mem-parse semuanya untuk 48 file
+          // menembus batas memori edge runtime. Nama sheet ini konsisten di ke-48 file.
           const wb = XLSX.read(buf, {
             type: "array",
+            sheets: ["Profil Pasokan"],
             cellDates: false, cellFormula: false, cellHTML: false, cellStyles: false, cellNF: false,
             dense: true,
           });
           const val = parseProfilPasokan(wb);
-          if (val === null) { unparsed.push(f.name); return; }
-          map[code] = val;
+          // Tanpa total rencana, entri ini tidak berguna — lewati sepenuhnya.
+          if (val.rencana === null) { unparsed.push(f.name); return; }
+          // Total realisasi DO boleh absen: "Sisa Kontrak" akan tampil "—", tetapi
+          // "Kontrak" tetap terisi. Dicatat supaya terlihat di log.
+          if (val.realisasiDo === null) noRealisasi.push(f.name);
+          map[code] = { r: val.rencana, d: val.realisasiDo };
         } catch (e) {
           unparsed.push(`${f.name} (${e instanceof Error ? e.message : String(e)})`);
         }
@@ -225,6 +257,7 @@ Deno.serve(async (req: Request) => {
     log.push(`Parsed ${n} plants · skipped ${unmatched.length} unmatched · ${unparsed.length} failed`);
     if (unmatched.length) log.push(`  unmatched: ${unmatched.join(", ")}`);
     if (unparsed.length) log.push(`  failed: ${unparsed.join(", ")}`);
+    if (noRealisasi.length) log.push(`  no "TOTAL REALISASI DO" row: ${noRealisasi.join(", ")}`);
 
     if (n < MIN_PLANTS) {
       return await markError(`Only ${n} plants parsed (min ${MIN_PLANTS}) - refusing to overwrite.`);
@@ -232,8 +265,12 @@ Deno.serve(async (req: Request) => {
 
     if (dryRun) {
       const codes = Object.keys(map).sort();
-      log.push(`DRY RUN - no write performed. ${n} PLTU:`);
-      for (const c of codes) log.push(`  ${c} = ${map[c]}`);
+      log.push(`DRY RUN - no write performed. ${n} PLTU (rencana / realisasiDO / sisa):`);
+      for (const c of codes) {
+        const e = map[c];
+        const sisa = (e.d === null) ? "-" : round2(e.r - e.d);
+        log.push(`  ${c} = ${e.r} / ${e.d === null ? "-" : e.d} / ${sisa}`);
+      }
       return out(true);
     }
 
