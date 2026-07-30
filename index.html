@@ -7129,10 +7129,26 @@ function initMainMap(){
   const _cofiringLegend = document.querySelector('.map-view:not(.pembangkit-view):not(.fasilitas-view) .legend');
   map.on('tooltipopen', () => { if (_cofiringLegend) _cofiringLegend.classList.add('legend-behind-tooltip'); });
   map.on('tooltipclose', () => { if (_cofiringLegend) _cofiringLegend.classList.remove('legend-behind-tooltip'); });
+  // V82: tooltip PLTU hanya tertutup oleh klik di area peta lain. Klik pada marker
+  // tidak sampai ke sini — Leaflet menghentikan propagasi untuk layer interaktif —
+  // jadi handler ini hanya kena klik latar peta. Klik DI DALAM tooltip dikecualikan
+  // supaya tooltip tidak menutup dirinya sendiri saat diklik untuk membuka detail.
+  map.on('click', (e) => {
+    const t = e.originalEvent && e.originalEvent.target;
+    if (t && t.closest && t.closest('.leaflet-tooltip')) return;
+    closeAllPlantTooltips();
+  });
   // Prevent Leaflet from capturing click/touch on overlays inside map-area
   document.querySelectorAll('.map-overlay, .sidebar-show-btn, .trends-panel, .trends-show-btn').forEach(el => {
     if (el) L.DomEvent.disableClickPropagation(el);
   });
+}
+
+// V82: tutup tooltip PLTU yang sedang terbuka (dipanggil dari klik latar peta).
+function closeAllPlantTooltips(){
+  for (const code in markers){
+    try { markers[code].closeTooltip(); } catch(e){}
+  }
 }
 
 function refreshMarkers(){
@@ -7165,16 +7181,22 @@ function refreshMarkers(){
       iconAnchor:[size/2, size*1.15],
     });
     const m = L.marker([p.lat, p.lon], { icon, title: p.name });
-    // V17: bindTooltip on hover (no auto-pan) instead of bindPopup (which pans the map)
-    // V64: interactive:true so the popup stays while the mouse is over it (marker OR popup)
+    // V17: bindTooltip (no auto-pan) instead of bindPopup (which pans the map)
+    // V64: interactive:true so the tooltip stays while the mouse is over it
     m.bindTooltip(renderPopup(p), {
       direction: 'top', offset: [0, -8], opacity: 1, sticky: false,
       className: 'plant-tooltip plant-tooltip-interactive', interactive: true,
     });
-    // Click opens the full detail panel directly (does not show the popup)
+    // Klik marker: buka panel detail + tooltip (selectPlant memanggil openTooltip).
     m.on('click', () => selectPlant(p.code, true));
     markers[p.code] = m;
     markerLayer.addLayer(m);
+    // V82: tooltip dibuka lewat KLIK, bukan hover — dan tidak menutup saat kursor
+    // pindah. Leaflet memasang mouseover→open dan mouseout→close di
+    // _initTooltipInteractions, tetapi baru SAAT marker masuk ke map, jadi off() harus
+    // dipanggil SETELAH addLayer (bukan setelah bindTooltip — di situ handler-nya
+    // belum ada). Handler 'move'/'remove' milik Leaflet sengaja dibiarkan utuh.
+    m.off('mouseover').off('mouseout');
   });
 }
 
@@ -7641,9 +7663,10 @@ window.closeSisaKontrakModal = closeSisaKontrakModal;
 function selectPlant(code, fromMarkerClick){
   state.selected = code;
   refreshMarkers();
-  // V64: refreshMarkers() recreated the marker, which drops its hover tooltip.
-  // When the user clicked the marker, re-open it so the popup doesn't vanish; it
-  // still hides on mouse-out. Skipped for programmatic calls (no mouse over it).
+  // V64: refreshMarkers() recreated the marker, which drops its tooltip — so re-open
+  // it here. V82: tooltip kini dibuka HANYA oleh klik dan menetap sampai pengguna
+  // mengklik latar peta; pemanggilan programatik (fromMarkerClick falsy) tidak
+  // membukanya, mis. saat dipilih dari tabel.
   if (fromMarkerClick && markers[code]) markers[code].openTooltip();
   const p = DATA.plants.find(pl => pl.code === code);
   if (!p) return;
