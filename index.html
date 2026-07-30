@@ -7009,6 +7009,8 @@ function plantKontrakBerjalan(p){
 // "Sisa Kontrak <tahun>" = rencana pasokan − realisasi DO. null bila salah satunya
 // tidak ada. Bisa NEGATIF bila realisasi melampaui rencana — itu data yang sah
 // (4 PLTU begitu per 2026-07-30), jangan di-clamp ke 0.
+// V79: baris ini ditampilkan tanpa warna (mewarisi var(--text) seperti baris polos
+// lain), jadi nilai negatif TIDAK lagi ditandai merah — sesuai permintaan.
 function plantSisaKontrakPasokan(p){
   const e = _kontrakEntry(p);
   return (e && e.d !== null) ? (e.r - e.d) : null;
@@ -7204,7 +7206,7 @@ function renderPopup(p){
     <div class="plant-popup-row"><span>DO s.d. ${mLabel}</span><span>${fmtInt(ytd.do_sum)} ton</span></div>
     <div class="plant-popup-row"><span>Realisasi s.d. ${mLabel}</span><span style="color:${statusColor(status)}">${fmtInt(ytd.real)} ton</span></div>
     <div class="plant-popup-row"><span>Kontrak ${yr}</span><span style="color:${kontrak === null ? 'var(--text-dim)' : shortfall ? '#ef4444' : '#10b981'}">${kontrak === null ? 'belum tersedia' : fmtInt(kontrak) + ' ton'}</span></div>
-    <div class="plant-popup-row"><span>Sisa Kontrak ${yr}</span><span style="color:${sisaKontrak === null ? 'var(--text-dim)' : sisaKontrak < 0 ? '#ef4444' : '#10b981'}">${sisaKontrak === null ? 'belum tersedia' : fmtInt(sisaKontrak) + ' ton'}</span></div>
+    <div class="plant-popup-row"><span>Sisa Kontrak ${yr}</span><span${sisaKontrak === null ? ' style="color:var(--text-dim)"' : ''}>${sisaKontrak === null ? 'belum tersedia' : fmtInt(sisaKontrak) + ' ton'}</span></div>
     ${shortfall ? `<div class="plant-popup-warning">⚠ Kontrak &lt; Target FGD: kurang ${fmtInt(fgd - kontrak)} ton</div>` : ''}
   </div>`;
 }
