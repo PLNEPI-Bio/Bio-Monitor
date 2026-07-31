@@ -4480,6 +4480,12 @@ html,body{
 .yoy-table tbody tr:hover,.bn-table tbody tr:hover{
   background:color-mix(in srgb, var(--accent) 8%, var(--panel));
 }
+/* V74: baris TOTAL di tabel bulanan panel detail PLTU */
+.monthly-table tfoot td{
+  border-top:2px solid var(--border);border-bottom:none;
+  background:var(--panel-3);font-weight:700;color:var(--text-bright);
+  text-transform:uppercase;letter-spacing:.5px;
+}
 
 /* Empty state */
 .empty-state{
@@ -7783,11 +7789,17 @@ function selectPlant(code, fromMarkerClick){
               // V73: kolom Target & Gap mengikuti basis aktif. Bila basis FGD dipilih tapi
               // rincian bulanannya belum ada (ts.monthly === null), kolomnya "—" — TIDAK
               // diam-diam memakai angka Deklarasi.
+              // V74: akumulasi total kolom — hanya menjumlahkan angka yang benar-benar
+              // tampil di kolomnya, supaya TOTAL konsisten dengan baris di atasnya.
+              let sT = 0, sD = 0, sR = 0, sG = 0;
               const rows = MONTHS.map((m,i) => {
                 const t = ts.monthly ? (ts.monthly[i] || 0) : null;
                 const d = p.do_2026[i] || 0;
                 const r = p.real_2026[i] || 0;
                 const g = ts.isFgd ? (t === null ? null : r - t) : (p.gap_2026[i] || 0);
+                if (t) sT += t;
+                sD += d; sR += r;
+                if (g) sG += g;
                 return `<tr>
                   <td>${m}</td>
                   <td class="num ${t?'':'dim'}">${t ? fmtInt(t) : '—'}</td>
@@ -7796,18 +7808,28 @@ function selectPlant(code, fromMarkerClick){
                   <td class="num ${g > 0 ? 'pos' : g < 0 ? 'neg' : 'dim'}">${g ? (g > 0 ? '+' : '') + fmtInt(g) : '—'}</td>
                 </tr>`;
               }).join('');
-              return `<thead><tr><th>Month</th><th class="num">Target ${ts.isFgd ? 'FGD' : ''}</th><th class="num">DO</th><th class="num">Real</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody>`;
+              const foot = `<tfoot><tr>
+                <td>Total</td>
+                <td class="num ${sT?'':'dim'}">${sT ? fmtInt(sT) : '—'}</td>
+                <td class="num ${sD?'':'dim'}">${sD ? fmtInt(sD) : '—'}</td>
+                <td class="num ${sR?'':'dim'}">${sR ? fmtInt(sR) : '—'}</td>
+                <td class="num ${sG > 0 ? 'pos' : sG < 0 ? 'neg' : 'dim'}">${sG ? (sG > 0 ? '+' : '') + fmtInt(sG) : '—'}</td>
+              </tr></tfoot>`;
+              return `<thead><tr><th>Month</th><th class="num">Target ${ts.isFgd ? 'FGD' : ''}</th><th class="num">DO</th><th class="num">Real</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody>${foot}`;
             }
             // 2025: Target/DO/Real/Gap (V26: now includes DO from Excel cols 20-31)
             if (selYear === '2025'){
               const realArr = hr['2025'] || [];
               const targetArr = ht['2025'] || [];
               const doArr = hd['2025'] || [];
+              let sT = 0, sD = 0, sR = 0, sG = 0;
               const rows = MONTHS.map((m,i) => {
                 const t = targetArr[i] || 0;
                 const d = doArr[i] || 0;
                 const r = realArr[i] || 0;
                 const g = r - t;
+                sT += t; sD += d; sR += r;
+                if (g && t) sG += g;
                 return `<tr>
                   <td>${m}</td>
                   <td class="num ${t?'':'dim'}">${t ? fmtInt(t) : '—'}</td>
@@ -7816,15 +7838,25 @@ function selectPlant(code, fromMarkerClick){
                   <td class="num ${g > 0 ? 'pos' : g < 0 ? 'neg' : 'dim'}">${g && t ? (g > 0 ? '+' : '') + fmtInt(g) : '—'}</td>
                 </tr>`;
               }).join('');
-              return `<thead><tr><th>Month</th><th class="num">Target</th><th class="num">DO</th><th class="num">Real</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody>`;
+              const foot = `<tfoot><tr>
+                <td>Total</td>
+                <td class="num ${sT?'':'dim'}">${sT ? fmtInt(sT) : '—'}</td>
+                <td class="num ${sD?'':'dim'}">${sD ? fmtInt(sD) : '—'}</td>
+                <td class="num ${sR?'':'dim'}">${sR ? fmtInt(sR) : '—'}</td>
+                <td class="num ${sG > 0 ? 'pos' : sG < 0 ? 'neg' : 'dim'}">${sG ? (sG > 0 ? '+' : '') + fmtInt(sG) : '—'}</td>
+              </tr></tfoot>`;
+              return `<thead><tr><th>Month</th><th class="num">Target</th><th class="num">DO</th><th class="num">Real</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody>${foot}`;
             }
             // 2024/2023: Target (distributed from national 2.5M / 1.08M) + Real + Gap. NO DO column.
             const realArr = hr[selYear] || [];
             const targetArr = ht[selYear] || []; // distributed target
+            let sT = 0, sR = 0, sG = 0;
             const rows = MONTHS.map((m,i) => {
               const t = targetArr[i] || 0;
               const r = realArr[i] || 0;
               const g = r - t;
+              sT += t; sR += r;
+              if (g && t) sG += g;
               return `<tr>
                 <td>${m}</td>
                 <td class="num ${t?'':'dim'}">${t ? fmtInt(t) : '—'}</td>
@@ -7832,26 +7864,18 @@ function selectPlant(code, fromMarkerClick){
                 <td class="num ${g > 0 ? 'pos' : g < 0 ? 'neg' : 'dim'}">${g && t ? (g > 0 ? '+' : '') + fmtInt(g) : '—'}</td>
               </tr>`;
             }).join('');
-            return `<thead><tr><th>Month</th><th class="num">Target</th><th class="num">Real</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody>`;
+            const foot = `<tfoot><tr>
+              <td>Total</td>
+              <td class="num ${sT?'':'dim'}">${sT ? fmtInt(sT) : '—'}</td>
+              <td class="num ${sR?'':'dim'}">${sR ? fmtInt(sR) : '—'}</td>
+              <td class="num ${sG > 0 ? 'pos' : sG < 0 ? 'neg' : 'dim'}">${sG ? (sG > 0 ? '+' : '') + fmtInt(sG) : '—'}</td>
+            </tr></tfoot>`;
+            return `<thead><tr><th>Month</th><th class="num">Target</th><th class="num">Real</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody>${foot}`;
           })()}
         </table>
       </div>
 
       ${state.mapPeriod.year === '2026' ? `
-      <div class="detail-section">
-        <h4>Konfirmasi DO Summary</h4>
-        <div class="progress-block">
-          <div class="progress-head">
-            <span class="progress-label">Total Konfirmasi 2026</span>
-            <span class="progress-value">${fmtInt(p.do_2026_total)}</span>
-          </div>
-          <div class="progress-meta">
-            <span>DO / TARGET ${ts.isFgd ? 'FGD ' : ''}<b>${tTotal ? (p.do_2026_total/tTotal*100).toFixed(1) : 0}%</b></span>
-            <span>GAP AKM <b style="color:${p.gap_akm<0?'var(--danger)':'var(--accent)'}">${fmtInt(p.gap_akm)}</b></span>
-          </div>
-        </div>
-      </div>
-
       <div class="detail-section">
         <h4>Kebutuhan Batubara 2026</h4>
         <div class="progress-block">
