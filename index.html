@@ -6548,8 +6548,8 @@ html,body{
 
 <!-- V88: Volume / Sisa Kontrak tahun berjalan — rincian per PLTU.
      Dibuka dari dua kartu baru di tab Daftar Kontrak. Sumber angkanya sama persis
-     dengan baris "Kontrak <tahun>" di tooltip Map Cofiring (tabel kontrak_pasokan),
-     jadi modal ini adalah pembagian per PLTU dari total nasional. -->
+     dengan baris "Kontrak <tahun>" dan "Sisa Kontrak <tahun>" di tooltip Map Cofiring
+     (tabel kontrak_pasokan), jadi modal ini adalah pembagian per PLTU dari total nasional. -->
 <div class="pemasok-modal-backdrop" id="kontrakPasokanBackdrop">
   <div class="pemasok-modal" id="kontrakPasokanModal" style="max-width:920px">
     <div class="pemasok-modal-head">
@@ -6992,10 +6992,8 @@ function plantKontrakBerjalan(p){
 // "Sisa Kontrak <tahun>" = rencana pasokan − realisasi DO. null bila salah satunya
 // tidak ada. Bisa NEGATIF bila realisasi melampaui rencana — itu data yang sah
 // (4 PLTU begitu per 2026-07-30), jangan di-clamp ke 0.
-// V90: dulu dipakai juga oleh baris "Sisa Kontrak" di tooltip Map Cofiring (V79),
-// tapi baris itu sudah dihapus dari popup. Sekarang konsumennya tab Daftar Kontrak
-// (kartu ringkasan & modal rincian per PLTU) — nilai negatif ditampilkan apa adanya,
-// tanpa penanda warna.
+// V79: baris ini ditampilkan tanpa warna (mewarisi var(--text) seperti baris polos
+// lain), jadi nilai negatif TIDAK lagi ditandai merah — sesuai permintaan.
 function plantSisaKontrakPasokan(p){
   const e = _kontrakEntry(p);
   return (e && e.d !== null) ? (e.r - e.d) : null;
@@ -7261,10 +7259,11 @@ function refreshMarkers(){
 }
 
 // V71: isi tooltip dirombak — selalu tahun berjalan (bukan filter periode peta), dengan
-// delapan baris: Periode, Target Deklarasi, Target FGD, DO s.d. bulan berjalan, Realisasi
-// s.d. bulan berjalan, Kontrak tahun berjalan, Kebutuhan Batubara, dan % Cofiring. Identitas
-// Genco/Boiler/Regional diringkas jadi satu subjudul. Rincian lain (gap, sisa kontrak)
-// tetap ada di panel detail yang terbuka saat ikon diklik.
+// sembilan baris: Periode, Target Deklarasi, Target FGD, DO s.d. bulan berjalan, Realisasi
+// s.d. bulan berjalan, Kontrak tahun berjalan, Sisa Kontrak tahun berjalan, Kebutuhan
+// Batubara, dan % Cofiring. Identitas Genco/Boiler/Regional diringkas jadi satu subjudul.
+// Rincian lain (gap) tetap ada di panel detail yang terbuka saat ikon diklik.
+// V90: baris "Sisa Kontrak" sempat dihapus lalu dikembalikan lagi atas permintaan user.
 function renderPopup(p){
   const color = gencoColor(p.genco);
   const yr = runningYear();
@@ -7272,6 +7271,8 @@ function renderPopup(p){
   const ytd = plantRunningYtd(p);
   const fgd = plantTargetFgd(p);
   const kontrak = plantKontrakBerjalan(p);
+  // V78: rencana pasokan − realisasi DO. Boleh negatif; lihat plantSisaKontrakPasokan().
+  const sisaKontrak = plantSisaKontrakPasokan(p);
   // V80: kebutuhan batubara dari sheet Rekap (terisi untuk ke-51 PLTU). Nilainya bisa
   // sampai 8 digit, jadi dipakai fmt() yang meringkas ke "3.49M" — fmtInt akan
   // melebarkan tooltip. Ke-51 PLTU punya nilai bukan-nol.
@@ -7298,7 +7299,6 @@ function renderPopup(p){
   // V86: onclick (V75) + kelas -clickable dibuang. Tooltip ini hanya muncul untuk PLTU yang
   // SUDAH terpilih, jadi mengkliknya cuma memilih ulang PLTU yang sama — tidak ada gunanya,
   // sementara pointer-events yang dibutuhkannya memblokir klik ke marker di belakang tooltip.
-  // V90: baris "Sisa Kontrak" dihapus dari tooltip; angka ini tetap ada di tab Daftar Kontrak.
   return `<div class="plant-popup">
     <div class="plant-popup-name">${p.name}${shortfall ? ' <span class="popup-warn">!</span>' : ''}</div>
     <div class="plant-popup-sub"><b style="color:${color}">${p.genco || '—'}</b>${sub ? ' · ' + sub : ''}</div>
@@ -7308,6 +7308,7 @@ function renderPopup(p){
     <div class="plant-popup-row"><span>DO s.d. ${mLabel}</span><span>${fmtInt(ytd.do_sum)} ton</span></div>
     <div class="plant-popup-row"><span>Realisasi s.d. ${mLabel}</span><span style="color:${statusColor(status)}">${fmtInt(ytd.real)} ton</span></div>
     <div class="plant-popup-row"><span>Kontrak ${yr}</span><span style="color:${kontrak === null ? 'var(--text-dim)' : shortfall ? '#ef4444' : '#10b981'}">${kontrak === null ? 'belum tersedia' : fmtInt(kontrak) + ' ton'}</span></div>
+    <div class="plant-popup-row"><span>Sisa Kontrak ${yr}</span><span${sisaKontrak === null ? ' style="color:var(--text-dim)"' : ''}>${sisaKontrak === null ? 'belum tersedia' : fmtInt(sisaKontrak) + ' ton'}</span></div>
     <div class="plant-popup-row"><span>Kebutuhan Batubara</span><span>${fmt(batubara)} ton</span></div>
     <div class="plant-popup-row"><span>% Cofiring</span><span>${cofiringPct === null ? '—' : cofiringPct.toFixed(1) + '%'}</span></div>
     ${shortfall ? `<div class="plant-popup-warning">⚠ Kontrak &lt; Target FGD: kurang ${fmtInt(fgd - kontrak)} ton</div>` : ''}
@@ -13206,7 +13207,7 @@ function renderKontrakSummary(){
 }
 
 // V88: dua kartu "Volume Kontrak <tahun>" & "Sisa Kontrak <tahun>" — penjumlahan
-// nasional dari angka yang sama persis dengan tooltip Map Cofiring (baris "Kontrak <tahun>"):
+// nasional dari angka yang sama persis dengan tooltip Map Cofiring:
 //   Volume Kontrak = Σ plantKontrakBerjalan(p)      (rencana pasokan, kolom `r`)
 //   Sisa Kontrak   = Σ plantSisaKontrakPasokan(p)   (rencana − realisasi DO, `r − d`)
 // Keduanya bersumber dari tabel `kontrak_pasokan`, BUKAN dari DATA.contracts, jadi
@@ -13606,8 +13607,8 @@ window.closeKontrakBreakdown = closeKontrakBreakdown;
 // =====================================================
 // V88: Volume / Sisa Kontrak <tahun> — rincian per PLTU
 // Dibuka dari dua kartu baru di ringkasan tab Daftar Kontrak. Isinya pembagian
-// total nasional ke masing-masing PLTU, dengan angka Volume Kontrak yang identik
-// dengan baris "Kontrak <tahun>" di tooltip Map Cofiring.
+// total nasional ke masing-masing PLTU, dengan angka yang identik dengan tooltip
+// Map Cofiring (baris "Kontrak <tahun>" dan "Sisa Kontrak <tahun>").
 // =====================================================
 let kontrakPasokanType = 'vol';
 let kontrakPasokanGenco = 'all';
@@ -13697,7 +13698,7 @@ function renderKontrakPasokanBody(){
     (on ? 'var(--accent)' : 'var(--border)') + ';background:' + (on ? 'var(--accent)' : 'transparent') +
     ';color:' + (on ? '#fff' : 'var(--text-dim)') + ';';
   let html = '<div class="sk-modal-note">Volume Kontrak ' + yr + ' = total rencana pasokan tahun berjalan · ' +
-    'Sisa Kontrak ' + yr + ' = rencana pasokan − realisasi DO. Volume Kontrak per PLTU sama dengan baris "Kontrak ' + yr + '" di tooltip Map Cofiring. ' +
+    'Sisa Kontrak ' + yr + ' = rencana pasokan − realisasi DO. Angka per PLTU sama dengan tooltip Map Cofiring. ' +
     'Sisa bisa negatif bila realisasi DO melampaui rencana.' +
     (tanpaData > 0 ? ' <b>' + tanpaData + ' PLTU</b> belum punya data rencana pasokan dan tidak masuk hitungan.' : '') +
     '</div>';
