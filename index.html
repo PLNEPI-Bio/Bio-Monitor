@@ -396,16 +396,6 @@ html,body{
 }
 .mou-wk-cell:hover{background:var(--mou-month-cell-hover, rgba(15,73,110,.15))}
 .mou-wk-cell.filled{background:var(--mou-month-fill, var(--accent));border-color:var(--mou-month-fill, var(--accent))}
-/* Busdev add row */
-.mou-add-row{background:var(--panel);border:1px solid var(--border);border-radius:3px;padding:14px 16px;margin-top:16px}
-.mou-add-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:700;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
-.mou-add-form-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.mou-date-input{
-  background:var(--panel);border:1px solid var(--border);color:var(--text);
-  padding:4px 6px;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
-  border-radius:3px;outline:none;width:120px;
-}
-.mou-date-input:focus{border-color:var(--accent)}
 /* Pareto meta spacing */
 .pareto-chart-meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 @media (max-width:768px){
@@ -4321,16 +4311,6 @@ html,body{
 .mou-grp-row{height:38px !important}
 .mou-tbl td,.mou-tbl th{box-sizing:border-box}
 
-/* V50.3: Busdev MoU table — fixed column widths for symmetry */
-.mou-busdev-tbl{table-layout:fixed;width:100%}
-.mou-bd-sub{width:30px}
-.mou-bd-proker{width:auto}
-.mou-bd-pic{width:100px}
-.mou-bd-tgl{width:140px}
-.mou-bd-prog{width:100px;text-align:center}
-.mou-busdev-tbl td:nth-child(4){padding:4px 6px}
-.mou-busdev-tbl td:nth-child(5){text-align:center}
-
 /* V51: Revert button */
 .update-revert-btn{
   background:transparent;border:1px solid var(--danger);color:var(--danger);
@@ -6650,7 +6630,6 @@ const state = {
   bnDetailKeyword: null, // keyword filter for PLTU detail panel (right side)
   bnSelected: null,
   bnSelectedPltu: null, // when user clicks a PLTU cluster on bn map
-  realFilters: { year: 'all', month: 'all', genco: 'all', regional: 'all', pltu: 'all' },
   kontrakFilters: { regional: 'all', genco: 'all', pltu: 'all', mitra: 'all', jenis: 'all', tahun: 'all', bulan: 'all' },
   kontrakShowOldYears: false,
   kontrakOnlyActive: true,
@@ -10574,166 +10553,12 @@ function renderRealView(){
   }
 }
 
-function buildRealFilters(){
-  // Year dropdown
-  const yearSel = document.getElementById('real-year-filter');
-  if (yearSel && !yearSel.dataset.built){
-    yearSel.innerHTML = '<option value="all">All Years</option>' +
-      ['2023','2024','2025','2026'].map(y => `<option value="${y}">${y}</option>`).join('');
-    yearSel.value = state.realFilters.year;
-    yearSel.onchange = () => { state.realFilters.year = yearSel.value; renderRealRecap(); };
-    yearSel.dataset.built = '1';
-  }
-  // Month dropdown
-  const monthSel = document.getElementById('real-month-filter');
-  if (monthSel && !monthSel.dataset.built){
-    monthSel.innerHTML = '<option value="all">All Months</option>' +
-      MONTHS.map((m,i) => `<option value="${i}">${m}</option>`).join('');
-    monthSel.value = state.realFilters.month;
-    monthSel.onchange = () => { state.realFilters.month = monthSel.value; renderRealRecap(); };
-    monthSel.dataset.built = '1';
-  }
-  // Genco dropdown
-  const gencoSel = document.getElementById('real-genco-filter');
-  if (gencoSel && !gencoSel.dataset.built){
-    const gencos = [...new Set(DATA.plants.map(p => p.genco))].sort();
-    gencoSel.innerHTML = '<option value="all">All Gencos</option>' +
-      gencos.map(g => `<option value="${g}">${g}</option>`).join('');
-    gencoSel.value = state.realFilters.genco;
-    gencoSel.onchange = () => {
-      state.realFilters.genco = gencoSel.value;
-      // PLTU list scoped to genco + regional
-      buildRealPltuOptions();
-      renderRealRecap();
-    };
-    gencoSel.dataset.built = '1';
-  }
-  // Regional dropdown (sorted)
-  const regionSel = document.getElementById('real-regional-filter');
-  if (regionSel && !regionSel.dataset.built){
-    const regions = [...new Set(DATA.plants.map(p => p.regional))].sort();
-    regionSel.innerHTML = '<option value="all">All Regions</option>' +
-      regions.map(r => `<option value="${r}">${r}</option>`).join('');
-    regionSel.value = state.realFilters.regional;
-    regionSel.onchange = () => {
-      state.realFilters.regional = regionSel.value;
-      // Also refresh pltu dropdown scoped to region
-      buildRealPltuOptions();
-      renderRealRecap();
-    };
-    regionSel.dataset.built = '1';
-  }
-  // PLTU dropdown (scoped to region + genco)
-  buildRealPltuOptions();
-}
-
-function buildRealPltuOptions(){
-  const pltuSel = document.getElementById('real-pltu-filter');
-  if (!pltuSel) return;
-  let plants = DATA.plants;
-  if (state.realFilters.genco !== 'all') plants = plants.filter(p => p.genco === state.realFilters.genco);
-  if (state.realFilters.regional !== 'all') plants = plants.filter(p => p.regional === state.realFilters.regional);
-  const names = plants.map(p => p.name).sort();
-  const prevValue = state.realFilters.pltu;
-  pltuSel.innerHTML = '<option value="all">All PLTU</option>' +
-    names.map(n => `<option value="${n}">${n}</option>`).join('');
-  // Retain selection if still valid
-  pltuSel.value = names.includes(prevValue) ? prevValue : 'all';
-  state.realFilters.pltu = pltuSel.value;
-  pltuSel.onchange = () => { state.realFilters.pltu = pltuSel.value; renderRealRecap(); };
-}
-
-function filteredRealPlants(){
-  let plants = DATA.plants;
-  if (state.realFilters.genco !== 'all') plants = plants.filter(p => p.genco === state.realFilters.genco);
-  if (state.realFilters.regional !== 'all') plants = plants.filter(p => p.regional === state.realFilters.regional);
-  if (state.realFilters.pltu !== 'all') plants = plants.filter(p => p.name === state.realFilters.pltu);
-  return plants;
-}
-
-function renderRealRecap(){
-  const container = document.getElementById('real-recap-table');
-  if (!container) return;
-  const plants = filteredRealPlants();
-  const years = state.realFilters.year === 'all' ? ['2023','2024','2025','2026'] : [state.realFilters.year];
-  const monthFilter = state.realFilters.month;
-  const showAllMonths = monthFilter === 'all';
-
-  // Build table header
-  let header = '<thead><tr><th class="pltu-col">PLTU</th><th>Genco</th><th>Regional</th>';
-  if (showAllMonths){
-    MONTHS.forEach(m => years.forEach(y => {
-      header += `<th class="num">${m} ${y.slice(2)}</th>`;
-    }));
-    years.forEach(y => header += `<th class="num year-total">Total ${y}</th>`);
-  } else {
-    const monthName = MONTHS[parseInt(monthFilter, 10)];
-    years.forEach(y => header += `<th class="num">${monthName} ${y}</th>`);
-  }
-  header += '<th class="num grand-total">Grand Total</th></tr></thead>';
-
-  // Body
-  const rowsHtml = plants.map(p => {
-    let row = `<tr>
-      <td class="pltu-cell">${p.name}<span class="code">${p.code}</span></td>
-      <td><span class="genco-pill" style="color:${gencoColor(p.genco)};border-color:${gencoColor(p.genco)}40">${p.genco}</span></td>
-      <td class="region-cell">${p.regional}</td>`;
-    let grand = 0;
-    if (showAllMonths){
-      MONTHS.forEach((m, mi) => {
-        years.forEach(y => {
-          const v = (p.historical_real[y] && p.historical_real[y][mi]) || 0;
-          grand += v;
-          row += `<td class="num ${v?'':'dim'}">${v ? fmtInt(v) : '—'}</td>`;
-        });
-      });
-      years.forEach(y => {
-        const yTotal = (p.historical_real[y] || []).reduce((a,b) => a + (b||0), 0);
-        row += `<td class="num year-total">${yTotal ? fmtInt(yTotal) : '—'}</td>`;
-      });
-    } else {
-      const mi = parseInt(monthFilter, 10);
-      years.forEach(y => {
-        const v = (p.historical_real[y] && p.historical_real[y][mi]) || 0;
-        grand += v;
-        row += `<td class="num ${v?'':'dim'}">${v ? fmtInt(v) : '—'}</td>`;
-      });
-    }
-    row += `<td class="num grand-total">${grand ? fmtInt(grand) : '—'}</td></tr>`;
-    return row;
-  }).join('');
-
-  // Footer total row
-  let footer = '<tfoot><tr><td class="pltu-cell" colspan="3"><b>TOTAL</b></td>';
-  let grandTotal = 0;
-  if (showAllMonths){
-    MONTHS.forEach((m, mi) => {
-      years.forEach(y => {
-        const v = plants.reduce((s,p) => s + ((p.historical_real[y] && p.historical_real[y][mi]) || 0), 0);
-        grandTotal += v;
-        footer += `<td class="num ${v?'':'dim'}"><b>${v ? fmtInt(v) : '—'}</b></td>`;
-      });
-    });
-    years.forEach(y => {
-      const v = plants.reduce((s,p) => s + (p.historical_real[y] || []).reduce((a,b) => a + (b||0), 0), 0);
-      footer += `<td class="num year-total"><b>${v ? fmtInt(v) : '—'}</b></td>`;
-    });
-  } else {
-    const mi = parseInt(monthFilter, 10);
-    years.forEach(y => {
-      const v = plants.reduce((s,p) => s + ((p.historical_real[y] && p.historical_real[y][mi]) || 0), 0);
-      grandTotal += v;
-      footer += `<td class="num ${v?'':'dim'}"><b>${v ? fmtInt(v) : '—'}</b></td>`;
-    });
-  }
-  footer += `<td class="num grand-total"><b>${grandTotal ? fmtInt(grandTotal) : '—'}</b></td></tr></tfoot>`;
-
-  container.innerHTML = `<table class="recap-table">${header}<tbody>${rowsHtml}</tbody>${footer}</table>`;
-
-  // Update count indicator
-  const cnt = document.getElementById('real-recap-count');
-  if (cnt) cnt.textContent = `${plants.length} PLTU`;
-}
+// V89: Tab "Rekap" dihapus di V14; buildRealFilters/buildRealPltuOptions/
+// filteredRealPlants/renderRealRecap ikut dibuang di sini. Keempatnya menargetkan
+// #real-year-filter/#real-month-filter/#real-genco-filter/#real-regional-filter/
+// #real-pltu-filter/#real-recap-table yang sudah tidak ada di markup, sehingga
+// pemanggilannya saat boot hanya no-op. CSS .real-recap-* SENGAJA dipertahankan --
+// dipakai ulang oleh tab Daftar Kontrak dan Usulan Kontrak.
 
 // V66: Tabel DO vs Realisasi per PLTU (bulanan) untuk submenu Ringkasan.
 // Mengikuti filter Wilayah/PLTU global (realFilteredPlants) + filter tahun sendiri.
@@ -12412,7 +12237,6 @@ function fmtK(v){
 }
 
 // ========= TAB SWITCHING =========
-let rekapInit = false;
 // V65: Realisasi tab lazy-init flag. Can't key off realCharts.trend anymore —
 // the trend chart lives in a sub-tab that isn't the default one.
 let realInit = false;
@@ -12484,11 +12308,6 @@ function switchTab(tab){
   // Lazy init - MUST happen after view becomes visible so maps get proper dimensions
   if (tab === 'realisasi' && !realInit){
     setTimeout(() => { renderRealView(); }, 30);
-  }
-  if (tab === 'rekap' && !rekapInit){
-    buildRealFilters();
-    renderRealRecap();
-    rekapInit = true;
   }
   if (tab === 'kontrak' && !kontrakInit){
     kontrakInit = true;
@@ -19662,7 +19481,6 @@ function mouSubscribeRealtime(){
     .on('postgres_changes', { event: '*', schema: 'public', table: 'mou_data' }, () => {
       mouFetchData().then(() => {
         if (state.tab === 'mou-timeline') renderMouTimeline();
-        if (state.tab === 'mou-busdev') renderMouBusdev();
       });
     })
     .subscribe();
@@ -19911,112 +19729,12 @@ function renderMouTimeline(){
   });
 }
 
-// ---- Busdev MoU Rendering (also editable) ----
-function renderMouBusdev(){
-  const el = document.getElementById('mouBusdevContent');
-  if (!el) return;
-  const progs = mouState.busdev;
-  if (progs.length === 0){ el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-dim)">Data Busdev MoU belum tersedia.</div>'; return; }
-  let html = '';
-  for (const p of progs){
-    const doneCount = p.items.filter(i => (i.progress||'').toLowerCase() === 'done').length;
-    html += '<div class="mou-group">';
-    html += '<div class="mou-group-head" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
-    html += '<div class="mou-group-title">' + p.no + '. ' + escapeHtml(p.name) + '</div>';
-    html += '<div class="mou-group-meta">' + doneCount + '/' + p.items.length + ' done</div>';
-    html += '</div>';
-    html += '<div class="mou-group-body"><table class="mou-table mou-busdev-tbl"><thead><tr>';
-    html += '<th class="mou-bd-sub"></th><th class="mou-bd-proker">Program Kerja</th><th class="mou-bd-pic">PIC</th><th class="mou-bd-tgl">Tanggal</th><th class="mou-bd-prog">Progress</th>';
-    html += '</tr></thead><tbody>';
-    for (const item of p.items){
-      const sc = (item.progress || '').toLowerCase();
-      const cls = sc === 'done' ? 'done' : sc === 'pending' ? 'pending' : sc.includes('progress') ? 'pending' : 'empty';
-      html += '<tr><td>' + escapeHtml(item.sub) + '</td><td style="max-width:400px">' + escapeHtml(item.proker) + '</td>';
-      html += '<td>' + escapeHtml(item.pic) + '</td>';
-      html += '<td><input type="date" class="mou-date-input" value="' + (item.tanggal||'') + '" data-pid="' + p.id + '" data-iid="' + item.id + '"></td>';
-      html += '<td><span class="mou-status ' + cls + '" data-pid="' + p.id + '" data-iid="' + item.id + '" style="cursor:pointer" title="Klik untuk ubah">' + (item.progress || '\u2014') + '</span></td></tr>';
-    }
-    html += '</tbody></table></div></div>';
-  }
-  // Add new row form
-  html += '<div class="mou-add-row">';
-  html += '<div class="mou-add-title">Tambah Item Baru</div>';
-  html += '<div class="mou-add-form-row">';
-  html += '<select id="mouAddProg" class="cal-input cal-input-sm"><option value="">Pilih Program...</option>';
-  html += '<option value="__new__">+ Buat Program Baru</option>';
-  for (const p of progs){ html += '<option value="' + p.id + '">' + p.no + '. ' + escapeHtml(p.name).substring(0,50) + '</option>'; }
-  html += '</select>';
-  html += '<input type="text" id="mouAddProgName" class="cal-input" placeholder="Nama program baru (jika pilih Buat Program Baru)" style="flex:2;display:none">';
-  html += '<input type="text" id="mouAddSub" class="cal-input cal-input-sm" placeholder="Sub (a,b,c...)" style="max-width:60px">';
-  html += '<input type="text" id="mouAddProker" class="cal-input" placeholder="Program Kerja" style="flex:2">';
-  html += '<input type="text" id="mouAddPic" class="cal-input cal-input-sm" placeholder="PIC" style="max-width:80px">';
-  html += '<input type="date" id="mouAddTgl" class="cal-input cal-input-sm">';
-  html += '<button class="cal-btn-save" id="mouAddBtn">+ Tambah</button>';
-  html += '</div></div>';
-  el.innerHTML = html;
-
-  // Wire status clicks
-  el.querySelectorAll('.mou-status[data-iid]').forEach(badge => {
-    badge.onclick = (e) => {
-      e.stopPropagation();
-      const p = mouState.busdev.find(x => x.id === badge.dataset.pid);
-      if (!p) return;
-      const item = p.items.find(x => x.id === badge.dataset.iid);
-      if (!item) return;
-      const curIdx = MOU_STATUS_CYCLE.indexOf(item.progress || '');
-      item.progress = MOU_STATUS_CYCLE[(curIdx + 1) % MOU_STATUS_CYCLE.length];
-      renderMouBusdev();
-      mouSaveData();
-    };
-  });
-  // Wire date edits
-  el.querySelectorAll('.mou-date-input').forEach(inp => {
-    inp.onchange = () => {
-      const p = mouState.busdev.find(x => x.id === inp.dataset.pid);
-      if (!p) return;
-      const item = p.items.find(x => x.id === inp.dataset.iid);
-      if (!item) return;
-      item.tanggal = inp.value;
-      mouSaveData();
-    };
-  });
-  // Wire add button
-  const addBtn = document.getElementById('mouAddBtn');
-  if (addBtn){
-    addBtn.onclick = () => {
-      const progId = document.getElementById('mouAddProg').value;
-      const sub = document.getElementById('mouAddSub').value.trim();
-      const proker = document.getElementById('mouAddProker').value.trim();
-      const pic = document.getElementById('mouAddPic').value.trim();
-      const tgl = document.getElementById('mouAddTgl').value;
-      const progNameInput = document.getElementById('mouAddProgName');
-      const newProgName = progNameInput ? progNameInput.value.trim() : '';
-      if (progId === '__new__'){
-        if (!newProgName){ alert('Isi nama program baru'); return; }
-        const newNo = mouState.busdev.length + 1;
-        const newProg = { id: 'b' + newNo + '_' + Date.now().toString(36), no: newNo, name: newProgName, items: [] };
-        if (proker){
-          newProg.items.push({ id: 'bi' + newNo + '_1_' + Date.now().toString(36), sub: sub || 'a', proker, pic, tanggal: tgl, progress: '' });
-        }
-        mouState.busdev.push(newProg);
-      } else {
-        if (!progId || !proker){ alert('Pilih program dan isi Program Kerja'); return; }
-        const p = mouState.busdev.find(x => x.id === progId);
-        if (!p) return;
-        const newId = 'bi' + progId.replace('b','') + '_' + (p.items.length + 1) + '_' + Date.now().toString(36);
-        p.items.push({ id: newId, sub: sub || String.fromCharCode(97 + p.items.length), proker, pic, tanggal: tgl, progress: '' });
-      }
-      renderMouBusdev();
-      mouSaveData();
-    };
-  }
-  // Show/hide new program name input
-  const progSel = document.getElementById('mouAddProg');
-  const progNameInput = document.getElementById('mouAddProgName');
-  if (progSel && progNameInput){
-    progSel.onchange = () => { progNameInput.style.display = progSel.value === '__new__' ? '' : 'none'; };
-  }
-}
+// V89: Renderer Busdev MoU dihapus -- sub-tab "mou-busdev" sudah dibuang di V51,
+// sehingga renderMouBusdev() menargetkan #mouBusdevContent yang tidak ada dan kedua
+// pemanggilnya bergantung pada nilai tab yang tak pernah tercapai.
+// PARSER-nya SENGAJA DIPERTAHANKAN: parseMouExcel() tetap membaca sheet BUSDEV dan
+// mouSaveData() tetap menulis mou_data.busdev, supaya riwayat datanya tidak terputus
+// bila sub-tab ini dihidupkan lagi.
 
 // ---- Boot ----
 async function bootMouTab(subTab){
@@ -20034,7 +19752,6 @@ async function bootMouTab(subTab){
     }
   }
   if (subTab === 'mou-timeline') renderMouTimeline();
-  if (subTab === 'mou-busdev') renderMouBusdev();
 }
 
 // EXCEL PARSERS — port from Python refresh_dashboard.py
