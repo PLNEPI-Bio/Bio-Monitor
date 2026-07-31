@@ -980,23 +980,6 @@ html,body{
   font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;letter-spacing:2px;
   color:var(--text-dim);text-transform:uppercase;margin-bottom:10px;font-weight:500;
 }
-/* Clickable Sisa Kontrak section → opens active-contracts popup */
-.detail-section-clickable{cursor:pointer;border-radius:10px;transition:background .15s}
-.detail-section-clickable:hover{background:var(--panel-2)}
-.detail-section-clickable:hover .progress-block{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-.detail-section-clickable:active{transform:translateY(1px)}
-.detail-h4-click{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.detail-click-badge{
-  display:inline-flex;align-items:center;gap:5px;flex-shrink:0;
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;font-weight:700;letter-spacing:.4px;
-  text-transform:none;color:#fff;background:var(--accent);
-  padding:3px 9px;border-radius:20px;box-shadow:var(--shadow-sm);
-  transition:filter .15s,transform .15s;
-}
-.detail-click-badge svg{opacity:.9}
-.detail-click-badge .dcb-chevron{font-size:12px;line-height:1;margin-left:1px}
-.detail-section-clickable:hover .detail-click-badge{filter:brightness(1.1)}
-.detail-section-clickable:hover .detail-click-badge .dcb-chevron{transform:translateX(2px)}
 .sk-modal-note{font-size:10px;color:var(--text-dim);margin-bottom:10px;line-height:1.5}
 
 .progress-block{background:var(--panel);border:1px solid var(--border);padding:14px}
@@ -1007,26 +990,6 @@ html,body{
 .progress-fill{height:100%;transition:width .4s}
 .progress-meta{display:flex;justify-content:space-between;margin-top:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim)}
 .progress-meta b{color:var(--text);font-weight:500}
-
-/* Dual-bar visualization for Sisa Kontrak vs Sisa Target */
-.dual-bar-wrap{display:flex;flex-direction:column;gap:6px;margin-top:8px}
-.dual-bar-row{display:grid;grid-template-columns:80px 1fr 70px;align-items:center;gap:8px}
-.dual-bar-label{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--text-dim);
-  letter-spacing:1px;text-transform:uppercase;
-}
-.dual-bar-track{height:6px;background:var(--bg);overflow:hidden;position:relative}
-.dual-bar-fill{height:100%;transition:width .4s;border-radius:0}
-.dual-bar-value{
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-bright);
-  text-align:right;font-weight:500;
-}
-
-.shortfall-hint{
-  margin-top:10px;padding:8px 10px;background:rgba(239,68,68,.08);
-  border-left:2px solid var(--danger);font-size:10px;color:var(--text);line-height:1.5;
-}
-.shortfall-hint b{color:var(--danger);font-weight:700}
 
 /* Jenis Biomassa list (in PLTU detail panel) */
 .jenis-list{display:flex;flex-direction:column;gap:10px}
@@ -6564,21 +6527,6 @@ html,body{
   </div>
 </div>
 
-<!-- Sisa Kontrak per PLTU breakdown (opened from the Map Cofiring detail panel) -->
-<div class="pemasok-modal-backdrop" id="sisaKontrakModalBackdrop">
-  <div class="pemasok-modal" id="sisaKontrakModal" style="max-width:920px">
-    <div class="pemasok-modal-head">
-      <div class="pemasok-modal-title-wrap">
-        <div class="pemasok-modal-eyebrow">Sisa Kontrak 2026 · Kontrak Aktif</div>
-        <div class="pemasok-modal-title" id="sisaKontrakModalTitle">—</div>
-        <div class="pemasok-modal-meta" id="sisaKontrakModalMeta"></div>
-      </div>
-      <button class="pemasok-modal-close" onclick="closeSisaKontrakModal()" title="Close">× CLOSE</button>
-    </div>
-    <div class="pemasok-modal-body" id="sisaKontrakModalBody"></div>
-  </div>
-</div>
-
 <script>
 /* Delivery Order (DO) per kontrak — parsed from "01. Delivery Order MM.xlsx"
    (sheets 2024/2025/2026), bucketed by Awal Pengiriman month, keyed by a
@@ -7692,83 +7640,10 @@ function computePlantSisaKontrak(plant){
   return sisa;
 }
 
-// Popup: list the active contracts behind a plant's Sisa Kontrak 2026.
-function showSisaKontrakDetail(code){
-  const p = (DATA.plants || []).find(pl => pl.code === code);
-  const backdrop = document.getElementById('sisaKontrakModalBackdrop');
-  const titleEl = document.getElementById('sisaKontrakModalTitle');
-  const metaEl = document.getElementById('sisaKontrakModalMeta');
-  const bodyEl = document.getElementById('sisaKontrakModalBody');
-  if (!p || !backdrop || !bodyEl) return;
-  if (titleEl) titleEl.textContent = p.name + ' · ' + p.code;
-
-  const rows = matchPlantContracts(p, true).map(c => {
-    const years = plantContractDurationYears(c);
-    const vol = +c.vol_mt || 0;
-    const annualVol = vol / years;
-    const rt = c.realisasi_total || {};
-    const real2026 = (typeof rt['2026'] === 'number')
-      ? rt['2026'] : ((c.realisasi && c.realisasi['2026']) || []).reduce((s, v) => s + (+v || 0), 0);
-    return { c, years, vol, annualVol, real2026, sisa: annualVol - real2026 };
-  }).sort((a, b) => b.sisa - a.sisa);
-
-  const totVol = rows.reduce((s, r) => s + r.vol, 0);
-  const totAnnual = rows.reduce((s, r) => s + r.annualVol, 0);
-  const totReal = rows.reduce((s, r) => s + r.real2026, 0);
-  const totSisa = rows.reduce((s, r) => s + r.sisa, 0);
-  const sisaTarget = Math.max(0, (p.target_2026_total || 0) - (p.real_2026_total || 0));
-  const diff = totSisa - sisaTarget;
-  const statusTxt = totSisa < sisaTarget ? 'SHORTFALL ⚠' : 'SUFFICIENT';
-  if (metaEl){
-    metaEl.innerHTML = rows.length + ' kontrak aktif · Sisa Kontrak 2026 <b>' + fmtInt(Math.round(totSisa)) +
-      '</b> ton vs Sisa Target <b>' + fmtInt(sisaTarget) + '</b> ton · ' + statusTxt +
-      ' (' + (diff >= 0 ? '+' : '') + fmtInt(Math.round(diff)) + ')';
-  }
-
-  if (rows.length === 0){
-    bodyEl.innerHTML = '<div class="jenis-empty" style="padding:24px;text-align:center">Tidak ada kontrak aktif untuk PLTU ini.</div>';
-  } else {
-    let html = '<div class="sk-modal-note">Sisa Kontrak 2026 = Volume kontrak (disetahunkan bila durasi ≥ 2 tahun) − Realisasi 2026.</div>';
-    html += '<div style="overflow:auto;max-height:520px;border:1px solid var(--border);border-radius:8px">';
-    html += '<table class="kontrak-table" style="font-size:9px">';
-    html += '<thead><tr><th>#</th><th>Pemasok</th><th>Jenis</th><th>Nomor Kontrak</th><th>Periode</th>' +
-      '<th style="text-align:center">Durasi (thn)</th><th class="num">Vol (MT)</th><th class="num">Vol/Thn (MT)</th>' +
-      '<th class="num">Real 2026</th><th class="num">Sisa 2026</th></tr></thead><tbody>';
-    rows.forEach((r, i) => {
-      const c = r.c;
-      const sisaColor = r.sisa < 0 ? 'var(--danger)' : 'var(--text-bright)';
-      const multi = r.years > 1;
-      html += '<tr>' +
-        '<td style="color:var(--text-dim)">' + (i + 1) + '</td>' +
-        '<td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(c.pemasok || '') + '">' + escapeHtml(c.pemasok || '—') + '</td>' +
-        '<td>' + escapeHtml(c.jenis || '—') + '</td>' +
-        '<td style="font-size:8px;color:var(--text-dim);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(c.kontrak || '') + '">' + (c.kontrak ? escapeHtml(c.kontrak) : '—') + '</td>' +
-        '<td style="white-space:nowrap;font-size:8px">' + fmtKontrakDate(c.awal) + ' → ' + fmtKontrakDate(c.akhir) + '</td>' +
-        '<td style="text-align:center' + (multi ? ';font-weight:700;color:var(--accent)' : '') + '">' + r.years + '</td>' +
-        '<td class="num">' + fmtInt(Math.round(r.vol)) + '</td>' +
-        '<td class="num"' + (multi ? ' style="font-weight:700;color:var(--accent)"' : '') + '>' + fmtInt(Math.round(r.annualVol)) + '</td>' +
-        '<td class="num">' + fmtInt(Math.round(r.real2026)) + '</td>' +
-        '<td class="num" style="font-weight:700;color:' + sisaColor + '">' + fmtInt(Math.round(r.sisa)) + '</td>' +
-      '</tr>';
-    });
-    html += '</tbody><tfoot><tr style="font-weight:700;background:var(--panel-3)">';
-    html += '<td colspan="6" style="text-align:right;padding-right:10px">TOTAL (' + rows.length + ' kontrak)</td>';
-    html += '<td class="num">' + fmtInt(Math.round(totVol)) + '</td>';
-    html += '<td class="num" style="color:var(--accent)">' + fmtInt(Math.round(totAnnual)) + '</td>';
-    html += '<td class="num">' + fmtInt(Math.round(totReal)) + '</td>';
-    html += '<td class="num" style="color:' + (totSisa < 0 ? 'var(--danger)' : 'var(--text-bright)') + '">' + fmtInt(Math.round(totSisa)) + '</td>';
-    html += '</tr></tfoot></table></div>';
-    bodyEl.innerHTML = html;
-  }
-  backdrop.classList.add('open');
-  backdrop.onclick = (e) => { if (e.target === backdrop) closeSisaKontrakModal(); };
-}
-window.showSisaKontrakDetail = showSisaKontrakDetail;
-function closeSisaKontrakModal(){
-  const b = document.getElementById('sisaKontrakModalBackdrop');
-  if (b) b.classList.remove('open');
-}
-window.closeSisaKontrakModal = closeSisaKontrakModal;
+// V91: showSisaKontrakDetail() & closeSisaKontrakModal() dihapus — konsumen satu-satunya
+// adalah tombol "Lihat kontrak" pada kartu "Sisa Kontrak 2026 vs Sisa Target" di panel detail
+// PLTU, yang juga sudah dihapus (lihat selectPlant()). matchPlantContracts() dan
+// plantContractDurationYears() TETAP dipertahankan — masih dipakai _plantContractItems().
 
 function selectPlant(code, fromMarkerClick){
   state.selected = code;
@@ -7788,24 +7663,17 @@ function selectPlant(code, fromMarkerClick){
   setTimeout(() => { if (map) map.invalidateSize({ pan: false }); }, 260);
 
   const color = gencoColor(p.genco);
+  // V91: kartu "Sisa Kontrak 2026 vs Sisa Target" (dan tombol "Lihat kontrak") dihapus
+  // atas permintaan user. computePlantSisaKontrak() SENGAJA dipertahankan — masih dipakai
+  // tabel map (renderPopup-adjacent) dan generator laporan.
   // V73: seluruh angka target di panel ini mengikuti basis terpilih (Deklarasi ↔ FGD).
   const ts = plantTargetSet(p);
   const tTotal = ts.total;
-  const sisaKontrak = computePlantSisaKontrak(p);
   const kebutuhanBatubara = p.kebutuhan_batubara || 0;
-  const sisaKontrakPct = tTotal ? (sisaKontrak / tTotal * 100) : 0;
   const biomassaRatio = kebutuhanBatubara ? (tTotal / (tTotal + kebutuhanBatubara) * 100) : 0;
   // Realisasi biomassa 2026 vs kebutuhan batubara 2026 (actual contribution)
   const realBiomassa = p.real_2026_total || 0;
   const realBiomassaRatio = (realBiomassa + kebutuhanBatubara) ? (realBiomassa / (realBiomassa + kebutuhanBatubara) * 100) : 0;
-  // Sisa Target = Target 2026 - Realisasi YTD (what's still needed to hit target)
-  const sisaTarget = Math.max(0, tTotal - (p.real_2026_total || 0));
-  const kontrakVsSisaTarget = sisaKontrak - sisaTarget; // positive = enough contract to cover remaining need
-  const isShortfall = sisaKontrak < sisaTarget;
-  // For the bar visual: scale both to the larger of the two
-  const maxVal = Math.max(sisaKontrak, sisaTarget) || 1;
-  const kontrakBarPct = Math.max(0, sisaKontrak / maxVal * 100);
-  const targetBarPct = sisaTarget / maxVal * 100;
 
   const panel = document.getElementById('detail-panel');
   panel.innerHTML = `
@@ -7970,35 +7838,6 @@ function selectPlant(code, fromMarkerClick){
       </div>
 
       ${state.mapPeriod.year === '2026' ? `
-      <div class="detail-section detail-section-clickable" onclick="showSisaKontrakDetail('${p.code}')" title="Klik untuk lihat kontrak-kontrak aktif">
-        <h4 class="detail-h4-click">Sisa Kontrak 2026 vs Sisa Target
-          <span class="detail-click-badge"><svg viewBox="0 0 16 16" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="4.5"/><path d="M11 11l3.5 3.5"/></svg>Lihat kontrak<span class="dcb-chevron">›</span></span>
-        </h4>
-        <div class="progress-block">
-          <div class="progress-head">
-            <span class="progress-label">${isShortfall ? 'SHORTFALL ⚠' : sisaKontrak === 0 && sisaTarget === 0 ? 'TARGET ACHIEVED' : 'SUFFICIENT'}</span>
-            <span class="progress-value" style="color:${isShortfall ? 'var(--danger)' : 'var(--accent)'}">${kontrakVsSisaTarget >= 0 ? '+' : ''}${fmtInt(kontrakVsSisaTarget)}</span>
-          </div>
-          <div class="dual-bar-wrap">
-            <div class="dual-bar-row">
-              <span class="dual-bar-label">Sisa Kontrak</span>
-              <div class="dual-bar-track"><div class="dual-bar-fill" style="width:${kontrakBarPct}%;background:${isShortfall ? 'var(--danger)' : 'var(--accent)'}"></div></div>
-              <span class="dual-bar-value">${fmtInt(sisaKontrak)}</span>
-            </div>
-            <div class="dual-bar-row">
-              <span class="dual-bar-label">Sisa Target</span>
-              <div class="dual-bar-track"><div class="dual-bar-fill" style="width:${targetBarPct}%;background:var(--neutral)"></div></div>
-              <span class="dual-bar-value">${fmtInt(sisaTarget)}</span>
-            </div>
-          </div>
-          <div class="progress-meta" style="margin-top:10px">
-            <span>KONTRAK <b>${sisaKontrakPct > 0 ? sisaKontrakPct.toFixed(1) + '%' : '0%'}</b> of target</span>
-            <span>NEED <b>${tTotal ? (sisaTarget/tTotal*100).toFixed(1) : 0}%</b> to reach target</span>
-          </div>
-          ${isShortfall ? `<div class="shortfall-hint">Need <b>${fmtInt(Math.abs(kontrakVsSisaTarget))}</b> ton additional contract to cover remaining target</div>` : ''}
-        </div>
-      </div>
-
       <div class="detail-section">
         <h4>Konfirmasi DO Summary</h4>
         <div class="progress-block">
