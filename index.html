@@ -1943,9 +1943,11 @@ html,body{
 .kontrak-toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text);letter-spacing:1px;text-transform:uppercase;user-select:none}
 .kontrak-toggle input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
 
-/* Kontrak summary card: 4 KPI cells above table */
+/* Kontrak summary card: KPI cells above table.
+   V88: 6 sel (4 lama + Volume/Sisa Kontrak tahun berjalan) → 3 kolom × 2 baris,
+   supaya dua sel terakhir tidak menyisakan kolom kosong seperti pada grid 4 kolom. */
 .kontrak-summary{
-  display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;margin-bottom:18px;
+  display:grid;grid-template-columns:repeat(3, 1fr);gap:14px;margin-bottom:18px;
 }
 .kontrak-summary-cell{
   background:var(--panel);border:1px solid var(--border);border-radius:10px;
@@ -6622,6 +6624,24 @@ html,body{
       <button class="pemasok-modal-close" onclick="closeKontrakBreakdown()" title="Close">× CLOSE</button>
     </div>
     <div class="pemasok-modal-body" id="kontrakBreakdownBody"></div>
+  </div>
+</div>
+
+<!-- V88: Volume / Sisa Kontrak tahun berjalan — rincian per PLTU.
+     Dibuka dari dua kartu baru di tab Daftar Kontrak. Sumber angkanya sama persis
+     dengan baris "Kontrak <tahun>" dan "Sisa Kontrak <tahun>" di tooltip Map Cofiring
+     (tabel kontrak_pasokan), jadi modal ini adalah pembagian per PLTU dari total nasional. -->
+<div class="pemasok-modal-backdrop" id="kontrakPasokanBackdrop">
+  <div class="pemasok-modal" id="kontrakPasokanModal" style="max-width:920px">
+    <div class="pemasok-modal-head">
+      <div class="pemasok-modal-title-wrap">
+        <div class="pemasok-modal-eyebrow" id="kontrakPasokanEyebrow">Rencana Pasokan</div>
+        <div class="pemasok-modal-title" id="kontrakPasokanTitle">—</div>
+        <div class="pemasok-modal-meta" id="kontrakPasokanMeta"></div>
+      </div>
+      <button class="pemasok-modal-close" onclick="closeKontrakPasokanModal()" title="Close">× CLOSE</button>
+    </div>
+    <div class="pemasok-modal-body" id="kontrakPasokanBody"></div>
   </div>
 </div>
 
@@ -13421,7 +13441,68 @@ function renderKontrakSummary(){
       '<div class="kontrak-summary-value">' + overallPct.toFixed(1) + '%</div>' +
       '<div class="kontrak-summary-sub">' + fmtInt(totalActiveReal) + ' / ' + fmtInt(totalActiveVol) + ' MT</div>' +
       '<div class="kontrak-progress"><div class="kontrak-progress-bar" style="width:' + Math.min(overallPct, 100) + '%"></div></div>' +
+    '</div>' +
+    renderKontrakPasokanCells();
+}
+
+// V88: dua kartu "Volume Kontrak <tahun>" & "Sisa Kontrak <tahun>" — penjumlahan
+// nasional dari angka yang sama persis dengan tooltip Map Cofiring:
+//   Volume Kontrak = Σ plantKontrakBerjalan(p)      (rencana pasokan, kolom `r`)
+//   Sisa Kontrak   = Σ plantSisaKontrakPasokan(p)   (rencana − realisasi DO, `r − d`)
+// Keduanya bersumber dari tabel `kontrak_pasokan`, BUKAN dari DATA.contracts, jadi
+// sengaja tidak mengikuti filter tab ini (sama seperti pie Jenis Biomassa) dan tidak
+// dapat disamakan dengan kartu "Total Vol/Sisa Kontrak Aktif" di sebelahnya.
+// Sisa tidak di-clamp ke 0: realisasi DO yang melampaui rencana memang bisa negatif
+// (lihat plantSisaKontrakPasokan) dan itu data yang sah.
+function renderKontrakPasokanCells(){
+  const yr = (typeof runningYear === 'function') ? runningYear() : 2026;
+  const agg = kontrakPasokanTotals();
+  const belum = '<div class="kontrak-summary-value" style="font-size:15px;color:var(--text-dim)">belum tersedia</div>';
+  const volCell = agg.nVol > 0
+    ? '<div class="kontrak-summary-value">' + fmtInt(Math.round(agg.vol)) + ' <span class="unit">MT</span></div>' +
+      '<div class="kontrak-summary-sub">Rencana pasokan PLTU · nasional · <u>Lihat detail</u></div>'
+    : belum + '<div class="kontrak-summary-sub">Data rencana pasokan belum termuat</div>';
+  const sisaCell = agg.nSisa > 0
+    ? '<div class="kontrak-summary-value">' + fmtInt(Math.round(agg.sisa)) + ' <span class="unit">MT</span></div>' +
+      '<div class="kontrak-summary-sub">Rencana − realisasi DO · PLTU · <u>Lihat detail</u></div>'
+    : belum + '<div class="kontrak-summary-sub">Realisasi DO belum termuat</div>';
+  return '<div class="kontrak-summary-cell info' + (agg.nVol > 0 ? ' kontrak-summary-clickable' : '') + '"' +
+      (agg.nVol > 0 ? ' onclick="showKontrakPasokanBreakdown(\'vol\')" title="Klik untuk rincian per PLTU"' : '') + '>' +
+      '<div class="kontrak-summary-label">Volume Kontrak ' + yr + '</div>' + volCell +
+    '</div>' +
+    '<div class="kontrak-summary-cell warn' + (agg.nSisa > 0 ? ' kontrak-summary-clickable' : '') + '"' +
+      (agg.nSisa > 0 ? ' onclick="showKontrakPasokanBreakdown(\'sisa\')" title="Klik untuk rincian per PLTU"' : '') + '>' +
+      '<div class="kontrak-summary-label">Sisa Kontrak ' + yr + '</div>' + sisaCell +
     '</div>';
+}
+
+// Satu baris per PLTU yang punya entri di `kontrak_pasokan`. `sisa` null bila
+// realisasi DO belum ada — PLTU itu tetap dihitung pada Volume, tidak pada Sisa.
+function kontrakPasokanRows(){
+  const plants = (DATA && DATA.plants) || [];
+  const out = [];
+  for (const p of plants){
+    const vol = plantKontrakBerjalan(p);
+    if (vol === null) continue;
+    const sisa = plantSisaKontrakPasokan(p);
+    out.push({
+      code: p.code, name: p.name || p.code, genco: p.genco || '—', regional: p.regional || '—',
+      vol: vol, sisa: sisa, doReal: (sisa === null) ? null : (vol - sisa),
+      pct: (sisa === null || vol <= 0) ? null : ((vol - sisa) / vol * 100),
+    });
+  }
+  return out;
+}
+
+function kontrakPasokanTotals(rows){
+  const rs = rows || kontrakPasokanRows();
+  let vol = 0, sisa = 0, doReal = 0, nVol = 0, nSisa = 0;
+  for (const r of rs){
+    vol += r.vol; nVol++;
+    if (r.sisa !== null){ sisa += r.sisa; doReal += r.doReal; nSisa++; }
+  }
+  const plants = (DATA && DATA.plants) || [];
+  return { vol, sisa, doReal, nVol, nSisa, nPlants: plants.length, rows: rs };
 }
 
 // =====================================================
@@ -13761,6 +13842,161 @@ function closeKontrakBreakdown(){
   if (backdrop) backdrop.classList.remove('open');
 }
 window.closeKontrakBreakdown = closeKontrakBreakdown;
+
+// =====================================================
+// V88: Volume / Sisa Kontrak <tahun> — rincian per PLTU
+// Dibuka dari dua kartu baru di ringkasan tab Daftar Kontrak. Isinya pembagian
+// total nasional ke masing-masing PLTU, dengan angka yang identik dengan tooltip
+// Map Cofiring (baris "Kontrak <tahun>" dan "Sisa Kontrak <tahun>").
+// =====================================================
+let kontrakPasokanType = 'vol';
+let kontrakPasokanGenco = 'all';
+let kontrakPasokanSort = { col: null, dir: 'desc' }; // null col → default per tipe kartu
+
+function showKontrakPasokanBreakdown(type){
+  const backdrop = document.getElementById('kontrakPasokanBackdrop');
+  if (!backdrop) return;
+  kontrakPasokanType = (type === 'sisa') ? 'sisa' : 'vol';
+  kontrakPasokanGenco = 'all';
+  kontrakPasokanSort = { col: null, dir: 'desc' };
+  renderKontrakPasokanBody();
+  backdrop.classList.add('open');
+  backdrop.onclick = (e) => { if (e.target === backdrop) closeKontrakPasokanModal(); };
+}
+window.showKontrakPasokanBreakdown = showKontrakPasokanBreakdown;
+
+function setKontrakPasokanGenco(g){
+  kontrakPasokanGenco = g;
+  renderKontrakPasokanBody();
+}
+window.setKontrakPasokanGenco = setKontrakPasokanGenco;
+
+function setKontrakPasokanSort(col){
+  const s = kontrakPasokanSort;
+  if (s.col === col){ s.dir = (s.dir === 'desc') ? 'asc' : 'desc'; }
+  else { s.col = col; s.dir = (col === 'name' || col === 'genco' || col === 'regional') ? 'asc' : 'desc'; }
+  renderKontrakPasokanBody();
+}
+window.setKontrakPasokanSort = setKontrakPasokanSort;
+
+function renderKontrakPasokanBody(){
+  const titleEl = document.getElementById('kontrakPasokanTitle');
+  const metaEl = document.getElementById('kontrakPasokanMeta');
+  const eyebrowEl = document.getElementById('kontrakPasokanEyebrow');
+  const bodyEl = document.getElementById('kontrakPasokanBody');
+  if (!bodyEl) return;
+
+  const yr = (typeof runningYear === 'function') ? runningYear() : 2026;
+  const allRows = kontrakPasokanRows();
+  // Chip genco dibangun dari data, bukan daftar tetap: peta memakai PNP/PIP/UIW *dan* UIK
+  // (lihat GENCO_COLORS), jadi daftar tetap akan menyembunyikan satu kelompok PLTU.
+  const gencoCounts = { all: allRows.length };
+  for (const r of allRows){ gencoCounts[r.genco] = (gencoCounts[r.genco] || 0) + 1; }
+  const gencoOrder = ['PNP', 'PIP', 'UIW', 'UIK'];
+  const gencoList = Object.keys(gencoCounts).filter(g => g !== 'all')
+    .sort((a, b) => {
+      const ia = gencoOrder.indexOf(a), ib = gencoOrder.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+    });
+  const rows = kontrakPasokanGenco === 'all'
+    ? allRows.slice()
+    : allRows.filter(r => r.genco === kontrakPasokanGenco);
+
+  if (titleEl) titleEl.textContent = (kontrakPasokanType === 'sisa' ? 'Sisa Kontrak ' : 'Volume Kontrak ') + yr;
+  if (eyebrowEl) eyebrowEl.textContent = 'Rincian per PLTU · ' +
+    (kontrakPasokanType === 'sisa' ? 'Rencana Pasokan − Realisasi DO' : 'Rencana Pasokan');
+
+  // Sortir: kolom yang diklik, atau default sesuai kartu yang membuka modal.
+  const textCols = { name: 1, genco: 1, regional: 1 };
+  const defaultCol = kontrakPasokanType === 'sisa' ? 'sisa' : 'vol';
+  const sortCol = kontrakPasokanSort.col || defaultCol;
+  const sortDir = kontrakPasokanSort.col ? kontrakPasokanSort.dir : 'desc';
+  rows.sort((a, b) => {
+    const av = a[sortCol], bv = b[sortCol];
+    // null (DO belum ada) selalu di bawah, apa pun arah sortirnya.
+    if (!textCols[sortCol]){
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+    }
+    const cmp = textCols[sortCol] ? String(av || '').localeCompare(String(bv || '')) : ((av || 0) - (bv || 0));
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const tot = kontrakPasokanTotals(rows);
+  const tanpaData = tot.nPlants - allRows.length;
+  const gencoSuffix = kontrakPasokanGenco === 'all' ? '' : ' · Genco ' + kontrakPasokanGenco;
+  if (metaEl){
+    metaEl.innerHTML = rows.length + ' PLTU' + gencoSuffix +
+      ' · Volume Kontrak <b>' + fmtInt(Math.round(tot.vol)) + '</b> MT · Realisasi DO <b>' +
+      fmtInt(Math.round(tot.doReal)) + '</b> MT · Sisa <b>' + fmtInt(Math.round(tot.sisa)) + '</b> MT' +
+      (tot.nSisa < rows.length ? ' <span style="opacity:.7">(sisa dari ' + tot.nSisa + ' PLTU ber-DO)</span>' : '');
+  }
+
+  const chipStyle = (on) => 'padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid ' +
+    (on ? 'var(--accent)' : 'var(--border)') + ';background:' + (on ? 'var(--accent)' : 'transparent') +
+    ';color:' + (on ? '#fff' : 'var(--text-dim)') + ';';
+  let html = '<div class="sk-modal-note">Volume Kontrak ' + yr + ' = total rencana pasokan tahun berjalan · ' +
+    'Sisa Kontrak ' + yr + ' = rencana pasokan − realisasi DO. Angka per PLTU sama dengan tooltip Map Cofiring. ' +
+    'Sisa bisa negatif bila realisasi DO melampaui rencana.' +
+    (tanpaData > 0 ? ' <b>' + tanpaData + ' PLTU</b> belum punya data rencana pasokan dan tidak masuk hitungan.' : '') +
+    '</div>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">';
+  html += '<span style="font-size:10px;color:var(--text-dim);font-weight:600;margin-right:2px">GENCO:</span>';
+  for (const g of ['all'].concat(gencoList)){
+    html += '<button type="button" onclick="setKontrakPasokanGenco(\'' + escapeHtml(g) + '\')" style="' + chipStyle(kontrakPasokanGenco === g) + '">' +
+      escapeHtml(g === 'all' ? 'Semua' : g) + ' <span style="opacity:.7">(' + fmtInt(gencoCounts[g] || 0) + ')</span></button>';
+  }
+  html += '</div>';
+
+  const arrow = (col) => sortCol === col ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  const th = (col, label) => '<th style="cursor:pointer;user-select:none;white-space:nowrap' +
+    (sortCol === col ? ';color:var(--accent)' : '') + '" onclick="setKontrakPasokanSort(\'' + col + '\')" title="Klik untuk sortir">' + label + arrow(col) + '</th>';
+
+  if (rows.length === 0){
+    html += '<div class="jenis-empty" style="padding:24px;text-align:center">Tidak ada PLTU dengan data rencana pasokan pada filter ini.</div>';
+    bodyEl.innerHTML = html;
+    return;
+  }
+
+  html += '<div style="overflow:auto;max-height:500px;border:1px solid var(--border);border-radius:8px">';
+  html += '<table class="kontrak-table" style="font-size:9px">';
+  html += '<thead><tr><th>#</th>' + th('genco', 'Genco') + th('name', 'PLTU') + th('regional', 'Regional') +
+    th('vol', 'Volume Kontrak (MT)') + th('doReal', 'Realisasi DO (MT)') + th('sisa', 'Sisa Kontrak (MT)') + th('pct', '% DO') +
+    '</tr></thead><tbody>';
+  const badgeClass = (p) => p >= 100 ? 'over' : p >= 80 ? 'high' : p >= 40 ? 'mid' : 'low';
+  rows.forEach((r, i) => {
+    const dim = ' style="color:var(--text-dim)"';
+    html += '<tr>';
+    html += '<td style="color:var(--text-dim)">' + (i + 1) + '</td>';
+    html += '<td>' + escapeHtml(r.genco) + '</td>';
+    html += '<td style="font-weight:500;color:var(--text-bright)">' + escapeHtml(r.name) + '</td>';
+    html += '<td>' + escapeHtml(r.regional) + '</td>';
+    html += '<td class="num">' + fmtInt(Math.round(r.vol)) + '</td>';
+    html += r.doReal === null ? '<td class="num"' + dim + '>—</td>' : '<td class="num">' + fmtInt(Math.round(r.doReal)) + '</td>';
+    html += r.sisa === null
+      ? '<td class="num"' + dim + '>belum ada DO</td>'
+      : '<td class="num" style="font-weight:700;color:' + (r.sisa < 0 ? 'var(--danger)' : 'var(--text-bright)') + '">' + fmtInt(Math.round(r.sisa)) + '</td>';
+    html += r.pct === null
+      ? '<td style="text-align:center;color:var(--text-dim)">—</td>'
+      : '<td style="text-align:center"><span class="kontrak-pct-badge ' + badgeClass(r.pct) + '" style="font-size:9px;padding:2px 5px;min-width:40px">' + r.pct.toFixed(1) + '%</span></td>';
+    html += '</tr>';
+  });
+  html += '</tbody><tfoot><tr style="font-weight:700;background:var(--panel-3)">';
+  html += '<td colspan="4" style="text-align:right;padding-right:10px">TOTAL (' + rows.length + ' PLTU)</td>';
+  html += '<td class="num" style="color:var(--accent)">' + fmtInt(Math.round(tot.vol)) + '</td>';
+  html += '<td class="num">' + fmtInt(Math.round(tot.doReal)) + '</td>';
+  html += '<td class="num" style="color:' + (tot.sisa < 0 ? 'var(--danger)' : 'var(--text-bright)') + '">' + fmtInt(Math.round(tot.sisa)) + '</td>';
+  html += '<td></td>';
+  html += '</tr></tfoot></table></div>';
+  bodyEl.innerHTML = html;
+}
+
+function closeKontrakPasokanModal(){
+  const b = document.getElementById('kontrakPasokanBackdrop');
+  if (b) b.classList.remove('open');
+}
+window.closeKontrakPasokanModal = closeKontrakPasokanModal;
 
 // Build the dynamic "Real" columns for the Daftar Kontrak table, following the
 // Tahun/Bulan filters:
@@ -14433,6 +14669,12 @@ async function fetchKontrakPasokan(){
       // perlu dibuat ulang bila peta sudah terlanjur ter-render tanpa data kontrak.
       if (typeof refreshMarkers === 'function' && typeof markerLayer !== 'undefined' && markerLayer){
         try { refreshMarkers(); } catch(e){}
+      }
+      // V88: kartu "Volume/Sisa Kontrak <tahun>" di tab Daftar Kontrak juga membaca peta
+      // ini. Fetch-nya asinkron dan bisa selesai setelah ringkasan ter-render, jadi
+      // ringkasan digambar ulang agar kartunya tidak tertinggal di "belum tersedia".
+      if (typeof renderKontrakSummary === 'function'){
+        try { renderKontrakSummary(); } catch(e){}
       }
     }
   } catch(e){ console.warn('[Kontrak] fetch failed:', e); }
