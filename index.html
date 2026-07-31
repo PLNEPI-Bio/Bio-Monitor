@@ -11886,7 +11886,9 @@ function openParetoCatModal(catCode){
   if (titleEl) titleEl.textContent = catName;
   if (subEl) subEl.textContent = periodLabel() + ' · ' + gencoLabel() + ' · ' + rows.length + ' PLTU berkontribusi';
 
-  const gencoColor = g => g === 'PNP' ? '#10b981' : g === 'PIP' ? '#f59e0b' : g === 'UIW' ? '#3b82f6' : '#64748b';
+  // V89: shadow lokal gencoColor dihapus — daftarnya hanya memuat PNP/PIP/UIW
+  // sehingga UIK jatuh ke abu-abu, padahal GENCO_COLORS global memberinya ungu
+  // (#a855f7) seperti pada swatch filter, marker peta, dan chart lain.
   const maxVal = rows.length ? rows[0].value : 1;
 
   if (rows.length === 0){
