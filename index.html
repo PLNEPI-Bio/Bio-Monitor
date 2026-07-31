@@ -609,28 +609,6 @@ html,body{
   padding-right:14px;border-right:1px solid var(--border);
 }
 
-/* Real-time presence indicator: shows # active users */
-.presence-indicator{
-  display:flex;align-items:center;gap:6px;
-  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
-  padding-right:14px;border-right:1px solid var(--border);
-  color:var(--text-dim);letter-spacing:.5px;
-}
-.presence-dot{
-  width:8px;height:8px;border-radius:50%;background:var(--accent);
-  box-shadow:0 0 8px var(--accent);
-  animation:pulse 2s ease-in-out infinite;
-}
-@keyframes pulse{
-  0%, 100% { opacity:1; transform:scale(1); }
-  50% { opacity:.5; transform:scale(0.85); }
-}
-.presence-count{
-  color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums;
-}
-.presence-label{
-  text-transform:uppercase;font-size:8px;
-}
 .updated-indicator .updated-label{
   font-size:8px;color:var(--text-dim);letter-spacing:1.2px;
   text-transform:uppercase;
@@ -3483,7 +3461,6 @@ html,body{
   .datetime-display{display:none}
   .theme-toggle{width:30px;height:30px}
   .theme-toggle svg{width:14px;height:14px}
-  .presence-indicator{display:none}
   .updated-indicator{display:none}
 
   /* Tabs: horizontal scrollable + sticky at top so always visible */
@@ -3865,7 +3842,6 @@ html,body{
 
 @media (max-width: 980px){
   .insights-grid-2{grid-template-columns:1fr}
-  .presence-indicator{display:none}
 }
 
 /* Insights — extra mobile tweaks */
@@ -4084,11 +4060,6 @@ html,body{
 :root[data-theme="light"] .progress-fill[style*="#10b981"]{
   /* The inline style still wins, but bars created by JS use --accent */
 }
-/* Real-time presence dot: yellow with subtle pulse */
-:root[data-theme="light"] .presence-dot{
-  background:#FFC72C;box-shadow:0 0 8px rgba(255,199,44,.6);
-}
-:root[data-theme="light"] .presence-count{color:#0F496E}
 /* Plant popup on map */
 :root[data-theme="light"] .plant-popup{
   background:#FFFFFF;color:#1F2937;
@@ -4577,21 +4548,6 @@ html,body{
 .empty-state-title{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.2px}
 .empty-state-desc{font-size:11px;max-width:260px;line-height:1.5}
 
-/* Notification bell */
-.notif-btn{
-  background:transparent;border:none;color:var(--text-dim);cursor:pointer;
-  position:relative;padding:6px;border-radius:6px;transition:all .15s;
-  display:flex;align-items:center;justify-content:center;
-}
-.notif-btn:hover{color:var(--text-bright);background:var(--panel-3)}
-.notif-badge{
-  position:absolute;top:2px;right:2px;min-width:15px;height:15px;
-  background:var(--danger);color:#fff;font-size:9px;font-weight:800;
-  border-radius:99px;display:flex;align-items:center;justify-content:center;
-  padding:0 4px;font-family:'Plus Jakarta Sans',sans-serif;
-  animation:notifPop .3s ease;
-}
-@keyframes notifPop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
 @keyframes toastSlideIn{0%{transform:translateX(120%);opacity:0}100%{transform:translateX(0);opacity:1}}
 @keyframes toastSlideOut{0%{transform:translateX(0);opacity:1}100%{transform:translateX(120%);opacity:0}}
 #updateAppliedBanner{
@@ -4634,23 +4590,6 @@ html,body{
   height:100%;background:var(--accent);
   transition:width linear;
 }
-.notif-badge:empty,.notif-badge[data-count="0"]{display:none}
-.notif-dropdown{
-  position:fixed;top:52px;right:8px;width:320px;max-height:400px;overflow-y:auto;
-  background:var(--panel);border:1px solid var(--border);border-radius:10px;
-  box-shadow:var(--shadow-lg);z-index:5000;display:none;
-  font-family:'Plus Jakarta Sans',sans-serif;
-}
-.notif-dropdown.open{display:block}
-.notif-header{padding:12px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text-bright);text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center}
-.notif-item{padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
-.notif-item:hover{background:var(--panel-2)}
-.notif-item:last-child{border-bottom:none}
-.notif-item-title{font-size:12px;font-weight:600;color:var(--text-bright);margin-bottom:2px}
-.notif-item-desc{font-size:10px;color:var(--text-dim);line-height:1.4}
-.notif-item-time{font-size:9px;color:var(--text-dim);margin-top:4px;opacity:.7}
-.notif-item.unread{border-left:3px solid var(--accent)}
-.notif-clear-btn{background:transparent;border:none;color:var(--accent);font-size:10px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif}
 
 /* V55: Login / user menu */
 .topbar-login-btn{
@@ -21670,9 +21609,6 @@ window.addEventListener('DOMContentLoaded', () => {
   window.closeDetailPanel = closeDetailPanel;
   window.closeBnPltuDetail = closeBnPltuDetail;
 
-  // Boot insights features
-  initPresenceIndicator();
-
   // V33: keep Leaflet maps sized correctly on viewport changes (mobile
   // orientation, window resize, etc). Without invalidateSize after resize,
   // the map can render at the old size and look hidden/clipped.
@@ -22569,59 +22505,11 @@ td.num { text-align:right; font-variant-numeric:tabular-nums; }
 
 // Helper accessor used in PDF export (escapeHtml + gencoColor + fmt etc are in scope at top of file)
 
-// ============================================================
-// REAL-TIME PRESENCE INDICATOR
-// ============================================================
-let presenceChannel = null;
-let presenceCount = 1;
+// V89: Presence Indicator dihapus — #presenceCount tidak pernah ada di markup, jadi
+// jumlah pengguna aktif tidak punya tempat tampil. Ikut dibuang: channel Realtime
+// 'online-users' beserta panggilan .track() yang menulis state presence ke Supabase
+// pada setiap tab yang dibuka.
 
-function initPresenceIndicator(){
-  // Generate a stable user ID for this session
-  let userId;
-  try {
-    userId = sessionStorage.getItem('presence_user_id');
-    if (!userId){
-      userId = 'user_' + Math.random().toString(36).slice(2, 10);
-      sessionStorage.setItem('presence_user_id', userId);
-    }
-  } catch(e){
-    userId = 'user_' + Math.random().toString(36).slice(2, 10);
-  }
-
-  // Use Supabase Realtime presence channel if available
-  if (typeof supabaseClient !== 'undefined' && supabaseClient){
-    try {
-      presenceChannel = supabaseClient.channel('online-users', {
-        config: { presence: { key: userId } }
-      });
-      presenceChannel
-        .on('presence', { event: 'sync' }, () => {
-          const state = presenceChannel.presenceState();
-          presenceCount = Object.keys(state).length;
-          updatePresenceUI();
-        })
-        .subscribe(async (status) => {
-          if (status === 'SUBSCRIBED'){
-            await presenceChannel.track({
-              user_id: userId,
-              online_at: new Date().toISOString(),
-            });
-          }
-        });
-    } catch(e){
-      console.warn('[Presence] Supabase channel failed:', e);
-      updatePresenceUI(); // fallback to 1
-    }
-  } else {
-    // No Supabase - just show 1 (current user)
-    updatePresenceUI();
-  }
-}
-
-function updatePresenceUI(){
-  const countEl = document.getElementById('presenceCount');
-  if (countEl) countEl.textContent = presenceCount;
-}
 // ============================================================
 // BERITA TAB — Media Monitoring (Google News via Supabase Edge Function)
 // ============================================================
@@ -23033,86 +22921,11 @@ function animateKpiValues(){
 // Hook into updateMapKPI
 const _origUpdateMapKPI = typeof updateMapKPI === 'function' ? updateMapKPI : null;
 
-// --- Notification Bell System ---
-const notifState = { items: [], unread: 0 };
-function notifAdd(title, desc, type){
-  notifState.items.unshift({ title, desc, type: type||'info', time: new Date(), read: false });
-  if (notifState.items.length > 20) notifState.items.pop();
-  notifState.unread = notifState.items.filter(n => !n.read).length;
-  notifRender();
-}
-function notifRender(){
-  const badge = document.getElementById('notifBadge');
-  const list = document.getElementById('notifList');
-  if (badge) badge.textContent = notifState.unread > 0 ? notifState.unread : '';
-  if (!list) return;
-  if (notifState.items.length === 0){
-    list.innerHTML = '<div class="empty-state" style="padding:24px"><div class="empty-state-icon">🔔</div><div class="empty-state-desc">No notifications yet</div></div>';
-    return;
-  }
-  list.innerHTML = notifState.items.map((n,i) => {
-    const ago = formatTimeAgo(n.time);
-    return '<div class="notif-item' + (n.read ? '' : ' unread') + '" data-idx="' + i + '">' +
-      '<div class="notif-item-title">' + n.title + '</div>' +
-      '<div class="notif-item-desc">' + n.desc + '</div>' +
-      '<div class="notif-item-time">' + ago + '</div></div>';
-  }).join('');
-  list.querySelectorAll('.notif-item').forEach(item => {
-    item.onclick = () => {
-      const idx = parseInt(item.dataset.idx);
-      notifState.items[idx].read = true;
-      notifState.unread = notifState.items.filter(n => !n.read).length;
-      notifRender();
-    };
-  });
-}
-(function initNotifBell(){
-  const btn = document.getElementById('notifBtn');
-  const dd = document.getElementById('notifDropdown');
-  const clearBtn = document.getElementById('notifClearBtn');
-  if (btn && dd){
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      dd.classList.toggle('open');
-    };
-    document.addEventListener('click', (e) => {
-      if (!dd.contains(e.target) && e.target !== btn) dd.classList.remove('open');
-    });
-  }
-  if (clearBtn){
-    clearBtn.onclick = () => {
-      notifState.items = [];
-      notifState.unread = 0;
-      notifRender();
-    };
-  }
-  // Generate initial notifications from data context
-  notifAdd('Dashboard Ready', 'All data loaded successfully', 'info');
-  // Listen for Supabase realtime changes — deferred to DOMContentLoaded
-  window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      if (typeof supabaseClient !== 'undefined' && supabaseClient){
-        try {
-          supabaseClient.channel('v54-notif')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'upload_log' }, payload => {
-              const rec = payload.new || {};
-              notifAdd('Data Updated', (rec.uploaded_by || 'Someone') + ' uploaded new data', 'upload');
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, payload => {
-              const rec = payload.new || {};
-              notifAdd('Calendar Event', (rec.title || 'New event') + ' on ' + (rec.date || ''), 'calendar');
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'mou_data' }, payload => {
-              notifAdd('MoU Updated', 'Timeline data has been updated', 'mou');
-            })
-            .subscribe();
-        } catch(e){ console.warn('Notif subscribe failed:', e); }
-      }
-    }, 2000); // wait for initSupabase() to complete
-  });
-  notifRender();
-})();
-
+// V89: Notification Bell dihapus — markup-nya (#notifBtn/#notifDropdown/#notifList/
+// #notifBadge/#notifClearBtn) sudah tidak ada sejak lama, sehingga notifRender() tidak
+// pernah punya tempat menggambar. Yang dibuang bersamanya: langganan Realtime channel
+// 'v54-notif' (3 listener postgres_changes ke upload_log/calendar_events/mou_data) yang
+// tetap terbuka di setiap tab dan ikut memakan kuota Realtime milik fitur yang hidup.
 // --- Comparison Mode (Pareto) ---
 const compareState = { active: false, chartA: null, chartB: null };
 (function initCompareMode(){
@@ -23227,8 +23040,6 @@ document.addEventListener('keydown', function(e){
     document.querySelectorAll('.sidebar.mobile-open').forEach(s => s.classList.remove('mobile-open'));
     const backdrop = document.getElementById('mobileBackdrop');
     if (backdrop) backdrop.classList.remove('show');
-    const notifDd = document.getElementById('notifDropdown');
-    if (notifDd) notifDd.classList.remove('open');
     mobCloseMore();
     // Restore legend
     const lg = document.querySelector('.legend');
