@@ -6531,7 +6531,12 @@ html,body{
       <div class="usulan-form-grid">
         <div class="usulan-form-field">
           <label for="usulanFormRegional">PLTU</label>
-          <input type="text" id="usulanFormRegional" placeholder="Nama PLTU">
+          <!-- V88: dari input bebas jadi daftar pilihan. Opsinya diisi saat modal dibuka
+               oleh fillUsulanPltuSelect() dari DATA.plants — bukan ditulis di markup,
+               karena daftar PLTU baru tiba setelah muat dari Supabase. -->
+          <select id="usulanFormRegional">
+            <option value="">-- Pilih PLTU --</option>
+          </select>
         </div>
         <div class="usulan-form-field">
           <label for="usulanFormPltu">Regional</label>
@@ -14846,6 +14851,48 @@ function setupOnlineHandlers(){
 }
 
 // ---------- Row data composition ----------
+// V88: ===== penyelarasan nama PLTU pada usulan =====
+// Nama PLTU dulu diketik bebas, jadi yang tersimpan tidak sama bentuknya dengan daftar
+// resmi: "ANGGREK" vs "Anggrek", "BALIKPAPAN" vs "Teluk Balikpapan". Kuncinya dibuat
+// dengan membuang semua yang bukan huruf/angka lalu menyamakan besar-kecilnya, supaya
+// spasi, tanda hubung, dan kurung tidak ikut menentukan kecocokan.
+function _usulanPlantKey(s){ return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+// Memetakan nama PLTU bebas-ketik ke nama resmi di DATA.plants. Mengembalikan '' bila
+// tidak bisa dipastikan — pemanggil WAJIB memperlakukan itu sebagai "biarkan apa adanya",
+// bukan "kosongkan".
+function resolveUsulanPltuName(raw){
+  const key = _usulanPlantKey(raw);
+  if (!key) return '';
+  const names = (DATA.plants || []).map(p => p.name).filter(Boolean);
+  // 1) Cocok persis setelah dinormalisasi. Didahulukan supaya "BARRU" jatuh ke "Barru",
+  //    bukan ke "Barru 3 (Expansion)" yang juga memuat kata itu.
+  const exact = names.find(nm => _usulanPlantKey(nm) === key);
+  if (exact) return exact;
+  // 2) Salah satu memuat yang lain — ini yang menyelamatkan "BALIKPAPAN" → "Teluk
+  //    Balikpapan". Hanya diterima bila kandidatnya TUNGGAL: "SURALAYA" cocok dengan dua
+  //    PLTU sekaligus, dan menebak salah satunya lebih buruk daripada tidak menebak.
+  const partial = names.filter(nm => {
+    const k = _usulanPlantKey(nm);
+    return k.includes(key) || key.includes(k);
+  });
+  return partial.length === 1 ? partial[0] : '';
+}
+
+// Versi aman untuk dipakai saat render: nama resmi bila ketemu, nilai asli bila tidak.
+// Dengan begini seluruh tab Usulan (tabel, filter, ekspor) menampilkan satu bentuk nama
+// tanpa perlu menulis ulang data di Supabase.
+const _usulanPltuCanonCache = new Map();
+function canonUsulanPltu(v){
+  if (!v) return v;
+  if (_usulanPltuCanonCache.has(v)) return _usulanPltuCanonCache.get(v);
+  const out = resolveUsulanPltuName(v) || v;
+  // Belum di-cache selama DATA.plants belum tiba, supaya hasil sementara yang masih
+  // "apa adanya" tidak terkunci setelah daftar PLTU akhirnya termuat.
+  if ((DATA.plants || []).length) _usulanPltuCanonCache.set(v, out);
+  return out;
+}
+
 // For Excel rows, server may have overrides (regional/pltu/jenis/volume/metode/keterangan)
 // from user edits. Custom rows have all data on server. Returns merged "display" data.
 function getEffectiveRow(rec){
@@ -14854,7 +14901,7 @@ function getEffectiveRow(rec){
   if (rec.is_custom){
     return {
       no: rec.no,
-      regional: remote.regional !== undefined ? remote.regional : rec.regional,
+      regional: canonUsulanPltu(remote.regional !== undefined ? remote.regional : rec.regional),
       pltu: remote.pltu !== undefined ? remote.pltu : rec.pltu,
       jenis: remote.jenis !== undefined ? remote.jenis : rec.jenis,
       volume: remote.volume !== undefined ? remote.volume : rec.volume,
@@ -14868,7 +14915,7 @@ function getEffectiveRow(rec){
   // Excel data just because server hasn't been written for that field)
   return {
     no: rec.no,
-    regional: (remote.regional && remote.regional.length > 0) ? remote.regional : rec.regional,
+    regional: canonUsulanPltu((remote.regional && remote.regional.length > 0) ? remote.regional : rec.regional),
     pltu: (remote.pltu && remote.pltu.length > 0) ? remote.pltu : rec.pltu,
     jenis: (remote.jenis && remote.jenis.length > 0) ? remote.jenis : rec.jenis,
     volume: (remote.volume && remote.volume > 0) ? remote.volume : rec.volume,
@@ -15846,6 +15893,9 @@ function openUsulanModal(){
     if (el) el.value = '';
   });
   setUsulanRegionalSelect(''); // clear Regional dropdown + any leftover temp option
+  // V88: bangun ulang daftar PLTU tiap kali modal dibuka — DATA.plants baru terisi
+  // setelah muat dari Supabase, dan ini sekaligus membuang opsi sementara sisa edit.
+  fillUsulanPltuSelect('');
   // Update title + button text
   const titleEl = document.getElementById('usulanModalTitle');
   if (titleEl) titleEl.textContent = 'Tambah Usulan Baru';
@@ -15865,6 +15915,39 @@ function closeUsulanModal(){
   const backdrop = document.getElementById('usulanModalBackdrop');
   if (backdrop) backdrop.classList.remove('open');
   document.body.style.overflow = '';
+}
+
+// Mengisi dropdown PLTU (id usulanFormRegional — lihat catatan penamaan di
+// submitUsulanForm) dan memilih `val`. Nilai lama yang tidak terpetakan tetap
+// dipertahankan sebagai opsi sementara supaya menyunting kolom lain tidak diam-diam
+// mengganti PLTU-nya; polanya sama dengan setUsulanRegionalSelect di bawah.
+function fillUsulanPltuSelect(val){
+  const sel = document.getElementById('usulanFormRegional');
+  if (!sel) return;
+  const names = (DATA.plants || []).map(p => p.name).filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, 'id'));
+  // Daftar PLTU ikut datang bersama data dashboard. Bila belum tiba (offline tanpa
+  // cache), katakan apa adanya — sebelum V88 kolom ini bisa diketik bebas, jadi
+  // dropdown kosong tanpa keterangan akan terbaca sebagai form yang rusak.
+  if (!names.length){
+    sel.innerHTML = '<option value="">-- Daftar PLTU belum termuat --</option>';
+    sel.value = '';
+    return;
+  }
+  sel.innerHTML = '<option value="">-- Pilih PLTU --</option>' +
+    names.map(nm => `<option value="${escapeHtml(nm)}">${escapeHtml(nm)}</option>`).join('');
+  const resolved = resolveUsulanPltuName(val);
+  if (resolved){ sel.value = resolved; return; }
+  if (val){
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = val + ' (tidak terdaftar)';
+    opt.dataset.temp = '1';
+    sel.appendChild(opt);
+    sel.value = val;
+    return;
+  }
+  sel.value = '';
 }
 
 // Set the Regional <select> (id usulanFormPltu) to a value, appending a temporary
@@ -15901,7 +15984,9 @@ function openUsulanEditModal(usulanNo){
   }
   const eff = getEffectiveRow(baseRow);
   // Pre-fill form
-  document.getElementById('usulanFormRegional').value = eff.regional || '';
+  // V88: nama PLTU lama dipetakan ke nama resmi; yang tidak terpetakan tetap tampil
+  // apa adanya sebagai opsi sementara — lihat fillUsulanPltuSelect().
+  fillUsulanPltuSelect(eff.regional || '');
   // Regional dropdown (usulanFormPltu holds the Regional value): preserve any
   // legacy/unknown value by adding it as an option so it isn't lost on save.
   setUsulanRegionalSelect(eff.pltu || '');
@@ -15938,7 +16023,7 @@ async function submitUsulanForm(){
   // Validation
   // NOTE: field IDs are kept stable for data binding — usulanFormRegional holds the
   // PLTU name and usulanFormPltu holds the Regional value (see modal labels).
-  if (!regional){ errEl.textContent = 'PLTU wajib diisi.'; return; }
+  if (!regional){ errEl.textContent = 'PLTU wajib dipilih.'; return; }
   if (!pltu){ errEl.textContent = 'Regional wajib dipilih.'; return; }
   if (!jenis){ errEl.textContent = 'Jenis biomassa wajib diisi.'; return; }
   if (isNaN(volume) || volume < 0){ errEl.textContent = 'Volume harus angka ≥ 0.'; return; }
