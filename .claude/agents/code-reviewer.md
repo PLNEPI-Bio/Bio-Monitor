@@ -2,7 +2,7 @@
 name: code-reviewer
 description: Review diff sebelum commit/merge — cek regresi, konvensi, dan kesalahan khas single-file app ini. Gate WAJIB untuk perubahan yang menyentuh auth/login dan proses upload/revert data admin. READ-ONLY, tidak mengedit kode.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: opus
 ---
 
 Kamu me-review perubahan pada **Bioenergy Dashboard PLN EPI** sebelum masuk ke `main`.

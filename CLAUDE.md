@@ -73,7 +73,15 @@ Lima subagent di [.claude/agents/](.claude/agents/):
 | **frontend-dev** | sonnet | tulis | Peta, chart, modal, filter, tabel, layout responsif |
 | **data-backend-dev** | sonnet | tulis | Parser Excel, skema & query Supabase, versioning/revert, edge function SharePoint DO |
 | **data-qc-validator** | sonnet | read-only | Setiap perubahan yang menyentuh angka: target, realisasi, gap, achievement ratio, pareto loss, pembobotan |
-| **code-reviewer** | sonnet | read-only | Sebelum commit. **Wajib** untuk perubahan auth/login dan upload/revert data |
+| **code-reviewer** | **opus** | read-only | Sebelum commit. **Wajib** untuk perubahan auth/login dan upload/revert data |
+
+Model bukan seragam karena taruhannya tidak seragam. `explorer` cuma grep-and-report → haiku. Penulis
+dapat sonnet. `code-reviewer` dapat opus karena **repo ini tidak punya test/linter/type checker** —
+review manual adalah gate terakhir, dan kesalahan yang lolos di sini tidak punya jaring kedua.
+
+**Eskalasi per-pemanggilan.** Parameter `model` pada Agent tool menang atas frontmatter. Naikkan
+`data-backend-dev` ke opus untuk tiga area blast-radius tinggi: penulisan `dashboard_data`, alur
+upload/revert, dan edge function cron di `supabase/functions/`. Default tetap sonnet.
 
 ### Urutan kerja yang disarankan
 
