@@ -5418,6 +5418,24 @@ html,body{
         <div class="real-card-note">Mengikuti filter Wilayah/PLTU di atas. DO = Delivery Order, Real = Realisasi (ton).</div>
         <div class="real-podt-scroll"><div id="real-podt-table"></div></div>
       </div>
+
+      <!-- V92: Rekap Kalori (GCV) per PLTU — bulanan, dengan filter tahun sendiri -->
+      <div class="real-card">
+        <div class="real-card-head">
+          <h3>Rekap Kalori per PLTU &middot; Bulanan</h3>
+          <div class="real-card-head-controls">
+            <label class="real-filter-label" for="realKalorYearSel">Tahun</label>
+            <select id="realKalorYearSel" class="real-filter-select real-filter-select-sm">
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+          </div>
+        </div>
+        <div class="real-card-note">Mengikuti filter Wilayah/PLTU di atas. Sumber: sheet &ldquo;Rekap Kalor&rdquo; (kolom H&ndash;BG), satuan kcal/kg. Baris RATA-RATA = rerata sederhana PLTU yang tampil dan punya nilai di bulan tersebut (bukan rerata tertimbang tonase).</div>
+        <div class="real-podt-scroll"><div id="real-kalor-table"></div></div>
+      </div>
     </div>
 
     <!-- ---------- Panel: Peringkat PLTU ---------- -->
@@ -6603,6 +6621,8 @@ const state = {
   realSubtab: 'ringkasan',
   // V66: year filter khusus untuk tabel DO/Real per PLTU di Ringkasan
   realPodtYear: '2026',
+  // V92: year filter khusus untuk tabel Rekap Kalori (GCV) per PLTU di Ringkasan
+  realKalorYear: '2026',
 };
 
 // ========= utils =========
@@ -10369,6 +10389,8 @@ function renderRealView(){
   }
   // V66: tabel DO vs Realisasi per PLTU (bulanan) — ikut filter Wilayah/PLTU
   renderRealPodtTable();
+  // V92: tabel Rekap Kalori (GCV) per PLTU (bulanan) — ikut filter Wilayah/PLTU
+  renderRealKalorTable();
   } // end Contribution by Genco
 
   // Wire toggle checkboxes for trend & annual chart labels (first-time bind only)
@@ -10489,6 +10511,88 @@ function renderRealPodtTable(){
   const body = plants.length
     ? `<tbody>${rowsHtml}</tbody>`
     : '<tbody><tr><td class="pltu-cell" colspan="28" style="text-align:center;color:var(--text-dim);padding:16px">Tidak ada PLTU sesuai filter.</td></tr></tbody>';
+
+  container.innerHTML = `<table class="recap-table">${header}${body}${footer}</table>`;
+}
+
+// V92: Cari baris GCV milik sebuah PLTU di DATA.gcv. Kunci map berasal dari kolom
+// D sheet "Rekap Kalor" dan tidak selalu identik dengan nama di sheet "Rekap",
+// jadi fallback ke pencocokan substring — sama seperti panel detail peta.
+function _gcvRowForPlant(name){
+  const gcvMap = DATA.gcv || {};
+  if (gcvMap[name]) return gcvMap[name];
+  const nameUp = String(name || '').toUpperCase();
+  if (!nameUp) return null;
+  const entries = Object.entries(gcvMap);
+  // Exact (case-insensitive) menang lebih dulu — kalau substring dicek dalam satu
+  // lintasan, kunci "SURALAYA" bisa merebut baris milik "SURALAYA 8".
+  for (const [k, v] of entries){ if (k.toUpperCase() === nameUp) return v; }
+  for (const [k, v] of entries){
+    const kUp = k.toUpperCase();
+    if (nameUp.includes(kUp) || kUp.includes(nameUp)) return v;
+  }
+  return null;
+}
+
+// V92: Tabel Rekap Kalori (GCV) per PLTU untuk submenu Ringkasan.
+// Sumber: sheet "Rekap Kalor" kolom H–BG → DATA.gcv (4 blok tahun × 12 bulan +
+// akumulasi), diisi parseProdExcel dan edge function prod-auto-refresh.
+// Mengikuti filter Wilayah/PLTU global (realFilteredPlants) + filter tahun sendiri.
+function renderRealKalorTable(){
+  // Wire the year filter once (idempotent).
+  const sel = document.getElementById('realKalorYearSel');
+  if (sel && !sel.dataset.wired){
+    sel.value = state.realKalorYear || '2026';
+    sel.onchange = () => { state.realKalorYear = sel.value; renderRealKalorTable(); };
+    sel.dataset.wired = '1';
+  }
+  const container = document.getElementById('real-kalor-table');
+  if (!container) return;
+
+  const year = state.realKalorYear || '2026';
+  const plants = realFilteredPlants().slice().sort((a, b) => a.name.localeCompare(b.name));
+
+  let header = '<thead><tr><th class="pltu-col">PLTU</th><th>Genco</th>';
+  MONTHS.forEach(m => { header += `<th class="num">${m}</th>`; });
+  header += '<th class="num year-total">Akumulasi</th></tr></thead>';
+
+  // GCV nol/null di sheet berarti "tidak ada data", bukan nilai kalori 0.
+  const cell = (v, extra) => {
+    const ok = Number(v) > 0;
+    return `<td class="num${extra}${ok ? '' : ' dim'}">` +
+           `${ok ? Number(v).toLocaleString('id-ID', { maximumFractionDigits: 1 }) : '—'}</td>`;
+  };
+
+  // Rerata kolom (sederhana): hanya PLTU yang punya nilai di bulan itu yang dihitung.
+  const colSum = new Array(12).fill(0), colCnt = new Array(12).fill(0);
+  let akumSum = 0, akumCnt = 0;
+
+  const rowsHtml = plants.map(p => {
+    const gcvRow = _gcvRowForPlant(p.name);
+    const yrData = (gcvRow && gcvRow[year]) || null;
+    const monthly = (yrData && yrData.monthly) || [];
+    let row = `<td class="pltu-cell">${escapeHtml(p.name)}<span class="code">${escapeHtml(p.code)}</span></td>` +
+      `<td><span class="kontrak-genco-pill" style="color:${gencoColor(p.genco)};border-color:${gencoColor(p.genco)}40">${p.genco}</span></td>`;
+    for (let mi = 0; mi < 12; mi++){
+      const v = Number(monthly[mi]) || 0;
+      if (v > 0){ colSum[mi] += v; colCnt[mi] += 1; }
+      row += cell(v, '');
+    }
+    const akum = Number(yrData && yrData.akum) || 0;
+    if (akum > 0){ akumSum += akum; akumCnt += 1; }
+    row += cell(akum, ' year-total');
+    return `<tr>${row}</tr>`;
+  }).join('');
+
+  let footer = '<tfoot><tr><td class="pltu-cell" colspan="2"><b>RATA-RATA</b></td>';
+  for (let mi = 0; mi < 12; mi++){
+    footer += cell(colCnt[mi] ? colSum[mi] / colCnt[mi] : 0, '');
+  }
+  footer += cell(akumCnt ? akumSum / akumCnt : 0, ' year-total') + '</tr></tfoot>';
+
+  const body = plants.length
+    ? `<tbody>${rowsHtml}</tbody>`
+    : '<tbody><tr><td class="pltu-cell" colspan="15" style="text-align:center;color:var(--text-dim);padding:16px">Tidak ada PLTU sesuai filter.</td></tr></tbody>';
 
   container.innerHTML = `<table class="recap-table">${header}${body}${footer}</table>`;
 }
