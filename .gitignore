@@ -1,0 +1,5 @@
+# Local restore points for index.html (1.7-1.8 MB each).
+# Kept on disk deliberately, but not in git: they are duplicates of a file that is
+# already versioned here, and committing them bloats the repo permanently.
+# Use the git tags instead for history-based restore, e.g. pre-redesign-2026-08-03.
+backups/
