@@ -355,6 +355,8 @@ body.gate-locked{overflow:hidden}
   --page-text:#1A2430;       --page-text-dim:#5A6470;    --page-text-bright:#0F496E;
   --page-panel-2:#ECEEF0;    --page-panel-3:#E4E7EA;
   --page-border:#D6DADF;     --page-border-bright:#98A0A9; --page-ctl-bg:#FFFFFF;
+  --page-status-ok-ink:#04674A; --page-status-warn-ink:#8F4106; --page-status-crit-ink:#B6302B;
+  --page-accent:#0F496E;     --page-on-accent:#FFFFFF;
 
   /* V93 STATUS VOCABULARY — deliberately separate from the PLN brand accents above.
      Never mix the two families: brand marks identity, status marks condition.
@@ -456,6 +458,17 @@ html,body{
   --accent:var(--chrome-accent);
   --accent-line:var(--chrome-accent);
   --on-accent:var(--chrome-on-accent);
+  /* V101: --accent-soft is a translucent PLN blue, which on the PLN blue band is a
+     no-op — it made .topbar-login-btn:active give no press feedback at all. */
+  --accent-soft:rgba(255,255,255,.22);
+  /* V101 BUGFIX. The status inks are tuned for the PAPER ground, where they must be
+     dark to pass on white. On the blue band they were 1.33:1 (warn) and 1.55:1
+     (crit) — i.e. invisible. That hid the two admin alerts that exist specifically
+     to be noticed: the auto-refresh PAUSED state and the DO SharePoint link failure.
+     The band needs the light end of each hue instead. Ratios on #0F496E below. */
+  --status-ok-ink:#6EE7B7;    /* 6.25:1 */
+  --status-warn-ink:#FBBF24;  /* 5.74:1 */
+  --status-crit-ink:#FCA5A5;  /* 5.01:1 */
 }
 /* Lives inside .topbar in the DOM, paints on the page plane. Reset off the
    canonical --page-* copies so it does not inherit the band. */
@@ -468,6 +481,18 @@ html,body{
   --border:var(--page-border);
   --border-bright:var(--page-border-bright);
   --ctl-bg:var(--page-ctl-bg);
+  /* V101: the band lightens the status inks so they read on blue. This panel is a
+     white sheet, where those light inks would be ~1.6:1 — .login-dd-role.admin uses
+     one. Reset them to the page values along with everything else. */
+  --status-ok-ink:var(--page-status-ok-ink);
+  --status-warn-ink:var(--page-status-warn-ink);
+  --status-crit-ink:var(--page-status-crit-ink);
+  /* V101: --accent too. Without it .login-dd-avatar drew the band's YELLOW disc with
+     white initials on this white panel (~1.6:1). On the page plane the accent is
+     PLN blue, and white on that is 9.55:1. */
+  --accent:var(--page-accent);
+  --accent-line:var(--page-accent);
+  --on-accent:var(--page-on-accent);
 }
 .topbar{
   display:flex;align-items:center;justify-content:space-between;
@@ -5504,7 +5529,10 @@ html,body{
 .topbar-login-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--panel-3)}
 .topbar-login-btn.logged-in{background:var(--panel-3)}
 .login-avatar{
-  width:22px;height:22px;border-radius:var(--r-pill);background:var(--accent);color:#fff;
+  /* V101: sits inside the chrome band, where --accent is PLN yellow. Hardcoded #fff
+     on it was 1.55:1 — the user's initials were invisible. --on-accent tracks the
+     surface it is actually painted on (dark ink in the band, white on the page). */
+  width:22px;height:22px;border-radius:var(--r-pill);background:var(--accent);color:var(--on-accent);
   display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
   flex-shrink:0;text-transform:uppercase;
 }
@@ -5521,7 +5549,7 @@ html,body{
   border-bottom:1px solid var(--border);background:var(--panel-2);
 }
 .login-dd-avatar{
-  width:40px;height:40px;border-radius:var(--r-pill);background:var(--accent);color:#fff;
+  width:40px;height:40px;border-radius:var(--r-pill);background:var(--accent);color:var(--on-accent);
   display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;
   flex-shrink:0;text-transform:uppercase;
 }
