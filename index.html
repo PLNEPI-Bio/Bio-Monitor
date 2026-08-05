@@ -4286,10 +4286,14 @@ html,body{
   /* V33: explicit dimensions for map-area on mobile.
      Without this, grid cell can collapse to 0 height when sidebar is
      position:fixed (out of flow), leaving map invisible. */
-  .map-view .map-area{min-height:calc(100vh - 94px);height:100%;width:100%}
+  /* V102: 94px assumed a 42px tab rail that is collapsed to 0 on mobile. The later
+     dvh rule already overrides these with `- 52px`, but it is `100dvh` with NO vh
+     fallback — so on a browser without dvh the declaration is dropped and THESE are
+     what render. Corrected so the degraded path is right too. */
+  .map-view .map-area{min-height:calc(100vh - 52px);height:100%;width:100%}
   .map-view #map,
   .pembangkit-view #pembangkit-map,
-  .bn-view #bn-map{min-height:calc(100vh - 94px);width:100%;height:100%}
+  .bn-view #bn-map{min-height:calc(100vh - 52px);width:100%;height:100%}
 
   /* Sidebar becomes left-sliding drawer.
      V26: ensure sidebar top aligns with shell content (below tabs at 94px). */
@@ -4335,16 +4339,26 @@ html,body{
   .pembangkit-view.detail-open .sidebar-show-btn{display:none!important}
 
   /* Backdrop when drawer open */
+  /* V102 BUGFIX: 94px was topbar(52) + tab rail(42). The tab rail is collapsed to
+     ZERO on mobile (`.shell{grid-template-rows:52px 0px 1fr!important}` — the bottom
+     nav replaced it), so this left a 42px strip under the topbar that was neither
+     dimmed nor tappable: the drawer looked open over undimmed content there, and
+     tapping that strip to dismiss did nothing. .sidebar was already corrected to
+     top:52px by a later rule; the backdrop that pairs with it was missed. */
   .mobile-backdrop{
-    display:none;position:fixed;inset:94px 0 0 0;background:rgba(0,0,0,.5);
+    display:none;position:fixed;inset:52px 0 0 0;background:rgba(0,0,0,.5);
     z-index:850;opacity:0;transition:opacity .2s;
   }
   .mobile-backdrop.show{display:block;opacity:1}
 
-  /* Detail panel becomes bottom sheet. Always leave topbar (52px) + tabs (42px) = 94px visible at top.
-     V26: z-index 950 stays below tabs (1000) so tabs remain visible & clickable. */
+  /* Detail panel becomes bottom sheet.
+     V102 BUGFIX: same stale 52+42 arithmetic as the backdrop above. With the tab rail
+     collapsed to 0 the sheet opened 42px lower than it should, wasting 42px of an
+     already short screen and showing a band of map where the sheet's own header
+     belongs. Its two sibling sheets, .bn-list and .bn-pltu-panel, already use 52px —
+     this one was the outlier. */
   .detail-panel{
-    position:fixed;top:94px;bottom:0;left:0;right:0;max-height:none;z-index:950;
+    position:fixed;top:52px;bottom:0;left:0;right:0;max-height:none;z-index:950;
     border-left:none;border-top:1px solid var(--border);
     transform:translateY(100%);transition:transform .25s ease;
     box-shadow:var(--shadow-md);border-radius:14px 14px 0 0;
@@ -6542,16 +6556,31 @@ html,body{
      scrolls. It sits ABOVE the bar now, so its own safe-area padding is redundant. */
   .mobile-more-menu{
     bottom:var(--mobnav-safe);
-    max-height:calc(100dvh - 120px);overflow-y:auto;-webkit-overflow-scrolling:touch;
+    /* V102: dvh-only meant a browser without dvh support got NO ceiling at all, which
+       is the exact overflow this rule exists to prevent. Paired vh-then-dvh like
+       every other height in this block. */
+    max-height:calc(100vh - 120px);max-height:calc(100dvh - 120px);
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
     padding-bottom:6px;
   }
   .sidebar{bottom:var(--mobnav-safe)!important}
   #mobileBackdrop{bottom:var(--mobnav-safe)!important}
   /* Scroll containers whose last rows were sitting under the bar. */
   .kontrak-cards{padding-bottom:calc(24px + var(--mobnav-safe))}
-  .bn-list{padding-bottom:var(--mobnav-safe)}
-  .detail-panel .detail-body,
-  .bn-pltu-panel .bn-pltu-body{padding-bottom:calc(16px + var(--mobnav-safe))}
+  /* .detail-panel runs to bottom:0, i.e. UNDER the bar, so its body must pad by the
+     full bar height. That is the single-count case and is correct. */
+  .detail-panel .detail-body{padding-bottom:calc(16px + var(--mobnav-safe))}
+  /* V102 BUGFIX — DOUBLE-COUNTED BAR CLEARANCE.
+     .bn-list and .bn-pltu-panel already STOP above the bar (`bottom:56px`), and then
+     padded the bar's height on top of that: roughly 56px of dead space under the last
+     row of a list on a 360px screen. Worse, the 56px they stop at is the bar's content
+     height only — on a notched phone the bar is 57px + safe-area, so they were also
+     ~34px too low, hiding their own bottom edge behind it.
+     Fixed on both axes: the sheets now stop at the bar's REAL height, and the padding
+     drops to ordinary scroll clearance instead of a second copy of the bar. */
+  .bn-list,.bn-pltu-panel{bottom:var(--mobnav-safe)}
+  .bn-list{padding-bottom:12px}
+  .bn-pltu-panel .bn-pltu-body{padding-bottom:16px}
   /* Map furniture is positioned against .map-area, which runs to the viewport edge,
      so `bottom:8..16px` put all of it UNDER the bar (z-index 500–1100 vs the bar's
      2000). Pre-existing since the bottom nav was introduced; fixed here because it
