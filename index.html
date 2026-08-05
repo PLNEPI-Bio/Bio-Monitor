@@ -1704,6 +1704,19 @@ html,body{
 :root[data-theme="light"] .trends-panel{background:rgba(255,255,255,.95)}
 /* Default = completely hidden (not on screen at all). User clicks show button to reveal. */
 .trends-panel.hidden{display:none}
+/* V103: the panel used to appear by `display:flex`, instantly, with no sign that a new
+   layer had arrived. It now enters on the SHARED overlay vocabulary — `overlayPanelIn`
+   (fade + 8px rise + .99 scale), --dur-slow / --ease-out, the same move and the same
+   timing the six modals use. Declared here rather than in the overlay-motion block so
+   the panel's behaviour reads in one place; @keyframes resolve globally, so referencing
+   a rule defined further down the sheet is fine.
+   Only opacity and transform animate — nothing that runs layout, and nothing that
+   changes clientWidth, so the drawTrend() 50ms later still measures the true box.
+   No fill mode, matching the modals: under prefers-reduced-motion the global block at
+   the end of this sheet collapses it to 1ms and the panel lands on its natural visible
+   state. Exit stays instantaneous — JS re-adds .hidden in the same frame, and an
+   animated exit would need an .is-closing class plus animationend. */
+.trends-panel:not(.hidden){animation:overlayPanelIn var(--dur-slow) var(--ease-out)}
 .trends-panel.collapsed{
   padding:8px 12px;max-width:220px;
 }
@@ -1758,6 +1771,12 @@ html,body{
 .terrain-toggle-btn:hover{color:var(--accent);border-color:var(--accent);background:var(--panel-3)}
 .terrain-toggle-btn.active{color:#fff;background:var(--accent);border-color:var(--accent)}
 .terrain-toggle-btn svg{flex-shrink:0}
+/* V103: Terrain is parked at left:188px, i.e. INSIDE the footprint of the open trends
+   panel (left:16px, max-width:460px) — same z-index:500, later in the DOM, so it drew
+   over the chart's legend row. It steps aside while the panel is open, on every
+   viewport. Not merely repositioned: the map-area narrows when the sidebar or the
+   detail sheet is open, so no fixed offset is guaranteed to stay clear of the panel. */
+.map-area:has(.trends-panel:not(.hidden)) .terrain-toggle-btn{display:none}
 @media(max-width:768px){
   .terrain-toggle-btn{bottom:12px;left:auto;right:8px;padding:8px 10px;font-size:9px}
 }
@@ -4381,6 +4400,22 @@ html,body{
   .legend.collapsed .legend-head{padding:6px 10px}
   .legend-row{font-size:10px}
   .legend-collapse-btn{width:28px;height:24px;font-size:11px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  /* V103 BUGFIX. The legend moves from top-left (desktop) to BOTTOM-left here, which is
+     where .trends-show-btn already sat (left:16px, same bottom). The legend won on
+     z-index (1100 vs 500), so the Monthly Trend button was covered and unclickable.
+     The button joins the right-hand column instead, stacked above .terrain-toggle-btn —
+     the two are siblings in style and sit side by side on desktop anyway. Its `bottom`
+     is set in the bottom-nav clearance block below, which owns that axis for all map
+     furniture. Left free so the legend can grow upward when expanded. */
+  .trends-show-btn{left:auto;right:8px}
+  /* V103: the legend moves to the BOTTOM-left here, under the open panel's full-width
+     footprint (left:8/right:8), and its z-index 1100 beats the panel's 500 outright — it
+     drew over the chart. It steps aside while the panel is open. Desktop needs no such
+     rule: up there the legend is top-left, nowhere near the panel. Terrain has the same
+     collision on every viewport and is handled once at its own rule. Matched on the
+     parent with :has() rather than a JS class so it stays true whichever path toggles
+     .hidden; browsers without :has() simply keep the old behaviour. */
+  .map-area:has(.trends-panel:not(.hidden)) .legend{display:none}
   .search-bar{top:8px;right:8px}
   .search-bar input{min-width:140px;font-size:11px;padding:8px 10px}
 
@@ -5534,8 +5569,15 @@ html,body{
 /* V55: Login / user menu */
 /* Transition/:active/:disabled come from the shared chrome-control rule near
    the top of this stylesheet (V94). Only geometry and rest colours here. */
+/* V103 BUGFIX. The rest background was var(--panel) — paper white. --panel is the ONE
+   surface token the chrome band does NOT remap (see .topbar,.tabs: panel-2/panel-3 are
+   there, panel is not), so in the band this painted a white pill whose ink resolves to
+   --chrome-ink, also white: an invisible label on an invisible icon. Only the anonymous
+   state was affected — .logged-in overrides the fill to --panel-3 (= --chrome-hover).
+   Below 768px .login-label is display:none, so the pill was literally blank.
+   Fixed by joining the three siblings above, which all rest on `transparent`. */
 .topbar-login-btn{
-  display:flex;align-items:center;gap:7px;background:var(--panel);
+  display:flex;align-items:center;gap:7px;background:transparent;
   border:1px solid var(--border);color:var(--text);cursor:pointer;
   padding:7px 12px;border-radius:var(--r-md);
   font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;
@@ -6588,7 +6630,10 @@ html,body{
   .legend{bottom:calc(12px + var(--mobnav-safe))}
   .terrain-toggle-btn{bottom:calc(12px + var(--mobnav-safe))}
   .trends-panel{bottom:calc(8px + var(--mobnav-safe))}
-  .trends-show-btn{bottom:calc(12px + var(--mobnav-safe));min-height:44px}
+  /* V103: stacked one row above .terrain-toggle-btn in the right-hand column
+     (12 bottom + 44 button + 8 gap = 64), not beside the legend. See the sibling
+     rule in the 768px block above. */
+  .trends-show-btn{bottom:calc(64px + var(--mobnav-safe));min-height:44px}
 
   /* --- 2. TOUCH FLOOR for controls that hardcode a height ------------------------- */
   /* Topbar. The bar is 52px on mobile and that number is load-bearing in eight
@@ -23033,7 +23078,12 @@ window.addEventListener('DOMContentLoaded', () => {
     trendsShowBtn.onclick = () => {
       if (trendsPanel) trendsPanel.classList.remove('hidden');
       trendsShowBtn.style.display = 'none';
-      setTimeout(() => { if (trendChart) trendChart.resize(); }, 50);
+      // V103 BUGFIX: the panel starts `hidden` (display:none), so the drawTrend() at
+      // init built the chart against a 0x0 canvas — with maintainAspectRatio:false that
+      // yields an empty plot. resize() alone did not recover it, which is why the values
+      // only appeared after a MONTHLY/CUMULATIVE toggle: that path re-runs drawTrend().
+      // Do the same rebuild here, once the panel actually has a box to measure.
+      setTimeout(() => { drawTrend(); }, 50);
     };
   }
 
