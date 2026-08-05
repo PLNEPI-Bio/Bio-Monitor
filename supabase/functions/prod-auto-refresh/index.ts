@@ -54,7 +54,8 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
     monthly: [],
     pembangkit: [],
     gcv: {},
-    gcv_national: { "2023": 3008, "2024": 3093, "2025": 3137, "2026": 0 },
+    gcv_total: {} as any, // V101: baris "Total" sheet Rekap Kalor
+    gcv_national: {} as Record<string, number>, // V101: diisi dari baris Total sheet
     target_fgd_2026: 0,
     target_fgd_2026_monthly: [] as number[],
     target_fgd_2026_plants: {} as Record<string, unknown>,
@@ -257,6 +258,13 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
   }
 
   // GCV (Rekap Kalor)
+  // Layout (idx relatif origin B1): C=No(1) · D=PLTU(2) · E=Genco(3) · F=Boiler(4) ·
+  // G=Regional(5) · H=Jan23(6) … T=Akum23(18) · U=Jan24(19) … BG=Akum26(57).
+  // V101: baris data dulu dipatok mati ke 4..49 dan baris Total ke kl[50]. Sheet sudah
+  // bertambah 5 PLTU UIK (Excel r51–r55) sehingga kelimanya tak pernah terbaca dan
+  // kl[50] kini baris "Tanjung Jati B", bukan Total (→ gcv_national 2026 jadi 0).
+  // Header + baris Total kini dicari dinamis. MIRROR dari parseProdExcel di
+  // index.html — jaga tetap sama.
   if (wb.Sheets["Rekap Kalor"]) {
     const kl = _sheetToMatrix(wb.Sheets["Rekap Kalor"]);
     const GCV_YEARS = [
@@ -265,31 +273,54 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
       { yr: "2025", start: 32, akum: 44 },
       { yr: "2026", start: 45, akum: 57 },
     ];
-    for (let i = 4; i < Math.min(50, kl.length); i++) {
-      const r = kl[i];
-      if (!r) continue;
-      const name = _safeStr(r[2]);
-      if (!name) continue;
-      const plant: any = {};
+    let klHdr = -1;
+    for (let r = 0; r < Math.min(12, kl.length); r++) {
+      if (_safeStr((kl[r] || [])[2]).toLowerCase() === "pltu") { klHdr = r; break; }
+    }
+    // Hanya di-parse bila header ketemu: parse kosong tidak menimpa gcv lama (lihat merge).
+    let klTotal = -1;
+    if (klHdr >= 0) {
+      for (let i = klHdr + 1; i < kl.length; i++) {
+        const r = kl[i];
+        if (!r) continue;
+        if (_safeStr(r[1]).toLowerCase() === "total") { klTotal = i; break; }
+        const name = _safeStr(r[2]);
+        if (!name) continue;
+        const plant: any = {};
+        for (const cfg of GCV_YEARS) {
+          const monthly: (number | null)[] = [];
+          for (let m = 0; m < 12; m++) {
+            const v = _safeNum(r[cfg.start + m]);
+            monthly.push(v > 0 ? Math.round(v * 10) / 10 : null);
+          }
+          const ak = _safeNum(r[cfg.akum]);
+          plant[cfg.yr] = { monthly, akum: ak > 0 ? Math.round(ak * 10) / 10 : null };
+        }
+        result.gcv[name] = plant;
+      }
+    }
+    const totalRow = klTotal >= 0 ? kl[klTotal] : null;
+    if (totalRow) {
+      // V101: baris "Total" sheet disimpan apa adanya (bentuk sama dengan baris PLTU),
+      // dipakai footer kolom Akumulasi tabel Rekap Kalori supaya ikut angka sheet.
+      const tot: any = {};
       for (const cfg of GCV_YEARS) {
         const monthly: (number | null)[] = [];
         for (let m = 0; m < 12; m++) {
-          const v = _safeNum(r[cfg.start + m]);
+          const v = _safeNum(totalRow[cfg.start + m]);
           monthly.push(v > 0 ? Math.round(v * 10) / 10 : null);
         }
-        const ak = _safeNum(r[cfg.akum]);
-        plant[cfg.yr] = { monthly, akum: ak > 0 ? Math.round(ak * 10) / 10 : null };
+        const ak = _safeNum(totalRow[cfg.akum]);
+        tot[cfg.yr] = { monthly, akum: ak > 0 ? Math.round(ak * 10) / 10 : null };
       }
-      result.gcv[name] = plant;
-    }
-    const totalRow = kl[50];
-    if (totalRow) {
-      result.gcv_national = {
-        "2023": 3008,
-        "2024": 3093,
-        "2025": 3137,
-        "2026": _safeNum(totalRow[57]) > 0 ? Math.round(_safeNum(totalRow[57])) : 0,
-      };
+      result.gcv_total = tot;
+      // V101: 2023–2025 tidak lagi di-hardcode; keempat tahun dibaca dari kolom
+      // akumulasi baris Total sheet. Sumber tunggal angka GCV nasional = sheet.
+      result.gcv_national = {} as Record<string, number>;
+      for (const cfg of GCV_YEARS) {
+        const ak = Number(tot[cfg.yr] && tot[cfg.yr].akum) || 0;
+        result.gcv_national[cfg.yr] = ak > 0 ? Math.round(ak) : 0;
+      }
     }
   }
 
@@ -453,7 +484,14 @@ Deno.serve(async (_req: Request) => {
       monthly: (parsed.monthly && parsed.monthly.length) ? parsed.monthly : (existing.monthly || []),
       pembangkit: (parsed.pembangkit && parsed.pembangkit.length) ? parsed.pembangkit : (existing.pembangkit || []),
       gcv: (parsed.gcv && Object.keys(parsed.gcv).length) ? parsed.gcv : (existing.gcv || {}),
-      gcv_national: parsed.gcv_national || existing.gcv_national,
+      // V101: baris Total sheet Rekap Kalor. Parse kosong tidak menimpa data lama.
+      gcv_total: (parsed.gcv_total && Object.keys(parsed.gcv_total).length) ? parsed.gcv_total : (existing.gcv_total || {}),
+      // V101: `gcv_national` selalu objek (ada nilai default), jadi `||` tidak pernah
+      // jatuh ke existing. Kalau baris "Total" tak ketemu, angka 2026-nya 0 dan akan
+      // menimpa nilai lama yang benar — perlakukan 0 sebagai parse gagal.
+      gcv_national: (parsed.gcv_national && Number(parsed.gcv_national["2026"]) > 0)
+        ? parsed.gcv_national
+        : (existing.gcv_national || parsed.gcv_national),
       target_fgd_2026: (parsed.target_fgd_2026 && parsed.target_fgd_2026 > 0) ? parsed.target_fgd_2026 : (existing.target_fgd_2026 || 0),
       target_fgd_2026_monthly: (parsed.target_fgd_2026_monthly && parsed.target_fgd_2026_monthly.length) ? parsed.target_fgd_2026_monthly : (existing.target_fgd_2026_monthly || []),
       // V71: Target FGD per-PLTU (dipakai tooltip peta). Parse kosong tidak menimpa.
@@ -477,6 +515,11 @@ Deno.serve(async (_req: Request) => {
       stableStringify(merged.monthly) === stableStringify(existing.monthly) &&
       stableStringify(merged.pembangkit) === stableStringify(existing.pembangkit) &&
       stableStringify(merged.gcv) === stableStringify(existing.gcv) &&
+      // V101: gcv_total WAJIB ikut dibandingkan. Tanpa baris ini, run yang hanya
+      // mengubah baris Total sheet (atau run pertama setelah field ini ditambahkan,
+      // saat field lain kebetulan tidak berubah) akan dinilai "tidak ada perubahan"
+      // dan write dilewati — gcv_total tidak akan pernah sampai ke database.
+      stableStringify(merged.gcv_total) === stableStringify(existing.gcv_total) &&
       stableStringify(merged.gcv_national) === stableStringify(existing.gcv_national) &&
       stableStringify(merged.target_fgd_2026) === stableStringify(existing.target_fgd_2026) &&
       stableStringify(merged.target_fgd_2026_monthly) === stableStringify(existing.target_fgd_2026_monthly) &&
