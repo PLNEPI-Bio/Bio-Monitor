@@ -15589,6 +15589,13 @@ let kontrakBreakdownType = 'sisa';
 let kontrakBreakdownGenco = 'all';
 let kontrakBreakdownSort = { col: null, dir: 'desc' }; // null col → default by type
 let kontrakBreakdownGroupMitra = false; // V67: gabungkan baris dengan pemasok sama
+// V103: sertakan kontrak yang masa berlakunya sudah lewat. "Expired" di sini berarti
+// TEPAT satu hal: tidak terminated, punya tanggal akhir, dan akhir < hari ini.
+// Kontrak terminated (dicoret di Excel sumber) adalah kontrak yang DIBATALKAN, bukan
+// yang habis masa berlakunya — volumenya tidak pernah berlaku, jadi tetap di luar.
+// Kontrak tanpa tanggal akhir juga tetap di luar: statusnya tidak bisa ditentukan, dan
+// menariknya masuk berarti menjumlahkan volume yang belum tentu pernah berjalan.
+let kontrakBreakdownIncludeExpired = false;
 
 function showKontrakBreakdown(type){
   const backdrop = document.getElementById('kontrakBreakdownBackdrop');
@@ -15597,6 +15604,7 @@ function showKontrakBreakdown(type){
   kontrakBreakdownGenco = 'all'; // reset filter each time the modal opens
   kontrakBreakdownSort = { col: null, dir: 'desc' };
   kontrakBreakdownGroupMitra = false;
+  kontrakBreakdownIncludeExpired = false;
   renderKontrakBreakdownBody();
   backdrop.classList.add('open');
   // Close on backdrop click
@@ -15618,6 +15626,15 @@ function setKontrakBreakdownGroupMitra(on){
 }
 window.setKontrakBreakdownGroupMitra = setKontrakBreakdownGroupMitra;
 
+// V103: Toggle: sertakan kontrak yang sudah expired dalam himpunan yang dihitung.
+// Berlaku untuk SEMUA angka di modal — daftar baris, chip genco, footer TOTAL, dan
+// penjumlahan "Gabungkan mitra sama" (mitra dengan kontrak lama ikut terhitung).
+function setKontrakBreakdownIncludeExpired(on){
+  kontrakBreakdownIncludeExpired = !!on;
+  renderKontrakBreakdownBody();
+}
+window.setKontrakBreakdownIncludeExpired = setKontrakBreakdownIncludeExpired;
+
 // Click a column header to sort. Same col → flip direction; new col → desc first
 // (asc first for text columns pltu/pemasok/genco/jenis/akhir).
 function setKontrakBreakdownSort(col){
@@ -15638,18 +15655,33 @@ function renderKontrakBreakdownBody(){
 
   const all = (DATA && DATA.contracts) || [];
   const today = todayISO();
+  // V103: complement of isContractActive() for contracts whose term has simply run out.
+  // Deliberately NOT `!isContractActive(c)` — that also swallows terminated contracts and
+  // contracts with no end date, neither of which is "expired". See the state declaration.
+  const isContractExpired = (c) => !c.terminated && !!c.akhir && c.akhir < today;
   const activeAll = all.filter(c => isContractActive(c, today));
-  // Per-genco counts (over the full active set) for the filter chip labels.
-  const gencoCounts = { all: activeAll.length, PNP: 0, PIP: 0, UIW: 0 };
-  for (const c of activeAll){ const g = c.genco || ''; if (gencoCounts[g] !== undefined) gencoCounts[g]++; }
+  const expiredAll = all.filter(isContractExpired);
+  // How many expired contracts the toggle would actually add under the genco filter now
+  // in force — i.e. the number on the checkbox label is the number that will appear.
+  const expiredTotal = kontrakBreakdownGenco === 'all'
+    ? expiredAll.length
+    : expiredAll.filter(c => (c.genco || '') === kontrakBreakdownGenco).length;
+  // V103: the scope every number in this modal is computed over. Adding expired contracts
+  // widens it once, here, so the rows, the genco chips, the TOTAL footer and the
+  // "gabungkan mitra sama" sums all move together — no path can disagree with another.
+  const scopeAll = kontrakBreakdownIncludeExpired ? activeAll.concat(expiredAll) : activeAll;
+  // Per-genco counts (over the full scope) for the filter chip labels.
+  const gencoCounts = { all: scopeAll.length, PNP: 0, PIP: 0, UIW: 0 };
+  for (const c of scopeAll){ const g = c.genco || ''; if (gencoCounts[g] !== undefined) gencoCounts[g]++; }
   // Apply the genco filter for the table itself.
-  const active = kontrakBreakdownGenco === 'all'
-    ? activeAll
-    : activeAll.filter(c => (c.genco || '') === kontrakBreakdownGenco);
+  const scoped = kontrakBreakdownGenco === 'all'
+    ? scopeAll
+    : scopeAll.filter(c => (c.genco || '') === kontrakBreakdownGenco);
 
   // Per-contract stats (realisasi = jumlah 2023–2026).
-  const contractCount = active.length;
-  let rows = active.map(c => {
+  const contractCount = scoped.length;
+  const expiredShown = scoped.filter(isContractExpired).length;
+  let rows = scoped.map(c => {
     const vol = c.vol_mt || 0;
     const yt = c.realisasi_total || {};
     const totalReal = (yt['2023']||0) + (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
@@ -15659,6 +15691,9 @@ function renderKontrakBreakdownBody(){
       jenis: c.jenis || '—', akhir: c.akhir || '—',
       vol, totalReal, sisa, n: 1,
       pct: vol > 0 ? (totalReal / vol * 100) : 0,
+      // V103: carried per row so an expired contract stays visibly marked even after it
+      // has been folded into a mitra group. nExpired counts them within a group.
+      expired: isContractExpired(c), nExpired: isContractExpired(c) ? 1 : 0,
     };
   });
 
@@ -15671,11 +15706,11 @@ function renderKontrakBreakdownBody(){
       const key = r.pemasok;
       let g = byMitra.get(key);
       if (!g){
-        g = { pemasok: r.pemasok, akhir: r.akhir, vol: 0, totalReal: 0, n: 0,
+        g = { pemasok: r.pemasok, akhir: r.akhir, vol: 0, totalReal: 0, n: 0, nExpired: 0,
               pltuSet: new Set(), gencoSet: new Set(), jenisSet: new Set() };
         byMitra.set(key, g);
       }
-      g.vol += r.vol; g.totalReal += r.totalReal; g.n += 1;
+      g.vol += r.vol; g.totalReal += r.totalReal; g.n += 1; g.nExpired += r.nExpired;
       g.pltuSet.add(r.pltu); g.gencoSet.add(r.genco); g.jenisSet.add(r.jenis);
       if ((r.akhir || '') > (g.akhir || '')) g.akhir = r.akhir; // tanggal akhir terjauh
     }
@@ -15685,14 +15720,20 @@ function renderKontrakBreakdownBody(){
       pemasok: g.pemasok, jenis: one(g.jenisSet), akhir: g.akhir,
       vol: g.vol, totalReal: g.totalReal, sisa: g.vol - g.totalReal, n: g.n,
       pct: g.vol > 0 ? (g.totalReal / g.vol * 100) : 0,
+      // V103: a mitra row is "expired" only when EVERY contract folded into it is —
+      // a partly-expired mitra is still an active supplier and must not read as dead.
+      nExpired: g.nExpired, expired: g.nExpired > 0 && g.nExpired === g.n,
       // Daftar PLTU (untuk tooltip saat pemasok terkontrak di >1 PLTU).
       pltuList: [...g.pltuSet].sort((a, b) => String(a).localeCompare(String(b))),
     }));
   }
 
-  if (type === 'vol'){ titleEl.textContent = 'Total Volume Kontrak Aktif'; eyebrowEl.textContent = 'Detail Breakdown · Volume'; }
-  else if (type === 'sisa'){ titleEl.textContent = 'Total Sisa Kontrak Aktif'; eyebrowEl.textContent = 'Detail Breakdown · Sisa'; }
-  else { titleEl.textContent = 'Daftar Kontrak Aktif'; eyebrowEl.textContent = 'Detail Breakdown · Active Contracts'; }
+  // V103: the heading has to follow the scope. Leaving "Aktif" on a table that also
+  // lists lapsed contracts would misstate every figure under it.
+  const scopeWord = kontrakBreakdownIncludeExpired ? 'Aktif + Expired' : 'Aktif';
+  if (type === 'vol'){ titleEl.textContent = 'Total Volume Kontrak ' + scopeWord; eyebrowEl.textContent = 'Detail Breakdown · Volume'; }
+  else if (type === 'sisa'){ titleEl.textContent = 'Total Sisa Kontrak ' + scopeWord; eyebrowEl.textContent = 'Detail Breakdown · Sisa'; }
+  else { titleEl.textContent = 'Daftar Kontrak ' + scopeWord; eyebrowEl.textContent = 'Detail Breakdown · Active Contracts'; }
 
   // Sort: explicit clicked column, else default per card type.
   const textCols = { pltu: 1, pemasok: 1, genco: 1, jenis: 1, akhir: 1 };
@@ -15710,9 +15751,14 @@ function renderKontrakBreakdownBody(){
   const totalReal = rows.reduce((s, r) => s + r.totalReal, 0);
   const totalSisa = rows.reduce((s, r) => s + Math.max(0, r.sisa), 0);
   const gencoSuffix = kontrakBreakdownGenco === 'all' ? '' : ' · Genco ' + kontrakBreakdownGenco;
+  // V103: state the scope in words rather than leaving "akhir ≥ today" attached to a set
+  // that may now contain contracts whose akhir is in the past.
+  const scopeNote = kontrakBreakdownIncludeExpired
+    ? 'aktif + ' + fmtInt(expiredShown) + ' expired'
+    : 'aktif, akhir ≥ ' + today;
   const scopeLabel = kontrakBreakdownGroupMitra
-    ? rows.length + ' mitra (gabungan ' + contractCount + ' kontrak aktif, akhir ≥ ' + today + ')'
-    : rows.length + ' kontrak aktif (akhir ≥ ' + today + ')';
+    ? rows.length + ' mitra (gabungan ' + contractCount + ' kontrak · ' + scopeNote + ')'
+    : rows.length + ' kontrak (' + scopeNote + ')';
   metaEl.textContent = scopeLabel + gencoSuffix +
     ' · Total Vol ' + fmtInt(totalVol) + ' MT · Total Realisasi ' + fmtInt(totalReal) + ' MT · Sisa (min 0/kontrak) ' + fmtInt(totalSisa) + ' MT';
 
@@ -15727,10 +15773,20 @@ function renderKontrakBreakdownBody(){
     html += '<button type="button" onclick="setKontrakBreakdownGenco(\'' + g + '\')" style="' + chipStyle(kontrakBreakdownGenco === g) + '">' +
       label + ' <span style="opacity:.7">(' + fmtInt(gencoCounts[g] || 0) + ')</span></button>';
   }
+  // Dua toggle skope/agregasi, dikelompokkan di ujung kanan baris filter.
+  const toggleStyle = 'display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--text-dim);cursor:pointer;user-select:none';
+  const boxStyle = 'cursor:pointer;accent-color:var(--accent)';
+  html += '<span style="margin-left:auto;display:inline-flex;align-items:center;gap:14px;flex-wrap:wrap">';
+  // V103: toggle sertakan kontrak expired. Dipasang SEBELUM "gabungkan mitra sama" karena
+  // ia menentukan himpunan yang digabung, bukan sebaliknya.
+  html += '<label style="' + toggleStyle + '" title="Sertakan kontrak yang tanggal akhirnya sudah lewat (' + fmtInt(expiredTotal) + ' kontrak). Volume dan realisasinya ikut dijumlahkan, termasuk saat digabung per mitra. Kontrak terminated dan kontrak tanpa tanggal akhir tetap tidak dihitung.">' +
+    '<input type="checkbox" ' + (kontrakBreakdownIncludeExpired ? 'checked' : '') + ' onchange="setKontrakBreakdownIncludeExpired(this.checked)" style="' + boxStyle + '">' +
+    'Sertakan kontrak expired <span style="opacity:.7;font-weight:400">(' + fmtInt(expiredTotal) + ')</span></label>';
   // V67: toggle gabungkan mitra sama
-  html += '<label style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--text-dim);cursor:pointer;user-select:none" title="Jumlahkan semua kontrak dari pemasok yang sama menjadi satu baris">' +
-    '<input type="checkbox" ' + (kontrakBreakdownGroupMitra ? 'checked' : '') + ' onchange="setKontrakBreakdownGroupMitra(this.checked)" style="cursor:pointer;accent-color:var(--accent)">' +
+  html += '<label style="' + toggleStyle + '" title="Jumlahkan semua kontrak dari pemasok yang sama menjadi satu baris">' +
+    '<input type="checkbox" ' + (kontrakBreakdownGroupMitra ? 'checked' : '') + ' onchange="setKontrakBreakdownGroupMitra(this.checked)" style="' + boxStyle + '">' +
     'Gabungkan mitra sama</label>';
+  html += '</span>';
   html += '</div>';
 
   // Table (sortable headers)
@@ -15758,11 +15814,21 @@ function renderKontrakBreakdownBody(){
     } else {
       html += '<td style="font-weight:500;color:var(--text-bright)">' + escapeHtml(r.pltu) + '</td>';
     }
-    const pemasokExtra = (kontrakBreakdownGroupMitra && r.n > 1)
-      ? '<span style="color:var(--text-dim);font-size:8px;font-weight:400"> · ' + r.n + ' kontrak</span>' : '';
+    // V103: when a mitra row mixes live and lapsed contracts the count is split, so the
+    // reader can see how much of the sum comes from contracts that have run out.
+    const nExp = r.nExpired || 0;
+    const kontrakNote = (kontrakBreakdownGroupMitra && r.n > 1)
+      ? r.n + ' kontrak' + (nExp > 0 && nExp < r.n ? ', ' + nExp + ' expired' : '') : '';
+    const pemasokExtra = kontrakNote
+      ? '<span style="color:var(--text-dim);font-size:8px;font-weight:400"> · ' + kontrakNote + '</span>' : '';
     html += '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(r.pemasok) + '">' + escapeHtml(r.pemasok) + pemasokExtra + '</td>';
     html += '<td>' + escapeHtml(r.jenis) + '</td>';
-    html += '<td style="white-space:nowrap">' + fmtKontrakDate(r.akhir) + '</td>';
+    // V103: a lapsed end date is marked at the date itself — the one cell that states it.
+    const akhirCell = r.expired
+      ? '<span style="color:var(--text-dim)" title="Kontrak sudah berakhir">' + fmtKontrakDate(r.akhir) +
+        ' <span style="font-size:8px;font-weight:700;letter-spacing:.5px;color:var(--status-warn-ink)">EXP</span></span>'
+      : fmtKontrakDate(r.akhir);
+    html += '<td style="white-space:nowrap">' + akhirCell + '</td>';
     html += '<td class="num">' + fmtInt(r.vol) + '</td>';
     html += '<td class="num">' + fmtInt(r.totalReal) + '</td>';
     html += '<td class="num" style="color:' + sisaColor + '">' + fmtInt(r.sisa) + '</td>';
