@@ -693,11 +693,58 @@ html,body{
 .mou-status.planning::before{content:"●";font-size:7px}
 
 /* V50.2: Timeline — single table with CSS sticky freeze pane (V54 redesign) */
+/* ============================================================================
+   V103.1 — WHY THE FREEZE PANE NEVER WORKED, AND THE ONE LINE THAT FIXES IT
+
+   `position:sticky` resolves against the element's NEAREST SCROLLING ANCESTOR. For the
+   frozen columns that ancestor is .mou-tl-wrap, because it declares `overflow:auto`.
+   But .mou-tl-wrap never actually scrolled sideways, so its scroll offset was always 0
+   and the sticky columns had nothing to stick against.
+
+   The horizontal scrolling was happening one level up instead, on .real-view — which
+   sets `overflow-y:auto`, and CSS then forces the other axis from `visible` to `auto`
+   too, quietly making it a scroll container on BOTH axes. .real-view is an ANCESTOR of
+   the sticky cells' scrollport, so its scrolling moves the columns bodily and sticky
+   cannot see it. That is exactly the symptom: the whole sheet slides left, filter chips
+   and all, and # … Status ride away with it.
+
+   The reason .mou-tl-wrap could not clip is that #mouTimelineContent is a GRID ITEM of
+   .real-view, and grid items default to `min-width:auto` — they refuse to shrink below
+   their content's min-content width. A ~2600px table therefore forced the item wide,
+   the item forced the track wide, and the overflow escaped upward.
+
+   So the table is pinned back inside its own box on three fronts: the track may shrink
+   (minmax(0,1fr)), the item may shrink (min-width:0), and .real-view is told plainly
+   not to scroll sideways — leaving .mou-tl-wrap as the only horizontal scroller, which
+   is what sticky needed all along.
+
+   Scoped to this tab by id/attribute: .real-view is shared with Realisasi, Pareto and
+   others, and this is not the place to change how those lay out.
+
+   This is not a new trick — it is the SAME diagnosis and the same remedy already
+   written down for the kontrak tab at `.view[data-view="kontrak"] .real-view` (V64.1,
+   "a grid item has min-width:auto = min-content, so it refuses to shrink below the
+   table's intrinsic width"). That tab hit it as a white card stopping at the viewport
+   edge; this one hits it as a freeze pane that does not freeze. Same cause, so the
+   shape of the fix is deliberately kept identical.
+   ============================================================================ */
+.view[data-view="mou-timeline"]{overflow-x:hidden;max-width:100vw}
+.view[data-view="mou-timeline"] .real-view{
+  grid-template-columns:minmax(0,1fr);
+  overflow-x:hidden;max-width:100%;box-sizing:border-box;
+}
+#mouTimelineContent{min-width:0;max-width:100%;box-sizing:border-box}
 .mou-tl-wrap{
   overflow:auto;max-height:calc(100vh - 220px);border:1px solid var(--border);
   border-radius:10px;position:relative;background:var(--panel);
+  width:100%;box-sizing:border-box;
 }
-.mou-tbl{border-collapse:separate;border-spacing:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px}
+/* V103.1: `width:max-content` states outright that the table sizes to its columns and
+   never squeezes to fit the wrapper. With the wrapper finally bounded (above), an `auto`
+   table would be asked to shrink-to-fit, and the only thing stopping it is that every
+   column happens to carry a min-width — a guarantee that quietly disappears the day
+   someone adds a column without one. This is what makes .mou-tl-wrap the scroller. */
+.mou-tbl{border-collapse:separate;border-spacing:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;width:max-content}
 /* V95: the sticky head genuinely floats over the scrolling rows, so it earns a
    shadow. Applied to <thead> itself (one element, so no per-cell seams).
    Layering here was already correct: thead z-10, frozen head cells z-12, frozen
@@ -713,24 +760,90 @@ html,body{
   font-size:8px;font-weight:600;padding:5px 2px;
   border-bottom:1px solid var(--border);
 }
-/* Sticky frozen columns */
+/* ============================================================================
+   V103 FREEZE PANE — # · Output · PIC · Due Date · Status
+   The identity block a reader needs in view while scrolling right into the timeline.
+
+   WIDTHS ARE NAMED ONCE, OFFSETS ARE DERIVED. Every sticky column needs a `left`
+   equal to the SUM of the widths before it. Those five sums used to be hand-written
+   pixel literals, and the mobile block had to restate three of them by hand — so
+   changing any single width silently misaligned every column after it, with no error
+   anywhere. Now only the widths are authored; the offsets compute themselves, and the
+   mobile override changes exactly one value.
+
+   KETERANGAN IS DELIBERATELY OUT OF THE BLOCK. Freezing all six columns cost 675px:
+   on a 1440px laptop that left ~700px for the timeline, i.e. about 35 of the 96 week
+   columns in a two-year view — a third of the chart, in a tab whose whole purpose is
+   the chart. Status is where identity ends; Keterangan is prose and belongs with the
+   content that scrolls.
+   ============================================================================ */
+.mou-tbl{
+  --mou-w-no:30px;
+  --mou-w-output:260px;
+  --mou-w-pic:80px;
+  --mou-w-due:85px;
+  --mou-w-status:80px;
+  /* Left edge of each frozen column = sum of every width before it. */
+  --mou-x-output:var(--mou-w-no);
+  --mou-x-pic:calc(var(--mou-x-output) + var(--mou-w-output));
+  --mou-x-due:calc(var(--mou-x-pic) + var(--mou-w-pic));
+  --mou-x-status:calc(var(--mou-x-due) + var(--mou-w-due));
+}
 .mou-fr{position:sticky;z-index:5;background:var(--panel)}
 .mou-tbl thead .mou-fr{z-index:12;background:var(--panel-3)}
 .mou-hdr-month .mou-fr{background:#0F496E !important}
-.mou-fr1{left:0;width:30px;min-width:30px}
-.mou-fr2{left:30px;width:260px;min-width:260px}
-.mou-fr3{left:290px;width:80px;min-width:80px}
-.mou-fr4{left:370px;width:85px;min-width:85px;border-right:2px solid var(--accent)}
-.mou-fr-status{left:455px;width:80px;min-width:80px}
-.mou-fr-ket{left:535px;width:140px;min-width:140px;border-right:1px solid var(--border)}
+.mou-fr1{left:0;width:var(--mou-w-no);min-width:var(--mou-w-no)}
+.mou-fr2{left:var(--mou-x-output);width:var(--mou-w-output);min-width:var(--mou-w-output)}
+.mou-fr3{left:var(--mou-x-pic);width:var(--mou-w-pic);min-width:var(--mou-w-pic)}
+.mou-fr4{left:var(--mou-x-due);width:var(--mou-w-due);min-width:var(--mou-w-due)}
+.mou-fr-status{left:var(--mou-x-status);width:var(--mou-w-status);min-width:var(--mou-w-status)}
+/* The block's outer edge — the seam that tells the reader where frozen ends and the
+   timeline begins. It used to be drawn on Due Date, one column short of the real edge.
+   The shadow is the horizontal counterpart of the one <thead> already casts downward,
+   so the block reads as floating over the timeline rather than butting against it. */
+.mou-tbl .mou-fr-status{
+  border-right:2px solid var(--accent);
+  box-shadow:3px 0 6px -3px rgba(15,42,66,.30);
+}
+/* Scrolls with the timeline now. Width kept so the column still reads as a column. */
+.mou-fr-ket{width:140px;min-width:140px;border-right:1px solid var(--border)}
+/* V103: the group cell spans the entire table (colspan), so `position:sticky;left:0` on
+   the CELL has nowhere to travel — it is already flush left and its own box is the
+   constraint. The group NAME therefore scrolled out of sight the moment the reader moved
+   right, which is exactly when they most need to know which group a row belongs to.
+   The inner span is what actually sticks: it slides along inside the cell and stays
+   legible at every scroll position. Offset matches the cell's 12px padding so it does
+   not jump on the first pixel of scroll. */
+.mou-grp-inner{position:sticky;left:12px;display:inline-block}
 /* Cell styles */
 .mou-tbl td,.mou-tbl th{padding:8px 8px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;box-sizing:border-box}
 .mou-tbl tr.mou-task-row{transition:background-color var(--dur-fast) var(--ease-in-out)}
 .mou-tbl tr.mou-task-row:hover td{background:rgba(128,128,128,.07)}
-.mou-tbl tr.mou-task-row:hover .mou-fr{background:rgba(128,128,128,.07)}
+/* ----------------------------------------------------------------------------------
+   V103.2 SEE-THROUGH FROZEN COLUMNS — the hover tint was the whole bug.
+
+   A frozen column only hides what slides beneath it because it is painted OPAQUE. At
+   rest that holds: .mou-fr sets `background:var(--panel)`. On hover this rule replaced
+   that base colour outright with `rgba(128,128,128,.07)` — a 7%-opaque grey. The
+   `background` shorthand does not tint what was there, it REPLACES it, so the hovered
+   row's frozen cells became 93% transparent and the Keterangan text scrolling underneath
+   read straight through them. Exactly one row was ever affected: the one under the
+   cursor, which is why it looked intermittent rather than broken.
+
+   The tint is now MIXED INTO the opaque base instead of standing in for it, so the cell
+   is the same colour to the eye and still solid. Same 7% grey over var(--panel).
+   Any future state on a .mou-fr cell must keep this property: never assign a
+   translucent colour to a frozen cell, only an opaque one.
+   ---------------------------------------------------------------------------------- */
+.mou-tbl tr.mou-task-row:hover .mou-fr{
+  background:color-mix(in srgb, rgb(128,128,128) 7%, var(--panel));
+}
 .mou-tbl tr.mou-task-row:hover .mou-wk-cell.filled{background:var(--mou-month-fill, var(--accent));opacity:.85}
 .mou-td-no{text-align:center;color:var(--text-dim);font-weight:600}
-.mou-td-output{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;font-weight:500;color:var(--text-bright)}
+/* V103: max-width tracks the column width instead of restating it. It was a second copy
+   of 260px, so on mobile — where the column narrows to 150px — the ellipsis was being
+   computed against a width the column no longer had. */
+.mou-td-output{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:var(--mou-w-output);font-weight:500;color:var(--text-bright)}
 .mou-td-pic{font-size:9px}
 .mou-td-due{text-align:center;white-space:nowrap;font-size:9px}
 .mou-td-status{text-align:center}
@@ -758,11 +871,20 @@ html,body{
 .pareto-chart-meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 @media (max-width:768px){
   .mou-tl-wrap{max-height:60vh}
-  .mou-fr2{width:150px;min-width:150px}
-  .mou-fr3{left:180px}
-  .mou-fr4{left:260px}
-  .mou-fr-status{left:345px;position:static}
-  .mou-fr-ket{left:auto;position:static}
+  /* V103: a freeze pane wider than the screen is not a freeze pane — it is just a table
+     with no timeline. 535px of frozen columns on a 360px phone would leave nothing to
+     scroll INTO, so the block narrows to what identifies a row and nothing more: the
+     number and the output name (30 + 150 = 180px). PIC, Due Date and Status rejoin the
+     scrolling content. One width is overridden; the derived offsets follow on their own,
+     which is the whole point of computing them. */
+  .mou-tbl{--mou-w-output:150px}
+  .mou-fr3,.mou-fr4,.mou-fr-status{position:static}
+  /* The edge treatment moves with the edge: off Status, onto Output. */
+  .mou-tbl .mou-fr-status{border-right:0;box-shadow:none}
+  .mou-tbl .mou-fr2{
+    border-right:2px solid var(--accent);
+    box-shadow:3px 0 6px -3px rgba(15,42,66,.30);
+  }
 }
 
 
@@ -21835,7 +21957,7 @@ function renderMouTimeline(){
       '<div class="mou-legend-hint">💡 Klik status untuk ubah · klik sel minggu untuk tandai · klik nama grup untuk buka/tutup</div>' +
     '</div>' +
     '<div class="mou-tl-wrap"><table class="mou-tbl"><thead>';
-  html += '<tr class="mou-hdr-month"><th class="mou-fr mou-fr1 mou-fr-merged" rowspan="2">#</th><th class="mou-fr mou-fr2 mou-fr-merged" rowspan="2">Output</th><th class="mou-fr mou-fr3 mou-fr-merged" rowspan="2">PIC</th><th class="mou-fr mou-fr4 mou-fr-merged" rowspan="2">Due Date</th><th class="mou-fr mou-fr-status mou-fr-merged" rowspan="2">Status</th><th class="mou-fr mou-fr-ket mou-fr-merged" rowspan="2">Keterangan</th>' + monthHeaders + '</tr>';
+  html += '<tr class="mou-hdr-month"><th class="mou-fr mou-fr1 mou-fr-merged" rowspan="2">#</th><th class="mou-fr mou-fr2 mou-fr-merged" rowspan="2">Output</th><th class="mou-fr mou-fr3 mou-fr-merged" rowspan="2">PIC</th><th class="mou-fr mou-fr4 mou-fr-merged" rowspan="2">Due Date</th><th class="mou-fr mou-fr-status mou-fr-merged" rowspan="2">Status</th><th class="mou-fr-ket mou-fr-merged" rowspan="2">Keterangan</th>' + monthHeaders + '</tr>';
   html += '<tr class="mou-hdr-week">' + weekHeaders + '</tr>';
   html += '</thead><tbody>';
 
@@ -21853,6 +21975,9 @@ function renderMouTimeline(){
     const nameColor = _pastInternalEvent && !isInternalEvent ? 'color:#0047AB' : '';
     const nameColorWhite = isInternalEvent ? 'color:white' : '';
     html += '<tr class="mou-grp-row" data-gid="' + g.id + '" style="' + grpStyle + '"><td colspan="' + totalCols + '" class="mou-fr" style="' + grpStyle + '">';
+    // V103: everything in this cell goes inside a sticky span so the group name, its
+    // progress badge and its link pills stay on screen when the reader scrolls right.
+    html += '<span class="mou-grp-inner">';
     html += '<span class="mou-grp-arrow" data-gid="' + g.id + '">&#x25B8;</span> ';
     html += '<span class="mou-grp-name" style="' + nameColor + nameColorWhite + '">' + escapeHtml(g.name) + '</span>';
     // V54: Hide badge and add link for INTERNAL EVENT / MOU-NDA
@@ -21870,7 +21995,7 @@ function renderMouTimeline(){
     } else if (!isInternalEvent){
       html += ' <button class="mou-link-pill add" data-gid="' + g.id + '" title="Tambah link"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v10M3 8h10"/></svg> Add Link</button>';
     }
-    html += '</td></tr>';
+    html += '</span></td></tr>';
 
     if (!hasTasks) continue;
     for (const t of g.tasks){
@@ -21885,7 +22010,8 @@ function renderMouTimeline(){
       html += '<td class="mou-fr mou-fr3 mou-td-pic">' + escapeHtml(t.pic||'') + '</td>';
       html += '<td class="mou-fr mou-fr4 mou-td-due">' + (t.due||'') + '</td>';
       html += '<td class="mou-fr mou-fr-status mou-td-status"><span class="mou-status ' + cls + '" data-tid="' + t.id + '" data-gid="' + g.id + '" style="cursor:pointer" title="Klik untuk ubah">' + (t.status||'\u2014') + '</span></td>';
-      html += '<td class="mou-fr mou-fr-ket mou-td-ket" title="' + escapeHtml(ket) + '">' + escapeHtml(ketShort||'\u2014') + '</td>';
+      // V103: no longer carries .mou-fr \u2014 Keterangan scrolls with the timeline.
+      html += '<td class="mou-fr-ket mou-td-ket" title="' + escapeHtml(ket) + '">' + escapeHtml(ketShort||'\u2014') + '</td>';
 
       const tw = t.weeks || {};
       for (const wc of weekCols){
