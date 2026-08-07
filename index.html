@@ -1,7 +1,6 @@
 <!DOCTYPE html>
-<!-- V100: satu skema warna saja (edisi terang). data-theme="light" dipasang permanen di
-     markup — 64 aturan CSS `:root[data-theme="light"] …` bergantung padanya, dan tidak ada
-     lagi JS yang boleh mengubah atribut ini. -->
+<!-- data-theme="light" dipasang permanen dan JANGAN diubah dari JS: ~60 aturan CSS
+     `:root[data-theme="light"] …` bergantung pada spesifisitasnya. -->
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
@@ -78,9 +77,9 @@
   font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;
 }
 .auth-gate.hidden{display:none}
-/* The gate deliberately sits OUTSIDE the theme: it renders over a photograph before
-   any theme class exists, so it keeps literal colours and its own deeper shadow (the
-   light --shadow-lg is tuned for a --bg surface and disappears over a photo).
+/* The gate deliberately sits OUTSIDE the token layer: it renders over a photograph,
+   so it keeps literal colours and its own deeper shadow (--shadow-lg is tuned for a
+   --bg surface and disappears over a photo).
    V96 touches its geometry only — radius onto the token ladder, control sizing onto
    the shared tiers. No behaviour, no markup, no auth logic. */
 .auth-card{
@@ -120,7 +119,7 @@
 @keyframes authShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
 body.gate-locked{overflow:hidden}
 
-/* LIGHT THEME (default) — PLN EPI corporate identity from plnepi.co.id
+/* COLOUR TOKENS — PLN EPI corporate identity from plnepi.co.id
    Brand palette extracted from logo:
    - PLN Yellow #FFC72C (block icon)
    - PLN Blue  #0F496E (primary text + corporate)
@@ -128,10 +127,9 @@ body.gate-locked{overflow:hidden}
    - PLN Red   #B6302B (lightning bolt)
    - Site BG   #F3F4F8 (from official meta theme-color)
 */
-/* V97: STRUCTURAL TOKENS — theme-agnostic. Radius, rules, type, spacing, motion and
-   easing live here so both editions (siang/malam) inherit one scale. Declared on plain
-   :root (specificity 0,1,0); the theme blocks never redeclare them, so there is no
-   cascade conflict.
+/* V97: STRUCTURAL TOKENS — non-colour. Radius, rules, type, spacing, motion and
+   easing live here as one scale. Declared on plain :root (specificity 0,1,0); the
+   colour block never redeclares them, so there is no cascade conflict.
    V93 built this block for a card-based dashboard. V97 keeps every NAME (thousands of
    lines read them) and resets the VALUES to the paper world: a statistical data-book
    has no cards, so radius collapses, and structure is carried by ruled lines instead. */
@@ -163,7 +161,7 @@ body.gate-locked{overflow:hidden}
   --rule-w-hair:1px;
   --rule-w-rule:1px;
   --rule-w-bar:3px;
-  /* --rule-ink-* are per-theme; see the two theme blocks below. */
+  /* --rule-ink-* are declared in the colour block below. */
   --hairline:var(--rule-w-hair) solid var(--rule-ink-hair);
   --rule:var(--rule-w-rule) solid var(--rule-ink-rule);
   --bar:var(--rule-w-bar) solid var(--rule-ink-bar);
@@ -242,7 +240,7 @@ body.gate-locked{overflow:hidden}
   --ease-in-out:cubic-bezier(.4,0,.2,1);    /* symmetric — things moving in place */
   --ease-linear:linear;                      /* progress, spinners */
 
-  /* Focus ring geometry (colour is per-theme, see --focus-ring below) */
+  /* Focus ring geometry (colour is --focus-ring, declared below) */
   --focus-ring-w:2px;
   --focus-ring-offset:2px;
 
@@ -390,10 +388,7 @@ body.gate-locked{overflow:hidden}
   --focus-ring:#0F496E;
 
   /* V96 — CONTROL SURFACE + INK-ON-ACCENT.
-     --ctl-bg is the one fill every input/select/textarea uses. On light it is
-     --panel, which is what the old `:root[data-theme="light"] select` override
-     already forced them all to; the token just makes that explicit and gives
-     dark mode the same single answer.
+     --ctl-bg is the one fill every input/select/textarea uses.
      --on-accent is the text/icon colour for anything sitting ON an --accent
      fill. This was hardcoded as #0a0e14 / #06281d in five places — inherited
      from when --accent was emerald. Against the current PLN blue those inks
@@ -409,13 +404,6 @@ body.gate-locked{overflow:hidden}
   --select-chevron:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%235A6470' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
-/* ================================================================================
-   V100 — EDISI MALAM DIHAPUS. Pemilik produk menetapkan aplikasi hanya punya SATU
-   skema warna: edisi terang di atas. Seluruh blok token tema gelap beserta semua
-   override bertema gelap dibuang di revisi ini. Penanda `data-theme="light"`
-   TETAP ada di <html> karena 64 aturan `:root[data-theme="light"] …` bergantung
-   pada spesifisitasnya.
-   ================================================================================ */
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{
   height:100%;width:100%;margin:0;
@@ -423,7 +411,7 @@ html,body{
   background:var(--bg);color:var(--text);overflow:hidden;
   transition:background-color .2s,color .2s;
 }
-/* V32: explicit override to ensure the themed root also uses Plus Jakarta Sans
+/* V32: explicit override to ensure the root also uses Plus Jakarta Sans
    (helps when browser has cached older stylesheets). */
 :root[data-theme="light"] body,
 :root[data-theme="light"]{
@@ -518,9 +506,8 @@ html,body{
 .brand-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text-dim);letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 
 .topbar-right{display:flex;align-items:center;gap:14px;flex-shrink:0}
-/* V45.2: Hide datetime at narrower desktops to keep the topbar controls visible.
-   V100: dulu yang dijaga adalah tombol toggle tema; tombol itu sudah dihapus, aturan
-   ini tetap dipakai untuk melindungi tombol login/update. */
+/* V45.2: Hide datetime at narrower desktops to keep the topbar controls
+   (login/update) visible. */
 @media (max-width:1440px){
   .datetime-display{display:none}
   .topbar-right{gap:10px}
@@ -1100,9 +1087,8 @@ html,body{
   font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
   color:var(--text-dim);letter-spacing:.5px;
 }
-/* V97: the 10px accent glow is removed. A luminous edge is the one decoration the
-   night edition explicitly bans, and on paper it rendered as a smudge around the dot.
-   The dot still pulses, which is the actual signal. */
+/* V97: the 10px accent glow is removed — on paper it rendered as a smudge around
+   the dot. The dot still pulses, which is the actual signal. */
 .live-dot{width:7px;height:7px;border-radius:var(--r-pill);background:var(--accent);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
@@ -1269,7 +1255,7 @@ html,body{
     position:absolute;top:0;right:0;bottom:0;width:340px;z-index:1100;
     /* Genuinely floats over the map — one of the few places elevation is spent.
        V94: was an ad-hoc leftward rgba shadow; now the top step of the 3-step
-       scale, which is theme-aware (the old one stayed black in light mode). */
+       scale. */
     box-shadow:var(--shadow-lg);
     transform:translateX(14px);
     transition:opacity var(--dur-slow) var(--ease-out), transform var(--dur-slow) var(--ease-out);
@@ -1632,7 +1618,7 @@ html,body{
 .plant-popup-surplus{
   /* V96: literal emerald -> status vocabulary. "Kontrak melampaui target" is the
      favourable condition, so it is --status-ok; the TEXT takes the -ink variant
-     because raw --status-ok is 2.4:1 on this tint in light mode. */
+     because raw --status-ok is only 2.4:1 on this tint. */
   margin-top:8px;padding:6px 8px;background:color-mix(in srgb,var(--status-ok) 15%,var(--panel));
   border-left:2px solid var(--status-ok);color:var(--status-ok-ink);font-weight:600;
   font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.3px;
@@ -1761,11 +1747,9 @@ html,body{
 .monthly-table tr:last-child td{border-bottom:none}
 .monthly-table .num{text-align:right;color:var(--text-bright)}
 /* V95: .pos was var(--accent) — the brand accent standing in for "good". That is
-   the status vocabulary's job, and in dark mode it meant a favourable gap was
-   rendered in the same PLN cyan as every neutral accent on the page. Now
-   --status-ok-ink. .neg stays var(--danger): red already reads as adverse in both
-   vocabularies, and --danger is the pinned PLN red used app-wide — swapping it
-   for --status-crit-ink here alone would fragment it. */
+   the status vocabulary's job, so it is --status-ok-ink now. .neg stays
+   var(--danger): red already reads as adverse, and --danger is the pinned PLN red
+   used app-wide — swapping it for --status-crit-ink here alone would fragment it. */
 .monthly-table .num.pos{color:var(--status-ok-ink)}
 .monthly-table .num.neg{color:var(--danger)}
 .monthly-table .num.dim{color:var(--text-dim)}
@@ -1817,13 +1801,12 @@ html,body{
 /* ===== TRENDS CHART (bottom of map) ===== */
 .trends-panel{
   position:absolute;bottom:16px;left:16px;right:16px;
-  background:rgba(13,20,28,.95);backdrop-filter:blur(12px);
+  background:rgba(255,255,255,.95);backdrop-filter:blur(12px);
   border:1px solid var(--border);padding:14px 16px;
   display:flex;flex-direction:column;gap:10px;
   max-width:460px;z-index:500;
   transition:all .25s ease;
 }
-:root[data-theme="light"] .trends-panel{background:rgba(255,255,255,.95)}
 /* Default = completely hidden (not on screen at all). User clicks show button to reveal. */
 .trends-panel.hidden{display:none}
 /* V103: the panel used to appear by `display:flex`, instantly, with no sign that a new
@@ -2099,8 +2082,8 @@ html,body{
 .summary-stat-value{font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:700;color:var(--text-bright);letter-spacing:-.5px;font-variant-numeric:tabular-nums}
 .summary-stat-delta{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;margin-top:6px;font-weight:600}
 /* V95: literal emerald -> --status-ok-ink. "up" is a genuine favourable-state
-   reading, so it stays green; it just uses the token, which also makes it legible
-   on the light theme (raw #10b981 is 2.4:1 on white). */
+   reading, so it stays green; it just uses the token, which is what makes it legible
+   (raw #10b981 is 2.4:1 on white). */
 .summary-stat-delta.up{color:var(--status-ok-ink)}
 .summary-stat-delta.down{color:var(--danger)}
 
@@ -2179,7 +2162,7 @@ html,body{
   margin-top:12px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
   padding:9px 12px;border-radius:7px;cursor:pointer;
   /* V96: ink was #06281d — a near-black picked when --accent was emerald. It is
-     1.9:1 on PLN blue. --on-accent is the theme-aware answer. */
+     1.9:1 on PLN blue. --on-accent is the readable answer. */
   background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);
   font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
   transition:filter .15s,transform .1s;
@@ -2211,8 +2194,7 @@ html,body{
   font-size:8px;color:var(--text-dim);background:var(--bg);
   padding:0 5px;border-radius:6px;line-height:1.4;
 }
-/* V96: superseded by the button vocabulary at the end of this stylesheet, which
-   flips the chip's scrim with the theme so it stays visible on either accent. */
+/* V96: superseded by the button vocabulary at the end of this stylesheet. */
 .bn-keyword-btn:disabled{
   opacity:.35;cursor:not-allowed;
 }
@@ -2779,9 +2761,8 @@ html,body{
 .recap-table th.num.year-total{background:linear-gradient(rgba(var(--accent-rgb),.10),rgba(var(--accent-rgb),.10)),var(--panel-3);color:var(--accent)}
 .recap-table th.num.grand-total{background:linear-gradient(rgba(var(--accent-rgb),.20),rgba(var(--accent-rgb),.20)),var(--panel-3);color:var(--accent)}
 .recap-table td{padding:5px 6px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap}
-/* V95: was rgba(30,42,56,.3) — a hardcoded dark slate with no light-theme
-   override, so hovering a row on the light theme dropped a heavy blue-grey wash
-   across it. Now an accent tint that follows the theme. */
+/* V95: was rgba(30,42,56,.3) — a hardcoded dark slate, so hovering a row dropped a
+   heavy blue-grey wash across it. Now a light accent tint. */
 .recap-table tr:hover td{background:rgba(var(--accent-rgb),.07)}
 .recap-table td.pltu-cell{text-align:left;padding-left:12px;color:var(--text-bright);font-weight:500;position:sticky;left:0;background:var(--panel);z-index:1}
 .recap-table td.pltu-cell .code{color:var(--text-dim);font-size:9px;margin-left:6px;font-weight:400}
@@ -2935,8 +2916,7 @@ html,body{
   text-transform:uppercase;white-space:nowrap;position:sticky;top:0;z-index:2;
 }
 /* V95: the tint was a hardcoded PLN-blue rgba(15,73,110,.08) while the ink was
-   var(--accent). In dark mode --accent is PLN cyan, so this rendered cyan text
-   on a blue wash. Tint now derives from --accent-rgb and tracks the ink. */
+   var(--accent). Tint now derives from --accent-rgb so it tracks the ink. */
 .kontrak-table th.year-header{background:rgba(var(--accent-rgb),.10);color:var(--accent);padding:10px;border-left:1px solid var(--border)}
 .kontrak-table th.old-year{background:rgba(100,116,139,.06);color:var(--text-dim)}
 .kontrak-table td{
@@ -3275,7 +3255,7 @@ html,body{
 .usulan-table td.no-cell{text-align:center;color:var(--text-dim);font-weight:600;font-size:10px}
 .usulan-table td.pltu-cell{color:var(--text-bright);font-weight:500}
 
-/* V95: was rgba(30,42,56,.4) — dark slate, no light-theme override. */
+/* V95: was rgba(30,42,56,.4) — a dark slate that washed out the row on paper. */
 .usulan-table tr:hover td{background:rgba(var(--accent-rgb),.07)}
 
 /* Row state coloring (overrides hover)
@@ -3311,8 +3291,8 @@ html,body{
 }
 .tahap-checkbox.checked::after{
   content:"";position:absolute;left:7px;top:3px;
-  /* V96: white tick on the accent fill was 3.0:1 in dark mode, under the 3:1 floor
-     for a non-text graphic. --on-accent flips with the theme. */
+  /* V96: the tick was hardcoded white; --on-accent keeps it above the 3:1 floor
+     WCAG asks of a non-text graphic. */
   width:7px;height:13px;border:solid var(--on-accent);border-width:0 2px 2px 0;
   transform:rotate(45deg);
 }
@@ -4363,7 +4343,7 @@ html,body{
 ::-webkit-scrollbar-thumb:hover{background:var(--border-bright)}
 
 /* ============================================
-   LIGHT-MODE SPECIFIC OVERRIDES
+   LEAFLET + SHELL OVERRIDES
    ============================================ */
 :root[data-theme="light"] .leaflet-container{background:#e2e8f0}
 :root[data-theme="light"] .leaflet-control-attribution{background:rgba(255,255,255,.85)!important;color:#64748b!important}
@@ -4375,8 +4355,7 @@ html,body{
 :root[data-theme="light"] .leaflet-popup-tip{background:#ffffff!important}
 :root[data-theme="light"] .plant-popup-name{color:#0f172a}
 /* V94: was #f1f5f9 — a slate from the pre-V93 palette, one hue off the current
-   neutral ladder. --bg is the content plane in both themes; the shell is that
-   plane. */
+   neutral ladder. --bg is the content plane; the shell is that plane. */
 :root[data-theme="light"] .shell{background:var(--bg)}
 :root[data-theme="light"] .kpi-value,
 :root[data-theme="light"] .progress-value,
@@ -4979,40 +4958,20 @@ html,body{
 }
 
 /* ================================================================
-   LIGHT THEME — PLN EPI brand refinement layer
-   Polish applied on top of the base light theme tokens above.
-   Dark mode does NOT inherit these (kept dense dashboard look).
+   PLN EPI brand refinement layer
+   Polish applied on top of the base tokens above.
    ================================================================ */
 /* V94: this layer used to re-specify the whole chrome in raw hex, which fought
    the V93 neutral ladder declared at the top of the file. Everything that was
-   only restating a token value is deleted so the shell has ONE source of truth;
-   what is left is genuinely light-specific.
+   only restating a token value is deleted so the shell has ONE source of truth.
 
-   Deleted and why:
-   - `.topbar{background:#FFFFFF}` and `.tabs{background:#FFFFFF}` — the chrome
-     field is var(--panel-2) (#F7F8FB in light) in both themes. Pinning it to
-     pure white broke the ladder's one useful property here: the ACTIVE tab
-     is var(--bg) (#F1F3F7), i.e. it is the one tab that matches the content
-     plane it sits on, so selection reads as "this tab is that page".
-   - `.topbar::after` — the base rule that gave this pseudo-element its
-     `content` is gone (one hairline, not two), so this was already dead CSS
-     painting nothing. The 4-stop yellow/blue/cyan brand bar it drew was the
-     competing second divider the thesis rules out.
-   - `.tab{color:#6B7280}` — that is var(--text-dim), verbatim.
-   - `.tab:hover{color:#0F496E}` — hover was painting the SAME blue as .active,
-     so hovering any tab impersonated the selected one. Hover now falls back to
-     var(--text): a darkening, not a selection.
-   - `.tab.active{color:#0F496E}` — that is var(--text-bright), verbatim.
-   - `.tab.active{font-weight:700}` — a 600->700 swap on a `white-space:nowrap;
-     flex-shrink:0` tab changes its width, so every tab to the right of the
-     selection shifted a few px on each switch. The selection is already carried
-     by fill + ink + underline; the weight jump only cost stability.
-   - `.tab.active::after{background:#FFC72C;height:3px}` — PLN yellow on the
-     light chrome is ~1.55:1, well under the 3:1 that WCAG 1.4.11 asks of a
-     non-text state indicator; as the PRIMARY wayfinding signal that is the
-     wrong job for it. The underline is var(--accent) (PLN blue, 9.4:1 on the
-     rail) in both themes now. Yellow stays in the palette as --accent-2 for
-     highlight work, which is what it is good at. */
+   Two decisions worth keeping in mind, since they look like omissions:
+   - The active tab is deliberately var(--bg), i.e. the one tab that matches the
+     content plane it sits on, so selection reads as "this tab is that page".
+     Do not pin the chrome to pure white — that breaks it.
+   - The active underline is var(--accent) (PLN blue, 9.4:1 on the rail), not PLN
+     yellow (~1.55:1, under the 3:1 WCAG 1.4.11 asks of a non-text state
+     indicator). Yellow stays as --accent-2 for highlight work. */
 :root[data-theme="light"] .brand-title{
   color:var(--text-bright);font-weight:700;letter-spacing:-.1px;
 }
@@ -5021,28 +4980,18 @@ html,body{
   letter-spacing:1px;color:var(--text-dim);font-weight:500;
 }
 /* Sidebars + cards: the brightest step of the ladder, so the side regions read
-   as slightly forward of the content plane. Same computed colour as before
-   (--panel is #FFFFFF in light); only the hardcoded hex is gone. */
+   as slightly forward of the content plane. */
 :root[data-theme="light"] .sidebar,
 :root[data-theme="light"] .bn-list,
 :root[data-theme="light"] .detail-panel{
   background:var(--panel);
 }
-/* V97: THIS BLOCK IS GONE, NOT REWRITTEN.
-   It existed to give the light theme a white card with a border and a radius. There
-   are no cards in V97, so a rule whose only job was "draw the card in light mode" has
-   nothing left to do — and if it stayed it would fight the exhibit conversion above
-   at a HIGHER specificity (0,2,0 vs 0,1,0) and win, silently restoring the deck of
-   tiles in the day edition only. Deleted rather than neutralised, so no dead override
-   is left to confuse the next pass.
-   What was here:
-     .real-card,.insights-card,.insights-section,.kontrak-card,.pareto-card,.genco-card
-     { background:#FFFFFF; border:1px solid var(--border); border-radius:var(--r-md) }
-   V95 had already removed its box-shadow for the same reason. */
+/* NOTE: do not reintroduce a card rule for .real-card / .insights-card /
+   .insights-section / .kontrak-card / .pareto-card / .genco-card. There are no cards
+   since V97 — those are hairline-separated exhibits now, and a rule here would win on
+   specificity (0,2,0 vs 0,1,0) and silently restore the deck of tiles. */
 /* Section headings use Plus Jakarta Sans, not the harsh mono spacing.
-   V97: retokenised off the #0F496E literal — that is --text-bright / --accent in the
-   day edition, and pinning it in hex meant this rule quietly reintroduced PLN blue in
-   the NIGHT edition too, where blue is 1.9:1 and unreadable. */
+   V97: retokenised off the #0F496E literal — that is --text-bright / --accent. */
 :root[data-theme="light"] h3,
 :root[data-theme="light"] h4{
   font-family:'Plus Jakarta Sans',sans-serif;
@@ -5058,9 +5007,8 @@ html,body{
   color:var(--text-bright);text-transform:uppercase;
 }
 :root[data-theme="light"] .sidebar h3::before{background:var(--accent-2)}
-/* V97: the light-only KPI card fill is deleted for the same reason as the card group
-   above — .kpi is now a hairline-separated reading, and a white box here would have
-   put the tile back in the day edition only. The four indicator-lamp hues stay: they
+/* V97: the KPI card fill is deleted for the same reason as the card group above —
+   .kpi is now a hairline-separated reading. The four indicator-lamp hues stay: they
    are the PLN brand mapping (blue / yellow / red / cyan) and carry identity. */
 :root[data-theme="light"] .kpi.accent   .kpi-label::before{background:var(--accent)}
 :root[data-theme="light"] .kpi.warn     .kpi-label::before{background:var(--accent-2)}
@@ -5087,10 +5035,9 @@ html,body{
   background:var(--accent-soft);color:var(--accent);border-color:var(--accent);
 }
 /* Tags / pills
-   V96: this rule sat at (0,3,0) and so outranked the shared pill language, giving
-   light mode PLN-blue tag text on #F3F4F8 while dark mode got --text on --panel-3 —
-   two different components wearing one class name. Now both themes read from the
-   same tokens and only the *values* differ, which is what a theme is for. */
+   V96: this rule sat at (0,3,0) and so outranked the shared pill language with its own
+   hardcoded PLN-blue-on-#F3F4F8 — two different components wearing one class name.
+   It now reads from the same tokens as the shared language. */
 :root[data-theme="light"] .detail-tag,
 :root[data-theme="light"] .alert-tag,
 :root[data-theme="light"] .pill{
@@ -5100,8 +5047,8 @@ html,body{
 :root[data-theme="light"] .detail-tag.genco-tag{font-weight:700}
 /* Forms / dropdowns
    V96: retokenised off #FFFFFF / #1F2937 / #0F496E. These are --ctl-bg, --text and
-   --accent in this theme, so nothing moves; the point is that the light branch no
-   longer holds a second, independent definition of what a control looks like. */
+   --accent, so nothing moves; the point is that this block no longer holds a second,
+   independent definition of what a control looks like. */
 :root[data-theme="light"] select,
 :root[data-theme="light"] input[type="text"],
 :root[data-theme="light"] input[type="search"],
@@ -5109,22 +5056,17 @@ html,body{
 :root[data-theme="light"] .alert-filter-select{
   /* V96 BUG FIX: this was the `background` SHORTHAND, which also sets
      background-image:none. At (0,2,1) it outranked every `.x-select{background-image:
-     url(chevron)}` rule in the file, so in LIGHT MODE every custom select in the app
-     rendered with `appearance:none` and no chevron at all — a plain box with no
-     affordance that it opens. Longhand background-color leaves the image alone. */
+     url(chevron)}` rule in the file, so every custom select in the app rendered with
+     `appearance:none` and no chevron at all — a plain box with no affordance that it
+     opens. Longhand background-color leaves the image alone. */
   background-color:var(--ctl-bg);border:var(--ctl-border-w) solid var(--border);color:var(--text);
   font-family:'Plus Jakarta Sans',sans-serif;
 }
 :root[data-theme="light"] select:focus,
 :root[data-theme="light"] input:focus{border-color:var(--accent)}
-/* Progress bars use blue, not green emerald */
-:root[data-theme="light"] .progress-fill[style*="#10b981"]{
-  /* The inline style still wins, but bars created by JS use --accent */
-}
 /* Plant popup on map. A popup genuinely floats, so it keeps its elevation.
-   V97: retokenised off #FFFFFF / #1F2937 / #0F496E — those were the pre-V97 white
-   ground and its inks, and pinning them here meant the popup was the one surface in
-   the day edition that did not move to paper. */
+   V97: retokenised off #FFFFFF / #1F2937 / #0F496E — the pre-V97 white ground and its
+   inks, which kept the popup from moving to paper with everything else. */
 :root[data-theme="light"] .plant-popup{
   background:var(--panel);color:var(--text);
   border:1px solid var(--border);box-shadow:var(--shadow-md);
@@ -5520,7 +5462,7 @@ html,body{
    are kept only because existing rules reference them, and are aliased onto the scale
    so there is a single source of truth. --shadow-lg is NO LONGER declared here — it
    would have shadowed the new definition, since this block comes later in the cascade. */
-:root,:root[data-theme="light"]{
+:root{
   --shadow-xs:var(--shadow-sm);
   --shadow-hover:var(--shadow-md);
 }
@@ -5920,8 +5862,8 @@ html,body{
     font-variant-numeric:tabular-nums;background:var(--panel-3);
     padding:1px 7px;border-radius:var(--r-pill);min-width:22px;text-align:center;
   }
-  /* V94: was rgba(15,73,110,.12) — the light-theme accent hardcoded, so in dark
-     mode this stayed navy behind cyan text. --accent-soft follows the theme. */
+  /* V94: was rgba(15,73,110,.12) — the accent hardcoded. Now --accent-soft, so it
+     tracks the token. */
   .mobile-more-subitem.active .mms-count{color:var(--accent);background:var(--accent-soft)}
   /* V94: the backdrop was fully transparent — a pure click-catcher. It now
      carries a light scrim so the sheet reads as floating over a dimmed surface
@@ -5967,7 +5909,7 @@ html,body{
      shape    1px solid --border, radius --ctl-radius (4px), fill --ctl-bg
      size     sm 26px / md 34px (default) / lg 40px, from --ctl-h-*
      padding  --ctl-px-* horizontally; selects add --ctl-chevron-gutter on the right
-     chevron  one --select-chevron, per-theme stroke, 10x6, right-aligned
+     chevron  one --select-chevron, 10x6, right-aligned
      states   :hover        border --border-bright  (pointer is here)
               :focus        border --accent         (this field is live — mouse too)
               :focus-visible  + the global 2px ring below (keyboard only)
@@ -6287,8 +6229,8 @@ html,body{
    --status-* family; ENTITY IDENTITY (genco, procurement method, data source) uses
    the brand/genco families. No hex does both jobs. Every tinted variant below pairs
    a 12% fill with the matching -ink, which is the pair that was measured to clear
-   4.5:1 on BOTH themes — the raw fill colours are 2.2–2.4:1 as text on white and
-   were never text colours.
+   4.5:1 — the raw fill colours are 2.2–2.4:1 as text on white and were never text
+   colours.
    ---------------------------------------------------------------------------------- */
 .mou-status,.kontrak-pct-badge,.kontrak-genco-pill,.kontrak-jenis-pill,
 .usulan-metode-pill,.usulan-progress-pill,.usulan-custom-badge,
@@ -6360,9 +6302,8 @@ html,body{
                    the surface until you dismiss them)
 
    What was here: seven hand-rolled shadows — 0 8px 24px/.5, 0 12px 40px/.4,
-   0 20px 60px/.5 (x4), 0 24px 60px/.4, 0 6px 24px/.35 — none of which had a light
-   theme, so every overlay in light mode cast a shadow tuned for a black background.
-   The tokens are per-theme, which fixes that as a side effect.
+   0 20px 60px/.5 (x4), 0 24px 60px/.4, 0 6px 24px/.35 — all tuned for a black
+   background, so every overlay cast a shadow far too heavy for the paper ground.
 
    BACKDROP BLUR. Seven sites at four radii (2 / 4 / 8 / 12px) with no stated reason.
    Two reasons survive, so two values:
@@ -6445,7 +6386,6 @@ html,body{
 /* Leaflet paints its own chrome, so these need !important to reach it at all. */
 .leaflet-popup-content-wrapper{box-shadow:var(--shadow-md)!important}
 .leaflet-tooltip.plant-tooltip{box-shadow:var(--shadow-md)!important}
-:root[data-theme="light"] .leaflet-popup-content-wrapper{box-shadow:var(--shadow-md)!important}
 /* The toast floats above every other layer, so it takes the top step. */
 #updateAppliedBanner{box-shadow:var(--shadow-lg)}
 
@@ -7012,8 +6952,7 @@ html,body{
   per view as the single highlight, cyan #00A0E0 and red #B6302B for plates and
   alarm. Status (aman/waspada/kritis) stays a vocabulary separate from brand. Rules
   carry structure at three weights — hairline, rule, bar. Exhibit numbering is
-  visible wayfinding. One family, tabular figures throughout. A night edition
-  inverts the ground without becoming the old dark dashboard.
+  visible wayfinding. One family, tabular figures throughout.
 
   STORY: The operator arrives already inside a task — is biomass supply at 51 PLTU
   tracking target, and if not, where and why. They read exhibits, not widgets, and
@@ -7180,7 +7119,6 @@ html,body{
       <div class="datetime-date" id="topbarDate">—</div>
       <div class="datetime-time" id="topbarTime">—</div>
     </div>
-    <!-- V100: tombol toggle tema dihapus — aplikasi hanya punya edisi terang. -->
   </div>
 </div>
 
@@ -8915,9 +8853,6 @@ const DATA = { plants: [], monthly: [], bottlenecks: [], pareto: { categories: {
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL = {January:'Jan',February:'Feb',March:'Mar',April:'Apr',May:'May',June:'Jun',July:'Jul',August:'Aug',September:'Sep',October:'Oct',November:'Nov',December:'Dec'};
 
-// V100: helper isLight()/getTheme() dihapus bersama tema gelap. Semua percabangan
-// tema di bawah sudah diratakan ke nilai edisi terang.
-
 // Genco colors
 const GENCO_COLORS = {
   PNP: '#10b981',  // emerald
@@ -9408,8 +9343,6 @@ function initMainMap(){
     maxBoundsViscosity: 0.8,
     minZoom: 3,
   }).fitBounds(INDONESIA_BOUNDS);
-  // V100: dulu tile gelap dipasang di sini lalu ditukar ke terang oleh swapMapTiles()
-  // saat boot. swapMapTiles() sudah dihapus, jadi tile terang dipasang langsung.
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
     attribution:'&copy; OSM &copy; CARTO',
     subdomains:'abcd', maxZoom:12, minZoom:3,
@@ -10645,12 +10578,11 @@ function downloadTrendTableCSV(yearTotals){
 
 /**
  * Download trend table as PNG image. Renders the table directly to a canvas
- * (rather than using html2canvas) for crisp font rendering and theme-aware colors.
+ * (rather than using html2canvas) for crisp font rendering and exact palette control.
  */
 function downloadTrendTablePNG(yearTotals){
   const years = ['2023','2024','2025','2026'];
   const yearColors = { '2023':'#64748b', '2024':'#3b82f6', '2025':'#f59e0b', '2026':'#10b981' };
-  // V100: palet edisi terang (satu-satunya skema warna aplikasi)
   const bg = '#ffffff';
   const headerBg = '#e2e8f0';
   const totalBg = '#cbd5e1';
@@ -12308,7 +12240,7 @@ function renderRealView(){
     });
   }
   // ----- Monthly Realisasi · Multi-Year Comparison (+ optional data table) -----
-  // Plugin: draw values above each line point (theme-aware, color matches dataset)
+  // Plugin: draw values above each line point (color matches dataset)
   const trendValuesPlugin = {
     id: 'trendValues',
     afterDatasetsDraw(chart){
@@ -12351,7 +12283,7 @@ function renderRealView(){
       interaction:{ mode:'index', intersect:false },
       layout:{ padding:{ top: 14 } },
       plugins:{
-        // colors omitted → Chart.defaults from applyChartThemeDefaults() (theme-aware)
+        // colors omitted → Chart.defaults from applyChartThemeDefaults() (reads CSS tokens)
         legend:{ display:true, position:'bottom', labels:{ font:{size:11, family:"'Plus Jakarta Sans', sans-serif"}, boxWidth:16, boxHeight:2, padding:16 } },
         tooltip:{ callbacks:{ label: c => c.dataset.label + ': ' + fmtInt(c.parsed.y) + ' ton' } }
       },
@@ -12952,7 +12884,6 @@ function initBnMap(){
     zoomControl:false, attributionControl:true, preferCanvas:true,
     maxBounds: SEA_BOUNDS, maxBoundsViscosity:0.8, minZoom:3,
   }).fitBounds(INDONESIA_BOUNDS);
-  // V100: satu skema warna — tile terang selalu.
   const baseUrl = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
   const labelsUrl = 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png';
   L.tileLayer(baseUrl,{
@@ -14035,7 +13966,6 @@ function renderParetoMainChart(){
   const data = sorted.map(([_, v]) => v);
   const colors = sorted.map(([c]) => CAT_COLORS[c] || '#64748b');
 
-  // V100: palet edisi terang (satu-satunya skema warna aplikasi)
   const textColor = '#475569';
   const gridColor = 'rgba(15,23,42,0.08)';
 
@@ -14494,7 +14424,6 @@ function renderParetoGencoChart(){
     borderWidth: 0,
   }));
 
-  // V100: palet edisi terang (satu-satunya skema warna aplikasi)
   const textColor = '#475569';
   const gridColor = 'rgba(15,23,42,0.08)';
 
@@ -15634,7 +15563,6 @@ function renderKontrakJenisPie(){
   const data = sorted.map(([_, v]) => v);
   const colors = sorted.map((_, i) => JENIS_COLORS[i % JENIS_COLORS.length]);
 
-  // V100: palet edisi terang (satu-satunya skema warna aplikasi)
   const textColor = '#475569';
 
   kontrakJenisPieChart = new Chart(canvas, {
@@ -20025,7 +19953,6 @@ function initPembangkitMap(){
     zoomControl: false,
     attributionControl: true,
   }).fitBounds(INDONESIA_BOUNDS);
-  // V100: satu skema warna — tile terang selalu.
   const baseUrl = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
   const labelsUrl = 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png';
   L.tileLayer(baseUrl, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 12, minZoom: 3 }).addTo(pembangkitMap);
@@ -20530,7 +20457,6 @@ function initFasilitasMap(){
     maxBounds: SEA_BOUNDS,
     maxBoundsViscosity: 0.8,
   });
-  // V100: satu skema warna — tile terang selalu (sama seperti peta lain).
   const baseUrl = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
   const labelsUrl = 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png';
   L.tileLayer(baseUrl, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 14, minZoom: 3 }).addTo(fasilitasMap);
@@ -23487,7 +23413,6 @@ window.addEventListener('DOMContentLoaded', () => {
       exportCanvas.width = canvas.width;
       exportCanvas.height = canvas.height;
       const ctx = exportCanvas.getContext('2d');
-      // V100: satu skema warna — latar ekspor selalu putih.
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
       ctx.drawImage(canvas, 0, 0);
@@ -23574,10 +23499,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // ========= CHART DEFAULTS =========
-  // V100: toggle tema dihapus. Aplikasi hanya punya edisi terang; penanda
-  // data-theme="light" sudah terpasang permanen di <html>, jadi tidak ada lagi
-  // applyTheme(), swapMapTiles(), maupun persistensi 'biomassa-theme'.
-
   // Set Chart.js default colors (tick labels, legend text) dari token CSS.
   function applyChartThemeDefaults(){
     if (typeof Chart === 'undefined') return;
