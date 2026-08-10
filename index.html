@@ -9332,7 +9332,13 @@ let map, markerLayer, markers = {};
 const INDONESIA_BOUNDS = [[-11.5, 94.5], [6.5, 141.5]];
 // Wider bounds = SEA region (allows panning to show Malaysia, Singapore, Philippines edges
 // without letting users drift to Europe/Americas).
-const SEA_BOUNDS = [[-20, 80], [25, 155]];
+// V95: batas timur/barat dilonggarkan 25° (155→180, 80→55). Alasannya bukan wilayah, tapi
+// panel detail 340px yang MENGAMBANG di atas peta (lihat .detail-panel di media min-width:769px):
+// PLTU paling ujung — Holtekamp ~140,7°E, Nagan Raya ~96,3°E — tertutup panel dan tidak bisa
+// digeser keluar karena pan mentok di Papua Nugini / Samudra Hindia. 340px ≈ 15° pada zoom 5
+// dan ≈ 30° pada zoom 4, jadi 25° slack menutup kasus zoom kerja yang wajar. Lintang sengaja
+// tidak diubah — panel hanya memakan ruang horizontal.
+const SEA_BOUNDS = [[-20, 55], [25, 180]];
 
 function initMainMap(){
   map = L.map('map',{
