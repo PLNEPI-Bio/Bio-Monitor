@@ -1241,7 +1241,7 @@ html,body{
 .map-view.sidebar-collapsed{grid-template-columns:0px 1fr 0px}
 .map-view.sidebar-collapsed.detail-open{grid-template-columns:0px 1fr 340px}
 
-/* V64: On desktop, the Map Cofiring detail panel OVERLAYS the map instead of
+/* V64: On desktop, the   detail panel OVERLAYS the map instead of
    taking a grid column. This keeps the map element the exact same size when the
    panel opens, so the map never re-centers/shifts — the clicked marker stays put
    under the cursor and its hover tooltip is preserved. Scoped to the cofiring
@@ -24264,7 +24264,10 @@ function computeAlerts(){
         severity: sev,
         title: 'Kontrak ' + (c.pltu || '?') + ' / ' + (c.pemasok || '?') + ' expired dalam ' + daysLeft + ' hari',
         tags: [c.genco, c.jenis || 'Kontrak'],
-        detail: 'Kontrak ' + fmtInt(c.vol_mt || 0) + ' ton akan berakhir ' + endDate.toLocaleDateString('id-ID') + '. Realisasi ' + (c.pct_kontrak ? (c.pct_kontrak * 100).toFixed(1) : 0) + '%.',
+        // V104: penggalan "Realisasi X%" dibuang sementara — pct_kontrak sudah dalam satuan
+        // persen sejak parser, dikali 100 lagi di sini sehingga tampil 100x lipat. Kembalikan
+        // setelah formulasi realisasi kontrak ditetapkan.
+        detail: 'Kontrak ' + fmtInt(c.vol_mt || 0) + ' ton akan berakhir ' + endDate.toLocaleDateString('id-ID') + '.',
         priority: sev === 'warning' ? 65 : 40,
         pltu: c.pltu,
         month: endMonth,
