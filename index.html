@@ -1497,6 +1497,18 @@ html,body{
    kehilangan alasannya dan justru merugikan: panel selebar 320px itu melayang di atas
    markerPane dan memblokir klik ke marker mana pun di belakangnya — penyebab utama klik
    terasa "tidak kena". Dengan none, klik menembus ke marker/peta di bawahnya. */
+/* V106: satu-satunya bagian tooltip peta yang boleh menangkap pointer.
+   Mengembalikan pointer-events:auto ke SELURUH panel akan mengulang persis bug
+   yang dibereskan V86 — kotak selebar 320px melayang di atas markerPane dan
+   memblokir klik ke marker di belakangnya. Yang dibuka di sini hanya angka
+   ber-data-calc: beberapa puluh piksel, di dalam baris yang memang harus bisa
+   diklik untuk membuka rumusnya. Sisa panel tetap tembus bagi klik.
+   Ini sah menurut spesifikasi: anak dengan pointer-events:auto tetap dapat
+   di-hit-test walau induknya none. */
+.leaflet-tooltip.plant-tooltip [data-calc]{pointer-events:auto}
+/* Di dalam dua strip berwarna, --border-bright nyaris tak terlihat di atas tint
+   merah/hijau — garis penanda mengikuti warna teksnya saja. */
+.plant-popup-warning [data-calc],.plant-popup-surplus [data-calc]{text-decoration-color:currentColor}
 .leaflet-tooltip.plant-tooltip::before{display:none!important}
 :root[data-theme="light"] .leaflet-tooltip.plant-tooltip{
   box-shadow:0 6px 18px rgba(15,23,42,.15)!important;
@@ -1599,17 +1611,17 @@ html,body{
 /* Inline warning icon in popup title */
 .popup-warn{
   display:inline-flex;align-items:center;justify-content:center;
-  width:16px;height:16px;background:var(--danger);color:white;
+  width:14px;height:14px;background:var(--danger);color:white;
   border-radius:50%;font-family:'Plus Jakarta Sans',sans-serif;font-weight:900;
-  font-size:10px;margin-left:4px;
+  font-size:9px;margin-left:4px;
 }
 
 /* Full-width warning strip at bottom of popup */
 .plant-popup-warning{
-  margin-top:8px;padding:6px 8px;background:rgba(239,68,68,.15);
+  margin-top:6px;padding:5px 7px;background:rgba(239,68,68,.15);
   border-left:2px solid var(--danger);color:var(--danger);font-weight:600;
-  font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.3px;
-  line-height:1.4;
+  font-size:9.5px;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.3px;
+  line-height:1.35;
 }
 /* V83: kebalikan dari .plant-popup-warning — Kontrak melampaui Target FGD.
    Bentuknya sengaja identik, hanya warnanya hijau, supaya kedua kondisi terbaca
@@ -1619,10 +1631,10 @@ html,body{
   /* V96: literal emerald -> status vocabulary. "Kontrak melampaui target" is the
      favourable condition, so it is --status-ok; the TEXT takes the -ink variant
      because raw --status-ok is only 2.4:1 on this tint. */
-  margin-top:8px;padding:6px 8px;background:color-mix(in srgb,var(--status-ok) 15%,var(--panel));
+  margin-top:6px;padding:5px 7px;background:color-mix(in srgb,var(--status-ok) 15%,var(--panel));
   border-left:2px solid var(--status-ok);color:var(--status-ok-ink);font-weight:600;
-  font-size:10px;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.3px;
-  line-height:1.4;
+  font-size:9.5px;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.3px;
+  line-height:1.35;
 }
 
 /* ===== RIGHT PANEL ===== */
@@ -1887,18 +1899,27 @@ html,body{
 }
 
 /* Popup */
-.plant-popup{padding:12px 14px;min-width:220px;max-width:320px}
-.plant-popup-name{font-size:14px;font-weight:700;color:var(--text-bright);margin-bottom:2px}
+/* V106: dirapatkan ~50px. Tooltip ini berisi 10 baris tetap + blok catatan, dan
+   Leaflet selalu menempatkannya di ATAS marker (direction:'top'). Untuk PLTU di
+   tepi utara peta — Nagan Raya, Pangkalan Susu — tinggi lamanya (~285px) membuat
+   judulnya terpotong di luar viewport, dan itu tidak bisa diselamatkan dengan
+   menggeser peta karena maxBounds menarik pan kembali ke posisi semula.
+   Yang dikecilkan hanya ukuran huruf & jarak; tidak ada baris yang dibuang. */
+.plant-popup{padding:8px 11px;min-width:196px;max-width:320px}
+.plant-popup-name{font-size:12.5px;line-height:1.25;font-weight:700;color:var(--text-bright);margin-bottom:1px}
 /* V71: identitas Genco · Boiler · Regional diringkas jadi satu subjudul */
-.plant-popup-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.plant-popup-row{display:flex;justify-content:space-between;gap:12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;color:var(--text);margin-bottom:3px}
+.plant-popup-sub{font-family:'Plus Jakarta Sans',sans-serif;font-size:8.5px;line-height:1.3;letter-spacing:.9px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.plant-popup-row{display:flex;justify-content:space-between;gap:10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:9.5px;line-height:1.4;color:var(--text);margin-bottom:1px}
 /* V81: tiap baris wajib satu baris. Flex item default boleh menyusut (flex-shrink:1),
    jadi label panjang seperti "REALISASI S.D. SEPTEMBER" terbungkus jadi dua baris begitu
    label+nilai melebihi lebar tooltip. nowrap + flex-shrink:0 mematikan itu; max-width
    .plant-popup dinaikkan agar teks yang kini tidak boleh wrap tetap muat di dalam kotak. */
 .plant-popup-row span{white-space:nowrap;flex-shrink:0}
-.plant-popup-row span:first-child{color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
-.plant-popup-action{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:9px;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;transition:color .15s}
+/* V106: letter-spacing turun dari 1px — dengan nowrap + flex-shrink:0 di atas,
+   tiap 0,3px per huruf langsung jadi lebar kotak, dan label seperti
+   "REALISASI S.D. SEPTEMBER" adalah yang menentukan lebar seluruh tooltip. */
+.plant-popup-row span:first-child{color:var(--text-dim);letter-spacing:.7px;text-transform:uppercase}
+.plant-popup-action{margin-top:7px;padding-top:7px;border-top:1px solid var(--border);font-family:'Plus Jakarta Sans',sans-serif;font-size:8.5px;color:var(--accent);letter-spacing:1.2px;text-transform:uppercase;transition:color .15s}
 /* V86: .plant-popup-clickable (V75/V76) dihapus seluruhnya — tooltip kini
    pointer-events:none, jadi tidak pernah menerima hover maupun klik. */
 
@@ -6934,6 +6955,83 @@ html,body{
     transition-duration:90ms!important;
   }
 }
+
+/* ==============================================================================
+   V105 — INDIKATOR RUMUS.
+   Setiap angka yang lahir dari sebuah perhitungan (bukan angka yang langsung
+   dibaca dari sumber data) diberi atribut data-calc berisi HTML hasil calcTip().
+   Penandanya CUKUP garis bawah titik-titik — lencana ƒ (V105.0) dibuang karena
+   di grid yang padat ia menumpuk jadi derau, sementara garis titik-titik sudah
+   membedakan angka ini dari angka biasa di sebelahnya.
+
+   Tooltip muncul saat DIKLIK, bukan saat hover: penjelasan rumus adalah sesuatu
+   yang dibaca dengan sengaja, dan pemicu hover membuatnya menyembul terus-menerus
+   saat kursor cuma menyeberangi tabel.
+   ============================================================================== */
+[data-calc]{
+  cursor:pointer;
+  text-decoration:underline dotted var(--border-bright);
+  text-underline-offset:3px;
+  text-decoration-thickness:1px;
+}
+[data-calc]:hover{text-decoration-color:var(--accent)}
+/* Satu-satunya penanda mana yang sedang terbuka, menggantikan peran lencana ƒ. */
+[data-calc].calc-open{
+  text-decoration-style:solid;
+  text-decoration-color:var(--accent);
+}
+[data-calc]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.calc-tip{
+  position:fixed;top:0;left:0;z-index:200000;
+  min-width:230px;max-width:340px;
+  background:var(--panel);
+  border:1px solid var(--border-bright);
+  border-radius:4px;
+  box-shadow:var(--shadow-lg);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  color:var(--text);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity var(--dur-fast,.12s) var(--ease-out,ease);
+}
+/* pointer-events:auto saat terbuka — karena tooltip ini dibuka dengan sengaja
+   (klik), angka di dalamnya harus bisa diseleksi & disalin. Klik di dalamnya
+   tidak menutup panel; lihat penjaga _calcTipEl.contains() di wireCalcTips. */
+.calc-tip.show{opacity:1;visibility:visible;pointer-events:auto}
+/* max-height diatur per-tampil oleh _calcTipPosition() ke ruang yang tersedia di
+   sisi jangkar; isinya bergulir supaya panel tak pernah perlu digeser menimpa
+   angka pemicunya. overscroll-behavior menahan gulirannya agar tidak merembet
+   ke peta/tabel di belakangnya. */
+.calc-tip{overflow-y:auto;overscroll-behavior:contain}
+/* sticky: saat isi panel dipotong max-height dan digulir, tombol × harus tetap
+   terlihat. sticky juga tetap jadi containing block bagi tombol yang absolute. */
+.calc-tip-head{padding:9px 12px 7px;padding-right:30px;background:var(--panel-2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
+.calc-tip-title{font-size:9.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-dim)}
+.calc-tip-close{
+  position:absolute;top:4px;right:5px;
+  width:20px;height:20px;padding:0;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;border:1px solid transparent;border-radius:3px;
+  color:var(--text-dim);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;
+  cursor:pointer;transition:color .12s,border-color .12s,background .12s;
+}
+.calc-tip-close:hover{color:var(--danger);border-color:var(--border-bright);background:var(--panel)}
+.calc-tip-close:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.calc-tip-formula{margin-top:4px;font-size:11.5px;line-height:1.45;font-weight:600;color:var(--text-bright)}
+.calc-tip-body{padding:8px 12px}
+.calc-tip-step{display:flex;justify-content:space-between;gap:14px;font-size:11px;line-height:1.75;color:var(--text-dim)}
+.calc-tip-step b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.calc-tip-op{font-size:10.5px;line-height:1.7;font-style:italic;color:var(--text-dim)}
+.calc-tip-res{
+  display:flex;justify-content:space-between;gap:14px;align-items:baseline;
+  margin-top:6px;padding-top:7px;border-top:1px solid var(--border);
+  font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim);
+}
+.calc-tip-res b{font-size:13px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;letter-spacing:0;text-transform:none}
+.calc-tip-note{padding:7px 12px 9px;background:var(--panel-2);border-top:1px solid var(--border);font-size:10.5px;line-height:1.5;color:var(--text-dim)}
+@media (max-width:640px){
+  .calc-tip{max-width:calc(100vw - 24px);min-width:0}
+}
 </style>
 </head>
 <body>
@@ -8918,6 +9016,319 @@ const fmtInt = n => {
 function statusColor(s){ return {on_track:'#10b981', at_risk:'#f59e0b', behind:'#ef4444', no_data:'#475569'}[s]; }
 function gencoColor(g){ return GENCO_COLORS[g] || '#64748b'; }
 
+// ========= V105: tooltip rumus perhitungan =========
+// Kontrak: setiap angka yang merupakan HASIL PERHITUNGAN membawa atribut
+// data-calc berisi HTML penjelas. Satu tooltip tunggal di <body> menampilkannya
+// saat angkanya DIKLIK, lewat event delegation di document — jadi elemen yang
+// baru dibuat oleh render* mana pun ikut bekerja tanpa perlu memasang listener
+// sendiri. Klik, bukan hover: penjelasan ini dibaca dengan sengaja, dan pemicu
+// hover membuatnya menyembul terus saat kursor cuma menyeberangi tabel.
+//
+// Dua jalur pemasangan, keduanya menghasilkan atribut yang sama:
+//   calcAttr(o) → potongan ' data-calc="…" tabindex="0"' untuk template string
+//   setCalc(el, o) → untuk elemen yang sudah ada (jalur getElementById)
+//
+// Angka di dalam langkah perhitungan sengaja ditulis PENUH (fmtInt), bukan
+// ringkasan "3.5K"/"1.2M" seperti di kartunya — justru ketepatan itu yang dicari
+// orang saat membuka tooltip ini.
+function _calcEscText(s){
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+// o = { title, formula, steps:[[label,nilai] | [keterangan]], result:[label,nilai], note }
+function calcTip(o){
+  const e = _calcEscText;
+  // Tombol tutup selalu ada, bukan cadangan: mengklik ulang angkanya memang
+  // menutup panel, tetapi angka itu bisa berada di tabel yang tergulir atau di
+  // tooltip peta yang sempit — satu sasaran tutup yang tetap dan terlihat jauh
+  // lebih murah daripada memaksa orang menemukan lagi angka pemicunya.
+  let h = '<div class="calc-tip-head">'
+    + '<button type="button" class="calc-tip-close" aria-label="Tutup">&#215;</button>'
+    + '<div class="calc-tip-title">' + e(o.title) + '</div>';
+  if (o.formula) h += '<div class="calc-tip-formula">' + e(o.formula) + '</div>';
+  h += '</div><div class="calc-tip-body">';
+  (o.steps || []).forEach(s => {
+    if (!s) return;
+    if (s.length < 2) h += '<div class="calc-tip-op">' + e(s[0]) + '</div>';
+    else h += '<div class="calc-tip-step"><span>' + e(s[0]) + '</span><b>' + e(s[1]) + '</b></div>';
+  });
+  if (o.result) h += '<div class="calc-tip-res"><span>' + e(o.result[0]) + '</span><b>' + e(o.result[1]) + '</b></div>';
+  h += '</div>';
+  if (o.note) h += '<div class="calc-tip-note">' + e(o.note) + '</div>';
+  return h;
+}
+// Escape tingkat kedua: hasil calcTip() adalah HTML, di sini ia menjadi NILAI
+// sebuah atribut. Browser membuka satu lapis saat mem-parse atribut, lapis kedua
+// dibuka saat kita menyuntikkannya lewat innerHTML — jadi dua lapis memang benar.
+// title="" bukan sisa: beberapa angka ini duduk di dalam elemen yang punya title
+// sendiri (mis. kartu ringkasan Kontrak, title="Klik untuk detail"). Tanpa title
+// kosong di anaknya, hover di atas angka akan memunculkan tooltip bawaan browser
+// yang menjanjikan aksi yang KELIRU — mengklik angkanya kini membuka rumus, bukan
+// modal detail. title kosong menghentikan pewarisan itu. Tidak ada elemen
+// ber-data-calc yang punya title sendiri untuk ditimpa.
+function calcAttr(o){
+  return ' data-calc="' + calcTip(o).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '" tabindex="0" title=""';
+}
+function setCalc(el, o){
+  if (!el) return;
+  el.setAttribute('data-calc', calcTip(o));   // setAttribute meng-escape sendiri
+  if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+  if (!el.getAttribute('title')) el.setAttribute('title', '');
+}
+// Hapus penanda saat nilainya tidak terdefinisi (mis. pembagi 0 → "—"): tanpa ini
+// lencana ƒ tetap menempel di tanda strip dan menjanjikan rumus yang tak ada.
+function clearCalc(el){
+  if (!el) return;
+  el.removeAttribute('data-calc');
+  el.removeAttribute('tabindex');
+  if (el.getAttribute('title') === '') el.removeAttribute('title');
+}
+
+let _calcTipEl = null, _calcTipHost = null;
+// Tinggi alami panel, diukur sekali saat dibuka. Isinya tidak berubah selama
+// terbuka, jadi mengukurnya ulang di tiap event scroll cuma memaksa reflow.
+let _calcTipNatH = 0;
+// Isi data-calc yang sedang tampil. Ini identitas CADANGAN, dan ia bukan
+// kemewahan: di tab Peta, elemen jangkar tidak stabil. refreshMarkers() memanggil
+// markerLayer.clearLayers() lalu membangun ulang SETIAP marker berikut tooltipnya,
+// dan Leaflet menulis ulang innerHTML tooltip pada tiap openTooltip(). Beberapa
+// pemanggil refreshMarkers() asinkron (fetchKontrakPasokan, muat ulang data), jadi
+// <span> yang bagi pengguna "angka yang sama" bisa jadi objek DOM yang berbeda dari
+// yang tercatat saat panel dibuka. Membandingkan isi data-calc membuat "klik angka
+// yang sama" tetap berarti TUTUP, bukan buka ulang.
+let _calcTipKey = '';
+function _calcTipNode(){
+  if (!_calcTipEl){
+    _calcTipEl = document.createElement('div');
+    _calcTipEl.className = 'calc-tip';
+    _calcTipEl.setAttribute('role', 'tooltip');
+    document.body.appendChild(_calcTipEl);
+  }
+  return _calcTipEl;
+}
+// Pita vertikal tempat panel boleh berada. Panel ini z-index 200000 — di atas
+// SEGALANYA, termasuk masthead (z 2000) dan rail tab (z 1000) — jadi tanpa batas
+// ini ia dengan senang hati menimpa menu navigasi. Diukur dari DOM, bukan angka
+// tetap: tinggi masthead & rail berubah antar breakpoint, dan di ponsel ada pula
+// nav bawah yang harus dihindari dengan alasan yang sama.
+function _calcTipSafeBand(){
+  const pad = 8;
+  let top = pad, bottom = window.innerHeight - pad;
+  ['.topbar', '.tabs'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el || !el.offsetHeight) return;          // offsetHeight 0 = tersembunyi
+    const r = el.getBoundingClientRect();
+    // Hanya membatasi bila chrome-nya memang sedang menempati puncak viewport.
+    // Bila halaman tergulir dan ia sudah lewat ke atas, r.bottom ≤ top → diabaikan.
+    if (r.bottom > top) top = r.bottom + pad;
+  });
+  const mob = document.querySelector('.mobile-bottom-nav');
+  if (mob && mob.offsetHeight){
+    const r = mob.getBoundingClientRect();
+    if (r.top < bottom) bottom = r.top - pad;
+  }
+  return { top, bottom };
+}
+function _calcTipPosition(host){
+  // Elemen jangkarnya bisa lenyap di bawah kaki kita: tooltip peta dibangun ulang
+  // penuh oleh refreshMarkers() setiap filter/pilihan berubah. Node yang sudah
+  // terlepas mengembalikan rect nol, yang akan melempar panel ini ke pojok layar.
+  if (!host.isConnected){ hideCalcTip(); return; }
+  const tip = _calcTipNode();
+  const r = host.getBoundingClientRect();
+  const pad = 8, gap = 10;
+
+  let left = r.left + r.width / 2 - tip.offsetWidth / 2;
+  left = Math.max(pad, Math.min(left, window.innerWidth - tip.offsetWidth - pad));
+
+  // ATURAN YANG TIDAK BOLEH DILANGGAR: panel tidak pernah menutupi jangkarnya.
+  // Versi lama menjepit posisi ke dalam viewport (`top = innerHeight - th - pad`),
+  // yang untuk angka di paruh bawah layar mendaratkan panel TEPAT DI ATAS angkanya.
+  // Karena panel menangkap pointer, klik kedua pada angka itu mendarat di panel dan
+  // ditelan — tooltipnya jadi tidak bisa ditutup dengan mengklik ulang angkanya.
+  // Karena itu: pilih sisi yang muat, lalu batasi TINGGI panel ke ruang sisi itu
+  // (isinya bergulir) — bukan menggeser panel melewati jangkarnya.
+  const MINH = 80;
+  const band = _calcTipSafeBand();
+  const natH = _calcTipNatH || tip.offsetHeight;
+  const roomAbove = r.top - band.top - gap;
+  const roomBelow = band.bottom - r.bottom - gap;
+  let above;
+  if (natH <= roomAbove) above = true;              // muat utuh di atas
+  else if (natH <= roomBelow) above = false;        // muat utuh di bawah
+  else above = roomAbove >= roomBelow;              // dua-duanya sempit → sisi terlapang
+  // Sisi terpilih terlalu sempit untuk isi yang berarti → pindah ke sisi lain,
+  // selama sisi itu memang lebih longgar.
+  if (above && roomAbove < MINH && roomBelow > roomAbove) above = false;
+  if (!above && roomBelow < MINH && roomAbove > roomBelow) above = true;
+  const room = Math.max(MINH, above ? roomAbove : roomBelow);
+  tip.style.maxHeight = room + 'px';
+
+  const h = tip.offsetHeight;   // diukur ulang: max-height mungkin memotongnya
+  const top = above ? (r.top - gap - h) : (r.bottom + gap);
+  tip.style.left = Math.round(left) + 'px';
+  tip.style.top = Math.round(top) + 'px';
+}
+function showCalcTip(host){
+  const html = host && host.getAttribute('data-calc');
+  if (!html) return;
+  const tip = _calcTipNode();
+  tip.innerHTML = html;
+  tip.style.maxHeight = 'none';        // ukur tinggi alami sekali, sebelum dipotong
+  _calcTipNatH = tip.offsetHeight;
+  _calcTipHost = host;
+  _calcTipKey = html;
+  host.addEventListener('click', _calcHostClick);   // lihat catatan di _calcHostClick
+  tip.classList.add('show');
+  _calcTipPosition(host);
+}
+// Listener yang menempel LANGSUNG di elemen jangkar selama panelnya terbuka.
+// Ini bukan duplikat dari handler delegasi di document, melainkan jaring untuk
+// satu kemungkinan yang tidak bisa saya singkirkan tanpa browser: bila ada
+// sesuatu di antara angka dan document yang menghentikan propagasi klik (Leaflet
+// memasang disableClickPropagation di beberapa containernya), handler document
+// tidak pernah jalan — sementara listener di elemennya sendiri tetap kena, karena
+// fase target mendahului propagasi ke atas. Dipasang di showCalcTip, dilepas di
+// sini, jadi ia hanya hidup selama panel terbuka dan hanya di satu elemen.
+function _calcHostClick(e){
+  if (!calcTipIsOpen()) return;
+  e.stopPropagation();
+  e.preventDefault();
+  hideCalcTip();
+}
+function hideCalcTip(){
+  if (_calcTipEl) _calcTipEl.classList.remove('show');
+  if (_calcTipHost){
+    _calcTipHost.classList.remove('calc-open');
+    _calcTipHost.removeEventListener('click', _calcHostClick);
+  }
+  _calcTipHost = null;
+  _calcTipKey = '';
+}
+function calcTipIsOpen(){ return !!(_calcTipEl && _calcTipEl.classList.contains('show')); }
+function toggleCalcTip(host){
+  const key = host.getAttribute('data-calc') || '';
+  // Dua jalur pencocokan, bukan satu: identitas node untuk kasus normal, dan isi
+  // data-calc untuk jangkar yang sudah dibangun ulang di bawah kaki kita (lihat
+  // catatan di _calcTipKey). Cukup salah satu cocok untuk berarti "angka yang sama".
+  if (calcTipIsOpen() && (host === _calcTipHost || (key && key === _calcTipKey))){
+    hideCalcTip();
+    return;
+  }
+  hideCalcTip();
+  host.classList.add('calc-open');
+  showCalcTip(host);
+}
+// Panel yang jangkarnya sudah dihapus dari DOM tidak punya alasan untuk tetap
+// melayang — posisinya membeku di koordinat elemen yang tak ada lagi. Dipanggil
+// setelah proses yang membangun ulang DOM secara borongan (refreshMarkers).
+function pruneCalcTip(){
+  if (_calcTipHost && !_calcTipHost.isConnected) hideCalcTip();
+}
+(function wireCalcTips(){
+  const hostOf = t => (t && t.closest) ? t.closest('[data-calc]') : null;
+  // capture:true BUKAN detail gaya — ia yang membuat ini bekerja. Beberapa angka
+  // duduk di dalam elemen yang punya onclick sendiri (kartu ringkasan Kontrak →
+  // showKontrakBreakdown). Di fase bubble, handler kartu sudah telanjur jalan
+  // sebelum event sampai ke document, jadi modal akan terbuka BERSAMAAN dengan
+  // tooltip. Menangkapnya di fase capture di document memungkinkan kita
+  // menghentikan event sebelum ia turun ke kartu: klik pada angkanya menjelaskan
+  // angka itu, klik di bagian lain kartu tetap membuka detail seperti semula.
+  // Apakah titik klik jatuh di dalam kotak jangkar yang panelnya sedang terbuka?
+  const hitsOpenHost = e => {
+    if (!calcTipIsOpen() || !_calcTipHost || !_calcTipHost.isConnected) return false;
+    const r = _calcTipHost.getBoundingClientRect();
+    if (!r.width && !r.height) return false;
+    return e.clientX >= r.left && e.clientX <= r.right
+        && e.clientY >= r.top  && e.clientY <= r.bottom;
+  };
+  // JALUR TUTUP PALING DASAR: pointerdown, berbasis koordinat.
+  // 'click' adalah event SINTETIS — browser hanya memunculkannya bila mousedown
+  // dan mouseup mendarat di elemen yang sama, dan bila tidak, ia dilempar ke
+  // leluhur bersama keduanya. Di dalam pane Leaflet, tempat pointer-events dimatikan
+  // dengan lubang sebesar satu angka, syarat itu jauh lebih rapuh daripada di
+  // tabel biasa. 'pointerdown' tidak punya syarat apa pun: ia event input mentah
+  // yang selalu sampai ke listener capture di document untuk setiap tekanan di
+  // mana pun di halaman. Dipasangkan dengan pencocokan koordinat (bukan e.target),
+  // tidak tersisa satu pun asumsi yang bisa gagal.
+  let swallowNextClick = false;
+  document.addEventListener('pointerdown', e => {
+    swallowNextClick = false;          // selalu direset, jangan sampai basi
+    if (!hitsOpenHost(e)) return;
+    swallowNextClick = true;           // click susulan jangan membukanya lagi
+    e.stopPropagation();               // sengaja TANPA preventDefault: itu akan
+    hideCalcTip();                     // memblokir fokus & sintesis click-nya
+  }, true);
+  document.addEventListener('click', e => {
+    if (swallowNextClick){
+      swallowNextClick = false;
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
+    // JALUR TUTUP YANG TIDAK MELEWATI e.target SAMA SEKALI.
+    // Semua jalur di bawah bergantung pada elemen mana yang dilaporkan browser
+    // sebagai sasaran klik, dan justru di situlah ia gagal untuk tooltip peta:
+    // panel itu anak <body>, sedangkan angkanya hidup di dalam pane Leaflet yang
+    // pointer-events-nya none dengan lubang kecil di angka saja — cukup satu hal
+    // yang menggeser hasil hit-test (panel menindih, node diganti, koordinat
+    // meleset beberapa piksel) dan klik kedua tidak pernah dikenali sebagai
+    // "angka yang sama". Mencocokkan KOORDINAT dengan kotak jangkar yang sedang
+    // terbuka tidak punya titik gagal itu: yang dilihat pengguna sebagai mengklik
+    // ulang angka yang sama memang persis itu, terlepas dari apa pun yang
+    // dilaporkan sebagai e.target. Harus dicek PALING AWAL, mendahului penjaga
+    // panel di bawahnya.
+    if (hitsOpenHost(e)){
+      e.stopPropagation();
+      e.preventDefault();
+      hideCalcTip();
+      return;
+    }
+    // Klik DI DALAM panel: tombol × menutup, sisanya dibiarkan supaya teksnya
+    // bisa diseleksi & disalin tanpa panel ikut tertutup.
+    if (_calcTipEl && _calcTipEl.contains(e.target)){
+      if (e.target.closest && e.target.closest('.calc-tip-close')){
+        e.stopPropagation();
+        e.preventDefault();
+        hideCalcTip();
+      }
+      return;
+    }
+    const host = hostOf(e.target);
+    if (!host){ hideCalcTip(); return; }   // klik di luar → tutup, event diteruskan
+    e.stopPropagation();
+    e.preventDefault();
+    toggleCalcTip(host);
+  }, true);
+  // Keyboard: elemen ber-data-calc punya tabindex, jadi Enter/Spasi harus setara klik.
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape'){ hideCalcTip(); return; }
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    const host = hostOf(e.target);
+    if (!host) return;
+    e.preventDefault();   // Spasi jangan menggulung halaman
+    toggleCalcTip(host);
+  });
+  // Tab keluar dari elemen yang tooltipnya terbuka → tutup. Syarat relatedTarget
+  // bukan basa-basi: mengklik teks di dalam tooltip juga melepas fokus dari angka,
+  // tapi dengan relatedTarget null. Tanpa syarat ini, menyeleksi angka di dalam
+  // tooltip justru menutup tooltipnya. Klik-di-luar sudah ditangani handler klik.
+  document.addEventListener('focusout', e => {
+    if (hostOf(e.target) !== _calcTipHost) return;
+    if (!e.relatedTarget) return;   // klik-blur, bukan Tab — lihat catatan di atas
+    // Fokus pindah KE DALAM panel (tombol ×): jangan tutup di sini. Kalau ditutup
+    // sekarang, .show lepas → pointer-events kembali none → mouseup tidak lagi
+    // mendarat di tombolnya, dan klik itu tembus ke elemen di belakang panel
+    // (peta, sel kontrak) sebagai klik yang tak pernah diminta siapa pun.
+    if (_calcTipEl && _calcTipEl.contains(e.relatedTarget)) return;
+    hideCalcTip();
+  });
+  // Elemen bisa ikut bergulir di dalam panel/tabel, jadi posisi diperbarui, bukan
+  // disembunyikan. Capture:true supaya scroll di kontainer dalam ikut tertangkap.
+  window.addEventListener('scroll', () => { if (_calcTipHost) _calcTipPosition(_calcTipHost); }, true);
+  window.addEventListener('resize', hideCalcTip);
+})();
+
 // Power plant SVG icon (stylized coal/biomass plant with smokestacks)
 // Returns SVG string with stroke colored by genco
 function plantIconSvg(color, isSelected){
@@ -9514,6 +9925,11 @@ function refreshMarkers(){
     m.on('mouseover', () => m.setZIndexOffset(MARKER_RISE_Z));
     m.on('mouseout', () => m.setZIndexOffset(baseZ));
   });
+  // V106: clearLayers() di atas menghapus tooltip lama berikut angka-angka
+  // ber-data-calc di dalamnya. Bila panel rumus sedang terbuka dan jangkarnya ada
+  // di situ, ia kini menunjuk node yatim — tutup, jangan biarkan melayang di
+  // koordinat sesuatu yang sudah tidak ada.
+  if (typeof pruneCalcTip === 'function') pruneCalcTip();
 }
 
 // V71: isi tooltip dirombak — selalu tahun berjalan (bukan filter periode peta), dengan
@@ -9563,14 +9979,73 @@ function renderPopup(p){
     <div class="plant-popup-row"><span>Periode</span><span style="color:var(--accent)">${yr}</span></div>
     <div class="plant-popup-row"><span>Target Deklarasi</span><span>${fmtInt(p.target_2026_total || 0)} ton</span></div>
     <div class="plant-popup-row"><span>Target FGD</span><span>${fgd ? fmtInt(fgd) + ' ton' : '—'}</span></div>
-    <div class="plant-popup-row"><span>DO s.d. ${mLabel}</span><span>${fmtInt(ytd.do_sum)} ton</span></div>
-    <div class="plant-popup-row"><span>Realisasi s.d. ${mLabel}</span><span style="color:${statusColor(status)}">${fmtInt(ytd.real)} ton</span></div>
+    <div class="plant-popup-row"><span>DO s.d. ${mLabel}</span><span${calcAttr({
+      title: 'DO s.d. ' + mLabel,
+      formula: 'Σ Delivery Order bulan Jan s/d ' + mLabel + ' ' + yr,
+      steps: [
+        ['Bulan diakumulasi', bulanBerjalan + ' bulan (Jan–' + mLabel + ')'],
+        ['Sumber', 'DO bulanan ' + p.name]
+      ],
+      result: ['DO s.d. ' + mLabel, fmtInt(ytd.do_sum) + ' ton'],
+      note: 'Batas bulannya mengikuti kalender (bulan berjalan), bukan bulan terakhir yang datanya sudah masuk — jadi keterlambatan input tidak memendekkan periodenya.'
+    })}>${fmtInt(ytd.do_sum)} ton</span></div>
+    <div class="plant-popup-row"><span>Realisasi s.d. ${mLabel}</span><span style="color:${statusColor(status)}"${calcAttr({
+      title: 'Realisasi s.d. ' + mLabel,
+      formula: 'Σ realisasi bulan Jan s/d ' + mLabel + ' ' + yr,
+      steps: [
+        ['Bulan diakumulasi', bulanBerjalan + ' bulan (Jan–' + mLabel + ')'],
+        ['Σ realisasi', fmtInt(ytd.real) + ' ton'],
+        ['Target Jan–' + mLabel, ytd.target ? fmtInt(ytd.target) + ' ton' : 'belum ada'],
+        ['Realisasi ÷ target × 100', ytd.target ? pct.toFixed(1) + '%' : '—']
+      ],
+      result: ['Realisasi s.d. ' + mLabel, fmtInt(ytd.real) + ' ton'],
+      note: 'Warna angka ini dihitung terhadap target Jan–' + mLabel + ', BUKAN target setahun penuh, supaya sebanding dengan realisasinya: ≥ 90% hijau, ≥ 50% kuning, di bawah itu merah.'
+    })}>${fmtInt(ytd.real)} ton</span></div>
     <div class="plant-popup-row"><span>Kontrak ${yr}</span><span style="color:${kontrak === null ? 'var(--text-dim)' : shortfall ? '#ef4444' : '#10b981'}">${kontrak === null ? 'belum tersedia' : fmtInt(kontrak) + ' ton'}</span></div>
-    <div class="plant-popup-row"><span>Sisa Kontrak ${yr}</span><span${sisaKontrak === null ? ' style="color:var(--text-dim)"' : ''}>${sisaKontrak === null ? 'belum tersedia' : fmtInt(sisaKontrak) + ' ton'}</span></div>
+    <div class="plant-popup-row"><span>Sisa Kontrak ${yr}</span><span${sisaKontrak === null ? ' style="color:var(--text-dim)"' : calcAttr({
+      title: 'Sisa Kontrak ' + yr,
+      formula: 'Rencana pasokan − realisasi DO',
+      steps: [
+        ['Rencana pasokan (Kontrak ' + yr + ')', fmtInt(kontrak) + ' ton'],
+        ['− realisasi DO', fmtInt(kontrak - sisaKontrak) + ' ton'],
+        (sisaKontrak < 0) ? ['Hasil negatif → realisasi DO melampaui rencana'] : null
+      ],
+      result: ['Sisa Kontrak', fmtInt(sisaKontrak) + ' ton'],
+      note: 'Bersumber dari tabel kontrak_pasokan (workbook "Profil Pasokan" PLTU ini), BUKAN dari tab Daftar Kontrak. Tidak dijepit di 0: nilai negatif itu data yang sah.'
+    })}>${sisaKontrak === null ? 'belum tersedia' : fmtInt(sisaKontrak) + ' ton'}</span></div>
     <div class="plant-popup-row"><span>Est. Kebutuhan BB</span><span>${fmt(batubara)} ton</span></div>
-    <div class="plant-popup-row"><span>% Cofiring</span><span>${cofiringPct === null ? '—' : cofiringPct.toFixed(1) + '%'}</span></div>
-    ${shortfall ? `<div class="plant-popup-warning">⚠ Kontrak &lt; Target FGD: kurang ${fmtInt(fgd - kontrak)} ton</div>` : ''}
-    ${surplus ? `<div class="plant-popup-surplus">✓ Kontrak &gt; Target FGD: lebih ${fmtInt(kontrak - fgd)} ton</div>` : ''}
+    <div class="plant-popup-row"><span>% Cofiring</span><span${cofiringPct === null ? '' : calcAttr({
+      title: '% Cofiring',
+      formula: 'Realisasi Jan–' + mLabel + ' ÷ (Est. kebutuhan BB ÷ 12 × ' + bulanBerjalan + ') × 100',
+      steps: [
+        ['Realisasi Jan–' + mLabel, fmtInt(ytd.real) + ' ton'],
+        ['Est. kebutuhan BB setahun', fmtInt(batubara) + ' ton'],
+        ['÷ 12 × ' + bulanBerjalan + ' bulan berjalan', fmtInt(cofiringBase) + ' ton'],
+        ['Realisasi ÷ pembagi × 100']
+      ],
+      result: ['% Cofiring', cofiringPct.toFixed(1) + '%'],
+      note: 'Kebutuhan batubara diprorata ke jumlah bulan yang sudah berjalan supaya sebanding dengan realisasi yang juga baru sampai bulan itu. Menjumlahkan baris ini untuk semua PLTU menghasilkan kartu "% Cofiring" di panel National Overview.'
+    })}>${cofiringPct === null ? '—' : cofiringPct.toFixed(1) + '%'}</span></div>
+    ${shortfall ? `<div class="plant-popup-warning">⚠ Kontrak &lt; Target FGD: kurang <b${calcAttr({
+      title: 'Kekurangan Kontrak vs Target FGD',
+      formula: 'Target FGD − Kontrak ' + yr,
+      steps: [
+        ['Target FGD', fmtInt(fgd) + ' ton'],
+        ['− Kontrak ' + yr + ' (rencana pasokan)', fmtInt(kontrak) + ' ton']
+      ],
+      result: ['Kurang', fmtInt(fgd - kontrak) + ' ton'],
+      note: 'Kondisi inilah yang memunculkan tanda seru merah pada ikon PLTU di peta.'
+    })}>${fmtInt(fgd - kontrak)} ton</b></div>` : ''}
+    ${surplus ? `<div class="plant-popup-surplus">✓ Kontrak &gt; Target FGD: lebih <b${calcAttr({
+      title: 'Kelebihan Kontrak vs Target FGD',
+      formula: 'Kontrak ' + yr + ' − Target FGD',
+      steps: [
+        ['Kontrak ' + yr + ' (rencana pasokan)', fmtInt(kontrak) + ' ton'],
+        ['− Target FGD', fmtInt(fgd) + ' ton']
+      ],
+      result: ['Lebih', fmtInt(kontrak - fgd) + ' ton'],
+      note: 'Pasangan kebalikan dari peringatan merah: rencana pasokan sudah menutup Target FGD.'
+    })}>${fmtInt(kontrak - fgd)} ton</b></div>` : ''}
   </div>`;
 }
 
@@ -9668,6 +10143,31 @@ function updateKPIs(){
   // TARGET
   const targetVal = useFgd ? fgdPeriod : target;
   document.getElementById('kpi-target').innerHTML = fmt(targetVal) + UNIT;
+  // V105: rumus di balik tiap kartu. Label periode dipakai ulang dari periodLabelStr()
+  // supaya isi tooltip selalu sepadan dengan filter yang sedang aktif.
+  const _cPeriode = periodLabelStr();
+  const _cBulanTxt = (_tbMonth === 'all') ? 'seluruh 12 bulan' : ('bulan ' + MONTHS[parseInt(_tbMonth, 10)]);
+  setCalc(document.getElementById('kpi-target'), useFgd ? {
+    title: 'Target FGD',
+    formula: 'Target FGD nasional untuk ' + _cBulanTxt + ' ' + _tbYear,
+    steps: [
+      ['Target FGD setahun', fmtInt(fgdAnnual) + ' ton'],
+      ['Periode terpilih', _cPeriode],
+      (_tbMonth === 'all') ? ['Bulan «all» → dipakai angka setahun penuh'] : ['Diambil dari rincian FGD bulanan']
+    ],
+    result: ['Target FGD', fmtInt(targetVal) + ' ton'],
+    note: 'FGD hanya tersedia sebagai angka nasional — tidak ada rincian per-PLTU — sehingga filter Genco / Boiler / Regional tidak mengubah nilai ini.'
+  } : {
+    title: 'Target Deklarasi',
+    formula: 'Σ target deklarasi dari seluruh PLTU yang lolos filter, untuk ' + _cBulanTxt,
+    steps: [
+      ['PLTU lolos filter', fmtInt(plants.length) + ' dari ' + fmtInt((DATA.plants || []).length)],
+      ['Periode', _cPeriode],
+      ['Σ target per PLTU', fmtInt(target) + ' ton']
+    ],
+    result: ['Target Deklarasi', fmtInt(targetVal) + ' ton'],
+    note: 'Bulan «all» menjumlahkan target 12 bulan penuh, bukan hanya sampai bulan realisasi terakhir. Untuk pembanding yang sepadan dengan realisasi, lihat kartu Target Berjalan.'
+  });
   const tLabelEl = document.getElementById('kpi-target-label');
   const tMetaEl = document.getElementById('kpi-target-meta');
   if (tLabelEl) tLabelEl.textContent = useFgd ? 'Target FGD' : 'Target Deklarasi';
@@ -9689,10 +10189,26 @@ function updateKPIs(){
       tbEl.innerHTML = fmt(tbVal) + UNIT;
       if (tbMetaEl) tbMetaEl.textContent = 'AKUMULASI TARGET JAN–' + MONTHS[tbCutoff].toUpperCase() + ' ' + _tbYear;
       if (tbCard) tbCard.style.display = '';
+      setCalc(tbEl, {
+        title: 'Target Berjalan (' + (useFgd ? 'FGD' : 'Deklarasi') + ')',
+        formula: 'Σ target bulan Jan s/d ' + MONTHS[tbCutoff] + ' ' + _tbYear,
+        steps: [
+          ['Batas bulan (cutoff)', MONTHS[tbCutoff] + ' ' + _tbYear],
+          (_tbMonth === 'all')
+            ? ['Cutoff = bulan terakhir yang sudah punya realisasi']
+            : ['Cutoff = bulan yang dipilih di filter'],
+          ['Jumlah bulan diakumulasi', (tbCutoff + 1) + ' bulan'],
+          useFgd ? ['Sumber', 'rincian FGD bulanan (nasional)']
+                 : ['Sumber', 'target bulanan ' + fmtInt(plants.length) + ' PLTU terfilter']
+        ],
+        result: ['Target Berjalan', fmtInt(tbVal) + ' ton'],
+        note: 'Kartu ini ada supaya realisasi dibandingkan dengan target pada rentang bulan yang sama — bukan dengan target 12 bulan penuh.'
+      });
     } else {
       // No realisasi yet for this period → nothing to accumulate.
       tbEl.innerHTML = '—';
       if (tbMetaEl) tbMetaEl.textContent = 'BELUM ADA REALISASI';
+      clearCalc(tbEl);
     }
   }
 
@@ -9702,14 +10218,68 @@ function updateKPIs(){
   // sudah mengikuti filter, jadi FGD memakai fgdPeriod supaya persentase selalu dihitung
   // terhadap angka yang benar-benar tampil di kartu Target di sebelahnya.
   const _pctBase = useFgd ? fgdPeriod : target;
-  document.getElementById('kpi-real-pct').textContent = _pctBase ? `${(real/_pctBase*100).toFixed(1)}% VS TARGET ${useFgd ? 'FGD' : 'DEKLARASI'}` : '—';
+  const _pctEl = document.getElementById('kpi-real-pct');
+  _pctEl.textContent = _pctBase ? `${(real/_pctBase*100).toFixed(1)}% VS TARGET ${useFgd ? 'FGD' : 'DEKLARASI'}` : '—';
+  setCalc(document.getElementById('kpi-real'), {
+    title: 'Realisasi',
+    formula: 'Σ realisasi bulanan dari seluruh PLTU yang lolos filter, untuk ' + _cBulanTxt,
+    steps: [
+      ['PLTU lolos filter', fmtInt(plants.length) + ' dari ' + fmtInt((DATA.plants || []).length)],
+      ['Periode', _cPeriode],
+      ['Σ realisasi per PLTU', fmtInt(real) + ' ton']
+    ],
+    result: ['Realisasi', fmtInt(real) + ' ton'],
+    note: 'Tonase realisasi sama di basis Deklarasi maupun FGD — yang berbeda hanya pembandingnya.'
+  });
+  if (_pctBase){
+    setCalc(_pctEl, {
+      title: 'Realisasi vs Target',
+      formula: 'Realisasi ÷ Target ' + (useFgd ? 'FGD' : 'Deklarasi') + ' × 100',
+      steps: [
+        ['Realisasi', fmtInt(real) + ' ton'],
+        ['÷ Target ' + (useFgd ? 'FGD' : 'Deklarasi'), fmtInt(_pctBase) + ' ton'],
+        ['× 100']
+      ],
+      result: ['Persentase', (real / _pctBase * 100).toFixed(1) + '%'],
+      note: 'Pembaginya adalah angka yang persis tampil di kartu Target di sebelah kiri, sehingga keduanya selalu konsisten dengan filter yang aktif.'
+    });
+  } else clearCalc(_pctEl);
 
   // KONFIRMASI DO (sama untuk kedua basis)
   document.getElementById('kpi-do').innerHTML = fmt(doSum) + UNIT;
+  setCalc(document.getElementById('kpi-do'), {
+    title: 'Konfirmasi DO',
+    formula: 'Σ Delivery Order terkonfirmasi dari seluruh PLTU yang lolos filter, untuk ' + _cBulanTxt,
+    steps: [
+      ['PLTU lolos filter', fmtInt(plants.length) + ' dari ' + fmtInt((DATA.plants || []).length)],
+      ['Periode', _cPeriode],
+      ['Σ DO per PLTU', fmtInt(doSum) + ' ton']
+    ],
+    result: ['Konfirmasi DO', fmtInt(doSum) + ' ton'],
+    note: 'DO adalah pasokan yang sudah dipesan/dikonfirmasi — belum tentu sudah terealisasi. Kartu ini hanya ditampilkan untuk tahun berjalan.'
+  });
 
   // GAP = Realisasi − Target (basis aktif)
   const gapVal = useFgd ? gapFgd : gap;
   document.getElementById('kpi-gap').innerHTML = fmt(gapVal) + UNIT;
+  // Pembilang & pembagi diturunkan dari gapVal itu sendiri (pembanding = pembilang −
+  // gap) supaya pengurangan yang ditampilkan di tooltip DIJAMIN menghasilkan angka
+  // yang tertera di kartu, apa pun basis/tahun/bulan yang aktif.
+  const _gapReal = useFgd ? realElapsed : real;
+  const _gapRentang = (_tbMonth === 'all')
+    ? ('Jan–' + (tbCutoff >= 0 ? MONTHS[tbCutoff] : '—') + ' ' + _tbYear)
+    : (MONTHS[parseInt(_tbMonth, 10)] + ' ' + _tbYear);
+  setCalc(document.getElementById('kpi-gap'), {
+    title: 'Gap',
+    formula: 'Realisasi − Target ' + (useFgd ? 'FGD' : 'Deklarasi') + ', keduanya pada rentang ' + _gapRentang,
+    steps: [
+      ['Realisasi ' + _gapRentang, fmtInt(_gapReal) + ' ton'],
+      ['− Target ' + (useFgd ? 'FGD' : 'Deklarasi') + ' rentang sama', fmtInt(_gapReal - gapVal) + ' ton'],
+      (gapVal < 0) ? ['Hasil negatif → realisasi di bawah target'] : ['Hasil positif → realisasi melampaui target']
+    ],
+    result: ['Gap', (gapVal > 0 ? '+' : '') + fmtInt(gapVal) + ' ton'],
+    note: 'Target pembanding hanya sampai bulan yang sudah punya realisasi, bukan target 12 bulan penuh — kalau tidak, gap akan selalu tampak besar di awal tahun.'
+  });
   const gapMetaEl = document.getElementById('kpi-gap-meta');
   if (gapMetaEl) gapMetaEl.textContent = 'REALISASI VS TARGET ' + (useFgd ? 'FGD' : 'DEKLARASI');
   // V54/V55: Animate KPI counters ONLY on first render (avoid flicker on every filter change)
@@ -9772,6 +10342,20 @@ function updateKPIs(){
       if (cofEl) cofEl.innerHTML = cofBase > 0
         ? ((cofReal / cofBase * 100).toFixed(1) + '<span class="kpi-unit">%</span>')
         : '—';
+      if (cofBase > 0){
+        setCalc(cofEl, {
+          title: '% Cofiring Nasional',
+          formula: 'Σ realisasi Jan–' + MONTHS[cofCut] + ' ÷ (Σ kebutuhan batubara ÷ 12 × ' + (cofCut + 1) + ') × 100',
+          steps: [
+            ['Σ realisasi Jan–' + MONTHS[cofCut], fmtInt(cofReal) + ' ton'],
+            ['Σ kebutuhan batubara setahun', fmtInt(cofBatubara) + ' ton'],
+            ['÷ 12 × ' + (cofCut + 1) + ' bulan berjalan', fmtInt(cofBase) + ' ton'],
+            ['Realisasi ÷ pembagi × 100']
+          ],
+          result: ['% Cofiring', (cofReal / cofBase * 100).toFixed(1) + '%'],
+          note: 'Dijumlahkan dulu untuk seluruh PLTU terfilter baru dibagi — bukan rata-rata persentase per PLTU — agar PLTU besar menimbang lebih berat. Jumlah bulan berjalan mengikuti kalender, bukan bulan terakhir yang datanya masuk, supaya keterlambatan input tidak menaikkan persentase.'
+        });
+      } else clearCalc(cofEl);
       if (cofMeta) cofMeta.textContent = cofBase > 0
         ? ('REALISASI JAN–' + (MONTHS[cofCut] || '').toUpperCase() + ' VS KEBUTUHAN BATUBARA')
         : 'KEBUTUHAN BATUBARA BELUM ADA';
@@ -10023,7 +10607,17 @@ function selectPlant(code, fromMarkerClick){
         <div class="progress-block">
           <div class="progress-head">
             <span class="progress-label">Realisasi vs Target</span>
-            <span class="progress-value" style="color:${achColor}">${(pct*100).toFixed(1)}%</span>
+            <span class="progress-value" style="color:${achColor}"${calcAttr({
+              title: 'Achievement · ' + p.name,
+              formula: 'Realisasi 2026 ÷ Target ' + ts.label + ' setahun × 100',
+              steps: [
+                ['Realisasi 2026 YTD', fmtInt(p.real_2026_total || 0) + ' ton'],
+                ['÷ Target ' + ts.label, fmtInt(tTotal) + ' ton'],
+                ['× 100']
+              ],
+              result: ['Achievement', (pct * 100).toFixed(1) + '%'],
+              note: 'Pembaginya target setahun penuh. Ambang warna: ≥ 95% on track (hijau), ≥ 70% at risk (kuning), di bawah itu behind (merah).'
+            })}>${(pct*100).toFixed(1)}%</span>
           </div>
           <div class="progress-bar"><div class="progress-fill" style="width:${fillPct}%;background:${achColor}"></div></div>
           <div class="progress-meta">
@@ -10109,15 +10703,51 @@ function selectPlant(code, fromMarkerClick){
                   <td class="num ${t?'':'dim'}">${t ? fmtInt(t) : '—'}</td>
                   <td class="num ${d?'':'dim'}">${d ? fmtInt(d) : '—'}</td>
                   <td class="num ${r?'':'dim'}">${r ? fmtInt(r) : '—'}</td>
-                  <td class="num ${g > 0 ? 'pos' : g < 0 ? 'neg' : 'dim'}">${g ? (g > 0 ? '+' : '') + fmtInt(g) : '—'}</td>
+                  <td class="num ${g > 0 ? 'pos' : g < 0 ? 'neg' : 'dim'}"${g ? calcAttr({
+                    title: 'Gap ' + m + ' ' + selYear,
+                    formula: 'Realisasi − Target ' + (ts.isFgd ? 'FGD' : 'Deklarasi') + ' bulan ' + m,
+                    steps: [
+                      ['Realisasi ' + m, fmtInt(r) + ' ton'],
+                      ['− Target ' + m, (t === null ? '—' : fmtInt(t) + ' ton')]
+                    ],
+                    result: ['Gap', (g > 0 ? '+' : '') + fmtInt(g) + ' ton'],
+                    note: ts.isFgd
+                      ? 'Basis FGD: gap dihitung ulang dari rincian FGD bulanan.'
+                      : 'Basis Deklarasi: gap diambil dari kolom gap hasil unggahan Excel, bukan dihitung ulang di browser.'
+                  }) : ''}>${g ? (g > 0 ? '+' : '') + fmtInt(g) : '—'}</td>
                 </tr>`;
               }).join('');
               const foot = `<tfoot><tr>
                 <td>Total</td>
-                <td class="num ${sT?'':'dim'}">${sT ? fmtInt(sT) : '—'}</td>
-                <td class="num ${sD?'':'dim'}">${sD ? fmtInt(sD) : '—'}</td>
-                <td class="num ${sR?'':'dim'}">${sR ? fmtInt(sR) : '—'}</td>
-                <td class="num ${sG > 0 ? 'pos' : sG < 0 ? 'neg' : 'dim'}">${sG ? (sG > 0 ? '+' : '') + fmtInt(sG) : '—'}</td>
+                <td class="num ${sT?'':'dim'}"${sT ? calcAttr({
+                  title: 'Total Target ' + selYear,
+                  formula: 'Σ target 12 bulan yang ada nilainya',
+                  steps: [['Bulan dijumlahkan', 'hanya bulan yang tidak «—»']],
+                  result: ['Total Target', fmtInt(sT) + ' ton'],
+                  note: 'Sengaja hanya menjumlahkan angka yang benar-benar tampil di kolomnya, supaya baris Total selalu konsisten dengan baris-baris di atasnya.'
+                }) : ''}>${sT ? fmtInt(sT) : '—'}</td>
+                <td class="num ${sD?'':'dim'}"${sD ? calcAttr({
+                  title: 'Total DO ' + selYear,
+                  formula: 'Σ DO 12 bulan',
+                  steps: [['Bulan dijumlahkan', 'Jan–Des']],
+                  result: ['Total DO', fmtInt(sD) + ' ton']
+                }) : ''}>${sD ? fmtInt(sD) : '—'}</td>
+                <td class="num ${sR?'':'dim'}"${sR ? calcAttr({
+                  title: 'Total Realisasi ' + selYear,
+                  formula: 'Σ realisasi 12 bulan',
+                  steps: [['Bulan dijumlahkan', 'Jan–Des']],
+                  result: ['Total Realisasi', fmtInt(sR) + ' ton']
+                }) : ''}>${sR ? fmtInt(sR) : '—'}</td>
+                <td class="num ${sG > 0 ? 'pos' : sG < 0 ? 'neg' : 'dim'}"${sG ? calcAttr({
+                  title: 'Total Gap ' + selYear,
+                  formula: 'Σ gap 12 bulan',
+                  steps: [
+                    ['Total Realisasi', fmtInt(sR) + ' ton'],
+                    ['Total Target', sT ? fmtInt(sT) + ' ton' : '—']
+                  ],
+                  result: ['Total Gap', (sG > 0 ? '+' : '') + fmtInt(sG) + ' ton'],
+                  note: 'Menjumlahkan gap per bulan, bukan Total Realisasi − Total Target. Bila ada bulan yang targetnya kosong, kedua cara itu bisa berbeda.'
+                }) : ''}>${sG ? (sG > 0 ? '+' : '') + fmtInt(sG) : '—'}</td>
               </tr></tfoot>`;
               return `<thead><tr><th>Month</th><th class="num">Target ${ts.isFgd ? 'FGD' : ''}</th><th class="num">DO</th><th class="num">Real</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody>${foot}`;
             }
@@ -10192,8 +10822,27 @@ function selectPlant(code, fromMarkerClick){
             <div style="background:var(--warn);flex:1" title="Kebutuhan batubara"></div>
           </div>` : ''}
           <div class="progress-meta">
-            <span><b style="color:var(--accent)">${biomassaRatio.toFixed(1)}%</b> biomassa</span>
-            <span><b style="color:var(--warn)">${(100-biomassaRatio).toFixed(1)}%</b> batubara</span>
+            <span><b style="color:var(--accent)"${calcAttr({
+              title: 'Porsi Biomassa (rencana)',
+              formula: 'Target biomassa ÷ (Target biomassa + Kebutuhan batubara) × 100',
+              steps: [
+                ['Target biomassa ' + ts.label, fmtInt(tTotal) + ' ton'],
+                ['+ Kebutuhan batubara', fmtInt(kebutuhanBatubara) + ' ton'],
+                ['= total bahan bakar', fmtInt(tTotal + kebutuhanBatubara) + ' ton'],
+                ['Target biomassa ÷ total × 100']
+              ],
+              result: ['Porsi biomassa', biomassaRatio.toFixed(1) + '%'],
+              note: 'Berbasis RENCANA (target), bukan realisasi. Bandingkan dengan blok "Realisasi Biomassa vs Kebutuhan Batubara" di bawahnya.'
+            })}>${biomassaRatio.toFixed(1)}%</b> biomassa</span>
+            <span><b style="color:var(--warn)"${calcAttr({
+              title: 'Porsi Batubara (rencana)',
+              formula: '100% − porsi biomassa',
+              steps: [
+                ['Porsi biomassa', biomassaRatio.toFixed(1) + '%'],
+                ['100 − porsi biomassa']
+              ],
+              result: ['Porsi batubara', (100 - biomassaRatio).toFixed(1) + '%']
+            })}>${(100-biomassaRatio).toFixed(1)}%</b> batubara</span>
           </div>
           <div class="progress-meta" style="margin-top:4px">
             <span>BIOMASSA <b>${fmtInt(tTotal)}</b> ton</span>
@@ -10214,8 +10863,27 @@ function selectPlant(code, fromMarkerClick){
             <div style="background:var(--warn);flex:1" title="Kebutuhan batubara"></div>
           </div>` : ''}
           <div class="progress-meta">
-            <span><b style="color:var(--accent)">${realBiomassaRatio.toFixed(1)}%</b> biomassa</span>
-            <span><b style="color:var(--warn)">${(100-realBiomassaRatio).toFixed(1)}%</b> batubara</span>
+            <span><b style="color:var(--accent)"${calcAttr({
+              title: 'Porsi Biomassa (realisasi)',
+              formula: 'Realisasi biomassa ÷ (Realisasi biomassa + Kebutuhan batubara) × 100',
+              steps: [
+                ['Realisasi biomassa 2026', fmtInt(realBiomassa) + ' ton'],
+                ['+ Kebutuhan batubara', fmtInt(kebutuhanBatubara) + ' ton'],
+                ['= total bahan bakar', fmtInt(realBiomassa + kebutuhanBatubara) + ' ton'],
+                ['Realisasi ÷ total × 100']
+              ],
+              result: ['Porsi biomassa', realBiomassaRatio.toFixed(1) + '%'],
+              note: 'Realisasi biomassa YTD dibandingkan kebutuhan batubara SETAHUN, jadi porsinya cenderung lebih kecil dari porsi rencana di blok atas.'
+            })}>${realBiomassaRatio.toFixed(1)}%</b> biomassa</span>
+            <span><b style="color:var(--warn)"${calcAttr({
+              title: 'Porsi Batubara (realisasi)',
+              formula: '100% − porsi biomassa realisasi',
+              steps: [
+                ['Porsi biomassa realisasi', realBiomassaRatio.toFixed(1) + '%'],
+                ['100 − porsi biomassa']
+              ],
+              result: ['Porsi batubara', (100 - realBiomassaRatio).toFixed(1) + '%']
+            })}>${(100-realBiomassaRatio).toFixed(1)}%</b> batubara</span>
           </div>
           <div class="progress-meta" style="margin-top:4px">
             <span>BIOMASSA <b>${fmtInt(realBiomassa)}</b> ton</span>
@@ -10403,11 +11071,25 @@ function renderPlantYoyTable(p, monthSel){
     if (!prev) return null;
     return ((curr - prev) / prev) * 100;
   }
-  function fmtDelta(d){
+  // V105: yCurr/yPrev dibawa masuk supaya tooltip bisa menampilkan kedua angka
+  // sumbernya, bukan cuma hasil persentasenya.
+  function fmtDelta(d, yCurr, yPrev){
     if (d === null) return '<span style="color:var(--text-dim)">—</span>';
     const sign = d >= 0 ? '+' : '';
     const color = d >= 0 ? 'var(--accent)' : 'var(--danger)';
-    return '<span style="color:' + color + '">' + sign + d.toFixed(1) + '%</span>';
+    return '<span style="color:' + color + '"' + calcAttr({
+      title: 'YoY ' + yCurr + ' vs ' + yPrev,
+      formula: '(Realisasi ' + yCurr + ' − Realisasi ' + yPrev + ') ÷ Realisasi ' + yPrev + ' × 100',
+      steps: [
+        ['Realisasi ' + yCurr, fmtInt(values[yCurr]) + ' ton'],
+        ['− Realisasi ' + yPrev, fmtInt(values[yPrev]) + ' ton'],
+        ['= selisih', (values[yCurr] - values[yPrev] >= 0 ? '+' : '') + fmtInt(values[yCurr] - values[yPrev]) + ' ton'],
+        ['÷ Realisasi ' + yPrev + ' × 100']
+      ],
+      result: ['YoY', sign + d.toFixed(1) + '%'],
+      note: (isAnnual ? 'Membandingkan total setahun' : 'Membandingkan bulan ' + MONTHS[mi] + ' saja')
+        + (yCurr === '2026' ? '. 2026 masih YTD, jadi perbandingannya belum setara tahun penuh.' : '.')
+    }) + '>' + sign + d.toFixed(1) + '%</span>';
   }
   const d24 = delta(values['2024'], values['2023']);
   const d25 = delta(values['2025'], values['2024']);
@@ -10419,9 +11101,9 @@ function renderPlantYoyTable(p, monthSel){
       <thead><tr><th>Year${periodLabel}</th><th class="num">Realisasi (ton)</th><th class="num">YoY</th></tr></thead>
       <tbody>
         <tr><td>2023</td><td class="num">${fmtInt(values['2023'])}</td><td class="num"><span style="color:var(--text-dim)">—</span></td></tr>
-        <tr><td>2024</td><td class="num">${fmtInt(values['2024'])}</td><td class="num">${fmtDelta(d24)}</td></tr>
-        <tr><td>2025</td><td class="num">${fmtInt(values['2025'])}</td><td class="num">${fmtDelta(d25)}</td></tr>
-        <tr><td>2026${tag2026}</td><td class="num"><b>${fmtInt(values['2026'])}</b></td><td class="num">${fmtDelta(d26)}</td></tr>
+        <tr><td>2024</td><td class="num">${fmtInt(values['2024'])}</td><td class="num">${fmtDelta(d24, '2024', '2023')}</td></tr>
+        <tr><td>2025</td><td class="num">${fmtInt(values['2025'])}</td><td class="num">${fmtDelta(d25, '2025', '2024')}</td></tr>
+        <tr><td>2026${tag2026}</td><td class="num"><b>${fmtInt(values['2026'])}</b></td><td class="num">${fmtDelta(d26, '2026', '2025')}</td></tr>
       </tbody>
     </table>
   `;
@@ -12210,15 +12892,39 @@ function renderRealView(){
     { label:'2026 YTD', value: yearSums['2026'], prev: yearSums['2025'], color:'#10b981' },
   ];
   const statsEl = document.getElementById('real-summary');
-  statsEl.innerHTML = stats.map(s => {
+  const _rNPltu = filteredPlants.length, _rNAll = (DATA.plants || []).length;
+  statsEl.innerHTML = stats.map((s, si) => {
     let delta = '';
     if (s.prev && s.value > 0){
       const d = ((s.value - s.prev)/s.prev*100);
-      delta = `<div class="summary-stat-delta ${d>0?'up':'down'}">${d>0?'▲':'▼'} ${Math.abs(d).toFixed(1)}% vs prev year</div>`;
+      const prevLabel = stats[si - 1] ? stats[si - 1].label : 'tahun sebelumnya';
+      delta = `<div class="summary-stat-delta ${d>0?'up':'down'}"${calcAttr({
+        title: 'Perubahan vs Tahun Sebelumnya',
+        formula: '(Tahun ini − Tahun lalu) ÷ Tahun lalu × 100',
+        steps: [
+          [s.label, fmtInt(s.value) + ' ton'],
+          ['− ' + prevLabel, fmtInt(s.prev) + ' ton'],
+          ['= selisih', (s.value - s.prev > 0 ? '+' : '') + fmtInt(s.value - s.prev) + ' ton'],
+          ['÷ ' + prevLabel + ' × 100']
+        ],
+        result: ['Perubahan', (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + '%'],
+        note: si === 3
+          ? 'Perbandingan ini tidak setara periode: 2026 baru berjalan sebagian tahun sementara 2025 sudah penuh.'
+          : 'Keduanya tahun penuh, dari ' + fmtInt(_rNPltu) + ' PLTU yang lolos filter.'
+      })}>${d>0?'▲':'▼'} ${Math.abs(d).toFixed(1)}% vs prev year</div>`;
     }
     return `<div class="summary-stat" style="--stat-accent:${s.color}">
       <div class="summary-stat-label">${s.label}</div>
-      <div class="summary-stat-value">${fmt(s.value)} <span style="font-size:11px;color:var(--text-dim)">ton</span></div>
+      <div class="summary-stat-value"${calcAttr({
+        title: s.label,
+        formula: 'Σ realisasi bulanan dari ' + _rNPltu + ' PLTU yang lolos filter',
+        steps: [
+          ['PLTU lolos filter', fmtInt(_rNPltu) + ' dari ' + fmtInt(_rNAll)],
+          ['Bulan dijumlahkan', si === 3 ? 'Jan s/d bulan terakhir yang ada datanya' : 'Jan–Des'],
+          ['Sumber', 'realisasi bulanan per PLTU']
+        ],
+        result: ['Total', fmtInt(s.value) + ' ton']
+      })}>${fmt(s.value)} <span style="font-size:11px;color:var(--text-dim)">ton</span></div>
       ${delta}
     </div>`;
   }).join('');
@@ -13880,21 +14586,57 @@ function renderParetoKpis(){
   const achievement = agg.target > 0 ? (agg.real / agg.target * 100) : 0;
   const lossPct = agg.target > 0 ? (agg.loss / agg.target * 100) : 0;
 
-  function card(eyebrow, value, unit, sub, accent){
+  // V105: argumen `calc` opsional — objek untuk calcAttr(), dipasang pada elemen
+  // nilainya (bukan kartunya) supaya lencana ƒ menempel tepat di angka.
+  function card(eyebrow, value, unit, sub, accent, calc){
     return `
       <div class="pareto-kpi-card" style="border-left:3px solid ${accent}">
         <div class="pareto-kpi-eyebrow">${eyebrow}</div>
-        <div class="pareto-kpi-value">${value}<span class="pareto-kpi-unit">${unit||''}</span></div>
+        <div class="pareto-kpi-value"${calc ? calcAttr(calc) : ''}>${value}<span class="pareto-kpi-unit">${unit||''}</span></div>
         <div class="pareto-kpi-sub">${sub||''}</div>
       </div>`;
   }
+  const _pPeriode = (typeof periodLabel === 'function') ? periodLabel() : String(paretoState.monthSel);
+  const _pSumber = (paretoState.monthSel === 'ytd')
+    ? 'kolom AKUM (kumulatif) evaluasi Pareto'
+    : ('rincian bulan ' + _pPeriode + ' evaluasi Pareto');
 
   gridEl.innerHTML = [
-    card('Target', fmtK(agg.target), 'ton', plants.length + ' PLTU', '#0F496E'),
-    card('Realisasi', fmtK(agg.real), 'ton', achievement.toFixed(1) + '% dari target', '#10b981'),
-    card('Loss', fmtK(agg.loss), 'ton', lossPct.toFixed(1) + '% dari target', '#ef4444'),
+    card('Target', fmtK(agg.target), 'ton', plants.length + ' PLTU', '#0F496E', {
+      title: 'Target (Pareto)',
+      formula: 'Σ target dari ' + plants.length + ' PLTU yang lolos filter, periode ' + _pPeriode,
+      steps: [['PLTU lolos filter', fmtInt(plants.length)], ['Periode', _pPeriode], ['Sumber', _pSumber]],
+      result: ['Target', fmtInt(agg.target) + ' ton']
+    }),
+    card('Realisasi', fmtK(agg.real), 'ton', achievement.toFixed(1) + '% dari target', '#10b981', {
+      title: 'Realisasi (Pareto)',
+      formula: 'Σ realisasi dari ' + plants.length + ' PLTU yang lolos filter, periode ' + _pPeriode,
+      steps: [['PLTU lolos filter', fmtInt(plants.length)], ['Periode', _pPeriode], ['Sumber', _pSumber]],
+      result: ['Realisasi', fmtInt(agg.real) + ' ton']
+    }),
+    card('Loss', fmtK(agg.loss), 'ton', lossPct.toFixed(1) + '% dari target', '#ef4444', {
+      title: 'Loss (Pareto)',
+      formula: 'Σ loss seluruh kategori penyebab, dari ' + plants.length + ' PLTU, periode ' + _pPeriode,
+      steps: [
+        ['Σ loss', fmtInt(agg.loss) + ' ton'],
+        ['÷ Target', fmtInt(agg.target) + ' ton'],
+        ['× 100 → porsi terhadap target', lossPct.toFixed(1) + '%']
+      ],
+      result: ['Loss', fmtInt(agg.loss) + ' ton'],
+      note: 'Loss berasal dari evaluasi Pareto per kategori penyebab (a, b, c, …), bukan dari selisih target−realisasi. Karena itu Loss tidak selalu sama persis dengan gap.'
+    }),
     card('Achievement', achievement.toFixed(1) + '%', '', achievement >= 100 ? 'Surplus' : (achievement >= 80 ? 'On track' : 'Under target'),
-         achievement >= 100 ? '#10b981' : achievement >= 80 ? '#f59e0b' : '#ef4444'),
+         achievement >= 100 ? '#10b981' : achievement >= 80 ? '#f59e0b' : '#ef4444', {
+      title: 'Achievement (Pareto)',
+      formula: 'Realisasi ÷ Target × 100',
+      steps: [
+        ['Realisasi', fmtInt(agg.real) + ' ton'],
+        ['÷ Target', fmtInt(agg.target) + ' ton'],
+        ['× 100']
+      ],
+      result: ['Achievement', achievement.toFixed(1) + '%'],
+      note: 'Ambang warna: ≥ 100% surplus (hijau), ≥ 80% on track (kuning), di bawah itu under target (merah).'
+    }),
   ].join('');
   // V54/V55: Animate pareto KPI values ONLY once (avoid flicker on filter change)
   if (!window._paretoKpiAnimatedOnce){
@@ -14348,7 +15090,20 @@ function renderParetoTopTable(){
       + '<td class="num">' + fmtK(r.target) + '</td>'
       + '<td class="num">' + fmtK(r.real) + '</td>'
       + '<td class="num" style="color:#ef4444;font-weight:600">' + fmtK(r.loss) + '</td>'
-      + '<td class="num" style="color:' + achColor + ';font-weight:600">' + r.achievement.toFixed(1) + '%</td>'
+      + '<td class="num" style="color:' + achColor + ';font-weight:600"'
+        + calcAttr({
+            title: 'Achievement · ' + r.pltu,
+            formula: 'Realisasi ÷ Target × 100',
+            steps: [
+              ['Realisasi', fmtInt(r.real) + ' ton'],
+              ['÷ Target', fmtInt(r.target) + ' ton'],
+              ['× 100'],
+              ['Loss tercatat', fmtInt(r.loss) + ' ton']
+            ],
+            result: ['Achievement', r.achievement.toFixed(1) + '%'],
+            note: 'Periode ' + periodLabel() + '. Target 0 → achievement ditampilkan 0% karena rasionya tidak terdefinisi.'
+          })
+        + '>' + r.achievement.toFixed(1) + '%</td>'
       + '<td class="pareto-top-cat">' + domBadge + '</td>'
       + '</tr>';
   }).filter(s => s.length > 0).join('');
@@ -15211,11 +15966,30 @@ function openPemasokModal(pemasok, focusPltu, kontrakNo){
           '</div>' +
           '<div class="pemasok-stat-cell">' +
             '<div class="pemasok-stat-label">Net Sisa</div>' +
-            '<div class="pemasok-stat-value" style="color:' + sisaColor + '">' + fmtInt(sisaC) + ' <span style="font-size:10px;color:var(--text-dim);font-weight:400">MT</span></div>' +
+            '<div class="pemasok-stat-value" style="color:' + sisaColor + '"' + calcAttr({
+              title: 'Net Sisa Kontrak',
+              formula: 'Volume kontrak − realisasi total seluruh tahun',
+              steps: [
+                ['Volume kontrak', fmtInt(vol) + ' MT'],
+                ['− realisasi total 2023–2026', fmtInt(totalRealC) + ' MT']
+              ],
+              result: ['Net Sisa', fmtInt(sisaC) + ' MT'],
+              note: 'Tidak dijepit di 0: nilai negatif berarti realisasi sudah melampaui volume kontrak, dan itu memang informasi yang perlu terlihat di sini.'
+            }) + '>' + fmtInt(sisaC) + ' <span style="font-size:10px;color:var(--text-dim);font-weight:400">MT</span></div>' +
           '</div>' +
           '<div class="pemasok-stat-cell">' +
             '<div class="pemasok-stat-label">% Realisasi</div>' +
-            '<div class="pemasok-stat-value"><span class="kontrak-pct-badge ' + pctClass + '" style="font-size:11px;padding:4px 10px">' + pctC.toFixed(1) + '%</span></div>' +
+            '<div class="pemasok-stat-value"><span class="kontrak-pct-badge ' + pctClass + '" style="font-size:11px;padding:4px 10px"' + calcAttr({
+              title: '% Realisasi Kontrak',
+              formula: 'Realisasi total ÷ Volume kontrak × 100',
+              steps: [
+                ['Realisasi total 2023–2026', fmtInt(totalRealC) + ' MT'],
+                ['÷ Volume kontrak', fmtInt(vol) + ' MT'],
+                ['× 100']
+              ],
+              result: ['% Realisasi', pctC.toFixed(1) + '%'],
+              note: 'Terhadap volume SEUMUR kontrak. Kontrak multi-tahun yang baru berjalan sebagian wajar menunjukkan persentase rendah.'
+            }) + '>' + pctC.toFixed(1) + '%</span></div>' +
           '</div>' +
         '</div>' +
         '<dl class="pemasok-contract-info">' +
@@ -15424,23 +16198,63 @@ function renderKontrakSummary(){
   summaryEl.innerHTML =
     '<div class="kontrak-summary-cell info kontrak-summary-clickable" onclick="showKontrakBreakdown(\'active\')" title="Klik untuk detail">' +
       '<div class="kontrak-summary-label">Active Contracts</div>' +
-      '<div class="kontrak-summary-value">' + fmtInt(totalActiveContracts) +
+      '<div class="kontrak-summary-value"' + calcAttr({
+        title: 'Active Contracts',
+        formula: 'Cacah kontrak dengan tanggal akhir ≥ hari ini dan tidak diterminasi',
+        steps: [
+          ['Total kontrak terdaftar', fmtInt(all.length)],
+          ['Tanggal acuan', todayStr],
+          ['− kontrak sudah lewat / terminasi', fmtInt(all.length - totalActiveContracts)]
+        ],
+        result: ['Kontrak aktif', fmtInt(totalActiveContracts)],
+        note: 'Mencakup ' + uniquePltus + ' PLTU dan ' + uniqueMitras + ' mitra unik.'
+      }) + '>' + fmtInt(totalActiveContracts) +
         ' <span class="unit">of ' + fmtInt(all.length) + '</span></div>' +
       '<div class="kontrak-summary-sub">As of ' + todayStr + ' · ' + uniquePltus + ' PLTU · ' + uniqueMitras + ' mitra · <u>Lihat detail</u></div>' +
     '</div>' +
     '<div class="kontrak-summary-cell kontrak-summary-clickable" onclick="showKontrakBreakdown(\'vol\')" title="Klik untuk detail">' +
       '<div class="kontrak-summary-label">Total Vol Kontrak Aktif</div>' +
-      '<div class="kontrak-summary-value">' + fmtInt(totalActiveVol) + ' <span class="unit">MT</span></div>' +
+      '<div class="kontrak-summary-value"' + calcAttr({
+        title: 'Total Vol Kontrak Aktif',
+        formula: 'Σ volume kontrak (vol_mt) dari seluruh kontrak aktif',
+        steps: [
+          ['Kontrak aktif', fmtInt(totalActiveContracts) + ' kontrak'],
+          ['Σ volume kontrak', fmtInt(totalActiveVol) + ' MT']
+        ],
+        result: ['Total volume', fmtInt(totalActiveVol) + ' MT'],
+        note: 'Volume seumur kontrak, bukan per tahun. Kontrak multi-tahun ikut penuh.'
+      }) + '>' + fmtInt(totalActiveVol) + ' <span class="unit">MT</span></div>' +
       '<div class="kontrak-summary-sub">Sum of contracted volume · <u>Lihat detail</u></div>' +
     '</div>' +
     '<div class="kontrak-summary-cell warn kontrak-summary-clickable" onclick="showKontrakBreakdown(\'sisa\')" title="Klik untuk detail">' +
       '<div class="kontrak-summary-label">Total Sisa Kontrak Aktif</div>' +
-      '<div class="kontrak-summary-value">' + fmtInt(totalActiveSisa) + ' <span class="unit">MT</span></div>' +
+      '<div class="kontrak-summary-value"' + calcAttr({
+        title: 'Total Sisa Kontrak Aktif',
+        formula: 'Σ maks(0, volume kontrak − realisasi total) per kontrak aktif',
+        steps: [
+          ['Σ volume kontrak aktif', fmtInt(totalActiveVol) + ' MT'],
+          ['Σ realisasi 2023–2026', fmtInt(totalActiveReal) + ' MT'],
+          ['Per kontrak: sisa negatif dijadikan 0'],
+          ['Lalu dijumlahkan']
+        ],
+        result: ['Total sisa', fmtInt(totalActiveSisa) + ' MT'],
+        note: 'Karena setiap kontrak dijepit di 0 lebih dulu, angka ini biasanya LEBIH BESAR dari (Σ volume − Σ realisasi): kontrak yang over-realisasi tidak menutupi kekurangan kontrak lain.'
+      }) + '>' + fmtInt(totalActiveSisa) + ' <span class="unit">MT</span></div>' +
       '<div class="kontrak-summary-sub">Σ sisa per kontrak (min 0, tanpa terminasi) · <u>Lihat detail</u></div>' +
     '</div>' +
     '<div class="kontrak-summary-cell">' +
       '<div class="kontrak-summary-label">Overall Realisasi</div>' +
-      '<div class="kontrak-summary-value">' + overallPct.toFixed(1) + '%</div>' +
+      '<div class="kontrak-summary-value"' + calcAttr({
+        title: 'Overall Realisasi',
+        formula: 'Σ realisasi ÷ Σ volume kontrak aktif × 100',
+        steps: [
+          ['Σ realisasi 2023–2026', fmtInt(totalActiveReal) + ' MT'],
+          ['÷ Σ volume kontrak aktif', fmtInt(totalActiveVol) + ' MT'],
+          ['× 100']
+        ],
+        result: ['Overall Realisasi', overallPct.toFixed(1) + '%'],
+        note: 'Tanpa clamp: realisasi berlebih pada satu kontrak ikut menaikkan angka ini. Kontrak multi-tahun yang baru berjalan sebagian menekan persentase ke bawah secara wajar.'
+      }) + '>' + overallPct.toFixed(1) + '%</div>' +
       '<div class="kontrak-summary-sub">' + fmtInt(totalActiveReal) + ' / ' + fmtInt(totalActiveVol) + ' MT</div>' +
       '<div class="kontrak-progress"><div class="kontrak-progress-bar" style="width:' + Math.min(overallPct, 100) + '%"></div></div>' +
     '</div>' +
@@ -15461,11 +16275,30 @@ function renderKontrakPasokanCells(){
   const agg = kontrakPasokanTotals();
   const belum = '<div class="kontrak-summary-value" style="font-size:15px;color:var(--text-dim)">belum tersedia</div>';
   const volCell = agg.nVol > 0
-    ? '<div class="kontrak-summary-value">' + fmtInt(Math.round(agg.vol)) + ' <span class="unit">MT</span></div>' +
+    ? '<div class="kontrak-summary-value"' + calcAttr({
+        title: 'Volume Kontrak ' + yr,
+        formula: 'Σ rencana pasokan ' + yr + ' dari seluruh PLTU yang punya data kontrak pasokan',
+        steps: [
+          ['PLTU dengan data', fmtInt(agg.nVol) + ' dari ' + fmtInt(agg.nPlants)],
+          ['Σ rencana pasokan', fmtInt(Math.round(agg.vol)) + ' MT']
+        ],
+        result: ['Volume Kontrak', fmtInt(Math.round(agg.vol)) + ' MT'],
+        note: 'Bersumber dari tabel kontrak_pasokan (workbook "Profil Pasokan" per PLTU), BUKAN dari Daftar Kontrak. Karena itu angkanya tidak sebanding dengan kartu "Total Vol Kontrak Aktif" dan tidak mengikuti filter tab ini.'
+      }) + '>' + fmtInt(Math.round(agg.vol)) + ' <span class="unit">MT</span></div>' +
       '<div class="kontrak-summary-sub">Rencana pasokan PLTU · nasional · <u>Lihat detail</u></div>'
     : belum + '<div class="kontrak-summary-sub">Data rencana pasokan belum termuat</div>';
   const sisaCell = agg.nSisa > 0
-    ? '<div class="kontrak-summary-value">' + fmtInt(Math.round(agg.sisa)) + ' <span class="unit">MT</span></div>' +
+    ? '<div class="kontrak-summary-value"' + calcAttr({
+        title: 'Sisa Kontrak ' + yr,
+        formula: 'Σ (rencana pasokan − realisasi DO) per PLTU',
+        steps: [
+          ['PLTU dengan realisasi DO', fmtInt(agg.nSisa) + ' dari ' + fmtInt(agg.nPlants)],
+          ['Σ rencana pasokan (PLTU tsb)', fmtInt(Math.round(agg.sisa + agg.doReal)) + ' MT'],
+          ['− Σ realisasi DO', fmtInt(Math.round(agg.doReal)) + ' MT']
+        ],
+        result: ['Sisa Kontrak', fmtInt(Math.round(agg.sisa)) + ' MT'],
+        note: 'Tidak dijepit di 0 — realisasi DO yang melampaui rencana memang bisa membuat sisa negatif, dan itu data yang sah. PLTU yang belum punya realisasi DO dihitung pada Volume tetapi tidak di sini.'
+      }) + '>' + fmtInt(Math.round(agg.sisa)) + ' <span class="unit">MT</span></div>' +
       '<div class="kontrak-summary-sub">Rencana − realisasi DO · PLTU · <u>Lihat detail</u></div>'
     : belum + '<div class="kontrak-summary-sub">Realisasi DO belum termuat</div>';
   return '<div class="kontrak-summary-cell info' + (agg.nVol > 0 ? ' kontrak-summary-clickable' : '') + '"' +
@@ -15887,17 +16720,57 @@ function renderKontrakBreakdownBody(){
     html += '<td style="white-space:nowrap">' + akhirCell + '</td>';
     html += '<td class="num">' + fmtInt(r.vol) + '</td>';
     html += '<td class="num">' + fmtInt(r.totalReal) + '</td>';
-    html += '<td class="num" style="color:' + sisaColor + '">' + fmtInt(r.sisa) + '</td>';
-    html += '<td style="text-align:center"><span class="kontrak-pct-badge ' + badgeClass(r.pct) + '" style="font-size:9px;padding:2px 5px;min-width:40px">' + r.pct.toFixed(1) + '%</span></td>';
+    html += '<td class="num" style="color:' + sisaColor + '"' + calcAttr({
+      title: 'Sisa · ' + r.pemasok,
+      formula: 'Volume kontrak − realisasi total',
+      steps: [
+        ['Volume kontrak', fmtInt(r.vol) + ' MT'],
+        ['− Realisasi total', fmtInt(r.totalReal) + ' MT'],
+        (kontrakBreakdownGroupMitra && r.n > 1) ? ['Baris gabungan dari ' + r.n + ' kontrak'] : null
+      ].filter(Boolean),
+      result: ['Sisa', fmtInt(r.sisa) + ' MT'],
+      note: 'Sisa per baris TIDAK dijepit di 0 (negatif = over-realisasi), tetapi baris TOTAL di bawah menjepit tiap baris di 0 lebih dulu sebelum menjumlahkannya.'
+    }) + '>' + fmtInt(r.sisa) + '</td>';
+    html += '<td style="text-align:center"><span class="kontrak-pct-badge ' + badgeClass(r.pct) + '" style="font-size:9px;padding:2px 5px;min-width:40px"' + calcAttr({
+      title: '% Realisasi · ' + r.pemasok,
+      formula: 'Realisasi total ÷ Volume kontrak × 100',
+      steps: [
+        ['Realisasi total', fmtInt(r.totalReal) + ' MT'],
+        ['÷ Volume kontrak', fmtInt(r.vol) + ' MT'],
+        ['× 100']
+      ],
+      result: ['% Realisasi', r.pct.toFixed(1) + '%'],
+      note: 'Ambang warna: ≥ 100% over, ≥ 80% high, ≥ 40% mid, di bawah itu low.'
+    }) + '>' + r.pct.toFixed(1) + '%</span></td>';
     html += '</tr>';
   }
 
   // Footer totals
   html += '</tbody><tfoot><tr style="font-weight:700;background:var(--panel-3)">';
   html += '<td colspan="6" style="text-align:right;padding-right:10px">TOTAL (' + rows.length + (kontrakBreakdownGroupMitra ? ' mitra' : ' kontrak') + ')</td>';
-  html += '<td class="num" style="color:var(--accent)">' + fmtInt(totalVol) + '</td>';
-  html += '<td class="num">' + fmtInt(totalReal) + '</td>';
-  html += '<td class="num" style="color:var(--text-bright)">' + fmtInt(totalSisa) + '</td>';
+  html += '<td class="num" style="color:var(--accent)"' + calcAttr({
+    title: 'Total Volume',
+    formula: 'Σ volume kontrak seluruh baris pada tabel ini',
+    steps: [['Baris dijumlahkan', fmtInt(rows.length) + (kontrakBreakdownGroupMitra ? ' mitra' : ' kontrak')], ['Skope', scopeNote]],
+    result: ['Total Volume', fmtInt(totalVol) + ' MT']
+  }) + '>' + fmtInt(totalVol) + '</td>';
+  html += '<td class="num"' + calcAttr({
+    title: 'Total Realisasi',
+    formula: 'Σ realisasi seluruh baris pada tabel ini',
+    steps: [['Baris dijumlahkan', fmtInt(rows.length) + (kontrakBreakdownGroupMitra ? ' mitra' : ' kontrak')], ['Skope', scopeNote]],
+    result: ['Total Realisasi', fmtInt(totalReal) + ' MT']
+  }) + '>' + fmtInt(totalReal) + '</td>';
+  html += '<td class="num" style="color:var(--text-bright)"' + calcAttr({
+    title: 'Total Sisa',
+    formula: 'Σ maks(0, sisa) per baris',
+    steps: [
+      ['Σ volume', fmtInt(totalVol) + ' MT'],
+      ['Σ realisasi', fmtInt(totalReal) + ' MT'],
+      ['Sisa negatif per baris dijadikan 0 dulu, baru dijumlahkan']
+    ],
+    result: ['Total Sisa', fmtInt(totalSisa) + ' MT'],
+    note: 'Karena dijepit per baris, angka ini bisa lebih besar dari (Σ volume − Σ realisasi).'
+  }) + '>' + fmtInt(totalSisa) + '</td>';
   html += '<td></td>';
   html += '</tr></tfoot></table></div>';
 
@@ -16214,8 +17087,27 @@ function renderKontrakTable(){
     row += '<td>' + fmtKontrakDate(c.akhir) + '</td>';
     row += '<td>' + (c.jenis ? '<span class="kontrak-jenis-pill">' + escapeHtml(c.jenis) + '</span>' : '<span style="opacity:.4">—</span>') + '</td>';
     const sisaColor = displayedSisa < 0 ? 'var(--danger)' : (displayedSisa < vol * 0.1 ? 'var(--warn)' : 'var(--text-bright)');
-    row += '<td class="num" style="color:' + sisaColor + '">' + fmtInt(displayedSisa) + '</td>';
-    row += '<td style="text-align:center"><span class="kontrak-pct-badge ' + pctClass + '">' + displayedPct.toFixed(1) + '%</span></td>';
+    row += '<td class="num" style="color:' + sisaColor + '"' + calcAttr({
+      title: 'Sisa Kontrak',
+      formula: 'Volume kontrak − realisasi (mengikuti filter tahun/bulan yang aktif)',
+      steps: [
+        ['Volume kontrak', fmtInt(vol) + ' MT'],
+        ['− Realisasi (terfilter)', fmtInt(displayedTotalReal) + ' MT']
+      ],
+      result: ['Sisa', fmtInt(displayedSisa) + ' MT'],
+      note: 'Nilai ini ikut berubah bila filter tahun/bulan di atas tabel diubah, karena realisasi yang dikurangkan hanya yang masuk periode terpilih.'
+    }) + '>' + fmtInt(displayedSisa) + '</td>';
+    row += '<td style="text-align:center"><span class="kontrak-pct-badge ' + pctClass + '"' + calcAttr({
+      title: '% Realisasi',
+      formula: 'Realisasi (terfilter) ÷ Volume kontrak × 100',
+      steps: [
+        ['Realisasi (terfilter)', fmtInt(displayedTotalReal) + ' MT'],
+        ['÷ Volume kontrak', fmtInt(vol) + ' MT'],
+        ['× 100']
+      ],
+      result: ['% Realisasi', displayedPct.toFixed(1) + '%'],
+      note: 'Terhadap volume seumur kontrak. Bila filter periode dipersempit, pembilangnya mengecil sementara pembaginya tetap.'
+    }) + '>' + displayedPct.toFixed(1) + '%</span></td>';
     for (let i = 0; i < realCols.length; i++){
       const col = realCols[i];
       const v = _kontrakRealColValue(c, col);
@@ -16263,8 +17155,28 @@ function renderKontrakTable(){
   footer += '<td class="num"><b>' + fmtInt(totalVol) + '</b></td>';
   footer += '<td colspan="3"></td>';
   footer += '<td></td>';
-  footer += '<td class="num"><b>' + fmtInt(totalSisa) + '</b></td>';
-  footer += '<td style="text-align:center"><b>' + avgPct.toFixed(1) + '%</b></td>';
+  footer += '<td class="num"' + calcAttr({
+    title: 'Total Sisa Kontrak',
+    formula: 'Σ (volume kontrak − realisasi terfilter) untuk seluruh baris',
+    steps: [
+      ['Baris dijumlahkan', fmtInt(contracts.length) + ' kontrak'],
+      ['Σ volume kontrak', fmtInt(totalVol) + ' MT'],
+      ['− Σ realisasi terfilter', fmtInt(totalAllReal) + ' MT']
+    ],
+    result: ['Total Sisa', fmtInt(totalSisa) + ' MT'],
+    note: 'Tanpa clamp ke 0: kontrak yang over-realisasi menurunkan total ini. Berbeda dengan kartu "Total Sisa Kontrak Aktif" di ringkasan, yang menjepit tiap kontrak di 0 lebih dulu.'
+  }) + '><b>' + fmtInt(totalSisa) + '</b></td>';
+  footer += '<td style="text-align:center"' + calcAttr({
+    title: 'Average Achievement',
+    formula: 'Σ realisasi terfilter ÷ Σ volume kontrak × 100',
+    steps: [
+      ['Σ realisasi terfilter', fmtInt(totalAllReal) + ' MT'],
+      ['÷ Σ volume kontrak', fmtInt(totalVol) + ' MT'],
+      ['× 100']
+    ],
+    result: ['Average', avgPct.toFixed(1) + '%'],
+    note: 'Rata-rata TERBOBOT (total dibagi total), bukan rata-rata dari kolom % di atasnya — kontrak besar karenanya menimbang lebih berat.'
+  }) + '><b>' + avgPct.toFixed(1) + '%</b></td>';
   for (let i = 0; i < realCols.length; i++){
     footer += '<td class="num year-real' + (realCols[i].metric === 'do' ? ' do-cell' : '') + (realCols[i].isOld ? ' old-year-cell' : '') + '"><b>' + fmtInt(totalByCol[i]) + '</b></td>';
   }
@@ -23867,7 +24779,17 @@ function renderForecastSection(){
       <div class="forecast-row">
         <div>
           <div class="forecast-row-label">Realisasi YTD · ${monthsComplete} bulan lengkap${partialMonthIdx >= 0 ? ' + ' + MONTHS[partialMonthIdx] + ' parsial' : ''}</div>
-          <div class="forecast-row-meta">${achievementPctYtd.toFixed(1)}% of target</div>
+          <div class="forecast-row-meta"${calcAttr({
+            title: 'Achievement YTD',
+            formula: 'Realisasi YTD ÷ Target 2026 setahun × 100',
+            steps: [
+              ['Realisasi YTD', fmtInt(totalRealYtd) + ' ton'],
+              ['÷ Target 2026 (setahun)', fmtInt(totalTarget) + ' ton'],
+              ['× 100']
+            ],
+            result: ['Achievement YTD', achievementPctYtd.toFixed(1) + '%'],
+            note: 'Pembaginya target SETAHUN PENUH, bukan target sampai bulan berjalan — jadi angka ini sengaja rendah di pertengahan tahun dan tidak sebanding dengan "Realisasi vs Target" di tab Peta.'
+          })}>${achievementPctYtd.toFixed(1)}% of target</div>
         </div>
         <div class="forecast-row-value">${fmtInt(totalRealYtd)} <span style="font-size:11px;color:var(--text-dim);font-weight:400">ton</span></div>
       </div>
@@ -23876,7 +24798,20 @@ function renderForecastSection(){
           <div class="forecast-row-label">Year-End Forecast (seasonality model)</div>
           <div class="forecast-row-meta">2025 ratio: ${ratio2025Overall}% · ${wetSeasonShortfall > 100000 ? 'Wet-season risk: ' + fmtInt(wetSeasonShortfall) + ' ton' : 'No major wet-season risk'}</div>
         </div>
-        <div class="forecast-row-value ${forecastPct >= 95 ? 'green' : forecastPct >= 70 ? 'amber' : 'red'}">${forecastPct.toFixed(1)}%</div>
+        <div class="forecast-row-value ${forecastPct >= 95 ? 'green' : forecastPct >= 70 ? 'amber' : 'red'}"${calcAttr({
+          title: 'Year-End Forecast',
+          formula: 'Forecast 2026 ÷ Target 2026 × 100',
+          steps: [
+            ['1. Realisasi yang sudah ada', fmtInt(totalRealYtd) + ' ton'],
+            ['2. Sisa bulan diproyeksikan: target bulan itu × rasio achievement bulan yang sama di 2025, di-blend dengan DO terkonfirmasi'],
+            ['Rasio achievement 2025 (setahun)', ratio2025Overall + '%'],
+            ['3. Forecast 2026', fmtInt(forecast2026) + ' ton'],
+            ['÷ Target 2026', fmtInt(totalTarget) + ' ton'],
+            ['× 100']
+          ],
+          result: ['Forecast', forecastPct.toFixed(1) + '%'],
+          note: 'Model musiman: rasio dihitung per bulan, bukan satu rasio tahunan, sehingga pola musim hujan (Okt–Apr) yang lebih rendah ikut terbawa. Ini proyeksi berbasis pola 2025 — bukan komitmen.'
+        })}>${forecastPct.toFixed(1)}%</div>
       </div>
       <div class="forecast-verdict ${verdictClass}">
         <div class="forecast-verdict-label">Analysis</div>
@@ -24020,16 +24955,37 @@ function renderGencoCompareSection(){
         <div class="genco-card-stats">
           <div class="genco-stat-row">
             <span class="genco-stat-label">Target 2026</span>
-            <span class="genco-stat-value">${fmtInt(target)}</span>
+            <span class="genco-stat-value"${calcAttr({
+              title: 'Target 2026 · ' + g,
+              formula: 'Σ target deklarasi 2026 dari seluruh PLTU milik ' + g,
+              steps: [['Jumlah PLTU ' + g, fmtInt(gPlants.length)], ['Σ target 2026', fmtInt(target) + ' ton']],
+              result: ['Target 2026', fmtInt(target) + ' ton'],
+              note: 'Kartu ini selalu nasional per genco — filter di tab lain tidak mempengaruhinya.'
+            })}>${fmtInt(target)}</span>
           </div>
           <div class="genco-stat-row">
             <span class="genco-stat-label">Realisasi YTD</span>
-            <span class="genco-stat-value" style="color:${barColor}">${fmtInt(real)}</span>
+            <span class="genco-stat-value" style="color:${barColor}"${calcAttr({
+              title: 'Realisasi YTD · ' + g,
+              formula: 'Σ realisasi 2026 s/d bulan terakhir yang ada datanya, dari seluruh PLTU milik ' + g,
+              steps: [['Jumlah PLTU ' + g, fmtInt(gPlants.length)], ['Σ realisasi 2026', fmtInt(real) + ' ton']],
+              result: ['Realisasi YTD', fmtInt(real) + ' ton']
+            })}>${fmtInt(real)}</span>
           </div>
           <div>
             <div class="genco-stat-row" style="margin-bottom:4px">
               <span class="genco-stat-label">Achievement</span>
-              <span class="genco-stat-value" style="color:${barColor}">${pct.toFixed(1)}%</span>
+              <span class="genco-stat-value" style="color:${barColor}"${calcAttr({
+                title: 'Achievement · ' + g,
+                formula: 'Realisasi YTD ÷ Target 2026 setahun × 100',
+                steps: [
+                  ['Realisasi YTD', fmtInt(real) + ' ton'],
+                  ['÷ Target 2026 (setahun)', fmtInt(target) + ' ton'],
+                  ['× 100']
+                ],
+                result: ['Achievement', pct.toFixed(1) + '%'],
+                note: 'Pembaginya target setahun penuh, jadi di pertengahan tahun angka ini wajar berada jauh di bawah 100%. Ambang warna: ≥ 70% hijau, ≥ 30% kuning, di bawah itu merah.'
+              })}>${pct.toFixed(1)}%</span>
             </div>
             <div class="genco-progress-bar">
               <div class="genco-progress-fill" style="width:${Math.min(100, Math.max(0.5, pct))}%;background:${barColor}"></div>
