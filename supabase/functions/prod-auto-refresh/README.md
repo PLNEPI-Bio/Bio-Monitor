@@ -1,8 +1,9 @@
 # prod-auto-refresh
 
 Scheduled Supabase Edge Function that refreshes the **Produksi** dataset of the
-dashboard (`dashboard_data` row `id=1`) every 10 minutes from a public SharePoint
-Excel link — the same data the in-browser **Update Data → Produksi** upload writes.
+dashboard (`dashboard_data` row `id=1`) every 20 minutes during WIB working hours
+from a public SharePoint Excel link — the same data the in-browser
+**Update Data → Produksi** upload writes.
 
 ## What it does
 
@@ -33,20 +34,19 @@ Override without redeploying by setting the `SHAREPOINT_DOWNLOAD_URL` function s
 
 ## Schedule (pg_cron)
 
-> ⚠️ **Jadwal yang sebenarnya aktif belum terverifikasi.** Berkas ini menyebut
-> `*/10 * * * *` (tiap 10 menit, 24 jam), sedangkan
-> [kontrak-auto-refresh/README.md](../kontrak-auto-refresh/README.md) menyebut
-> job ini berjalan "menit 0, 20, 40 di jam UTC 23 dan 0–14" (tiap 20 menit, hanya
-> jam kerja WIB). Keduanya tidak bisa benar sekaligus, dan tidak ada di repo ini
-> yang bisa menyelesaikannya — `cron.job` adalah satu-satunya sumber kebenaran.
-> **Jalankan query di bawah lebih dulu, lalu betulkan salah satu README.**
->
-> Kalau yang aktif ternyata jendela WIB 06:00–22:00, itu berarti perubahan
-> workbook di luar jam tersebut memang tidak pernah ditarik sampai pagi — bukan
-> kerusakan, tapi perlu diketahui.
+**Terverifikasi 2026-08-18 dari `cron.job`** (kontradiksi antar-README sudah selesai):
+
+```
+jobid 1 · prod-auto-refresh-10min · */20 23,0-14 * * * · active
+```
+
+Jadi: **tiap 20 menit, hanya pada jam UTC 23 dan 0–14 = 06:00–21:40 WIB.** Nama
+job masih mengandung "10min" — itu sisa jadwal lama, bukan jadwal yang berjalan.
+Konsekuensinya perubahan workbook di luar jam tersebut memang baru ditarik pagi
+berikutnya; itu perilaku yang dipilih, bukan kerusakan.
 
 ```sql
--- SUMBER KEBENARAN: jadwal apa yang benar-benar terpasang?
+-- SUMBER KEBENARAN, kalau jadwalnya diubah lagi:
 select jobid, jobname, schedule, active from cron.job order by jobname;
 ```
 
@@ -100,9 +100,36 @@ berbeda yang dulu tercampur jadi satu angka.
 
 `source_etag` menyimpan ETag SharePoint dari run konklusif terakhir. Run berikutnya
 melakukan `HEAD` lebih dulu; kalau ETag-nya sama, download 2,6 MB dan parsing XLSX
-dilewati seluruhnya (~200 ms, bukan ~7 detik). Run yang **gagal** sengaja
-mengosongkan kolom ini, supaya kegagalan tidak pernah membuat satu perubahan
-workbook terlewat diam-diam.
+dilewati seluruhnya. Terukur 2026-08-18: **886 ms** di jalur lewat vs **4,8 detik**
+di jalur penuh. Run yang **gagal** sengaja mengosongkan kolom ini, supaya kegagalan
+tidak pernah membuat satu perubahan workbook terlewat diam-diam.
+
+### Kenapa ini penting: batas CPU, bukan memori
+
+Jalur penuh (download + parse XLSX) melewati **anggaran CPU per-request** Edge
+Runtime. Dibuktikan 2026-08-18 lewat `function_logs`:
+
+```
+event_type Shutdown · reason "CPUTime" · "CPU Time exceeded" → HTTP 546 WORKER_RESOURCE_LIMIT
+```
+
+Sekitar separuh run mati begini — worker dibunuh di tengah jalan, jadi run itu
+**tidak pernah sampai ke penulisan heartbeat di akhir**. Karena itu ada dua
+penulisan heartbeat:
+
+| Kapan | Isi | Gunanya |
+| :--- | :--- | :--- |
+| sebelum download | `ok=false`, log berakhir `⏳ started` | bukti run sempat jalan meski worker dibunuh |
+| di setiap exit | verdict sebenarnya + `source_etag` | hasil akhir |
+
+Baris yang lognya berhenti di `⏳ started` = **worker dibunuh CPU**, bukan cron mati.
+Beat pertama sengaja tidak mengirim `source_etag` — PostgREST hanya meng-`SET` kolom
+yang ada di body, jadi ETag tersimpan selamat dari percobaan yang tidak selesai.
+
+Setelah ETag pertama tersimpan, run normal tidak lagi menyentuh jalur berat sama
+sekali, sehingga 546 hanya mungkin muncul pada run setelah workbook benar-benar
+berubah. Kalau run seperti itu mati, tidak ada data yang rusak: ETag lama tetap
+tersimpan sehingga run berikutnya mencoba lagi.
 
 ## Operations
 

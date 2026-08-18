@@ -400,9 +400,11 @@ Deno.serve(async (_req: Request) => {
   let hbWrote = false;
   let hbCommitEtag: string | null = null;
 
-  // Every exit path goes through out(), so the heartbeat is written whatever
-  // happens — including the failure paths that used to leave no trace at all.
-  const out = async (ok: boolean, status = ok ? 200 : 500) => {
+  // One heartbeat write. Keys ABSENT from the payload are left untouched:
+  // PostgREST's merge-duplicates upsert only SETs the columns present in the
+  // body, so an attempt beat can refresh last_run_at without clobbering the
+  // stored ETag.
+  const beat = async (row: Record<string, unknown>) => {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/refresh_heartbeat?on_conflict=fn`, {
         method: "POST",
@@ -410,16 +412,24 @@ Deno.serve(async (_req: Request) => {
         body: JSON.stringify({
           fn: "prod-auto-refresh",
           last_run_at: new Date().toISOString(),
-          ok,
-          wrote: hbWrote,
-          duration_ms: Date.now() - t0,
-          source_etag: hbCommitEtag,
-          log: log.join("\n").slice(0, 4000),
+          ...row,
         }),
       });
     } catch (_e) {
       // A heartbeat failure must never turn a good refresh into a bad one.
     }
+  };
+
+  // Every exit path goes through out(), so the heartbeat is written whatever
+  // happens — including the failure paths that used to leave no trace at all.
+  const out = async (ok: boolean, status = ok ? 200 : 500) => {
+    await beat({
+      ok,
+      wrote: hbWrote,
+      duration_ms: Date.now() - t0,
+      source_etag: hbCommitEtag,
+      log: log.join("\n").slice(0, 4000),
+    });
     return new Response(JSON.stringify({ ok, log, ms: Date.now() - t0 }, null, 2), {
       status,
       headers: { "Content-Type": "application/json" },
@@ -451,9 +461,11 @@ Deno.serve(async (_req: Request) => {
     // 0b) Cheap freshness probe (HEAD). SharePoint's ETag is "{GUID},<version>"
     //     and the version increments on every save, so an unchanged ETag means the
     //     workbook cannot have changed. Skipping here avoids a 2.6 MB download plus
-    //     a full XLSX parse on the overwhelming majority of runs: ~200 ms and a few
-    //     MB instead of ~7 s and enough memory to trip WORKER_RESOURCE_LIMIT on a
-    //     cold worker (observed 2026-08-18).
+    //     a full XLSX parse on the overwhelming majority of runs. Measured
+    //     2026-08-18: 886 ms on the skip path vs 4.8 s on the full path, and the
+    //     full path is what exceeds the Edge runtime's per-request CPU budget
+    //     (shutdown reason "CPUTime" → HTTP 546 WORKER_RESOURCE_LIMIT) on roughly
+    //     half of all runs. It is CPU time, not memory.
     //
     //     Fail-open by design: if HEAD errors, returns no ETag, or we have no ETag
     //     stored from a previous run, we fall through to the full download. The
@@ -490,6 +502,23 @@ Deno.serve(async (_req: Request) => {
     } catch (e) {
       log.push(`(HEAD probe failed, continuing with full download: ${e instanceof Error ? e.message : String(e)})`);
     }
+
+    // 0c) Attempt beat, written BEFORE the expensive path starts.
+    //     Download + XLSX parse costs ~2 s of CPU, and the Edge runtime kills the
+    //     worker outright once a request exceeds its CPU budget ("CPU Time
+    //     exceeded" → HTTP 546, reproduced 2026-08-18). A killed worker never
+    //     reaches out(), so a run that dies there would leave NO trace — the exact
+    //     blind spot this heartbeat exists to remove. After this write, a row whose
+    //     log still reads "started" is positive evidence of a worker kill rather
+    //     than of a dead cron.
+    //     `source_etag` is deliberately not in the payload so the stored ETag
+    //     survives an attempt that never reaches a verdict.
+    await beat({
+      ok: false,
+      wrote: false,
+      duration_ms: Date.now() - t0,
+      log: (log.join("\n") + "\n⏳ started: download + parse, no verdict yet").slice(0, 4000),
+    });
 
     // 1) Download the Excel from SharePoint
     log.push(`Downloading: ${SHAREPOINT_URL}`);
