@@ -375,6 +375,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SHAREPOINT_URL = Deno.env.get("SHAREPOINT_DOWNLOAD_URL") || DEFAULT_SHAREPOINT_URL;
 
+// SharePoint serves the anonymous share only to a browser-shaped User-Agent.
+// Shared by the HEAD freshness probe and the GET download so the two can never drift.
+const SP_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+
 function restHeaders(extra: Record<string, string> = {}) {
   return {
     "apikey": SERVICE_KEY,
@@ -387,11 +392,39 @@ function restHeaders(extra: Record<string, string> = {}) {
 Deno.serve(async (_req: Request) => {
   const log: string[] = [];
   const t0 = Date.now();
-  const out = (ok: boolean, status = ok ? 200 : 500) =>
-    new Response(JSON.stringify({ ok, log, ms: Date.now() - t0 }, null, 2), {
+
+  // Heartbeat state. `hbCommitEtag` stays null unless the run reached a
+  // conclusive verdict (no-change, or a successful write). A failed run must
+  // NEVER persist the ETag it saw — otherwise the next run would treat that
+  // ETag as "already handled" and skip the workbook change for good.
+  let hbWrote = false;
+  let hbCommitEtag: string | null = null;
+
+  // Every exit path goes through out(), so the heartbeat is written whatever
+  // happens — including the failure paths that used to leave no trace at all.
+  const out = async (ok: boolean, status = ok ? 200 : 500) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/refresh_heartbeat?on_conflict=fn`, {
+        method: "POST",
+        headers: restHeaders({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
+        body: JSON.stringify({
+          fn: "prod-auto-refresh",
+          last_run_at: new Date().toISOString(),
+          ok,
+          wrote: hbWrote,
+          duration_ms: Date.now() - t0,
+          source_etag: hbCommitEtag,
+          log: log.join("\n").slice(0, 4000),
+        }),
+      });
+    } catch (_e) {
+      // A heartbeat failure must never turn a good refresh into a bad one.
+    }
+    return new Response(JSON.stringify({ ok, log, ms: Date.now() - t0 }, null, 2), {
       status,
       headers: { "Content-Type": "application/json" },
     });
+  };
 
   try {
     // 0) Honour the admin pause switch (public.app_control id=1). When paused,
@@ -415,15 +448,60 @@ Deno.serve(async (_req: Request) => {
       log.push(`(app_control check failed, continuing: ${e instanceof Error ? e.message : String(e)})`);
     }
 
+    // 0b) Cheap freshness probe (HEAD). SharePoint's ETag is "{GUID},<version>"
+    //     and the version increments on every save, so an unchanged ETag means the
+    //     workbook cannot have changed. Skipping here avoids a 2.6 MB download plus
+    //     a full XLSX parse on the overwhelming majority of runs: ~200 ms and a few
+    //     MB instead of ~7 s and enough memory to trip WORKER_RESOURCE_LIMIT on a
+    //     cold worker (observed 2026-08-18).
+    //
+    //     Fail-open by design: if HEAD errors, returns no ETag, or we have no ETag
+    //     stored from a previous run, we fall through to the full download. The
+    //     skip only ever happens on positive proof that nothing changed.
+    let lastEtag: string | null = null;
+    try {
+      const hbRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/refresh_heartbeat?fn=eq.prod-auto-refresh&select=source_etag`,
+        { headers: restHeaders() },
+      );
+      if (hbRes.ok) {
+        const hbRows = await hbRes.json();
+        lastEtag = (Array.isArray(hbRows) && hbRows.length) ? (hbRows[0].source_etag || null) : null;
+      }
+    } catch (_e) { /* no heartbeat yet — fall through to the full download */ }
+
+    try {
+      const head = await fetch(SHAREPOINT_URL, {
+        method: "HEAD",
+        redirect: "follow",
+        headers: { "User-Agent": SP_UA },
+      });
+      const headEtag = head.headers.get("etag");
+      if (head.ok && headEtag && lastEtag && headEtag === lastEtag) {
+        hbCommitEtag = headEtag;
+        log.push(`↔ SharePoint unchanged (ETag ${headEtag}) — skipped download & parse.`);
+        return out(true);
+      }
+      log.push(
+        headEtag
+          ? `Freshness probe: ETag ${headEtag} (stored: ${lastEtag ?? "none"}) → full refresh`
+          : `Freshness probe: no ETag returned → full refresh`,
+      );
+    } catch (e) {
+      log.push(`(HEAD probe failed, continuing with full download: ${e instanceof Error ? e.message : String(e)})`);
+    }
+
     // 1) Download the Excel from SharePoint
     log.push(`Downloading: ${SHAREPOINT_URL}`);
     const dl = await fetch(SHAREPOINT_URL, {
       redirect: "follow",
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "User-Agent": SP_UA,
         "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream,*/*",
       },
     });
+    // Held until a conclusive verdict; only then does it reach the heartbeat.
+    const dlEtag = dl.headers.get("etag");
     log.push(`HTTP ${dl.status} ${dl.statusText} · content-type: ${dl.headers.get("content-type") || "?"}`);
     if (!dl.ok) {
       log.push("✗ Download failed (non-200). Aborting, existing data preserved.");
@@ -525,6 +603,9 @@ Deno.serve(async (_req: Request) => {
       stableStringify(merged.target_fgd_2026_monthly) === stableStringify(existing.target_fgd_2026_monthly) &&
       stableStringify(merged.target_fgd_2026_plants) === stableStringify(existing.target_fgd_2026_plants);
     if (sameData) {
+      // Conclusive: this exact workbook version yields data identical to what is
+      // stored, so the next run may skip the download entirely on this ETag.
+      hbCommitEtag = dlEtag;
       log.push(`↔ No change vs stored data — skipped write (saves egress). ${summary}`);
       return out(true);
     }
@@ -564,6 +645,8 @@ Deno.serve(async (_req: Request) => {
       log.push(`✗ Upsert failed: HTTP ${upRes.status} ${txt}`);
       return out(false);
     }
+    hbWrote = true;
+    hbCommitEtag = dlEtag;
     log.push(`✓ dashboard_data id=1 updated · ${summary}`);
     return out(true);
   } catch (e) {
