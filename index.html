@@ -524,19 +524,21 @@ html,body{
    `:active` kills its own transition-duration so the press reads instantly and
    only the release eases back.
    ---------------------------------------------------------------------------- */
+/* V107: .topbar-cmdk-btn (pemicu palet perintah) ikut ketiga daftar di bawah,
+   bukan menyalin state-nya sendiri — itulah gunanya blok ini ada. */
 .topbar-update-btn,.topbar-pause-btn,.topbar-calendar-btn,
-.topbar-login-btn{
+.topbar-login-btn,.topbar-cmdk-btn{
   transition:background-color var(--dur-fast) var(--ease-in-out),
              border-color var(--dur-fast) var(--ease-in-out),
              color var(--dur-fast) var(--ease-in-out);
 }
 .topbar-update-btn:active,.topbar-pause-btn:active,.topbar-calendar-btn:active,
-.topbar-login-btn:active{
+.topbar-login-btn:active,.topbar-cmdk-btn:active{
   background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent);
   transition-duration:0s;
 }
 .topbar-update-btn:disabled,.topbar-pause-btn:disabled,.topbar-calendar-btn:disabled,
-.topbar-login-btn:disabled{
+.topbar-login-btn:disabled,.topbar-cmdk-btn:disabled{
   opacity:.45;cursor:not-allowed;
   background:transparent;border-color:var(--border);color:var(--text-dim);
 }
@@ -7032,6 +7034,284 @@ html,body{
 @media (max-width:640px){
   .calc-tip{max-width:calc(100vw - 24px);min-width:0}
 }
+
+/* ==================================================================================
+   V107 — LAPIS KENYAMANAN (QoL)
+   ----------------------------------------------------------------------------------
+   Lima elemen mengambang yang tidak ada di V97: palet perintah, lembar pintasan,
+   toast serbaguna, tombol kembali ke atas, dan petunjuk gulir di bilah tab.
+
+   Semuanya BENAR-BENAR mengambang di atas halaman, jadi keempatnya boleh memakai
+   --r-lg (4px) dan --shadow-lg tanpa melanggar "no cards": hukum itu berlaku untuk
+   wadah ISI halaman, bukan untuk overlay. Tidak ada warna baru diperkenalkan — semua
+   ink diambil dari token yang sudah ada, dan --accent-2 (kuning PLN) tidak dipakai
+   sama sekali di sini supaya jatah "satu sorotan per tampilan" tetap milik data.
+
+   Tangga z: palet & pintasan memakai --z-modal-lg (9100), toast --z-toast (9999),
+   tombol ke-atas --z-mobile-fab (2100). Tidak ada nilai baru ditambahkan ke tangga.
+   ================================================================================== */
+
+/* ---------- Pemicu palet di topbar ---------- */
+/* Tanpa ini palet hanya bisa ditemukan oleh yang sudah tahu ada pintasannya —
+   yaitu tidak seorang pun. Tombol ini sekaligus MENGIKLANKAN pintasannya lewat
+   chip "Ctrl K" di kanannya. Warnanya tidak dipatok: ia anak .topbar, jadi
+   token band (--chrome-*) yang bekerja, sesuai catatan V98 di atas. */
+.topbar-cmdk-btn{
+  background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  height:32px;padding:0 8px 0 9px;display:flex;align-items:center;gap:7px;
+  cursor:pointer;border-radius:var(--r-sm);flex-shrink:0;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:.2px;white-space:nowrap;
+}
+.topbar-cmdk-btn:hover{background:var(--panel-3);border-color:var(--accent);color:var(--accent)}
+.topbar-cmdk-btn svg{width:14px;height:14px;flex-shrink:0}
+.topbar-cmdk-btn .cmdk-btn-label{opacity:.9}
+.topbar-cmdk-btn .cmdk-btn-kbd{
+  padding:2px 5px;border:1px solid var(--border);border-radius:var(--r-xs);
+  font-size:var(--fs-note);font-weight:700;letter-spacing:.5px;opacity:.85;
+}
+@media (max-width:1180px){
+  /* Topbar padat: sisakan ikonnya saja, pintasannya tetap hidup. */
+  .topbar-cmdk-btn{width:32px;padding:0;justify-content:center}
+  .topbar-cmdk-btn .cmdk-btn-label,.topbar-cmdk-btn .cmdk-btn-kbd{display:none}
+}
+
+/* ---------- Palet perintah (Ctrl+K / "/") ---------- */
+.cmdk-backdrop{
+  position:fixed;inset:0;z-index:var(--z-modal-lg);
+  background:rgba(15,36,48,.42);backdrop-filter:blur(2px);
+  display:none;align-items:flex-start;justify-content:center;
+  padding:12vh 16px 16px;
+}
+.cmdk-backdrop.open{display:flex}
+.cmdk{
+  /* min-width:0 WAJIB. Sebagai flex item, defaultnya min-width:auto, artinya ia
+     menolak menyusut di bawah min-content baris terpanjangnya — di 390px panel
+     jadi melewati tepi kanan dan chip tag-nya terpotong keluar layar. */
+  width:100%;max-width:560px;max-height:66vh;min-width:0;
+  display:flex;flex-direction:column;overflow:hidden;
+  background:var(--panel);border:1px solid var(--border-bright);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-lg);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  animation:cmdkIn var(--dur-slow) var(--ease-out) both;
+}
+@keyframes cmdkIn{from{opacity:0;transform:translateY(-8px) scale(.99)}to{opacity:1;transform:none}}
+.cmdk-input-wrap{
+  display:flex;align-items:center;gap:9px;flex-shrink:0;
+  padding:0 12px;border-bottom:var(--rule);background:var(--panel);
+}
+.cmdk-input-wrap svg{width:15px;height:15px;flex-shrink:0;color:var(--text-dim)}
+.cmdk-input{
+  flex:1;min-width:0;height:46px;
+  background:transparent;border:none;outline:none;
+  font-family:inherit;font-size:14px;font-weight:600;color:var(--text);
+}
+.cmdk-input::placeholder{color:var(--text-dim);font-weight:500}
+.cmdk-hint{
+  flex-shrink:0;font-size:var(--fs-note);letter-spacing:.6px;text-transform:uppercase;
+  color:var(--text-dim);font-weight:700;
+}
+.cmdk-list{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:5px 0}
+.cmdk-group{
+  padding:8px 13px 4px;font-size:var(--fs-note);font-weight:700;
+  letter-spacing:1.1px;text-transform:uppercase;color:var(--text-dim);
+}
+.cmdk-item{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 13px;cursor:pointer;
+  border-left:2px solid transparent;
+}
+.cmdk-item:hover{background:var(--panel-2)}
+/* Baris terpilih ditandai oleh rule tebal di tepi + field, bukan oleh fill berwarna:
+   satu bahasa dengan penanda tab aktif. */
+.cmdk-item.sel{background:var(--accent-soft);border-left-color:var(--rule-ink-bar)}
+.cmdk-item-icon{
+  width:20px;height:20px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-dim);
+}
+.cmdk-item.sel .cmdk-item-icon{color:var(--text-bright)}
+.cmdk-item-icon svg{width:14px;height:14px}
+.cmdk-item-main{flex:1;min-width:0}
+/* display:block WAJIB pada keduanya. Sebagai <span> inline mereka mengalir di baris
+   yang sama dan nama PLTU menempel ke sub-labelnya ("Suralaya 8SLA 8 · PIP · Banten"),
+   sekaligus mendorong chip tag keluar layar di lebar mobile. */
+.cmdk-item-label{
+  display:block;
+  font-size:12.5px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.cmdk-item.sel .cmdk-item-label{color:var(--text-bright)}
+.cmdk-item-sub{
+  display:block;
+  font-size:10px;color:var(--text-dim);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.cmdk-item-tag{
+  flex-shrink:0;padding:2px 6px;border-radius:var(--r-xs);
+  background:var(--panel-3);color:var(--text-dim);
+  font-size:var(--fs-note);font-weight:700;letter-spacing:.7px;text-transform:uppercase;
+}
+.cmdk-empty{padding:26px 16px;text-align:center;font-size:12px;color:var(--text-dim)}
+.cmdk-foot{
+  flex-shrink:0;display:flex;gap:14px;flex-wrap:wrap;
+  padding:7px 13px;border-top:var(--hairline);background:var(--panel-2);
+  font-size:var(--fs-note);color:var(--text-dim);
+}
+.cmdk-foot b{font-weight:700;color:var(--text)}
+
+/* ---------- Lembar pintasan keyboard ("?") ---------- */
+.kbdhelp-backdrop{
+  position:fixed;inset:0;z-index:var(--z-modal-lg);
+  background:rgba(15,36,48,.42);backdrop-filter:blur(2px);
+  display:none;align-items:center;justify-content:center;padding:16px;
+}
+.kbdhelp-backdrop.open{display:flex}
+.kbdhelp{
+  width:100%;max-width:520px;max-height:80vh;min-width:0;overflow-y:auto;overscroll-behavior:contain;
+  background:var(--panel);border:1px solid var(--border-bright);
+  border-radius:var(--r-lg);box-shadow:var(--shadow-lg);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  animation:cmdkIn var(--dur-slow) var(--ease-out) both;
+}
+.kbdhelp-head{
+  position:sticky;top:0;z-index:1;
+  display:flex;align-items:baseline;gap:10px;
+  padding:14px 18px 11px;background:var(--panel);border-bottom:var(--bar);
+}
+.kbdhelp-title{font-size:14px;font-weight:700;color:var(--text-bright);letter-spacing:.2px}
+.kbdhelp-sub{flex:1;font-size:10.5px;color:var(--text-dim)}
+.kbdhelp-close{
+  width:24px;height:24px;padding:0;line-height:1;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;border:1px solid transparent;border-radius:var(--r-sm);
+  color:var(--text-dim);font-family:inherit;font-size:17px;cursor:pointer;
+  transition:color var(--dur-fast) var(--ease-in-out),border-color var(--dur-fast) var(--ease-in-out);
+}
+.kbdhelp-close:hover{color:var(--danger);border-color:var(--border-bright)}
+.kbdhelp-body{padding:6px 18px 16px}
+.kbdhelp-group{
+  padding:13px 0 5px;font-size:var(--fs-note);font-weight:700;
+  letter-spacing:1.1px;text-transform:uppercase;color:var(--text-dim);
+}
+.kbdhelp-row{
+  display:flex;align-items:center;gap:12px;
+  padding:5px 0;border-bottom:var(--hairline);
+}
+.kbdhelp-row:last-child{border-bottom:none}
+.kbdhelp-desc{flex:1;font-size:12px;color:var(--text)}
+.kbdhelp-keys{display:flex;gap:4px;flex-shrink:0}
+.kbdhelp kbd{
+  display:inline-block;min-width:20px;padding:2px 6px;
+  background:var(--panel-3);border:1px solid var(--border);border-bottom-width:2px;
+  border-radius:var(--r-sm);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10.5px;font-weight:700;
+  color:var(--text);text-align:center;line-height:1.5;
+}
+
+/* ---------- Toast serbaguna ---------- */
+/* Terpisah dari #updateAppliedBanner (toast "Data Updated") — banner itu punya
+   siklus hidup sendiri termasuk progress bar. Ini untuk umpan balik singkat.
+   Ditumpuk ke ATAS dari sudut kanan bawah supaya tidak menabrak banner tersebut. */
+.qtoast-wrap{
+  position:fixed;right:16px;bottom:16px;z-index:var(--z-toast);
+  display:flex;flex-direction:column-reverse;gap:8px;
+  pointer-events:none;max-width:min(360px,calc(100vw - 32px));
+}
+.qtoast{
+  display:flex;align-items:flex-start;gap:9px;
+  padding:9px 12px;pointer-events:auto;
+  background:var(--panel);border:1px solid var(--border-bright);
+  border-left:var(--bar);border-radius:var(--r-md);box-shadow:var(--shadow-lg);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11.5px;line-height:1.5;
+  color:var(--text);
+  animation:qtoastIn var(--dur-slow) var(--ease-out) both;
+}
+/* Garis tepi kiri adalah MARK (boleh pakai warna fill penuh); glif di dalamnya
+   adalah TEKS, jadi ia wajib memakai pasangan --status-*-ink. --status-ok pada
+   kertas hanya ~2.4:1 dan tidak pernah boleh jadi huruf. */
+.qtoast.ok{border-left-color:var(--status-ok)}
+.qtoast.warn{border-left-color:var(--warn)}
+.qtoast.err{border-left-color:var(--danger)}
+.qtoast.out{animation:qtoastOut 180ms ease forwards}
+@keyframes qtoastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes qtoastOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(6px)}}
+.qtoast-mark{flex-shrink:0;font-size:12px;line-height:1.45;font-weight:700}
+.qtoast.ok .qtoast-mark{color:var(--status-ok-ink)}
+.qtoast.warn .qtoast-mark{color:var(--status-warn-ink)}
+.qtoast.err .qtoast-mark{color:var(--status-crit-ink)}
+.qtoast-msg{flex:1;min-width:0}
+
+/* ---------- Kembali ke atas ---------- */
+.to-top-btn{
+  position:fixed;right:16px;bottom:16px;z-index:var(--z-mobile-fab);
+  width:36px;height:36px;padding:0;
+  display:none;align-items:center;justify-content:center;
+  background:var(--panel);color:var(--text-bright);
+  border:1px solid var(--border-bright);border-radius:var(--r-lg);
+  box-shadow:var(--shadow-lg);cursor:pointer;
+  transition:background-color var(--dur-fast) var(--ease-in-out),
+             color var(--dur-fast) var(--ease-in-out);
+}
+.to-top-btn.show{display:flex}
+.to-top-btn:hover{background:var(--panel-3)}
+.to-top-btn svg{width:15px;height:15px}
+/* Keduanya menghuni sudut yang sama. Yang MENGALAH adalah toast, bukan tombolnya:
+   tombol itu kendali yang menetap dan posisinya harus bisa diandalkan, sedangkan
+   toast cuma lewat. Jadi saat tombol tampak, antrean toast naik ke atasnya.
+   (Percobaan pertama menggeser tombol ke kiri 44px — toast selebar 360px tetap
+   menutupinya, terlihat jelas di tangkapan layar uji.) */
+.qtoast-wrap.raised{bottom:62px}
+@media (max-width:900px){
+  /* Bilah nav bawah mobile tingginya ~54px — angkat keduanya ke atasnya. */
+  .to-top-btn{bottom:68px}
+  .qtoast-wrap{bottom:68px;left:16px;right:16px;max-width:none}
+  .qtoast-wrap.raised{bottom:114px}
+}
+
+/* ---------- Petunjuk gulir di bilah tab ---------- */
+/* 11 tab tidak muat di layar sempit dan tidak ada tanda apa pun bahwa masih ada
+   tab lain di kiri/kanan.
+
+   PERCOBAAN PERTAMA MEMAKAI mask-image DAN ITU SALAH. Mask memudarkan SELURUH
+   elemen — termasuk latar birunya — jadi yang tembus di tepi bukan "tab yang
+   memudar" melainkan halaman putih di belakang rail. Hasilnya smudge putih
+   terang di band biru, justru elemen paling mencolok di seluruh chrome.
+
+   Yang benar: dua pseudo-element yang MENGECAT DI ATAS tab dengan gradien dari
+   warna band itu sendiri ke transparan. Latarnya tidak pernah disentuh, tidak
+   ada warna baru diperkenalkan, dan tab yang terpotong larut ke dalam band.
+
+   position:sticky, bukan absolute: `.tabs` adalah scroll container-nya sendiri,
+   jadi anak absolute akan menempel pada tepi KONTEN yang ikut tergulir, bukan
+   pada tepi layar. Wadah pembungkus juga bukan pilihan — `.shell` adalah grid
+   dan `.tabs` salah satu barisnya (grid-template-rows), jadi menyisipkan div
+   akan merusak tata letaknya. */
+.tabs::before,
+.tabs::after{
+  content:"";
+  position:sticky;
+  align-self:stretch;
+  flex:0 0 32px;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity var(--dur-fast) var(--ease-in-out);
+  /* .tab juga position:relative, jadi urutan DOM saja tidak cukup untuk
+     mengangkat ::before di atas tab pertama. */
+  z-index:2;
+}
+/* Margin -34px = lebar pseudo (32) + satu gap (2). Menambah dua flex item ke
+   `.tabs` juga menambah dua gap, jadi kompensasinya harus ikut menghitung gap;
+   tanpa itu rail melebar 68px dan tab terakhir terdorong keluar. */
+.tabs::before{left:0;margin-right:-34px;background:linear-gradient(to right,var(--chrome-bg),transparent)}
+.tabs::after{right:0;margin-left:-34px;background:linear-gradient(to left,var(--chrome-bg),transparent)}
+.tabs.qol-fade-l::before{opacity:1}
+.tabs.qol-fade-r::after{opacity:1}
+
+@media (prefers-reduced-motion: reduce){
+  .cmdk,.kbdhelp,.qtoast{animation:none}
+  .qtoast.out{animation:none;opacity:0}
+}
 </style>
 </head>
 <body>
@@ -7176,6 +7456,14 @@ html,body{
     </button>
   </div>
   <div class="topbar-right">
+
+    <!-- V107: pemicu palet perintah. Satu-satunya jalan masuk yang KELIHATAN ke
+         pencarian global; chip di kanannya mengajarkan pintasannya. -->
+    <button class="topbar-cmdk-btn" id="topbarCmdkBtn" type="button" onclick="openCmdk()" title="Cari PLTU, mitra, tab, atau tindakan (Ctrl+K)" aria-label="Cari PLTU, mitra, tab, atau tindakan">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l4 4"/></svg>
+      <span class="cmdk-btn-label">Cari</span>
+      <span class="cmdk-btn-kbd" aria-hidden="true">Ctrl K</span>
+    </button>
 
     <div class="updated-indicator" id="updatedIndicator" title="Tanggal terakhir data di-refresh">
       <span class="updated-label">Updated per</span>
@@ -8811,6 +9099,45 @@ html,body{
     </div>
   </div>
 </div>
+
+<!-- V107: lapis kenyamanan. Empat elemen mengambang, saudara kandung .shell (bukan
+     anaknya) supaya tidak ikut terpotong oleh overflow:hidden di .view. -->
+
+<!-- Palet perintah — Ctrl+K atau "/" . Isi daftarnya dibangun runtime dari daftar
+     tab + DATA.plants, jadi markupnya sengaja kosong. -->
+<div class="cmdk-backdrop" id="cmdkBackdrop" role="dialog" aria-modal="true" aria-label="Cari & lompat">
+  <div class="cmdk">
+    <div class="cmdk-input-wrap">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l4 4"/></svg>
+      <input type="text" class="cmdk-input" id="cmdkInput" placeholder="Cari PLTU, mitra, tab, atau tindakan…" autocomplete="off" spellcheck="false" aria-label="Kata kunci pencarian" aria-controls="cmdkList" aria-expanded="true">
+      <span class="cmdk-hint">Esc</span>
+    </div>
+    <div class="cmdk-list" id="cmdkList" role="listbox" aria-label="Hasil"></div>
+    <div class="cmdk-foot">
+      <span><b>↑ ↓</b> pilih</span><span><b>Enter</b> buka</span><span><b>Esc</b> tutup</span><span><b>?</b> daftar pintasan</span>
+    </div>
+  </div>
+</div>
+
+<!-- Lembar pintasan keyboard — "?" -->
+<div class="kbdhelp-backdrop" id="kbdHelpBackdrop" role="dialog" aria-modal="true" aria-label="Pintasan keyboard">
+  <div class="kbdhelp">
+    <div class="kbdhelp-head">
+      <span class="kbdhelp-title">Pintasan Keyboard</span>
+      <span class="kbdhelp-sub">tidak aktif saat mengetik di kolom isian</span>
+      <button class="kbdhelp-close" id="kbdHelpClose" type="button" title="Tutup" aria-label="Tutup daftar pintasan">×</button>
+    </div>
+    <div class="kbdhelp-body" id="kbdHelpBody"></div>
+  </div>
+</div>
+
+<!-- Antrean toast serbaguna -->
+<div class="qtoast-wrap" id="qtoastWrap" role="status" aria-live="polite"></div>
+
+<!-- Kembali ke atas — muncul sendiri saat tab aktif punya area gulir panjang -->
+<button class="to-top-btn" id="toTopBtn" type="button" title="Kembali ke atas" aria-label="Kembali ke atas">
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 13V4M3.5 8.5L8 4l4.5 4.5"/></svg>
+</button>
 
 <!-- Add/Edit Usulan Modal -->
 <div class="usulan-modal-backdrop" id="usulanModalBackdrop">
@@ -24526,9 +24853,16 @@ window.addEventListener('DOMContentLoaded', () => {
       // V61: load + sync bottlenecks from Supabase (after dashboard_data has set the
       // legacy baseline, which is the seed source if the table is still empty).
       initBottleneckSync();
+      // V107: baru sekarang tab terakhir dipulihkan. Kalau dipanggil di DOMContentLoaded,
+      // tab seperti Pareto/Realisasi akan di-init terhadap DATA yang masih kosong.
+      if (typeof qolRestoreLastTab === 'function') qolRestoreLastTab();
     }).catch(e => {
       console.warn('[Update] Initial server load failed:', e);
+      if (typeof qolRestoreLastTab === 'function') qolRestoreLastTab();
     });
+  } else {
+    // V107: tanpa Supabase / offline, DATA tetap yang tertanam di HTML — sudah siap.
+    if (typeof qolRestoreLastTab === 'function') qolRestoreLastTab();
   }
 
   // ========= MOBILE SIDEBAR (backdrop) =========
@@ -26004,23 +26338,67 @@ function chartTooltipDefaults(){
 }
 
 // --- Keyboard Shortcuts ---
+// V107: angka mengikuti URUTAN BILAH TAB dari kiri ke kanan, bukan urutan historis
+// yang acak (dulu 2=realisasi, 3=bottleneck, dan tiga tab tidak kebagian angka).
+// Satu tab sengaja dilewati: USULAN KONTRAK, karena tab itu memasang gerbang
+// identitas — angka yang tak sengaja tertekan tidak boleh memunculkan prompt nama.
+// Tab itu tetap dapat dibuka lewat palet perintah.
+const QOL_TAB_KEYS = {
+  '1': 'map', '2': 'pembangkit', '3': 'fasilitas', '4': 'realisasi',
+  '5': 'bottleneck', '6': 'pareto', '7': 'kontrak', '8': 'mou-timeline',
+  '9': 'berita', '0': 'laporan'
+};
 document.addEventListener('keydown', function(e){
-  // Don't intercept when typing in input/textarea/select
-  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  // Gerbang auth menutupi seluruh halaman — jangan intersepsi apa pun di baliknya.
+  if (document.body.classList.contains('gate-locked')) return;
+  // Ctrl/Cmd+K membuka palet. Ini SATU-SATUNYA kombinasi bermodifier yang
+  // ditangani, dan diperiksa sebelum penjaga input di bawah supaya tetap jalan
+  // walau kursor sedang di dalam sebuah kolom isian.
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')){
+    e.preventDefault();
+    openCmdk();
+    return;
+  }
+  // Jangan intersepsi saat sedang mengetik.
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const key = e.key;
-  const shortcuts = {
-    '1': 'map', '2': 'realisasi', '3': 'bottleneck', '4': 'pareto',
-    '5': 'kontrak', '6': 'mou-timeline', '7': 'usulan', '8': 'berita'
-  };
-  if (shortcuts[key]){
+
+  if (QOL_TAB_KEYS[key]){
     e.preventDefault();
-    switchTab(shortcuts[key]);
+    switchTab(QOL_TAB_KEYS[key]);
+    return;
   }
+  // "?" (Shift+/) — lembar pintasan. Diperiksa SEBELUM "/" karena keduanya berbagi
+  // tuts fisik yang sama dan urutan terbalik akan membuat "?" tak pernah terbaca.
+  if (key === '?'){
+    e.preventDefault();
+    toggleKbdHelp();
+    return;
+  }
+  // "/" dan "s" — dulu keduanya memindahkan fokus diam-diam ke kolom cari peta,
+  // perilaku yang tidak pernah didokumentasikan di mana pun. Sekarang keduanya
+  // membuka palet, yang mencakup pencarian itu dan lebih.
   if (key === '/' || key === 's'){
     e.preventDefault();
-    const search = document.querySelector('.view.active .search-bar input') || document.getElementById('beritaSearchInput');
-    if (search) search.focus();
+    openCmdk();
+    return;
+  }
+  // "f" menggantikan fungsi lama "/": fokus ke kolom cari/filter MILIK tab aktif
+  // (Berita, Laporan, Usulan, Map). Tidak ada yang hilang, hanya jadi punya nama.
+  if (key === 'f'){
+    const box = document.querySelector('.view.active input[type="search"], .view.active .search-bar input, .view.active .berita-search, .view.active .usulan-filter-search, .view.active .laporan-arsip-search');
+    if (box){
+      e.preventDefault();
+      box.focus();
+      if (box.select) box.select();
+    }
+    return;
+  }
+  if (key === 't'){
+    e.preventDefault();
+    qolScrollActiveToTop();
+    return;
   }
   if (key === 'Escape'){
     // Close any open panels/modals
@@ -26132,6 +26510,738 @@ window.addEventListener('DOMContentLoaded', () => {
   if (paretoKpi && !paretoKpi.innerHTML.trim()){
     paretoKpi.innerHTML = skeletonHTML('cards');
   }
+});
+
+// ============================================================================
+// V107 — LAPIS KENYAMANAN (QoL)
+// ----------------------------------------------------------------------------
+// Tujuh hal yang membuat dashboard ini lebih enak dipakai, semuanya ADITIF:
+//   1. showToast()          umpan balik singkat yang bisa dipakai fungsi mana pun
+//   2. Palet perintah       Ctrl+K — lompat ke tab / 51 PLTU / mitra mana pun
+//   3. Lembar pintasan      "?" — pintasan keyboard akhirnya bisa ditemukan
+//   4. Ingat tab terakhir   buka lagi besok, kembali ke tempat Anda bekerja
+//   5. Ingat posisi gulir   pindah tab bolak-balik tidak melempar ke puncak
+//   6. Kembali ke atas      tab realisasi/pareto/kontrak sangat panjang
+//   7. Aksesibilitas        bilah tab jadi tablist sungguhan + panah kiri/kanan
+//
+// Tidak ada fungsi lama yang diubah perilakunya kecuali dua: blok pintasan
+// keyboard (dinomori ulang, lihat catatan di sana) dan switchTab (DIBUNGKUS,
+// bukan diubah — implementasi aslinya dipanggil utuh di tengah pembungkus).
+// ============================================================================
+
+// ---------- 1. Toast serbaguna ----------
+// Antrean maksimal empat. Sengaja BUKAN #updateAppliedBanner: banner itu punya
+// progress bar dan siklus hidupnya sendiri, dan dua pemilik untuk satu elemen
+// adalah cara termudah membuat keduanya rusak.
+const QTOAST_MARK = { ok:'✓', warn:'!', err:'×', info:'·' };
+function showToast(msg, type, ms){
+  const wrap = document.getElementById('qtoastWrap');
+  if (!wrap || !msg) return null;
+  const kind = QTOAST_MARK[type] ? type : 'info';
+  const el = document.createElement('div');
+  el.className = 'qtoast ' + kind;
+  el.innerHTML = '<span class="qtoast-mark" aria-hidden="true">' + QTOAST_MARK[kind] + '</span>' +
+                 '<span class="qtoast-msg">' + escapeHtml(String(msg)) + '</span>';
+  wrap.appendChild(el);
+  while (wrap.children.length > 4) wrap.removeChild(wrap.firstChild);
+  qolSyncToTopOffset();
+  const life = typeof ms === 'number' ? ms : 3200;
+  const kill = () => {
+    if (!el.isConnected) return;
+    el.classList.add('out');
+    setTimeout(() => { el.remove(); qolSyncToTopOffset(); }, 200);
+  };
+  const t = setTimeout(kill, life);
+  el.addEventListener('click', () => { clearTimeout(t); kill(); });
+  return el;
+}
+// Tombol "kembali ke atas" dan antrean toast menempati sudut yang sama. Tombolnya
+// tidak pernah bergerak — toast yang naik ke atasnya. Lihat catatan di CSS.
+function qolSyncToTopOffset(){
+  const wrap = document.getElementById('qtoastWrap');
+  const btn = document.getElementById('toTopBtn');
+  if (!wrap || !btn) return;
+  wrap.classList.toggle('raised', btn.classList.contains('show'));
+}
+
+// Salin teks ke clipboard. Dashboard ini sering dibuka lewat file://, dan di
+// sana navigator.clipboard tidak selalu tersedia — jadi ada jalur cadangan.
+function qolCopy(text){
+  const done = () => showToast('Disalin ke clipboard.', 'ok', 2200);
+  const fail = () => showToast('Browser menolak akses clipboard.', 'warn', 3200);
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(() => qolCopyFallback(text) ? done() : fail());
+  } else {
+    if (qolCopyFallback(text)) done(); else fail();
+  }
+}
+function qolCopyFallback(text){
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly','');
+    ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch(e){ return false; }
+}
+
+// ---------- 2. Palet perintah ----------
+// Kata kunci tambahan per tab: label tab pendek dan sering bukan kata yang
+// terpikir lebih dulu ("kendala" → BOTTLENECK, "pemasok" → DAFTAR KONTRAK).
+const QOL_TAB_KW = {
+  'map':          'peta cofiring marker lokasi sebaran titik pltu heatmap',
+  'pembangkit':   'overview pembangkit kit jenis pltg pltd plta kapasitas unit',
+  'fasilitas':    'fasilitas produksi pabrik pelet sawdust wood chip woodchip supplier',
+  'realisasi':    'realisasi target gap capaian achievement tahunan bulanan yoy 2023 2024 2025 2026 rekap',
+  'bottleneck':   'bottleneck kendala hambatan isu masalah problem',
+  'pareto':       'pareto loss kehilangan kategori penyebab analisa',
+  'kontrak':      'kontrak mitra pemasok vendor daftar do delivery order pasokan',
+  'mou-timeline': 'mou timeline nota kesepahaman monitoring busdev',
+  'usulan':       'usulan kontrak baru proposal tahap pengadaan',
+  'berita':       'berita news artikel media kliping',
+  'laporan':      'laporan infografis generator arsip pdf checkpoint',
+  'calendar':     'kalender calendar agenda jadwal rapat tim event',
+  'update':       'update data upload unggah excel admin revert versi'
+};
+const QOL_TAB_DIGIT = (() => {
+  const m = {};
+  Object.keys(QOL_TAB_KEYS).forEach(d => { m[QOL_TAB_KEYS[d]] = d; });
+  return m;
+})();
+
+let qolCmdkItems = [];   // indeks hasil bangun terakhir
+let qolCmdkView = [];    // hasil tersaring yang sedang tampil
+let qolCmdkSel = 0;
+let qolCmdkPrevFocus = null;
+
+function qolBuildCmdkIndex(){
+  const items = [];
+  // Tab dari bilah tab — dibaca dari DOM supaya label tidak pernah basi.
+  document.querySelectorAll('.tabs .tab').forEach(btn => {
+    const tab = btn.dataset.tab;
+    if (!tab) return;
+    const lblEl = btn.querySelector('#pembangkitTabLabel');
+    const label = (lblEl ? lblEl.textContent : btn.textContent).replace('▾','').trim();
+    items.push({ kind:'tab', tab, label, kw: QOL_TAB_KW[tab] || '', digit: QOL_TAB_DIGIT[tab] || '' });
+  });
+  // Dua tujuan yang tidak punya tombol di bilah tab.
+  items.push({ kind:'tab', tab:'calendar', label:'KALENDER TIM', kw: QOL_TAB_KW.calendar, digit:'' });
+  // Update Data hanya ditawarkan kepada yang memang punya aksesnya — menampilkannya
+  // ke semua orang hanya menghasilkan prompt nama lalu penolakan.
+  let canUpd = false;
+  try { canUpd = typeof canAccessUpdate === 'function' && canAccessUpdate(getUserName()); } catch(e){}
+  if (canUpd) items.push({ kind:'tab', tab:'update', label:'UPDATE DATA', kw: QOL_TAB_KW.update, digit:'' });
+
+  // 51 PLTU.
+  ((DATA && DATA.plants) || []).forEach(p => {
+    if (!p || !p.code) return;
+    items.push({
+      kind:'plant', code:p.code, label:p.name || p.code,
+      sub: [p.code, p.genco, p.regional].filter(Boolean).join(' · '),
+      kw: [p.code, p.name, p.genco, p.regional, p.boiler].filter(Boolean).join(' ').toLowerCase()
+    });
+  });
+
+  // Mitra / pemasok, diringkas dari DATA.contracts. Satu mitra biasanya punya
+  // banyak baris kontrak (beda PLTU, beda periode), jadi di sini dikelompokkan
+  // per nama dan jumlahnya ditampilkan sebagai sub-label.
+  const mitraAgg = new Map();
+  ((DATA && DATA.contracts) || []).forEach(c => {
+    const m = (c && c.pemasok || '').trim();
+    if (!m) return;
+    let e = mitraAgg.get(m);
+    if (!e){ e = { n:0, pltu:new Set(), genco:new Set() }; mitraAgg.set(m, e); }
+    e.n++;
+    if (c.pltu) e.pltu.add(c.pltu);
+    if (c.genco) e.genco.add(c.genco);
+  });
+  Array.from(mitraAgg.keys()).sort().forEach(m => {
+    const e = mitraAgg.get(m);
+    items.push({
+      kind:'mitra', mitra:m, label:m,
+      sub: e.n + ' kontrak · ' + e.pltu.size + ' PLTU' +
+           (e.genco.size ? ' · ' + Array.from(e.genco).sort().join('/') : ''),
+      // Nama PLTU ikut masuk kata kunci: mengetik "suralaya" jadi memunculkan
+      // PLTU-nya lebih dulu (cocok di label, skor jauh lebih tinggi) lalu para
+      // mitra yang memasok ke sana — pertanyaan yang memang sering ditanyakan.
+      kw: (m + ' ' + Array.from(e.pltu).join(' ')).toLowerCase()
+    });
+  });
+
+  // Tindakan.
+  items.push({ kind:'action', id:'kbdhelp', label:'Pintasan Keyboard', sub:'Semua tombol cepat', kw:'pintasan keyboard shortcut bantuan help tombol tuts' });
+  items.push({ kind:'action', id:'top',     label:'Kembali ke Atas',   sub:'Gulir tab aktif ke puncak', kw:'atas top puncak scroll gulir' });
+  items.push({ kind:'action', id:'copy',    label:'Salin Tautan Dashboard', sub:'Bagikan alamat halaman ini', kw:'salin copy link tautan url alamat bagikan share' });
+  qolCmdkItems = items;
+  return items;
+}
+
+function _qolReEsc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+// Mengembalikan RENTANG kecocokan subsekuens (jarak huruf pertama ke huruf
+// terakhir), atau -1 bila tidak cocok. Rentangnya yang dipakai, bukan sekadar
+// "cocok / tidak": pada 198 nama mitra yang panjang, subsekuens tanpa batas
+// mencocokkan hampir apa saja — "unggah" sempat memunculkan "PT Areca Tungga
+// Harsa" sebagai hasil teratas. Pemanggil membatasi rentang ke 3× panjang kueri,
+// yang menyisakan singkatan rapat ("mapcof" → "map cofiring") dan membuang
+// kecocokan yang huruf-hurufnya terserak di sepanjang kalimat.
+function _qolSubseqSpan(q, hay){
+  let i = 0, start = -1, end = -1;
+  for (let j = 0; j < hay.length && i < q.length; j++){
+    if (hay[j] === q[i]){ if (i === 0) start = j; end = j; i++; }
+  }
+  return i === q.length ? (end - start + 1) : -1;
+}
+// Tangga skor: makin dekat kecocokan ke AWAL label, makin tinggi. Kecocokan
+// hanya di kata kunci ada di anak tangga terbawah supaya sinonim tidak pernah
+// menggeser nama yang benar-benar diketik pengguna.
+function _qolScore(q, item){
+  // Tanpa kata kunci, palet berfungsi sebagai daftar telusur: tab lebih dulu,
+  // lalu tindakan, lalu 51 PLTU.
+  if (!q) return item.kind === 'tab' ? 5 : (item.kind === 'action' ? 3 : 1);
+  const lbl = item.label.toLowerCase();
+  // `sub` SENGAJA tidak ikut dicari. Sub-label mitra dirakit sebagai
+  // "33 kontrak · 16 PLTU · PIP/PNP", jadi memasukkannya membuat kata "kontrak"
+  // dan "pltu" cocok ke seluruh 198 mitra sekaligus — mengetik "kontrak"
+  // mengembalikan 60 baris, bukan tab Daftar Kontrak saja. Semua yang memang
+  // layak dicari sudah ada di `kw`, yang ditulis eksplisit per jenis.
+  const hay = (item.label + ' ' + (item.kw || '')).toLowerCase();
+  const tokens = q.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1){
+    if (!tokens.every(t => hay.includes(t))) return 0;
+    return 320 + (item.kind === 'tab' ? 30 : 0);
+  }
+  let s;
+  if (lbl === q) s = 1000;
+  else if (lbl.startsWith(q)) s = 800;
+  else if (new RegExp('\\b' + _qolReEsc(q)).test(lbl)) s = 600;
+  else if (lbl.includes(q)) s = 400;
+  else if (hay.includes(q)) s = 200;
+  // Anak tangga terakhir sengaja diuji terhadap LABEL saja, bukan hay, DAN dibatasi
+  // rentangnya. Dijalankan atas hay tanpa batas, "pareto" mencocoki enam PLTU dan
+  // tujuh mitra yang tidak ada hubungannya sama sekali.
+  else if (q.length >= 3){
+    const span = _qolSubseqSpan(q, lbl);
+    if (span > 0 && span <= q.length * 3) s = 60;
+    else return 0;
+  }
+  else return 0;
+  if (item.kind === 'tab') s += 30;
+  else if (item.kind === 'action') s += 15;
+  return s - Math.min(item.label.length, 40) * 0.3;
+}
+
+const QOL_KIND_ICON = {
+  tab:    '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="10" rx="1"/><path d="M1.5 6.5h13"/></svg>',
+  plant:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V7l4-2v2l4-2v2l4-2v9z"/><path d="M5 14v-2.5M9 14v-2.5"/></svg>',
+  mitra:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h6l3 3v10H3zM9 1.5v3h3M5 8h6M5 11h4"/></svg>',
+  action: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>'
+};
+const QOL_KIND_GROUP = { tab:'Tab', plant:'PLTU', mitra:'Mitra', action:'Tindakan' };
+
+function qolRenderCmdk(){
+  const list = document.getElementById('cmdkList');
+  const input = document.getElementById('cmdkInput');
+  if (!list || !input) return;
+  const q = input.value.trim().toLowerCase();
+  const scored = [];
+  for (const it of qolCmdkItems){
+    const s = _qolScore(q, it);
+    if (s > 0) scored.push({ it, s });
+  }
+  scored.sort((a, b) => b.s - a.s);
+  qolCmdkView = scored.slice(0, 60).map(x => x.it);
+  if (qolCmdkSel >= qolCmdkView.length) qolCmdkSel = 0;
+
+  if (!qolCmdkView.length){
+    list.innerHTML = '<div class="cmdk-empty">Tidak ada yang cocok dengan “' + escapeHtml(input.value.trim()) + '”.</div>';
+    return;
+  }
+  // Judul kelompok HANYA di mode telusur (kata kunci kosong), karena di sana
+  // urutannya memang mengelompok. Begitu ada kata kunci, urutannya relevansi:
+  // jenis berselang-seling, dan judul kelompok akan muncul berulang-ulang.
+  // Di mode itu pembedanya adalah tag di kanan tiap baris.
+  const grouped = !q;
+  let html = '';
+  let lastKind = null;
+  qolCmdkView.forEach((it, i) => {
+    if (grouped && it.kind !== lastKind){
+      html += '<div class="cmdk-group">' + QOL_KIND_GROUP[it.kind] + '</div>';
+      lastKind = it.kind;
+    }
+    const tagText = it.kind === 'tab' ? (it.digit || 'tab')
+                  : it.kind === 'plant' ? 'PLTU'
+                  : it.kind === 'mitra' ? 'mitra' : 'aksi';
+    const tag = '<span class="cmdk-item-tag">' + tagText + '</span>';
+    html += '<div class="cmdk-item' + (i === qolCmdkSel ? ' sel' : '') + '" role="option"' +
+              ' aria-selected="' + (i === qolCmdkSel ? 'true' : 'false') + '" data-i="' + i + '">' +
+              '<span class="cmdk-item-icon" aria-hidden="true">' + QOL_KIND_ICON[it.kind] + '</span>' +
+              '<span class="cmdk-item-main">' +
+                '<span class="cmdk-item-label">' + escapeHtml(it.label) + '</span>' +
+                (it.sub ? '<span class="cmdk-item-sub">' + escapeHtml(it.sub) + '</span>' : '') +
+              '</span>' + tag +
+            '</div>';
+  });
+  list.innerHTML = html;
+  qolScrollCmdkSelIntoView();
+}
+
+function qolScrollCmdkSelIntoView(){
+  const el = document.querySelector('.cmdk-item.sel');
+  if (el && el.scrollIntoView) el.scrollIntoView({ block:'nearest' });
+}
+function qolMoveCmdkSel(delta){
+  if (!qolCmdkView.length) return;
+  qolCmdkSel = (qolCmdkSel + delta + qolCmdkView.length) % qolCmdkView.length;
+  document.querySelectorAll('.cmdk-item').forEach(el => {
+    const on = Number(el.dataset.i) === qolCmdkSel;
+    el.classList.toggle('sel', on);
+    el.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  qolScrollCmdkSelIntoView();
+}
+
+function openCmdk(){
+  const bd = document.getElementById('cmdkBackdrop');
+  const input = document.getElementById('cmdkInput');
+  if (!bd || !input) return;
+  if (bd.classList.contains('open')) { input.select(); return; }
+  closeKbdHelp();
+  qolCmdkPrevFocus = document.activeElement;
+  qolBuildCmdkIndex();
+  qolCmdkSel = 0;
+  input.value = '';
+  bd.classList.add('open');
+  qolRenderCmdk();
+  input.focus();
+}
+function closeCmdk(){
+  const bd = document.getElementById('cmdkBackdrop');
+  if (!bd || !bd.classList.contains('open')) return;
+  bd.classList.remove('open');
+  // Kembalikan fokus ke tempat asalnya — kalau tidak, fokus jatuh ke <body>
+  // dan pengguna keyboard kehilangan posisinya.
+  if (qolCmdkPrevFocus && qolCmdkPrevFocus.focus){ try { qolCmdkPrevFocus.focus(); } catch(e){} }
+  qolCmdkPrevFocus = null;
+}
+function qolRunCmdk(i){
+  const it = qolCmdkView[i];
+  if (!it) return;
+  closeCmdk();
+  if (it.kind === 'tab'){ switchTab(it.tab); return; }
+  if (it.kind === 'plant'){ qolGotoPlant(it.code); return; }
+  if (it.kind === 'mitra'){ qolGotoMitra(it.mitra); return; }
+  if (it.id === 'kbdhelp') openKbdHelp();
+  else if (it.id === 'top') qolScrollActiveToTop();
+  else if (it.id === 'copy') qolCopy(location.href);
+}
+
+// Lompat ke satu PLTU di Map Cofiring.
+// Catatan V82 dihormati: tooltip marker TIDAK dibuka secara programatik — ia hanya
+// dibuka oleh klik pengguna. Yang dilakukan di sini adalah membuka panel detail
+// dan menggeser peta ke titiknya.
+function qolGotoPlant(code){
+  const p = ((DATA && DATA.plants) || []).find(x => x.code === code);
+  switchTab('map');
+  // Kolom "SEARCH PLTU" adalah filter marker, bukan pencarian. Kalau isinya
+  // tertinggal dari pencarian sebelumnya, marker yang dituju bisa tersembunyi.
+  const si = document.getElementById('search');
+  if (si && si.value){
+    si.value = '';
+    state.search = '';
+    try { refreshMarkers(); updateKPIs(); } catch(e){}
+  }
+  setTimeout(() => {
+    try { selectPlant(code, false); } catch(e){ console.warn('[QoL] selectPlant gagal:', e); }
+    if (p && p.lat != null && p.lon != null && map){
+      try { map.setView([p.lat, p.lon], Math.max(map.getZoom() || 5, 7), { animate:true }); } catch(e){}
+    }
+    // Chip filter Genco/Boiler/Regional bisa menyembunyikan PLTU ini. Panel
+    // detailnya tetap terbuka, tapi markernya tidak ada — katakan apa adanya.
+    // Syarat p.lat penting: PLTU tanpa koordinat MEMANG tidak pernah punya marker
+    // (refreshMarkers menyaring `.filter(p => p.lat)`), dan menyebutnya
+    // "disembunyikan filter" akan menuduh filter atas sesuatu yang bukan salahnya.
+    if (p && p.lat != null && !markers[code]){
+      showToast('PLTU ini sedang disembunyikan oleh filter peta.', 'warn', 4000);
+    } else if (p && p.lat == null){
+      showToast('PLTU ini belum punya koordinat, jadi tidak ada titiknya di peta.', 'info', 4000);
+    }
+  }, 80);
+}
+
+// Lompat ke satu MITRA di tab Daftar Kontrak.
+//
+// "Semua hasil untuk mitra ini" diambil harfiah: tab Daftar Kontrak punya LIMA
+// penyaring yang menyempitkan baris — regional, genco, PLTU, jenis, dan dua
+// sakelar (only-active, DO-kosong). Kalau salah satunya masih menyala dari
+// pekerjaan sebelumnya, pengguna melihat sebagian hasil dan mengira itu semuanya.
+// Jadi kelimanya dibuka. Tahun/Bulan TIDAK disentuh: keduanya hanya mengubah
+// angka realisasi mana yang dijumlahkan, bukan baris mana yang muncul.
+function qolApplyMitraFilter(mitra){
+  const f = state.kontrakFilters;
+  f.regional = 'all';
+  f.genco    = 'all';
+  f.pltu     = 'all';
+  f.jenis    = 'all';
+  f.mitra    = mitra;
+  state.kontrakOnlyActive = false;   // kontrak yang sudah berakhir tetap hasil yang sah
+  state.kontrakDoAnomOnly = false;   // sakelar badge "⚠ DO kosong"
+  // Selaraskan kontrol di layar supaya keadaan itu TERLIHAT, bukan tersembunyi.
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('kontrak-regional-filter', 'all');
+  set('kontrak-genco-filter', 'all');
+  set('kontrak-jenis-filter', 'all');
+  const act = document.getElementById('kontrak-only-active');
+  if (act) act.checked = false;
+  // Daftar PLTU dan datalist mitra diturunkan dari penyaring di atas, jadi harus
+  // dibangun ulang. buildKontrakMitraOptions() sekaligus mengisi kolom Mitra dari
+  // state, jadi nama yang dipilih muncul di kotaknya.
+  try {
+    if (typeof buildKontrakPltuOptions === 'function') buildKontrakPltuOptions();
+    if (typeof buildKontrakMitraOptions === 'function') buildKontrakMitraOptions();
+  } catch(e){ console.warn('[QoL] bangun ulang opsi kontrak gagal:', e); }
+}
+
+// Di lebar mobile blok filter dilipat (lihat V54 di buildKontrakFilters). Kalau
+// dibiarkan terlipat, tabel tampak tersaring tanpa sebab yang terlihat.
+function qolRevealKontrakFilters(){
+  const view = document.querySelector('.view[data-view="kontrak"]');
+  if (!view) return;
+  const body = view.querySelector('.kontrak-filter-body');
+  const btn  = view.querySelector('.kontrak-filter-toggle');
+  if (body) body.classList.remove('collapsed');
+  if (btn) btn.classList.remove('collapsed');
+}
+
+function qolGotoMitra(mitra){
+  // Penyaring dipasang SEBELUM pindah tab. Kalau Daftar Kontrak baru dibuka
+  // pertama kali, lazy-init-nya (setTimeout 30 ms di switchTab) langsung
+  // membangun tabel dengan penyaring yang benar — bukan membangun yang salah
+  // lalu ditimpa, yang akan terlihat berkedip.
+  qolApplyMitraFilter(mitra);
+  switchTab('kontrak');
+  // Lalu diulang setelah init selesai: pada panggilan pertama sebagian kontrol
+  // belum terbangun (select genco/jenis diisi oleh buildKontrakFilters), dan
+  // buildKontrakFilters mengembalikannya ke 'all' — sama dengan yang kita mau,
+  // tapi urutannya tidak dijamin. Pemanggilan kedua ini idempoten.
+  setTimeout(() => {
+    qolApplyMitraFilter(mitra);
+    try { renderKontrakTable(); } catch(e){ console.warn('[QoL] renderKontrakTable gagal:', e); }
+    qolRevealKontrakFilters();
+
+    let n = null;
+    try { n = filteredContracts().length; } catch(e){}
+    if (n === 0){
+      showToast('Tidak ada kontrak atas nama "' + mitra + '".', 'warn', 4500);
+    } else {
+      showToast((n === null ? '' : n + ' kontrak · ') + mitra +
+                ' — penyaring lain direset, termasuk "only active".', 'ok', 5200);
+    }
+
+    // Bawa tabelnya ke layar; di atasnya ada kartu-kartu KPI yang tinggi.
+    const wrap = document.querySelector('.view[data-view="kontrak"] .real-recap-wrap');
+    if (wrap && wrap.scrollIntoView){
+      const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      wrap.scrollIntoView({ block:'start', behavior: still ? 'auto' : 'smooth' });
+    }
+  }, 150);
+}
+
+// ---------- 3. Lembar pintasan keyboard ----------
+const QOL_KBD_SHEET = [
+  ['Navigasi', [
+    [['1'],  'Map Cofiring'],
+    [['2'],  'Overview Pembangkit'],
+    [['3'],  'Fasilitas Produksi'],
+    [['4'],  'Realisasi 2023–2026'],
+    [['5'],  'Bottleneck'],
+    [['6'],  'Pareto Loss'],
+    [['7'],  'Daftar Kontrak'],
+    [['8'],  'Monitoring MoU'],
+    [['9'],  'Berita'],
+    [['0'],  'Laporan'],
+    [['←','→'], 'Pindah tab saat fokus ada di bilah tab']
+  ]],
+  ['Cari & lompat', [
+    [['Ctrl','K'], 'Buka palet perintah — juga berfungsi saat sedang mengetik'],
+    [['/','S'], 'Buka palet perintah (saat tidak sedang mengetik)'],
+    [['↑','↓'], 'Pilih hasil di dalam palet'],
+    [['Enter'], 'Buka hasil terpilih'],
+    [['F'], 'Fokus ke kolom cari / filter milik tab yang sedang dibuka']
+  ]],
+  ['Lain-lain', [
+    [['T'], 'Kembali ke atas halaman'],
+    [['?'], 'Buka / tutup lembar ini'],
+    [['Esc'], 'Tutup palet, lembar ini, panel, dan menu']
+  ]]
+];
+function qolRenderKbdHelp(){
+  const body = document.getElementById('kbdHelpBody');
+  if (!body || body.dataset.built) return;
+  body.innerHTML = QOL_KBD_SHEET.map(([group, rows]) =>
+    '<div class="kbdhelp-group">' + escapeHtml(group) + '</div>' +
+    rows.map(([keys, desc]) =>
+      '<div class="kbdhelp-row"><span class="kbdhelp-desc">' + escapeHtml(desc) + '</span>' +
+      '<span class="kbdhelp-keys">' + keys.map(k => '<kbd>' + escapeHtml(k) + '</kbd>').join('') + '</span></div>'
+    ).join('')
+  ).join('');
+  body.dataset.built = '1';
+}
+function openKbdHelp(){
+  const bd = document.getElementById('kbdHelpBackdrop');
+  if (!bd) return;
+  closeCmdk();
+  qolRenderKbdHelp();
+  bd.classList.add('open');
+  const btn = document.getElementById('kbdHelpClose');
+  if (btn) btn.focus();
+}
+function closeKbdHelp(){
+  const bd = document.getElementById('kbdHelpBackdrop');
+  if (bd) bd.classList.remove('open');
+}
+function toggleKbdHelp(){
+  const bd = document.getElementById('kbdHelpBackdrop');
+  if (bd && bd.classList.contains('open')) closeKbdHelp(); else openKbdHelp();
+}
+
+// ---------- 5 & 6. Area gulir tab aktif ----------
+// Tiap tab menggulir di elemennya sendiri (.real-view, .pareto-view, …), bukan di
+// window — .view sendiri overflow:hidden. Jadi "puncak halaman" harus dicari, dan
+// pencariannya dibatasi tiga tingkat supaya tidak menyapu pohon 1,6 MB.
+function qolActiveScroller(){
+  const v = document.querySelector('.view.active');
+  if (!v) return null;
+  if (v.scrollHeight - v.clientHeight > 8) return v;
+  let level = [v];
+  for (let d = 0; d < 3 && level.length; d++){
+    const next = [];
+    for (const el of level){
+      for (const c of el.children){
+        // CANVAS tidak pernah jadi penggulir dan ada belasan di tab realisasi/pareto.
+        if (c.nodeType !== 1 || c.tagName === 'CANVAS') continue;
+        const oy = getComputedStyle(c).overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && c.scrollHeight - c.clientHeight > 8) return c;
+        next.push(c);
+      }
+    }
+    level = next;
+  }
+  return null;
+}
+function qolScrollActiveToTop(){
+  // Utamakan elemen yang PERSIS sedang digulir pengguna (dicatat oleh penangan
+  // scroll), baru cari sendiri kalau belum ada. Elemen yang sudah teridentifikasi
+  // selalu lebih tepat daripada hasil penelusuran ulang.
+  let s = qolToTopScroller;
+  if (!s || !s.isConnected || !s.closest('.view.active')) s = qolActiveScroller();
+  if (!s){ showToast('Tab ini tidak punya area gulir.', 'info', 2200); return; }
+  // scroll-behavior tidak ikut dinetralkan oleh blok reduced-motion di CSS, karena
+  // gerakannya diminta dari JS. Jadi diperiksa di sini: yang meminta gerak dikurangi
+  // mendapat lompatan seketika, bukan animasi 1.700px.
+  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  s.scrollTo({ top:0, behavior: still ? 'auto' : 'smooth' });
+}
+// Tombol muncul hanya kalau benar-benar ada yang jauh di bawah — di ambang 400px
+// tombolnya lebih mengganggu daripada menolong.
+let qolToTopScroller = null;
+function qolUpdateToTop(el){
+  const btn = document.getElementById('toTopBtn');
+  if (!btn) return;
+  const s = el || qolActiveScroller();
+  qolToTopScroller = s;
+  btn.classList.toggle('show', !!s && s.scrollTop > 400);
+  qolSyncToTopOffset();
+}
+
+// ---------- 7. Bilah tab: petunjuk gulir + peran ARIA ----------
+function qolUpdateTabFade(){
+  const bar = document.querySelector('.tabs');
+  if (!bar) return;
+  const max = bar.scrollWidth - bar.clientWidth;
+  bar.classList.toggle('qol-fade-l', max > 2 && bar.scrollLeft > 4);
+  bar.classList.toggle('qol-fade-r', max > 2 && bar.scrollLeft < max - 4);
+}
+// Bilah tab sudah BERPERILAKU seperti tablist; sebelumnya ia hanya tidak pernah
+// mengatakannya. Peran dipasang dari JS, bukan di markup, supaya sebelas tombol
+// tidak perlu disunting satu per satu dan aria-selected tidak pernah basi.
+function qolSyncTabsA11y(){
+  const bar = document.querySelector('.tabs');
+  if (!bar) return;
+  bar.setAttribute('role', 'tablist');
+  bar.setAttribute('aria-label', 'Bagian dashboard');
+  bar.querySelectorAll('.tab').forEach(btn => {
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', btn.classList.contains('active') ? 'true' : 'false');
+    const tab = btn.dataset.tab;
+    // Tab "Overview Pembangkit" tidak langsung membuka panelnya — ia membuka menu
+    // pilihan jenis pembangkit. Katakan itu, dan JANGAN klaim aria-controls ke
+    // panel yang belum tentu jadi terbuka.
+    if (btn.classList.contains('tab-dd-trigger')){
+      btn.setAttribute('aria-haspopup', 'menu');
+      return;
+    }
+    if (tab){
+      const view = document.querySelector('.view[data-view="' + tab + '"]');
+      if (view){
+        if (!view.id) view.id = 'view-' + tab;
+        view.setAttribute('role', 'tabpanel');
+        view.setAttribute('aria-label', btn.textContent.replace('▾','').trim());
+        btn.setAttribute('aria-controls', view.id);
+      }
+    }
+  });
+}
+
+// ---------- 4 & 5. Ingat tab terakhir + posisi gulir ----------
+const QOL_LAST_TAB_KEY = 'bio-qol-last-tab';
+// Dua tab SENGAJA tidak pernah dipulihkan otomatis: keduanya memasang gerbang
+// identitas, dan memunculkan prompt nama sebelum pengguna melakukan apa pun
+// adalah cara yang buruk untuk membuka sebuah dashboard.
+const QOL_RESTORABLE = ['map','pembangkit','fasilitas','realisasi','bottleneck',
+                        'pareto','kontrak','mou-timeline','berita','laporan','calendar'];
+const qolScrollMem = Object.create(null);
+let qolTabRestored = false;
+
+function qolRememberTab(tab){
+  if (!QOL_RESTORABLE.includes(tab)) return;
+  try { localStorage.setItem(QOL_LAST_TAB_KEY, JSON.stringify({ tab, at: Date.now() })); } catch(e){}
+}
+function qolRestoreLastTab(){
+  if (qolTabRestored) return;
+  qolTabRestored = true;
+  let rec = null;
+  try { rec = JSON.parse(localStorage.getItem(QOL_LAST_TAB_KEY) || 'null'); } catch(e){}
+  if (!rec || !rec.tab || rec.tab === 'map') return;
+  if (!QOL_RESTORABLE.includes(rec.tab)) return;
+  // Kedaluwarsa 12 jam. Tab yang dibuka kemarin sore bukan "tempat saya tadi".
+  if (!rec.at || Date.now() - rec.at > 12 * 3600 * 1000) return;
+  // Pengguna sudah keburu pindah tab sendiri — jangan rebut kendali darinya.
+  if (state.tab !== 'map') return;
+  try {
+    switchTab(rec.tab);
+    showToast('Dibuka di tab terakhir Anda. Tekan 1 untuk kembali ke Map.', 'info', 5000);
+  } catch(e){ console.warn('[QoL] pulihkan tab gagal:', e); }
+}
+
+// switchTab DIBUNGKUS, bukan diubah: implementasi aslinya dipanggil utuh di
+// tengah. Yang ditambahkan hanya simpan/pulihkan posisi gulir dan catat tab.
+// Pembungkus dipasang ke window karena onclick inline di markup dan pemanggilan
+// internal sama-sama menyelesaikan identifier `switchTab` lewat objek global.
+(function(){
+  const origSwitchTab = switchTab;
+  window.switchTab = function(tab){
+    const prev = state && state.tab;
+    if (prev && prev !== tab){
+      const ps = qolActiveScroller();
+      if (ps) qolScrollMem[prev] = ps.scrollTop;
+    }
+    const out = origSwitchTab.apply(this, arguments);
+    // switchTab bisa keluar lebih awal (gerbang identitas ditolak/dibatalkan).
+    // Kalau tab tidak benar-benar berpindah, jangan sentuh apa pun.
+    if (!state || state.tab !== tab) return out;
+    qolRememberTab(tab);
+    // aria-selected menyatakan keadaan SEKARANG, jadi ia disetel serentak dengan
+    // perpindahannya — bukan ditunda ke rAF bersama pekerjaan tata letak. Pembaca
+    // layar yang membacakan tab persis setelah klik tidak boleh dapat nilai basi.
+    qolSyncTabsA11y();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const ns = qolActiveScroller();
+      if (ns && qolScrollMem[tab] != null) ns.scrollTop = qolScrollMem[tab];
+      qolUpdateToTop(ns);
+      qolUpdateTabFade();
+    }));
+    return out;
+  };
+})();
+
+// ---------- Pemasangan ----------
+window.addEventListener('DOMContentLoaded', () => {
+  // Palet perintah
+  const bd = document.getElementById('cmdkBackdrop');
+  const input = document.getElementById('cmdkInput');
+  const list = document.getElementById('cmdkList');
+  if (bd) bd.addEventListener('mousedown', e => { if (e.target === bd) closeCmdk(); });
+  if (input){
+    input.addEventListener('input', () => { qolCmdkSel = 0; qolRenderCmdk(); });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown'){ e.preventDefault(); qolMoveCmdkSel(1); }
+      else if (e.key === 'ArrowUp'){ e.preventDefault(); qolMoveCmdkSel(-1); }
+      else if (e.key === 'Enter'){ e.preventDefault(); qolRunCmdk(qolCmdkSel); }
+      else if (e.key === 'Escape'){ e.preventDefault(); closeCmdk(); }
+      else if (e.key === 'Tab'){ e.preventDefault(); qolMoveCmdkSel(e.shiftKey ? -1 : 1); }
+    });
+  }
+  if (list){
+    list.addEventListener('click', e => {
+      const row = e.target.closest('.cmdk-item');
+      if (row) qolRunCmdk(Number(row.dataset.i));
+    });
+  }
+
+  // Lembar pintasan
+  const hbd = document.getElementById('kbdHelpBackdrop');
+  if (hbd) hbd.addEventListener('mousedown', e => { if (e.target === hbd) closeKbdHelp(); });
+  const hclose = document.getElementById('kbdHelpClose');
+  if (hclose) hclose.onclick = closeKbdHelp;
+
+  // Esc menutup dua overlay ini lebih dulu daripada apa pun. Dipasang di fase
+  // CAPTURE supaya menang atas penangan Escape lain yang sudah ada di file ini
+  // (dropdown pembangkit, sidebar mobile, modal) — kalau tidak, satu Esc akan
+  // menutup palet DAN sesuatu di belakangnya sekaligus.
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const cmdkOpen = bd && bd.classList.contains('open');
+    const helpOpen = hbd && hbd.classList.contains('open');
+    if (!cmdkOpen && !helpOpen) return;
+    e.stopPropagation();
+    e.preventDefault();
+    if (cmdkOpen) closeCmdk();
+    else closeKbdHelp();
+  }, true);
+
+  // Kembali ke atas
+  const topBtn = document.getElementById('toTopBtn');
+  if (topBtn) topBtn.onclick = qolScrollActiveToTop;
+  // scroll tidak menggelembung, jadi didengarkan di fase capture. Kerja nyatanya
+  // ditunda ke satu rAF supaya penggulir cepat tidak memicu layout berkali-kali.
+  let topRaf = 0;
+  document.addEventListener('scroll', e => {
+    const t = e.target;
+    if (!t || t.nodeType !== 1) return;
+    if (!t.closest || !t.closest('.view.active')) return;
+    if (topRaf) return;
+    topRaf = requestAnimationFrame(() => { topRaf = 0; qolUpdateToTop(t); });
+  }, true);
+
+  // Bilah tab: petunjuk gulir + panah kiri/kanan
+  const bar = document.querySelector('.tabs');
+  if (bar){
+    bar.addEventListener('scroll', qolUpdateTabFade, { passive:true });
+    bar.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') return;
+      const tabs = Array.from(bar.querySelectorAll('.tab:not(:disabled)'));
+      const cur = tabs.indexOf(document.activeElement);
+      if (cur < 0) return;
+      e.preventDefault();
+      let next;
+      if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = tabs.length - 1;
+      else next = (cur + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      tabs[next].focus();
+    });
+  }
+  window.addEventListener('resize', () => { qolUpdateTabFade(); qolSyncToTopOffset(); });
+
+  qolSyncTabsA11y();
+  qolUpdateTabFade();
+  // Bilah tab sering baru selesai tata-letaknya setelah font Plus Jakarta Sans
+  // termuat, dan scrollWidth sebelum itu salah.
+  setTimeout(qolUpdateTabFade, 600);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(qolUpdateTabFade).catch(() => {});
 });
 
 
