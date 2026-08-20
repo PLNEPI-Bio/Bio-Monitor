@@ -7242,6 +7242,48 @@ html,body{
 .qtoast.err .qtoast-mark{color:var(--status-crit-ink)}
 .qtoast-msg{flex:1;min-width:0}
 
+/* ---------- Banner "versi baru tersedia" (V109) ---------- */
+/* Muncul saat berkas yang DILAYANI server berubah — yaitu ketika push ke main
+   sudah selesai di-deploy GitHub Pages, bukan sekadar ter-push.
+   Sudut KIRI bawah: kanan-bawah sudah dihuni antrean toast + tombol ke-atas,
+   kanan-atas oleh #updateAppliedBanner. Berbeda dari .qtoast, banner ini MENETAP
+   sampai pengguna memilih — ia meminta aksi, bukan sekadar memberi kabar. */
+.verbanner{
+  position:fixed;left:16px;bottom:16px;z-index:var(--z-toast);
+  display:none;flex-direction:column;gap:9px;
+  /* 252px, bukan 300: baris tombol dasar peta ("Monthly Trend") menempel di tepi
+     kiri .map-area, yaitu x=276 — banner 300px maupun 276px menutupinya (terukur
+     di uji headless). 252 membuat tepi kanan berhenti di 268, tetap di dalam
+     lebar kolom panel kiri sehingga tak pernah masuk area peta di tab mana pun. */
+  width:min(252px,calc(100vw - 32px));padding:11px 13px 12px;
+  background:var(--panel);border:1px solid var(--border-bright);
+  border-left:3px solid var(--accent);
+  border-radius:var(--r-md);box-shadow:var(--shadow-lg);
+  font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);
+  animation:qtoastIn var(--dur-slow) var(--ease-out) both;
+}
+.verbanner.show{display:flex}
+.verbanner-title{
+  font-size:11px;font-weight:700;color:var(--text-bright);
+  letter-spacing:.4px;text-transform:uppercase;
+}
+.verbanner-msg{font-size:11.5px;line-height:1.5;color:var(--text-dim)}
+.verbanner-act{display:flex;gap:8px;align-items:center}
+.verbanner-btn{
+  font-family:inherit;font-size:11px;font-weight:700;line-height:1;
+  padding:7px 12px;border-radius:var(--r-sm);cursor:pointer;
+  border:1px solid var(--border-bright);background:var(--panel-2);color:var(--text);
+  transition:background-color var(--dur-fast) var(--ease-in-out);
+}
+.verbanner-btn:hover{background:var(--panel-3)}
+/* Isian accent butuh --on-accent, bukan #fff — di tema chrome/page accent-nya lain. */
+.verbanner-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.verbanner-btn.primary:hover{background:var(--accent);filter:brightness(1.12)}
+@media (max-width:900px){
+  /* Bilah nav bawah mobile ~54px — sejajarkan dengan penghuni sudut lainnya. */
+  .verbanner{left:16px;right:16px;bottom:68px;width:auto}
+}
+
 /* ---------- Kembali ke atas ---------- */
 .to-top-btn{
   position:fixed;right:16px;bottom:16px;z-index:var(--z-mobile-fab);
@@ -7309,7 +7351,7 @@ html,body{
 .tabs.qol-fade-r::after{opacity:1}
 
 @media (prefers-reduced-motion: reduce){
-  .cmdk,.kbdhelp,.qtoast{animation:none}
+  .cmdk,.kbdhelp,.qtoast,.verbanner{animation:none}
   .qtoast.out{animation:none;opacity:0}
 }
 </style>
@@ -9133,6 +9175,16 @@ html,body{
 
 <!-- Antrean toast serbaguna -->
 <div class="qtoast-wrap" id="qtoastWrap" role="status" aria-live="polite"></div>
+
+<!-- V109: versi baru terdeteksi (deploy baru dari push ke main). Menetap sampai dipilih. -->
+<div class="verbanner" id="verBanner" role="alert" aria-live="assertive">
+  <div class="verbanner-title">Versi Baru Tersedia</div>
+  <div class="verbanner-msg" id="verBannerMsg">Dashboard sudah diperbarui. Muat ulang halaman untuk memakai versi terbaru.</div>
+  <div class="verbanner-act">
+    <button class="verbanner-btn primary" type="button" id="verBannerReload">Muat Ulang</button>
+    <button class="verbanner-btn" type="button" id="verBannerLater">Nanti</button>
+  </div>
+</div>
 
 <!-- Kembali ke atas — muncul sendiri saat tab aktif punya area gulir panjang -->
 <button class="to-top-btn" id="toTopBtn" type="button" title="Kembali ke atas" aria-label="Kembali ke atas">
@@ -27256,7 +27308,129 @@ window.addEventListener('DOMContentLoaded', () => {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(qolUpdateTabFade).catch(() => {});
 });
 
+// =====================================================
+// V109 — PEMBERITAHUAN VERSI BARU
+// Setiap push ke main otomatis di-deploy GitHub Pages. Yang dipantau di sini
+// adalah HASIL deploy-nya, bukan push-nya: klien mengetuk (HEAD) berkas halaman
+// ini sendiri lalu membandingkan ETag/Last-Modified dengan yang berlaku saat
+// halaman dimuat. Berubah → ada versi baru yang sudah benar-benar live.
+//
+// Kenapa bukan API GitHub: (1) ia memberi kabar saat PUSH, padahal berkasnya
+// baru live ~1 menit kemudian — pengguna yang menurut lalu memuat ulang justru
+// mendapat versi lama lagi; (2) rate limit anonim 60/jam per IP, dan kantor ini
+// keluar lewat satu IP NAT bersama; (3) gagal total kalau repo dijadikan privat.
+//
+// TIDAK PERNAH memuat ulang sendiri. Pengguna bisa sedang di tengah unggah Excel
+// atau mengisi form usulan — memuat ulang tanpa diminta membuang pekerjaan itu.
+// Banner hanya menawarkan, keputusan tetap di pengguna.
+// =====================================================
+const VERCHK_INTERVAL_MS = 60000;
 
+let verChk = {
+  base: null,       // sidik jari versi yang SEDANG dijalankan pengguna
+  pending: null,    // sidik jari yang sedang ditawarkan lewat banner
+  dismissed: null,  // sidik jari yang sudah ditolak lewat "Nanti"
+  busy: false,
+  off: false,       // server tak memberi header yang bisa dipakai → menyerah
+};
+
+// ETag paling tepat; Last-Modified cadangan; Content-Length jaring terakhir
+// (berubah pada hampir semua suntingan nyata di berkas 1,9 MB ini).
+function _verFingerprint(res){
+  const et = res.headers.get('etag');
+  if (et) return 'e:' + et.replace(/^W\//i, '').trim();
+  const lm = res.headers.get('last-modified');
+  if (lm) return 'm:' + lm;
+  const cl = res.headers.get('content-length');
+  if (cl) return 's:' + cl;
+  return '';
+}
+
+function showVersionBanner(fp, lastModified){
+  const el = document.getElementById('verBanner');
+  if (!el) return;
+  verChk.pending = fp;
+  const msg = document.getElementById('verBannerMsg');
+  if (msg){
+    const t = lastModified ? new Date(lastModified) : null;
+    const when = (t && !isNaN(t.getTime()))
+      ? ' (' + t.toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) + ')'
+      : '';
+    msg.textContent = 'Dashboard sudah diperbarui' + when +
+      '. Muat ulang halaman untuk memakai versi terbaru.';
+  }
+  el.classList.add('show');
+}
+
+function hideVersionBanner(){
+  const el = document.getElementById('verBanner');
+  if (el) el.classList.remove('show');
+}
+
+// `cache:'no-store'` melewati cache browser; parameter unik melewati cache CDN
+// GitHub Pages (Cache-Control: max-age=600) — tanpanya kabar bisa telat 10 menit.
+async function checkAppVersion(){
+  if (verChk.off || verChk.busy) return;
+  if (!/^https?:$/.test(location.protocol)) return;   // dibuka lewat file://
+  verChk.busy = true;
+  try {
+    const res = await fetch(location.pathname + '?_vc=' + Date.now(),
+                           { method:'HEAD', cache:'no-store' });
+    if (!res.ok) return;
+    const fp = _verFingerprint(res);
+    if (!fp){
+      verChk.off = true;
+      console.warn('[Versi] Server tidak mengirim ETag/Last-Modified/Content-Length — pemantauan versi dimatikan.');
+      return;
+    }
+    const lm = res.headers.get('last-modified');
+    if (verChk.base === null){
+      verChk.base = fp;
+      // Deploy bisa mendarat persis di antara halaman termuat dan ketukan
+      // pertama ini — dan lebih sering lagi: halaman disajikan dari cache
+      // browser yang umurnya sampai 10 menit. document.lastModified adalah cap
+      // waktu dokumen yang BENAR-BENAR dijalankan pengguna, jadi kalau server
+      // sudah lebih baru, umumkan sekarang juga.
+      const srv = Date.parse(lm || '');
+      const doc = Date.parse(document.lastModified);
+      if (srv && doc && srv - doc > 2000) showVersionBanner(fp, lm);
+      return;
+    }
+    if (fp !== verChk.base && fp !== verChk.dismissed) showVersionBanner(fp, lm);
+  } catch(e){
+    // Jaringan putus / offline sementara — diamkan, coba lagi pada tik berikutnya.
+  } finally {
+    verChk.busy = false;
+  }
+}
+window.checkAppVersion = checkAppVersion;
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (!/^https?:$/.test(location.protocol)) return;
+
+  const rel = document.getElementById('verBannerReload');
+  // reload() memakai cache mode "reload": dokumen selalu diminta ulang ke
+  // server, jadi HTML lama yang masih segar di cache browser tidak terpakai.
+  if (rel) rel.addEventListener('click', () => location.reload());
+
+  const later = document.getElementById('verBannerLater');
+  if (later) later.addEventListener('click', () => {
+    // Jangan lagi menawarkan versi INI. Pemantauan tetap jalan — kalau nanti ada
+    // deploy yang lebih baru lagi, banner boleh muncul kembali.
+    verChk.dismissed = verChk.pending;
+    hideVersionBanner();
+  });
+
+  checkAppVersion();   // menetapkan patokan
+  setInterval(() => {
+    if (document.visibilityState === 'visible') checkAppVersion();
+  }, VERCHK_INTERVAL_MS);
+  // Tab yang ditinggal berjam-jam tidak diketuk sama sekali; saat dibuka lagi
+  // pengguna harus langsung tahu, tidak menunggu tik berikutnya.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkAppVersion();
+  });
+});
 
 </script>
 </body>
