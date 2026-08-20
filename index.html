@@ -2942,6 +2942,25 @@ html,body{
    var(--accent). Tint now derives from --accent-rgb so it tracks the ink. */
 .kontrak-table th.year-header{background:rgba(var(--accent-rgb),.10);color:var(--accent);padding:10px;border-left:1px solid var(--border)}
 .kontrak-table th.old-year{background:rgba(100,116,139,.06);color:var(--text-dim)}
+/* V110: header yang bisa disortir. Panah SELALU memesan tempatnya (opacity 0,
+   bukan display:none) supaya lebar kolom tidak berubah saat sortir dipindah —
+   tabel ini tanpa min-width sejak V46, jadi lebarnya mengikuti isi dan akan
+   tersentak setiap klik kalau panahnya muncul-hilang. */
+.kontrak-table th.sortable{cursor:pointer;user-select:none}
+.kontrak-table th.sortable::after{
+  content:'\2195';margin-left:4px;font-size:8px;opacity:0;
+  transition:opacity var(--dur-fast) var(--ease-in-out);
+}
+.kontrak-table th.sortable:hover::after{opacity:.45}
+.kontrak-table th.sortable.sorted::after{opacity:1}
+.kontrak-table th.sortable.sorted.asc::after{content:'\25B2'}
+.kontrak-table th.sortable.sorted.desc::after{content:'\25BC'}
+/* Kolom tahun/DO punya warna identitasnya sendiri (--accent / oranye DO);
+   jangan ditimpa. Penanda "sedang disortir" untuk semua kolom adalah garis
+   bawah accent, warna teks hanya untuk header biasa. */
+.kontrak-table th.sortable.sorted{box-shadow:inset 0 -2px 0 var(--accent)}
+.kontrak-table th.sortable.sorted:not(.year-header){color:var(--accent)}
+.kontrak-table th.sortable:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .kontrak-table td{
   padding:10px 10px;border-bottom:1px solid var(--border);color:var(--text);
   font-size:11px;vertical-align:middle;transition:background-color var(--dur-fast) var(--ease-in-out);
@@ -17391,11 +17410,77 @@ function _kontrakDoAnomaly(c, realCols){
   return { anomaly: periods.length > 0, periods };
 }
 
+// =====================================================
+// V110 — SORTIR TABEL "DAFTAR KONTRAK"
+// Mengikuti pola yang sudah dipakai tabel popup (setKontrakBreakdownSort):
+// klik kolom sama → balik arah, kolom baru → teks mulai menaik, angka mulai
+// menurun. Sortir SENGAJA bertahan saat filter diubah — pengguna yang sudah
+// mengurutkan berdasarkan Sisa biasanya ingin urutan itu tetap saat berganti
+// tahun/bulan.
+// =====================================================
+let kontrakTableSort = { col: null, dir: 'desc' }; // null col → urutan asal data
+
+const KONTRAK_TEXT_COLS = { genco:1, pltu:1, pemasok:1, kontrak:1, jenis:1, amandemen:1, awal:1, akhir:1 };
+
+function setKontrakTableSort(col){
+  const s = kontrakTableSort;
+  if (s.col === col) s.dir = (s.dir === 'desc') ? 'asc' : 'desc';
+  else { s.col = col; s.dir = KONTRAK_TEXT_COLS[col] ? 'asc' : 'desc'; }
+  renderKontrakTable();
+}
+window.setKontrakTableSort = setKontrakTableSort;
+
+// Header bukan elemen yang bisa difokus secara alami, jadi Enter/Spasi dipasang
+// sendiri — tanpa ini kolom hanya bisa disortir dengan tetikus.
+function kontrakSortKeydown(e, col){
+  if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); setKontrakTableSort(col); }
+}
+window.kontrakSortKeydown = kontrakSortKeydown;
+
+// Nilai pembanding satu kontrak untuk satu kolom. Angka dikembalikan sebagai
+// number, teks sebagai string — comparator memilih cara banding dari tipenya.
+// Tanggal disimpan ISO (YYYY-MM-DD), jadi urutan leksikografisnya SUDAH urutan
+// kronologis; tidak perlu diparse jadi Date.
+function _kontrakSortKey(c, col, realCols){
+  switch (col){
+    case 'genco':     return c.genco || '';
+    case 'pltu':      return c.pltu || '';
+    case 'pemasok':   return c.pemasok || '';
+    case 'kontrak':   return c.kontrak || '';
+    case 'jenis':     return c.jenis || '';
+    case 'amandemen': return c.amandemen || '';
+    case 'awal':      return c.awal || '';
+    case 'akhir':     return c.akhir || '';
+    case 'vol':       return c.vol_mt || 0;
+    // Sisa dan % memakai realisasi TERFILTER, sama persis dengan angka yang
+    // tampil di selnya. Menyortir pakai realisasi penuh akan menghasilkan
+    // urutan yang tidak cocok dengan kolom yang dilihat pengguna.
+    case 'sisa':      return (c.vol_mt || 0) - getFilteredRealisasiForContract(c);
+    case 'pct': {
+      const v = c.vol_mt || 0;
+      return v > 0 ? (getFilteredRealisasiForContract(c) / v * 100) : 0;
+    }
+  }
+  const m = /^real(\d+)$/.exec(col);
+  if (m){
+    const rc = realCols[+m[1]];
+    return rc ? _kontrakRealColValue(c, rc) : 0;
+  }
+  return '';
+}
+
 function renderKontrakTable(){
   const container = document.getElementById('kontrak-table');
   if (!container) return;
   const realCols = buildKontrakRealCols();
   let contracts = filteredContracts();
+
+  // Kolom tahun/DO bersifat dinamis — jumlahnya ikut filter Tahun/Bulan. Kalau
+  // kolom yang tersimpan sudah tidak ada lagi, jatuhkan sortirnya; kalau tidak,
+  // _kontrakSortKey mengembalikan 0 untuk semua baris dan urutannya jadi acak
+  // tanpa penjelasan yang terlihat.
+  const staleRealCol = /^real(\d+)$/.exec(kontrakTableSort.col || '');
+  if (staleRealCol && +staleRealCol[1] >= realCols.length) kontrakTableSort = { col: null, dir: 'desc' };
 
   // Count "realisasi ada tapi DO kosong" over the filtered set, and optionally
   // narrow the table to only those contracts (toggled via the ⚠ badge).
@@ -17426,22 +17511,55 @@ function renderKontrakTable(){
     return;
   }
 
-  // Header — V46: removed all min-width for autosize (no horizontal scroll)
-  let header = '<thead><tr>';
-  header += '<th>Genco</th>';
-  header += '<th>PLTU</th>';
-  header += '<th>Pemasok</th>';
-  header += '<th>Vol (MT)</th>';
-  header += '<th>Kontrak</th>';
-  header += '<th>Awal</th>';
-  header += '<th>Akhir</th>';
-  header += '<th>Jenis</th>';
-  header += '<th>Sisa</th>';
-  header += '<th>%</th>';
-  for (let i = 0; i < realCols.length; i++){
-    header += '<th class="year-header' + (realCols[i].metric === 'do' ? ' do-header' : '') + (realCols[i].isOld ? ' old-year' : '') + '">' + realCols[i].label + '</th>';
+  // V110: urutkan menurut kolom yang diklik. Kunci dihitung SEKALI per kontrak,
+  // tidak di dalam comparator — kolom sisa/%/DO memanggil
+  // getFilteredRealisasiForContract() dan getContractDO() yang tidak murah,
+  // sedangkan comparator dipanggil O(n log n) kali.
+  if (kontrakTableSort.col){
+    const dir = kontrakTableSort.dir === 'asc' ? 1 : -1;
+    const dec = contracts.map((c, i) => ({ c, i, k: _kontrakSortKey(c, kontrakTableSort.col, realCols) }));
+    dec.sort((a, b) => {
+      const cmp = (typeof a.k === 'number' && typeof b.k === 'number')
+        ? a.k - b.k
+        : String(a.k).localeCompare(String(b.k), 'id');
+      // Nilai seri mempertahankan urutan asal, bukan ikut dibalik. Tanpa ini
+      // seluruh blok baris bernilai sama (mis. semua "Woodchip") berjungkir
+      // balik tiap kali arah sortir ditukar, dan itu terlihat seperti bug.
+      return cmp !== 0 ? cmp * dir : a.i - b.i;
+    });
+    contracts = dec.map(d => d.c);
   }
-  header += '<th>Amandemen</th>';
+
+  // Header — V46: removed all min-width for autosize (no horizontal scroll)
+  // V110: tiap header bisa diklik untuk sortir.
+  const sortCol = kontrakTableSort.col, sortDir = kontrakTableSort.dir;
+  const kth = (col, label, extraCls) => {
+    const on = sortCol === col;
+    const cls = 'sortable' + (extraCls ? ' ' + extraCls : '') + (on ? ' sorted ' + sortDir : '');
+    const plain = String(label).replace(/<[^>]*>/g, '');
+    return '<th class="' + cls + '"' +
+      (on ? ' aria-sort="' + (sortDir === 'asc' ? 'ascending' : 'descending') + '"' : '') +
+      ' tabindex="0" role="columnheader"' +
+      ' onclick="setKontrakTableSort(\'' + col + '\')"' +
+      ' onkeydown="kontrakSortKeydown(event,\'' + col + '\')"' +
+      ' title="Klik untuk mengurutkan menurut ' + escapeHtml(plain) + '">' + label + '</th>';
+  };
+  let header = '<thead><tr>';
+  header += kth('genco', 'Genco');
+  header += kth('pltu', 'PLTU');
+  header += kth('pemasok', 'Pemasok');
+  header += kth('vol', 'Vol (MT)');
+  header += kth('kontrak', 'Kontrak');
+  header += kth('awal', 'Awal');
+  header += kth('akhir', 'Akhir');
+  header += kth('jenis', 'Jenis');
+  header += kth('sisa', 'Sisa');
+  header += kth('pct', '%');
+  for (let i = 0; i < realCols.length; i++){
+    header += kth('real' + i, realCols[i].label,
+      'year-header' + (realCols[i].metric === 'do' ? ' do-header' : '') + (realCols[i].isOld ? ' old-year' : ''));
+  }
+  header += kth('amandemen', 'Amandemen');
   header += '</tr></thead>';
 
   // Body
