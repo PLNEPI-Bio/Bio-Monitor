@@ -9719,12 +9719,20 @@ function buildFilters(){
   }
 }
 
-function currentPlants(){
+// V108: kotak "SEARCH PLTU" adalah alat NAVIGASI peta (menyisakan marker yang dicari),
+// bukan filter analitik. Sebelumnya ia ikut menyaring daftar PLTU yang dipakai
+// updateKPIs(), sehingga mengetik satu nama membuat National Overview di panel kiri
+// menghitung ulang target/realisasi/DO/gap hanya dari PLTU itu — angka "nasional" jadi
+// salah tanpa penanda apa pun. Kini pemanggil bisa meminta daftar tanpa efek pencarian.
+// Chip Genco/Boiler/Regional TETAP memengaruhi KPI: itu memang filter, dan labelnya
+// ("TARGET DEKLARASI PERIODE", "PLTU lolos filter") sudah menjelaskan penyempitannya.
+function currentPlants(opts){
+  const ignoreSearch = !!(opts && opts.ignoreSearch);
   return DATA.plants.filter(p => {
     if (state.filters.genco.size && !state.filters.genco.has(p.genco)) return false;
     if (state.filters.boiler.size && !state.filters.boiler.has(p.boiler)) return false;
     if (state.filters.regional.size && !state.filters.regional.has(p.regional)) return false;
-    if (state.search && !p.name.toLowerCase().includes(state.search.toLowerCase())) return false;
+    if (!ignoreSearch && state.search && !p.name.toLowerCase().includes(state.search.toLowerCase())) return false;
     return true;
   });
 }
@@ -10391,7 +10399,9 @@ function setTargetBasis(basis){
 }
 
 function updateKPIs(){
-  const plants = currentPlants();
+  // V108: sengaja mengabaikan state.search — lihat currentPlants(). Kartu KPI adalah
+  // ringkasan periode, bukan cerminan marker yang sedang tampak di peta.
+  const plants = currentPlants({ ignoreSearch: true });
   let target = 0, real = 0, doSum = 0, gap = 0;
   plants.forEach(p => {
     const t = plantPeriodTotals(p);
@@ -24471,8 +24481,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('search').addEventListener('input', e => {
     state.search = e.target.value;
+    // V108: hanya marker peta yang disaring. KPI panel kiri TIDAK ikut dihitung ulang
+    // dari hasil pencarian — updateKPIs() sengaja tidak dipanggil di sini.
     refreshMarkers();
-    updateKPIs();
   });
 
   // Bottleneck filter buttons (source filter)
@@ -26852,7 +26863,8 @@ function qolGotoPlant(code){
   if (si && si.value){
     si.value = '';
     state.search = '';
-    try { refreshMarkers(); updateKPIs(); } catch(e){}
+    // V108: KPI tidak lagi terpengaruh state.search, jadi cukup gambar ulang marker.
+    try { refreshMarkers(); } catch(e){}
   }
   setTimeout(() => {
     try { selectPlant(code, false); } catch(e){ console.warn('[QoL] selectPlant gagal:', e); }
