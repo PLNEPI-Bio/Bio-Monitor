@@ -92,6 +92,17 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
     }
     return out;
   }
+  // V112: sama, tapi TANPA _safeNum. Dipakai kolom yang selnya boleh berisi teks
+  // (Kapasitas/BM: "400 dan 600"), di mana _safeNum akan menggabungkan digitnya
+  // jadi 400600 dan membuang maknanya.
+  function extractColRaw(rowStart: number, col: number, count: number) {
+    const out: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const r = rekap[rowStart + i] || [];
+      out.push(_safeStr(r[col]));
+    }
+    return out;
+  }
 
   const PLANT_COUNT = 51;
   // V66: The "Rekap" sheet layout can shift between source-file revisions
@@ -125,6 +136,7 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
   const kebButubara = extractCol(ROW_2026, COL_KEBUTUHAN_BATUBARA, PLANT_COUNT);
   const jumlahUnitArr = extractCol(ROW_2026, COL_JUMLAH_UNIT, PLANT_COUNT);
   const kapasitasPerUnitArr = extractCol(ROW_2026, COL_KAPASITAS_PER_UNIT, PLANT_COUNT);
+  const kapasitasPerUnitRawArr = extractColRaw(ROW_2026, COL_KAPASITAS_PER_UNIT, PLANT_COUNT);
   const totalKapasitasArr = extractCol(ROW_2026, COL_TOTAL_KAPASITAS, PLANT_COUNT);
 
   const targets2025 = extractMonthBlock(ROW_2025, COL_TARGET_JAN, PLANT_COUNT);
@@ -201,6 +213,12 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
       kebutuhan_batubara: kebButubara[i],
       jumlah_unit: _safeNum(jumlahUnitArr[i]) || 0,
       kapasitas_per_unit: _safeNum(kapasitasPerUnitArr[i]) || 0,
+      // V112: teks mentah kolom BM. Sel ini tidak selalu skalar — Suralaya 1-7
+      // berisi "400 dan 600" karena unitnya tidak seragam (4x400 + 3x600 = 3400),
+      // dan _safeNum membuang non-digit sehingga jadi 400600. Angka itu tidak
+      // berarti apa-apa, jadi teks aslinya ikut disimpan supaya UI bisa
+      // menampilkan yang benar alih-alih hasil penggabungan digit.
+      kapasitas_per_unit_raw: kapasitasPerUnitRawArr[i],
       total_kapasitas: _safeNum(totalKapasitasArr[i]) || 0,
       historical_real: { "2023": reals2023[i], "2024": reals2024[i], "2025": reals2025[i], "2026": real_2026 },
       historical_target: { "2023": target2023PerPlant[i], "2024": target2024PerPlant[i], "2025": targets2025[i], "2026": target_2026 },

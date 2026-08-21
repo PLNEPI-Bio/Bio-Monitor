@@ -1789,6 +1789,9 @@ html,body{
 /* Tiga kolom di panel ~440px menyisakan ~117px per sel — biarkan label
    membungkus dua baris daripada terpotong. */
 .kapasitas-grid.cols-3 .kapasitas-label{white-space:normal;overflow-wrap:anywhere}
+/* V112: nilai majemuk ("400 & 600") untuk PLTU ber-unit tidak seragam. Angka
+   tunggal muat pada 13px, dua angka plus pemisah tidak — sel ini hanya ~94px. */
+.kapasitas-value.multi{font-size:10.5px;letter-spacing:-.2px;white-space:nowrap}
 /* V95: the 2px solid-accent border-left drops to a 1px --accent-line keyline and
    gains a hairline frame, so the cell reads as a recessed field on the detail
    panel rather than a mini card with a coloured tab. */
@@ -11065,10 +11068,17 @@ function selectPlant(code, fromMarkerClick){
                prod-auto-refresh sebagai kapasitas_per_unit tapi belum pernah tampil.
                Sengaja TIDAK diberi warna accent — accent dipakai Total Kapasitas,
                dan dua angka MW beraksen bersebelahan menghapus bedanya. -->
-          <div class="kapasitas-cell" title="Kapasitas satu unit pembangkit. Jumlah Unit × Kapasitas = Total Kapasitas.">
-            <div class="kapasitas-label">Kapasitas</div>
-            <div class="kapasitas-value">${p.kapasitas_per_unit ? (p.kapasitas_per_unit % 1 ? (Math.round(p.kapasitas_per_unit * 100) / 100) : fmtInt(p.kapasitas_per_unit)) + '<span class="kapasitas-unit">MW</span>' : '—'}</div>
-          </div>
+          ${(() => {
+            const kd = kapasitasPerUnitDisplay(p);
+            const tip = kd.small
+              ? 'Kapasitas per unit. PLTU ini punya unit dengan ukuran berbeda, jadi nilainya bukan angka tunggal (sesuai sheet Rekap kolom Kapasitas).'
+              : 'Kapasitas satu unit pembangkit. Jumlah Unit × Kapasitas = Total Kapasitas.';
+            return '<div class="kapasitas-cell" title="' + escapeHtml(tip) + '">' +
+              '<div class="kapasitas-label">Kapasitas</div>' +
+              '<div class="kapasitas-value' + (kd.small ? ' multi' : '') + '">' +
+              (kd.text ? escapeHtml(kd.text) + '<span class="kapasitas-unit">MW</span>' : '—') +
+              '</div></div>';
+          })()}
           <div class="kapasitas-cell">
             <div class="kapasitas-label">Total Kapasitas</div>
             <div class="kapasitas-value" style="color:var(--accent)">${p.total_kapasitas ? fmtInt(p.total_kapasitas) + '<span class="kapasitas-unit">MW</span>' : '—'}</div>
@@ -16173,6 +16183,30 @@ function pctBadgeClass(pct){
   if (pct >= 70) return 'high';
   if (pct >= 30) return 'mid';
   return 'low';
+}
+
+// V112: kapasitas per unit (sheet Rekap kolom BM) untuk ditampilkan.
+// Sel itu TIDAK selalu berisi satu angka: Suralaya 1-7 diisi "400 dan 600"
+// karena unitnya tidak seragam (4×400 + 3×600 = 3400 MW). _safeNum membuang
+// semua non-digit, jadi angkanya jadi 400600 — bilangan yang tidak berarti
+// apa pun. Karena itu teks aslinya yang dipakai bila ia bukan skalar.
+// Mengembalikan { text, small }; `small` menandai teks majemuk yang perlu
+// font lebih kecil agar muat di sel selebar ~94px.
+function kapasitasPerUnitDisplay(p){
+  const raw = _safeStr(p && p.kapasitas_per_unit_raw);
+  const num = (p && +p.kapasitas_per_unit) || 0;
+  if (raw && !isFinite(Number(raw.replace(',', '.')))){
+    // "400 dan 600" → "400 & 600": selnya tidak cukup lebar untuk kata "dan".
+    return { text: raw.replace(/\s*\bdan\b\s*/gi, ' & '), small: true };
+  }
+  if (!num) return { text: '', small: false };
+  // Data lama (ditulis sebelum kapasitas_per_unit_raw ada) tidak punya teks
+  // mentah. Di situ angka yang tidak konsisten dengan
+  // Jumlah Unit × Kapasitas = Total Kapasitas hampir pasti hasil penggabungan
+  // digit, jadi lebih baik tidak ditampilkan sama sekali daripada salah.
+  const ju = (p && +p.jumlah_unit) || 0, tot = (p && +p.total_kapasitas) || 0;
+  if (!raw && ju && tot && Math.abs(ju * num - tot) > 0.51) return { text: '', small: false };
+  return { text: num % 1 ? String(Math.round(num * 100) / 100) : fmtInt(num), small: false };
 }
 
 function fmtKontrakDate(iso){
@@ -23667,6 +23701,9 @@ async function parseProdExcel(wb){
   const kebButubara = extractCol(ROW_2026, COL_KEBUTUHAN_BATUBARA, PLANT_COUNT);
   const jumlahUnitArr = extractCol(ROW_2026, COL_JUMLAH_UNIT, PLANT_COUNT);
   const kapasitasPerUnitArr = extractCol(ROW_2026, COL_KAPASITAS_PER_UNIT, PLANT_COUNT);
+  // V112: teks mentah, lewat extractStr — extractCol memakai _safeNum yang
+  // menggabungkan digit "400 dan 600" jadi 400600.
+  const kapasitasPerUnitRawArr = extractStr(ROW_2026, COL_KAPASITAS_PER_UNIT, PLANT_COUNT);
   const totalKapasitasArr = extractCol(ROW_2026, COL_TOTAL_KAPASITAS, PLANT_COUNT);
 
   const targets2025 = extractMonthBlock(ROW_2025, COL_TARGET_JAN, PLANT_COUNT);
@@ -23754,6 +23791,9 @@ async function parseProdExcel(wb){
       kebutuhan_batubara: kebButubara[i],
       jumlah_unit: _safeNum(jumlahUnitArr[i]) || 0,
       kapasitas_per_unit: _safeNum(kapasitasPerUnitArr[i]) || 0,
+      // V112: MIRROR dari prod-auto-refresh — jaga tetap sama. Teks mentah kolom
+      // BM, karena sel itu tidak selalu skalar (Suralaya 1-7 = "400 dan 600").
+      kapasitas_per_unit_raw: kapasitasPerUnitRawArr[i],
       total_kapasitas: _safeNum(totalKapasitasArr[i]) || 0,
       historical_real: {
         '2023': reals2023[i],
