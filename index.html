@@ -1772,6 +1772,23 @@ html,body{
 .kapasitas-grid{
   display:grid;grid-template-columns:1fr 1fr;gap:6px;
 }
+/* V111: varian tiga kolom, HANYA untuk "Kapasitas Pembangkit" sejak sel
+   "Kapasitas" (per unit) disisipkan di tengah. Kelas terpisah karena
+   .kapasitas-grid juga dipakai bagian GCV Kalori — mode satu bulan di sana
+   cuma punya dua sel dan akan menyisakan lubang kalau dipaksa tiga kolom.
+   minmax(0,1fr), bukan 1fr: default 1fr adalah minmax(auto,1fr) yang lantainya
+   selebar konten, sehingga label "TOTAL KAPASITAS" bisa mendorong grid melebar. */
+.kapasitas-grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* Label "TOTAL KAPASITAS" membungkus dua baris sementara dua label lain hanya
+   satu, jadi angkanya turun sendiri. Sel dijadikan kolom flex dengan nilai
+   didorong ke dasar: grid sudah menyamakan tinggi sel, sehingga ketiga angka
+   berbaris rata berapa pun barisnya label. */
+.kapasitas-grid.cols-3 .kapasitas-cell{
+  min-width:0;display:flex;flex-direction:column;justify-content:space-between;
+}
+/* Tiga kolom di panel ~440px menyisakan ~117px per sel — biarkan label
+   membungkus dua baris daripada terpotong. */
+.kapasitas-grid.cols-3 .kapasitas-label{white-space:normal;overflow-wrap:anywhere}
 /* V95: the 2px solid-accent border-left drops to a 1px --accent-line keyline and
    gains a hairline frame, so the cell reads as a recessed field on the detail
    panel rather than a mini card with a coloured tab. */
@@ -11039,10 +11056,18 @@ function selectPlant(code, fromMarkerClick){
 
       <div class="detail-section">
         <h4>Kapasitas Pembangkit</h4>
-        <div class="kapasitas-grid">
+        <div class="kapasitas-grid cols-3">
           <div class="kapasitas-cell">
             <div class="kapasitas-label">Jumlah Unit</div>
             <div class="kapasitas-value">${p.jumlah_unit ? fmtInt(p.jumlah_unit) : '—'}</div>
+          </div>
+          <!-- V111: kapasitas PER UNIT (sheet Rekap kolom BM), sudah lama diparse
+               prod-auto-refresh sebagai kapasitas_per_unit tapi belum pernah tampil.
+               Sengaja TIDAK diberi warna accent — accent dipakai Total Kapasitas,
+               dan dua angka MW beraksen bersebelahan menghapus bedanya. -->
+          <div class="kapasitas-cell" title="Kapasitas satu unit pembangkit. Jumlah Unit × Kapasitas = Total Kapasitas.">
+            <div class="kapasitas-label">Kapasitas</div>
+            <div class="kapasitas-value">${p.kapasitas_per_unit ? (p.kapasitas_per_unit % 1 ? (Math.round(p.kapasitas_per_unit * 100) / 100) : fmtInt(p.kapasitas_per_unit)) + '<span class="kapasitas-unit">MW</span>' : '—'}</div>
           </div>
           <div class="kapasitas-cell">
             <div class="kapasitas-label">Total Kapasitas</div>
