@@ -2999,6 +2999,11 @@ html,body{
 .kontrak-table th.do-header{background:rgba(217,131,36,.1);color:#c07d1a}
 .kontrak-table td.year-real.do-cell{color:#c07d1a}
 .kontrak-table td.year-real.do-cell.zero{color:var(--text-dim);opacity:.5;font-weight:400}
+/* V113: kolom turunan Avg Real / Min DO — dipisahkan dari blok kolom tahun
+   dengan garis kiri supaya jelas keduanya bukan angka periode. */
+.kontrak-table th.derived-header{border-left:1px solid var(--border);white-space:nowrap}
+.kontrak-table td.derived-cell{border-left:1px solid var(--border);white-space:nowrap}
+.kontrak-table td.derived-cell.dim{color:var(--text-dim);opacity:.5;font-weight:400}
 /* Data-quality flag: realisasi ada tetapi DO kosong */
 .kontrak-table td.year-real.do-missing{background:rgba(239,68,68,.12);color:var(--danger)!important;opacity:1;font-weight:700}
 .kontrak-table td.year-real.do-missing .do-missing-mark{font-size:13px}
@@ -17470,6 +17475,68 @@ function _kontrakDoAnomaly(c, realCols){
 }
 
 // =====================================================
+// V113 — KOLOM "Avg Real" DAN "Min DO" DI TABEL DAFTAR KONTRAK
+//
+// Min DO   = volume kontrak ÷ durasi kontrak dalam bulan (inklusif: bulan
+//            `awal` s.d. bulan `akhir`). Laju kirim bulanan MINIMUM agar
+//            volume kontrak habis tepat pada tanggal akhir. Tidak mengikuti
+//            filter Tahun/Bulan — ia sifat kontrak, bukan sifat periode.
+// Avg Real = rata-rata realisasi BULANAN mitra pada kontrak ini, MENGIKUTI
+//            filter Tahun/Bulan yang aktif.
+//
+// Penyebut Avg Real adalah jumlah bulan yang PUNYA realisasi (> 0), bukan
+// seluruh bulan dalam periode. Kontrak yang baru berjalan September tidak
+// wajar dibagi 12 — hasilnya akan terlihat jauh di bawah Min DO padahal
+// kirimannya normal. Konsekuensinya: bulan kosong di TENGAH masa kontrak
+// (mitra benar-benar tidak mengirim) juga tidak ikut menurunkan rata-rata.
+//
+// Keduanya sengaja bersebelahan: Avg Real < Min DO berarti laju kirim mitra
+// belum cukup untuk menghabiskan kontrak sampai tanggal akhir.
+// =====================================================
+function _kontrakParseYm(iso){
+  if (!iso) return null;
+  const p = String(iso).split('-');
+  if (p.length < 2) return null;
+  const y = parseInt(p[0], 10), m = parseInt(p[1], 10);
+  if (!isFinite(y) || !isFinite(m) || m < 1 || m > 12) return null;
+  return { y: y, m: m - 1 };
+}
+// Durasi kontrak dalam bulan, inklusif kedua ujung: 1 Jan 2026 → 31 Des 2026
+// menghasilkan 12, bukan 11. 0 berarti tanggal tidak lengkap/terbalik.
+function _kontrakDurasiBulan(c){
+  const a = _kontrakParseYm(c && c.awal), b = _kontrakParseYm(c && c.akhir);
+  if (!a || !b) return 0;
+  const n = (b.y - a.y) * 12 + (b.m - a.m) + 1;
+  return n > 0 ? n : 0;
+}
+function _kontrakMinDO(c){
+  const n = _kontrakDurasiBulan(c);
+  return n > 0 ? ((c && c.vol_mt) || 0) / n : 0;
+}
+// Bulan yang dicakup mengikuti aturan filter yang sama dengan
+// getFilteredRealisasiForContract(), supaya pembilang dan penyebutnya sepadan.
+// Mengembalikan { sum, n } agar pemanggil bisa menampilkan langkah hitungnya.
+function _kontrakRealMonths(c){
+  const f = state.kontrakFilters;
+  const mIdx = (f.bulan === 'all' || f.bulan == null) ? null : parseInt(f.bulan, 10);
+  const years = (f.tahun === 'all') ? ['2023', '2024', '2025', '2026'] : [f.tahun];
+  let sum = 0, n = 0;
+  for (const y of years){
+    const arr = (c && c.realisasi && c.realisasi[y]) || [];
+    const last = (mIdx === null) ? arr.length - 1 : Math.min(mIdx, arr.length - 1);
+    for (let i = 0; i <= last; i++){
+      const v = arr[i] || 0;
+      if (v > 0){ sum += v; n++; }
+    }
+  }
+  return { sum: sum, n: n };
+}
+function _kontrakAvgReal(c){
+  const r = _kontrakRealMonths(c);
+  return r.n > 0 ? r.sum / r.n : 0;
+}
+
+// =====================================================
 // V110 — SORTIR TABEL "DAFTAR KONTRAK"
 // Mengikuti pola yang sudah dipakai tabel popup (setKontrakBreakdownSort):
 // klik kolom sama → balik arah, kolom baru → teks mulai menaik, angka mulai
@@ -17511,6 +17578,10 @@ function _kontrakSortKey(c, col, realCols){
     case 'awal':      return c.awal || '';
     case 'akhir':     return c.akhir || '';
     case 'vol':       return c.vol_mt || 0;
+    // V113: keduanya angka, jadi klik pertama mengurutkan MENURUN — mitra
+    // dengan laju kirim terbesar/kewajiban bulanan terberat muncul di atas.
+    case 'avgreal':   return _kontrakAvgReal(c);
+    case 'mindo':     return _kontrakMinDO(c);
     // Sisa dan % memakai realisasi TERFILTER, sama persis dengan angka yang
     // tampil di selnya. Menyortir pakai realisasi penuh akan menghasilkan
     // urutan yang tidak cocok dengan kolom yang dilihat pengguna.
@@ -17618,6 +17689,9 @@ function renderKontrakTable(){
     header += kth('real' + i, realCols[i].label,
       'year-header' + (realCols[i].metric === 'do' ? ' do-header' : '') + (realCols[i].isOld ? ' old-year' : ''));
   }
+  // V113: dua kolom turunan, tepat di kiri "Amandemen".
+  header += kth('avgreal', 'Avg Real', 'derived-header');
+  header += kth('mindo', 'Min DO', 'derived-header');
   header += kth('amandemen', 'Amandemen');
   header += '</tr></thead>';
 
@@ -17688,6 +17762,37 @@ function renderKontrakTable(){
       const cellContent = doMissing ? '<span class="do-missing-mark" title="Realisasi ada, DO kosong">⚠</span>' : (v ? fmtInt(v) : '—');
       row += '<td class="' + cellCls + '">' + cellContent + '</td>';
     }
+    // V113 — Avg Real & Min DO
+    const rm = _kontrakRealMonths(c);
+    const avgReal = rm.n > 0 ? rm.sum / rm.n : 0;
+    const durasiBln = _kontrakDurasiBulan(c);
+    const minDO = durasiBln > 0 ? vol / durasiBln : 0;
+    // Merah hanya bila KEDUANYA diketahui dan laju kirim memang tertinggal;
+    // kontrak tanpa tanggal lengkap (minDO = 0) tidak boleh ikut ditandai.
+    const avgColor = (minDO > 0 && avgReal > 0)
+      ? (avgReal < minDO ? '#ef4444' : '#10b981')
+      : '';
+    row += '<td class="num derived-cell' + (avgReal ? '' : ' dim') + '"' +
+      (avgColor ? ' style="color:' + avgColor + '"' : '') + calcAttr({
+      title: 'Avg Real (rata-rata realisasi bulanan)',
+      formula: 'Σ realisasi ÷ jumlah bulan yang ada realisasinya (mengikuti filter tahun/bulan)',
+      steps: [
+        ['Σ realisasi (terfilter)', fmtInt(rm.sum) + ' MT'],
+        ['÷ Bulan ada realisasi', fmtInt(rm.n) + ' bulan']
+      ],
+      result: ['Avg Real', (avgReal ? fmtInt(avgReal) : '0') + ' MT/bulan'],
+      note: 'Penyebutnya hanya bulan yang realisasinya > 0, bukan seluruh bulan periode — kontrak yang baru mulai berjalan tidak dibagi bulan-bulan sebelum kontraknya ada. Bandingkan dengan kolom Min DO di sebelahnya: lebih kecil berarti laju kirim belum cukup.'
+    }) + '>' + (avgReal ? fmtInt(avgReal) : '—') + '</td>';
+    row += '<td class="num derived-cell' + (minDO ? '' : ' dim') + '"' + calcAttr({
+      title: 'Min DO (kewajiban kirim per bulan)',
+      formula: 'Volume kontrak ÷ durasi kontrak dalam bulan',
+      steps: [
+        ['Volume kontrak', fmtInt(vol) + ' MT'],
+        ['÷ Durasi kontrak', (durasiBln ? fmtInt(durasiBln) + ' bulan' : 'tanggal tidak lengkap')]
+      ],
+      result: ['Min DO', (minDO ? fmtInt(minDO) : '—') + ' MT/bulan'],
+      note: 'Durasi dihitung inklusif dari bulan tanggal Awal s.d. bulan tanggal Akhir (1 Jan–31 Des = 12 bulan). TIDAK mengikuti filter tahun/bulan, karena ini sifat kontrak. Kosong bila tanggal Awal/Akhir tidak lengkap.'
+    }) + '>' + (minDO ? fmtInt(minDO) : '—') + '</td>';
     if (c.amandemen){
       const amText = escapeHtml(c.amandemen).split('\n').join('<br>');
       row += '<td class="wrap"><div class="kontrak-amandemen-text" title="' + escapeHtml(c.amandemen) + '">' + amText + '</div></td>';
@@ -17715,6 +17820,18 @@ function renderKontrakTable(){
   let totalAllReal = 0;
   for (let i = 0; i < contracts.length; i++) totalAllReal += getFilteredRealisasiForContract(contracts[i]);
   const avgPct = totalVol > 0 ? (totalAllReal / totalVol * 100) : 0;
+
+  // V113: total dua kolom turunan. Sengaja DIJUMLAHKAN, bukan dirata-rata:
+  // "berapa MT/bulan yang seharusnya mengalir dari seluruh kontrak terpilih"
+  // vs "berapa yang benar-benar mengalir" — dua angka yang sebanding.
+  // Rata-rata dari rata-rata akan memberi bobot sama pada kontrak 2.000 MT
+  // dan kontrak 500.000 MT, dan itu tidak berarti apa-apa di sini.
+  let totalAvgReal = 0, totalMinDO = 0, nMinDO = 0;
+  for (let i = 0; i < contracts.length; i++){
+    totalAvgReal += _kontrakAvgReal(contracts[i]);
+    const md = _kontrakMinDO(contracts[i]);
+    if (md > 0){ totalMinDO += md; nMinDO++; }
+  }
 
   let footer = '<tfoot><tr>';
   footer += '<td colspan="3" style="text-align:right;padding-right:14px"><b>TOTAL (' + contracts.length + ')</b></td>';
@@ -17746,6 +17863,26 @@ function renderKontrakTable(){
   for (let i = 0; i < realCols.length; i++){
     footer += '<td class="num year-real' + (realCols[i].metric === 'do' ? ' do-cell' : '') + (realCols[i].isOld ? ' old-year-cell' : '') + '"><b>' + fmtInt(totalByCol[i]) + '</b></td>';
   }
+  footer += '<td class="num derived-cell"' + calcAttr({
+    title: 'Σ Avg Real',
+    formula: 'Σ (rata-rata realisasi bulanan tiap kontrak)',
+    steps: [
+      ['Baris dijumlahkan', fmtInt(contracts.length) + ' kontrak'],
+      ['Σ Avg Real', fmtInt(totalAvgReal) + ' MT/bulan']
+    ],
+    result: ['Σ Avg Real', fmtInt(totalAvgReal) + ' MT/bulan'],
+    note: 'Penjumlahan, bukan rata-rata: angka ini adalah laju kirim gabungan seluruh kontrak terpilih, agar sebanding dengan Σ Min DO di sebelahnya.'
+  }) + '><b>' + fmtInt(totalAvgReal) + '</b></td>';
+  footer += '<td class="num derived-cell"' + calcAttr({
+    title: 'Σ Min DO',
+    formula: 'Σ (volume kontrak ÷ durasi kontrak dalam bulan)',
+    steps: [
+      ['Kontrak dengan tanggal lengkap', fmtInt(nMinDO) + ' dari ' + fmtInt(contracts.length)],
+      ['Σ Min DO', fmtInt(totalMinDO) + ' MT/bulan']
+    ],
+    result: ['Σ Min DO', fmtInt(totalMinDO) + ' MT/bulan'],
+    note: 'Kontrak yang tanggal Awal/Akhir-nya tidak lengkap tidak ikut dijumlahkan, jadi total ini bisa lebih rendah dari kewajiban sebenarnya.'
+  }) + '><b>' + fmtInt(totalMinDO) + '</b></td>';
   footer += '<td></td>';
   footer += '</tr></tfoot>';
 
@@ -17809,6 +17946,12 @@ function buildKontrakCards(contracts, realCols, totalByCol, totalVol, totalSisa,
       const valTxt = doMissing ? '⚠ kosong' : (v ? fmtInt(v) : '—');
       html += '<div class="kontrak-card-row"><span class="kontrak-card-label">' + col.label + '</span><span class="kontrak-card-val" style="color:' + valColor + '">' + valTxt + '</span></div>';
     }
+    // V113: dua kolom turunan juga muncul di kartu mobile, urutan sama seperti
+    // di tabel (Avg Real lalu Min DO) supaya keduanya bisa dibaca berdampingan.
+    const cAvg = _kontrakAvgReal(c), cMinDO = _kontrakMinDO(c);
+    const cAvgColor = (cMinDO > 0 && cAvg > 0) ? (cAvg < cMinDO ? '#ef4444' : '#10b981') : 'var(--text-dim)';
+    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Avg Real</span><span class="kontrak-card-val" style="color:' + cAvgColor + '">' + (cAvg ? fmtInt(cAvg) : '—') + '</span></div>';
+    html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Min DO</span><span class="kontrak-card-val">' + (cMinDO ? fmtInt(cMinDO) : '—') + '</span></div>';
     html += '<div class="kontrak-card-row"><span class="kontrak-card-label">Achievement</span><span class="kontrak-pct-badge ' + pctClass + '" style="font-size:10px;padding:2px 8px">' + pct.toFixed(1) + '%</span></div>';
     html += '</div>';
 
