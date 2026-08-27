@@ -10182,25 +10182,88 @@ const INDONESIA_BOUNDS = [[-11.5, 94.5], [6.5, 141.5]];
 // tidak diubah — panel hanya memakan ruang horizontal.
 const SEA_BOUNDS = [[-20, 55], [25, 180]];
 
-// V114: basemap pindah dari CARTO ke Esri World Light Gray Canvas.
-// CARTO mulai menolak request tanpa API key — tile tetap terkirim tapi
-// bertuliskan "API KEY REQUIRED" melintang di seluruh peta (lihat 2026-08-27).
-// Esri Light Gray Canvas gratis tanpa key, gaya sama (base abu terang + layer
-// label terpisah), jadi seluruh desain marker/heatmap tidak perlu berubah.
-// Catatan: urutan path Esri {z}/{y}/{x} — BUKAN {z}/{x}/{y} seperti CARTO.
-const BASEMAP_TILE_URL   = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-const BASEMAP_LABELS_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
-const BASEMAP_ATTRIB     = '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors';
+// V117: kembali ke basemap CARTO Positron yang asli, kini dengan API key.
+//
+// Riwayatnya: 2026-08-27 CARTO mulai mencap tile dengan tulisan "API KEY REQUIRED"
+// melintang di seluruh peta, jadi basemap sempat dipindah ke Esri (V114). Dengan
+// key terdaftar, tampilan asli bisa dipakai lagi.
+//
+// DUA JEBAKAN yang sudah memakan waktu — jangan diulang:
+//  1. Parameternya `key=`, BUKAN `api_key=`. Dengan `api_key=` CARTO tetap
+//     mengirim tile berwatermark, dan diam-diam: HTTP 200, bukan 401/403.
+//  2. CDN CARTO mengabaikan query string yang tidak dikenalinya saat membentuk
+//     cache key. Jadi menguji key lewat curl dengan cache-buster acak akan
+//     mengembalikan objek lama yang sama (X-Cache: HIT) dan terlihat seolah key
+//     tidak berpengaruh. Yang membedakan hanya parameter `key` itu sendiri.
+//
+// Kuota free tier: 5 juta permintaan tile per bulan kalender, dihitung gabungan
+// raster + vector. Kalau watermark muncul lagi, curigai kuota atau domain yang
+// belum terdaftar di konsol CARTO — bukan kode ini.
+//
+// KEY-NYA TIDAK DITULIS DI FILE INI. Repo ini publik, jadi key yang di-commit
+// akan tersimpan di riwayat git selamanya dan terpindai bot. Key disimpan di
+// Supabase `app_control.carto_basemap_key` (id=1) dan dibaca saat boot.
+// Ini bukan menjadikannya rahasia — RLS mengizinkan anon SELECT, jadi siapa pun
+// yang membuka dashboard tetap bisa membacanya, sama seperti key basemap
+// client-side mana pun. Proteksi sebenarnya adalah pembatasan domain di konsol
+// CARTO. Yang didapat: key tidak masuk riwayat git, dan rotasi key cukup lewat
+// satu UPDATE di Supabase tanpa deploy ulang.
+const BASEMAP_TILE_TPL   = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+const BASEMAP_LABELS_TPL = 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png';
+const BASEMAP_ATTRIB     = '&copy; OSM &copy; CARTO';
+const CARTO_KEY_CACHE    = 'bioCartoBasemapKey';
+
+// Cache localStorage dibaca SINKRON di sini supaya muat kedua dan seterusnya
+// langsung meminta tile ber-key. Tanpa cache, setiap muat akan menampilkan tile
+// berwatermark selama ~1 detik sampai jawaban Supabase tiba.
+let CARTO_BASEMAP_KEY = (function(){
+  try { return localStorage.getItem(CARTO_KEY_CACHE) || ''; } catch(e){ return ''; }
+})();
+
+// Layer basemap yang sudah terpasang, supaya URL-nya bisa ditulis ulang saat key
+// datang dari Supabase (atau berubah lewat realtime).
+const _basemapLayers = [];
+
+function _basemapUrl(tpl){
+  return CARTO_BASEMAP_KEY ? tpl + '?key=' + encodeURIComponent(CARTO_BASEMAP_KEY) : tpl;
+}
 
 // Pasang pasangan tile (base + label) ke sebuah peta Leaflet.
 // Opsi isBaseTile dipakai toggle Terrain untuk mengenali layer dasar.
 function addBaseTiles(mapObj, maxZoom, minZoom){
-  L.tileLayer(BASEMAP_TILE_URL, {
-    attribution: BASEMAP_ATTRIB, maxZoom: maxZoom, minZoom: minZoom, isBaseTile: true,
+  const base = L.tileLayer(_basemapUrl(BASEMAP_TILE_TPL), {
+    attribution: BASEMAP_ATTRIB, subdomains: 'abcd',
+    maxZoom: maxZoom, minZoom: minZoom, isBaseTile: true,
   }).addTo(mapObj);
-  L.tileLayer(BASEMAP_LABELS_URL, {
-    attribution: '', maxZoom: maxZoom, minZoom: minZoom, pane: 'shadowPane', isBaseTile: true,
+  const labels = L.tileLayer(_basemapUrl(BASEMAP_LABELS_TPL), {
+    attribution: '', subdomains: 'abcd',
+    maxZoom: maxZoom, minZoom: minZoom, pane: 'shadowPane', isBaseTile: true,
   }).addTo(mapObj);
+  _basemapLayers.push({ layer: base, tpl: BASEMAP_TILE_TPL },
+                      { layer: labels, tpl: BASEMAP_LABELS_TPL });
+}
+
+// Terapkan key baru ke semua layer basemap yang sudah terpasang. Aman dipanggil
+// berulang: keluar lebih awal kalau key tidak berubah, jadi tidak ada redraw
+// percuma saat realtime mengirim payload app_control yang tidak terkait.
+function applyCartoBasemapKey(key){
+  const k = (key || '').trim();
+  if (!k || k === CARTO_BASEMAP_KEY) return;
+  CARTO_BASEMAP_KEY = k;
+  try { localStorage.setItem(CARTO_KEY_CACHE, k); } catch(e){}
+  _basemapLayers.forEach(entry => {
+    try { entry.layer.setUrl(_basemapUrl(entry.tpl)); } catch(e){}
+  });
+}
+
+// Dipanggil sekali saat boot, setelah supabaseClient siap.
+async function fetchCartoBasemapKey(){
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('app_control').select('carto_basemap_key').eq('id', 1).single();
+    if (!error && data) applyCartoBasemapKey(data.carto_basemap_key);
+  } catch(e){ console.warn('[Basemap] gagal ambil key CARTO:', e); }
 }
 
 function initMainMap(){
@@ -18278,6 +18341,10 @@ function subscribeAutoRefreshState(){
         autoRefreshState.paused = !!r.auto_refresh_paused;
         renderPauseBtn();
       }
+      // V117: rotasi key basemap berlaku tanpa deploy ulang maupun reload.
+      if (r && r.carto_basemap_key && typeof applyCartoBasemapKey === 'function'){
+        applyCartoBasemapKey(r.carto_basemap_key);
+      }
     })
     .subscribe();
 }
@@ -25214,6 +25281,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (supabaseClient){
     fetchAutoRefreshState();
     subscribeAutoRefreshState();
+    // V117: key basemap CARTO — lihat catatan di dekat addBaseTiles().
+    if (typeof fetchCartoBasemapKey === 'function') fetchCartoBasemapKey();
     // DO store (auto + manual overrides + link health) — fetch once on boot.
     if (typeof fetchDoData === 'function') fetchDoData();
     // V77: Kontrak pasokan per PLTU — tabel sendiri, dimuat sekali saat boot.
