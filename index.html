@@ -10188,8 +10188,16 @@ const SEA_BOUNDS = [[-20, 55], [25, 180]];
 // Esri Light Gray Canvas gratis tanpa key, gaya sama (base abu terang + layer
 // label terpisah), jadi seluruh desain marker/heatmap tidak perlu berubah.
 // Catatan: urutan path Esri {z}/{y}/{x} — BUKAN {z}/{x}/{y} seperti CARTO.
+//
+// V115: layer label diganti dari Canvas/World_Light_Gray_Reference ke
+// Reference/World_Boundaries_and_Places. Light_Gray_Reference terlalu kosong saat
+// zoom out — pada zoom 5 Indonesia hanya tampil sebagai siluet abu tanpa batas
+// provinsi dan hanya segelintir nama kota. Boundaries_and_Places membawa garis
+// batas negara/provinsi, titik kota, dan nama selat/laut, tapi tetap overlay
+// transparan di atas base abu terang yang sama — jadi marker Genco berwarna
+// tetap jadi elemen paling menonjol di peta.
 const BASEMAP_TILE_URL   = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-const BASEMAP_LABELS_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+const BASEMAP_LABELS_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 const BASEMAP_ATTRIB     = '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors';
 
 // Pasang pasangan tile (base + label) ke sebuah peta Leaflet.
