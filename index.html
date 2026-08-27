@@ -1473,12 +1473,6 @@ html,body{
 .map-area{position:relative;background:var(--bg);overflow:hidden}
 #map,#bn-map,#pembangkit-map{width:100%;height:100%;background:#050810}
 .leaflet-container{background:#050810;font-family:'Plus Jakarta Sans',sans-serif}
-/* V116: basemap Esri World Topo dipaksa monokrom. Filter menempel pada CONTAINER
-   layer basemap saja (lewat opsi className di addBaseTiles), bukan pada
-   .leaflet-tile-pane — kalau dipasang di pane, tile OpenTopoMap milik toggle
-   Terrain ikut jadi abu dan tombol itu kehilangan gunanya. Marker, heatmap, dan
-   popup ada di pane lain, jadi warna Genco tidak tersentuh. */
-.basemap-mono{filter:grayscale(1) brightness(1.12) contrast(.8)}
 .leaflet-control-attribution{background:rgba(10,14,20,.8)!important;color:var(--text-dim)!important;font-size:9px!important}
 .leaflet-control-attribution a{color:var(--text-dim)!important}
 .leaflet-control-zoom{margin:16px!important}
@@ -10188,29 +10182,24 @@ const INDONESIA_BOUNDS = [[-11.5, 94.5], [6.5, 141.5]];
 // tidak diubah — panel hanya memakan ruang horizontal.
 const SEA_BOUNDS = [[-20, 55], [25, 180]];
 
-// V114: basemap pindah dari CARTO ke Esri. CARTO mulai menolak request tanpa API
-// key — tile tetap terkirim tapi bertuliskan "API KEY REQUIRED" melintang di
-// seluruh peta (lihat 2026-08-27). Esri gratis tanpa key.
+// V114: basemap pindah dari CARTO ke Esri World Light Gray Canvas.
+// CARTO mulai menolak request tanpa API key — tile tetap terkirim tapi
+// bertuliskan "API KEY REQUIRED" melintang di seluruh peta (lihat 2026-08-27).
+// Esri Light Gray Canvas gratis tanpa key, gaya sama (base abu terang + layer
+// label terpisah), jadi seluruh desain marker/heatmap tidak perlu berubah.
 // Catatan: urutan path Esri {z}/{y}/{x} — BUKAN {z}/{x}/{y} seperti CARTO.
-//
-// V116: satu layer World_Topo_Map, dibuat monokrom lewat CSS .basemap-mono.
-// Riwayat singkat, supaya tidak diulang: Canvas/World_Light_Gray (V114) terlalu
-// kosong saat zoom out — pada zoom 5 Indonesia cuma siluet abu tanpa batas
-// provinsi dan segelintir nama kota. Reference/World_Boundaries_and_Places (V115)
-// menambal isinya tapi label lautnya biru tebal berhalo, dan itu justru terlihat
-// lebih ramai, bukan lebih informatif. World_Topo membawa kota kecil, jalan,
-// relief, dan batas provinsi; filter grayscale mengembalikan palet putih-abu
-// sehingga marker Genco tetap satu-satunya elemen berwarna di peta.
-const BASEMAP_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
-const BASEMAP_ATTRIB   = '&copy; Esri, HERE, Garmin, FAO, NOAA, USGS, &copy; OpenStreetMap contributors';
+const BASEMAP_TILE_URL   = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const BASEMAP_LABELS_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+const BASEMAP_ATTRIB     = '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors';
 
-// Pasang tile basemap ke sebuah peta Leaflet.
-// - className: filter monokrom menempel di container layer ini saja (lihat CSS)
-// - isBaseTile: penanda supaya toggle Terrain bisa mengenali & melepasnya
+// Pasang pasangan tile (base + label) ke sebuah peta Leaflet.
+// Opsi isBaseTile dipakai toggle Terrain untuk mengenali layer dasar.
 function addBaseTiles(mapObj, maxZoom, minZoom){
   L.tileLayer(BASEMAP_TILE_URL, {
-    attribution: BASEMAP_ATTRIB, maxZoom: maxZoom, minZoom: minZoom,
-    className: 'basemap-mono', isBaseTile: true,
+    attribution: BASEMAP_ATTRIB, maxZoom: maxZoom, minZoom: minZoom, isBaseTile: true,
+  }).addTo(mapObj);
+  L.tileLayer(BASEMAP_LABELS_URL, {
+    attribution: '', maxZoom: maxZoom, minZoom: minZoom, pane: 'shadowPane', isBaseTile: true,
   }).addTo(mapObj);
 }
 
