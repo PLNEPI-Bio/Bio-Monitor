@@ -10182,6 +10182,27 @@ const INDONESIA_BOUNDS = [[-11.5, 94.5], [6.5, 141.5]];
 // tidak diubah — panel hanya memakan ruang horizontal.
 const SEA_BOUNDS = [[-20, 55], [25, 180]];
 
+// V114: basemap pindah dari CARTO ke Esri World Light Gray Canvas.
+// CARTO mulai menolak request tanpa API key — tile tetap terkirim tapi
+// bertuliskan "API KEY REQUIRED" melintang di seluruh peta (lihat 2026-08-27).
+// Esri Light Gray Canvas gratis tanpa key, gaya sama (base abu terang + layer
+// label terpisah), jadi seluruh desain marker/heatmap tidak perlu berubah.
+// Catatan: urutan path Esri {z}/{y}/{x} — BUKAN {z}/{x}/{y} seperti CARTO.
+const BASEMAP_TILE_URL   = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const BASEMAP_LABELS_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+const BASEMAP_ATTRIB     = '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors';
+
+// Pasang pasangan tile (base + label) ke sebuah peta Leaflet.
+// Opsi isBaseTile dipakai toggle Terrain untuk mengenali layer dasar.
+function addBaseTiles(mapObj, maxZoom, minZoom){
+  L.tileLayer(BASEMAP_TILE_URL, {
+    attribution: BASEMAP_ATTRIB, maxZoom: maxZoom, minZoom: minZoom, isBaseTile: true,
+  }).addTo(mapObj);
+  L.tileLayer(BASEMAP_LABELS_URL, {
+    attribution: '', maxZoom: maxZoom, minZoom: minZoom, pane: 'shadowPane', isBaseTile: true,
+  }).addTo(mapObj);
+}
+
 function initMainMap(){
   map = L.map('map',{
     zoomControl:false,
@@ -10191,13 +10212,7 @@ function initMainMap(){
     maxBoundsViscosity: 0.8,
     minZoom: 3,
   }).fitBounds(INDONESIA_BOUNDS);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-    attribution:'&copy; OSM &copy; CARTO',
-    subdomains:'abcd', maxZoom:12, minZoom:3,
-  }).addTo(map);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-    attribution:'', subdomains:'abcd', maxZoom:12, minZoom:3, pane:'shadowPane',
-  }).addTo(map);
+  addBaseTiles(map, 12, 3);
   markerLayer = L.layerGroup().addTo(map);
   // V64: The "Genco Color Code" legend is an HTML overlay that sits ABOVE the
   // Leaflet map layer, while hover tooltips render INSIDE the map pane (a
@@ -14044,14 +14059,7 @@ function initBnMap(){
     zoomControl:false, attributionControl:true, preferCanvas:true,
     maxBounds: SEA_BOUNDS, maxBoundsViscosity:0.8, minZoom:3,
   }).fitBounds(INDONESIA_BOUNDS);
-  const baseUrl = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
-  const labelsUrl = 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png';
-  L.tileLayer(baseUrl,{
-    attribution:'&copy; OSM &copy; CARTO', subdomains:'abcd', maxZoom:12, minZoom:3,
-  }).addTo(bnMap);
-  L.tileLayer(labelsUrl,{
-    attribution:'', subdomains:'abcd', maxZoom:12, minZoom:3, pane:'shadowPane',
-  }).addTo(bnMap);
+  addBaseTiles(bnMap, 12, 3);
   bnMarkerLayer = L.layerGroup().addTo(bnMap);
 }
 
@@ -21580,10 +21588,7 @@ function initPembangkitMap(){
     zoomControl: false,
     attributionControl: true,
   }).fitBounds(INDONESIA_BOUNDS);
-  const baseUrl = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
-  const labelsUrl = 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png';
-  L.tileLayer(baseUrl, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 12, minZoom: 3 }).addTo(pembangkitMap);
-  L.tileLayer(labelsUrl, { attribution: '', subdomains: 'abcd', maxZoom: 12, minZoom: 3, pane: 'shadowPane' }).addTo(pembangkitMap);
+  addBaseTiles(pembangkitMap, 12, 3);
   pembangkitMarkerLayer = L.layerGroup().addTo(pembangkitMap);
   // Prevent Leaflet from capturing click/touch on overlays
   const pembView = document.querySelector('.view[data-view="pembangkit"]');
@@ -22084,10 +22089,7 @@ function initFasilitasMap(){
     maxBounds: SEA_BOUNDS,
     maxBoundsViscosity: 0.8,
   });
-  const baseUrl = 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
-  const labelsUrl = 'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png';
-  L.tileLayer(baseUrl, { attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 14, minZoom: 3 }).addTo(fasilitasMap);
-  L.tileLayer(labelsUrl, { attribution: '', subdomains: 'abcd', maxZoom: 14, minZoom: 3, pane: 'shadowPane' }).addTo(fasilitasMap);
+  addBaseTiles(fasilitasMap, 14, 3);
   fasilitasMarkerLayer = L.layerGroup().addTo(fasilitasMap);
   // Map click handler — used to pick coordinates for a new point.
   fasilitasMap.on('click', onFasilitasMapClick);
@@ -24929,7 +24931,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (isActive){
         // Store current base layers and remove them
         map.eachLayer(l => {
-          if (l._url && l._url.includes('cartocdn')){
+          if (l.options && l.options.isBaseTile){
             baseTileLayers.push(l);
             map.removeLayer(l);
           }
@@ -24938,12 +24940,16 @@ window.addEventListener('DOMContentLoaded', () => {
         terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenTopoMap', maxZoom: 12, minZoom: 3,
         }).addTo(map);
-        if (markerLayer) markerLayer.bringToFront();
+        // V114: markerLayer adalah L.layerGroup — tidak punya bringToFront, jadi
+        // baris lama melempar TypeError dan tombol Terrain berhenti di tengah jalan
+        // (layer dasar tidak pernah dipulihkan saat dimatikan). Marker sudah berada
+        // di markerPane, selalu di atas tilePane, jadi pemanggilan ini memang opsional.
+        if (markerLayer && markerLayer.bringToFront) markerLayer.bringToFront();
       } else {
         if (terrainLayer){ map.removeLayer(terrainLayer); terrainLayer = null; }
         baseTileLayers.forEach(l => l.addTo(map));
         baseTileLayers = [];
-        if (markerLayer) markerLayer.bringToFront();
+        if (markerLayer && markerLayer.bringToFront) markerLayer.bringToFront();
       }
     };
   }
