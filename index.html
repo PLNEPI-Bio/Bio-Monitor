@@ -8882,6 +8882,35 @@ body.gf-on .gf-bar{
 .laporan-arsip-wgroup{margin-top:10px}
 .laporan-arsip-wilayah-head{display:flex;align-items:center;gap:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3px;color:var(--wcolor,#2e7d47);text-transform:uppercase;margin:10px 0 2px;padding-left:8px;border-left:3px solid var(--wcolor,#2e7d47)}
 .laporan-arsip-wilayah-head .cnt{font-weight:600;color:var(--text-dim);font-size:10px}
+/* ===== V119: LAMPIRAN — realisasi per mitra (halaman ke-2 laporan) ===== */
+.lamp-section{margin-top:18px;border-top:1px dashed var(--border);padding-top:14px}
+.lamp-head-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.lamp-toggle{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text-bright);cursor:pointer;user-select:none}
+.lamp-toggle input{width:15px;height:15px;accent-color:#2e7d47;cursor:pointer}
+.lamp-body{margin-top:10px}
+.lamp-body.off{display:none}
+.lamp-pltu{margin-top:12px;border:1px solid var(--border);border-radius:8px;background:var(--panel-2);overflow:hidden}
+.lamp-pltu-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:8px 12px;background:var(--panel-3);border-bottom:1px solid var(--border)}
+.lamp-pltu-name{font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:var(--text-bright)}
+.lamp-pltu-sub{font-size:10px;color:var(--text-dim);font-weight:500}
+.lamp-table{border-collapse:collapse;font-size:11px;width:100%;min-width:1000px}
+.lamp-table th,.lamp-table td{border-bottom:1px solid var(--border);padding:5px 8px;text-align:right;white-space:nowrap}
+.lamp-table th{background:var(--panel-2);color:var(--text-dim);font-weight:600;font-size:10px;letter-spacing:.3px;text-transform:uppercase}
+.lamp-table th.mitra,.lamp-table td.mitra{text-align:left;white-space:normal;min-width:200px}
+.lamp-table td.mitra{color:var(--text-bright);font-weight:500}
+.lamp-table th.act,.lamp-table td.act{text-align:center;width:34px}
+.lamp-table th.txt,.lamp-table td.txt{text-align:left}
+.lamp-table th.do-h{color:#d98324}
+.lamp-text-input{width:130px;box-sizing:border-box;background:var(--ctl-bg);border:var(--ctl-border-w) solid var(--border);border-radius:var(--ctl-radius);color:var(--text);font-size:11px;padding:4px var(--ctl-px-sm);min-height:var(--ctl-h-sm);font-family:inherit}
+.lamp-text-input:focus{border-color:#2e7d47;outline:none}
+.lamp-table tr.manual td.mitra{color:#d98324}
+.lamp-mitra-input{width:100%;box-sizing:border-box;background:var(--ctl-bg);border:var(--ctl-border-w) solid var(--border);border-radius:var(--ctl-radius);color:var(--text);font-size:11px;padding:4px var(--ctl-px-sm);min-height:var(--ctl-h-sm);font-family:inherit}
+.lamp-mitra-input:focus{border-color:#d98324;outline:none}
+.lamp-row-del{background:transparent;border:none;color:var(--danger);font-size:13px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:4px}
+.lamp-row-del:hover{background:rgba(192,57,43,.12)}
+.lamp-empty{padding:10px 12px;font-size:11px;color:var(--text-dim)}
+.lamp-preview-stack{display:flex;flex-direction:column;gap:12px}
+.lamp-pagebadge{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim)}
 @media (max-width:768px){
   .laporan-grid{grid-template-columns:1fr}
   /* clear the fixed bottom nav so the last card is fully scrollable */
@@ -8905,6 +8934,7 @@ body.gf-on .gf-bar{
   .laporan-form-input{width:88px;font-size:16px}
   .laporan-input,.laporan-textarea{font-size:16px}
   .laporan-alt-section .update-upload-zone{flex-direction:column;align-items:stretch}
+  .lamp-mitra-input,.lamp-text-input{font-size:16px}
 }
 </style>
 <div class="view" data-view="laporan">
@@ -8913,7 +8943,7 @@ body.gf-on .gf-bar{
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;width:100%">
         <div>
           <div class="real-title">Generate Laporan Infografis</div>
-          <div class="real-title-sub">Pilih wilayah &amp; tanggal checkpoint, isi prognosa + DO, lalu unduh laporan PNG/PDF</div>
+          <div class="real-title-sub">Pilih wilayah &amp; tanggal checkpoint, isi prognosa + DO, tambahkan halaman Lampiran realisasi mitra, lalu unduh PNG atau PDF</div>
         </div>
       </div>
     </div>
@@ -8963,6 +8993,21 @@ body.gf-on .gf-bar{
       <textarea id="laporanKendala" class="laporan-textarea" rows="4" placeholder="Contoh:&#10;Keterbatasan armada transportasi." oninput="renderLaporanPreview()"></textarea>
       <label class="laporan-lbl" for="laporanDukungan">Dukungan yang diperlukan (satu poin per baris)</label>
       <textarea id="laporanDukungan" class="laporan-textarea" rows="4" placeholder="Contoh:&#10;Percepatan kontraktual di ..." oninput="renderLaporanPreview()"></textarea>
+      <!-- ===== V119: Lampiran — realisasi per mitra tiap PLTU ===== -->
+      <div class="lamp-section">
+        <div class="lamp-head-row">
+          <label class="lamp-toggle" for="laporanLampiranOn">
+            <input type="checkbox" id="laporanLampiranOn" onchange="toggleLaporanLampiran()">
+            📎 Tambah halaman <b>Lampiran</b> — realisasi mitra per PLTU
+          </label>
+          <button class="laporan-mini-btn" id="laporanLampiranResetBtn" style="display:none" onclick="renderLaporanLampiran(true)" title="Muat ulang daftar mitra dari Daftar Kontrak (isian manual akan hilang)">↻ Muat ulang dari Daftar Kontrak</button>
+        </div>
+        <div class="lamp-body off" id="laporanLampiranBody">
+          <div class="laporan-hint" id="laporanLampiranHint"></div>
+          <div id="laporanLampiranWrap"></div>
+        </div>
+      </div>
+
       <div class="laporan-generate-row">
         <button class="update-upload-btn laporan-generate-btn" onclick="generateLaporanFromForm()">🖼️ Buat / Perbarui Preview</button>
         <button class="update-upload-btn laporan-saveas-btn" id="laporanSaveAsBtn" style="display:none" onclick="saveLaporanAsNew()" title="Simpan data form saat ini sebagai laporan baru (duplikat), tanpa mengubah laporan asli">📄 Simpan sebagai Baru</button>
@@ -8974,8 +9019,9 @@ body.gf-on .gf-bar{
       <div class="laporan-grid">
         <div>
           <div class="laporan-actions">
-            <button class="update-upload-btn" onclick="downloadLaporanPNG()">⬇ Unduh PNG</button>
-            <button class="update-upload-btn" onclick="downloadLaporanPDF()">⬇ Unduh PDF</button>
+            <button class="update-upload-btn" onclick="downloadLaporanPNG()">⬇ PNG Laporan</button>
+            <button class="update-upload-btn" id="laporanLampiranPngBtn" style="display:none" onclick="downloadLampiranPNG()">⬇ PNG Lampiran</button>
+            <button class="update-upload-btn" onclick="downloadLaporanPDF()" id="laporanPdfBtn">⬇ Unduh PDF</button>
           </div>
           <div class="laporan-hint" id="laporanHint"></div>
 
@@ -9006,6 +9052,10 @@ body.gf-on .gf-bar{
           <div class="laporan-lbl">Preview</div>
           <div class="laporan-preview-wrap">
             <canvas id="laporanPreviewCanvas" class="laporan-preview-canvas"></canvas>
+          </div>
+          <div id="laporanLampiranPreviewBox" style="display:none">
+            <div class="laporan-lbl">Preview Lampiran</div>
+            <div class="laporan-preview-wrap lamp-preview-stack" id="laporanLampiranPreview"></div>
           </div>
         </div>
       </div>
@@ -9049,12 +9099,17 @@ body.gf-on .gf-bar{
     </div>
     <div class="pemasok-modal-body">
       <div class="laporan-modal-actions">
-        <button class="update-upload-btn" onclick="downloadLaporanModalPNG()">⬇ Unduh PNG</button>
-        <button class="update-upload-btn" onclick="downloadLaporanModalPDF()">⬇ Unduh PDF</button>
+        <button class="update-upload-btn" onclick="downloadLaporanModalPNG()">⬇ PNG Laporan</button>
+        <button class="update-upload-btn" id="laporanModalLampiranPngBtn" style="display:none" onclick="downloadLaporanModalLampiranPNG()">⬇ PNG Lampiran</button>
+        <button class="update-upload-btn" id="laporanModalPdfBtn" onclick="downloadLaporanModalPDF()">⬇ Unduh PDF</button>
         <button class="update-upload-btn laporan-modal-edit-btn" onclick="editLaporanFromModal()">✏️ Edit</button>
       </div>
       <div class="laporan-preview-wrap" style="margin-top:14px">
         <canvas id="laporanModalCanvas" class="laporan-preview-canvas"></canvas>
+      </div>
+      <div id="laporanModalLampiranBox" style="display:none">
+        <div class="laporan-lbl">Lampiran</div>
+        <div class="laporan-preview-wrap lamp-preview-stack" id="laporanModalLampiran"></div>
       </div>
     </div>
   </div>
@@ -12921,6 +12976,7 @@ function renderLaporanPreview(){
   const dukungan = (document.getElementById('laporanDukungan').value || '').split('\n').map(s => s.trim()).filter(Boolean);
   try { buildLaporanCanvas(canvas, laporanModel, kendala, dukungan); }
   catch (e){ console.error('[Laporan] render failed', e); }
+  renderLaporanLampiranPreview(); // V119
 }
 window.renderLaporanPreview = renderLaporanPreview;
 
@@ -12951,6 +13007,14 @@ function _exportLaporanPDF(canvas, model){
   const imgW = canvas.width / 2, imgH = canvas.height / 2; // logical pts
   const pdf = new JsPDF({ orientation: imgH >= imgW ? 'portrait' : 'landscape', unit: 'pt', format: [imgW, imgH] });
   pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH);
+  // V119: halaman Lampiran menyusul di PDF yang sama (satu file, laporan + lampiran).
+  // Kanvas dibangun ulang dari `model`, bukan diambil dari DOM, supaya isi PDF
+  // selalu sama dengan preview tanpa bergantung container mana yang aktif.
+  _lampiranCanvases(model).forEach(lc => {
+    const lw = lc.width / 2, lh = lc.height / 2;
+    pdf.addPage([lw, lh], lh >= lw ? 'portrait' : 'landscape');
+    pdf.addImage(lc.toDataURL('image/png'), 'PNG', 0, 0, lw, lh);
+  });
   pdf.save(_laporanFileStamp(model) + '.pdf');
 }
 function downloadLaporanPNG(){
@@ -13055,6 +13119,10 @@ function renderLaporanForm(){
   html += '</tbody></table>';
   wrap.innerHTML = html;
   if (hint) hint.textContent = plants.length + ' PLTU · bulan berjalan (Jan–' + (ck > 0 ? LAPORAN_MONTHS[ck - 1] : '—') + ') otomatis dari data dashboard; isi Realisasi saat ini, Prognosa & DO ' + ckName + '. Satuan: ton.';
+  // V119: wilayah/tanggal berubah → daftar mitra di Lampiran ikut dibangun ulang
+  // (isian yang sudah diketik dipertahankan lewat _lampReadForm di dalamnya).
+  const lampOn = document.getElementById('laporanLampiranOn');
+  if (lampOn && lampOn.checked) renderLaporanLampiran(false);
 }
 window.renderLaporanForm = renderLaporanForm;
 
@@ -13107,6 +13175,7 @@ function buildLaporanModelFromForm(){
     rows, lastMonth: ck, doMonthIdx: ck, ckMonthIdx: ck, monthlyTotals, doTotal,
     realNowTotal, real2026,
     maxAnnual, maxYear, akumulasi, kendala, dukungan, checkpoint_date: dateStr,
+    lampiran: buildLampiranFromForm(), // V119: null bila halaman Lampiran tidak dipakai
   };
 }
 
@@ -13129,6 +13198,589 @@ function generateLaporanFromForm(opts){
   return true;
 }
 window.generateLaporanFromForm = generateLaporanFromForm;
+
+// ============================================================
+// V119: LAMPIRAN — halaman tambahan setelah laporan utama, berisi realisasi
+// tiap MITRA per PLTU pada bulan checkpoint. Daftar mitra ditarik dari
+// DATA.contracts (tab "Daftar Kontrak") — hanya kontrak yang aktif di bulan
+// checkpoint — dan bisa ditambah manual bila kontraknya sudah jalan tapi belum
+// masuk database. DO & realisasi terisi otomatis (getContractDO / c.realisasi),
+// prognosa default = realisasi; semuanya bisa diubah user.
+// Hasilnya disimpan di `laporanModel.lampiran` sehingga ikut tersimpan ke
+// library dan ter-render ulang saat laporan dibuka kembali.
+// ============================================================
+const LAMP_LINES_PER_PAGE = 30;   // baris kanvas per halaman lampiran (grup + mitra + subtotal)
+
+// Rentang tanggal ISO satu bulan kalender.
+function _lampMonthRange(year, mi){
+  const mm = String(mi + 1).padStart(2, '0');
+  const lastDay = String(new Date(year, mi + 1, 0).getDate()).padStart(2, '0');
+  return { first: year + '-' + mm + '-01', last: year + '-' + mm + '-' + lastDay };
+}
+
+// Kontrak sebuah PLTU yang aktif DI BULAN itu (bukan "aktif hari ini"):
+// awal <= akhir bulan dan akhir >= awal bulan. Kontrak terminated selalu keluar.
+// Kontrak tanpa tanggal sama sekali dilewati — keaktifannya tak bisa dipastikan;
+// untuk kasus itu ada tombol "+ Tambah mitra".
+function _lampActiveContracts(plant, year, mi){
+  const R = _lampMonthRange(year, mi);
+  return matchPlantContracts(plant, false)
+    .filter(c => {
+      if (c.terminated) return false;
+      if (!c.awal && !c.akhir) return false;
+      if (c.akhir && c.akhir < R.first) return false;
+      if (c.awal && c.awal > R.last) return false;
+      return true;
+    })
+    .sort((a, b) => String(a.pemasok || '').localeCompare(String(b.pemasok || '')));
+}
+
+// V120: realisasi kumulatif sejak awal kontrak s.d. AKHIR BULAN SEBELUM bulan
+// checkpoint. Dihitung lintas tahun karena pasangannya di baris yang sama adalah
+// vol_mt — volume kontrak seumur kontrak, bukan jatah satu tahun.
+function _lampPrevReal(c, year, mi){
+  const R = c && c.realisasi;
+  if (!R) return 0;
+  let s = 0;
+  Object.keys(R).forEach(k => {
+    const yy = parseInt(k, 10);
+    if (isNaN(yy) || yy > year) return;
+    const arr = R[k] || [];
+    const upto = (yy === year) ? mi : arr.length;   // mi = eksklusif → s.d. bulan lalu
+    for (let i = 0; i < upto && i < arr.length; i++) s += +arr[i] || 0;
+  });
+  return s;
+}
+
+// Nilai bawaan sebuah kontrak untuk bulan itu (ton, kecuali `jenis`).
+function _lampContractDefaults(c, year, mi){
+  const y = String(year);
+  const doMap = (typeof getContractDO === 'function') ? getContractDO(c) : null;
+  return {
+    jenis: c.jenis || '',
+    vol: +c.vol_mt || 0,
+    prev: _lampPrevReal(c, year, mi),
+    do: (doMap && doMap[y] && doMap[y][mi]) || 0,
+    real: (((c.realisasi && c.realisasi[y]) || [])[mi]) || 0,
+  };
+}
+
+// Wilayah + bulan checkpoint yang sedang dipilih di form. null bila belum lengkap.
+function _lampFormScope(){
+  const wEl = document.getElementById('laporanFormWilayah');
+  const dEl = document.getElementById('laporanFormDate');
+  const prov = wEl ? wEl.value : '';
+  const dateStr = dEl ? dEl.value : '';
+  if (!prov || !dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  return { prov, dateStr, mi: d.getMonth(), year: d.getFullYear() };
+}
+
+// Baca seluruh baris lampiran dari DOM apa adanya (termasuk baris manual kosong).
+function _lampReadForm(){
+  const out = [];
+  document.querySelectorAll('#laporanLampiranWrap tr[data-lamp-row]').forEach(tr => {
+    const manual = tr.getAttribute('data-manual') === '1';
+    const mEl = tr.querySelector('.lamp-mitra-input');
+    const num = (f) => {
+      const el = tr.querySelector('.laporan-form-input[data-lfld="' + f + '"]');
+      return el ? (parseFloat(el.value) || 0) : 0;
+    };
+    const txt = (f) => {
+      const el = tr.querySelector('.lamp-text-input[data-lfld="' + f + '"]');
+      return el ? el.value.trim() : '';
+    };
+    out.push({
+      key: tr.getAttribute('data-key') || '',
+      pltu: tr.getAttribute('data-pltu') || '',
+      mitra: manual ? ((mEl && mEl.value.trim()) || '') : (tr.getAttribute('data-mitra') || ''),
+      jenis: txt('jenis'),
+      vol: num('vol'), prev: num('prev'),
+      do: num('do'), real: num('real'), prognosa: num('prognosa'), manual,
+    });
+  });
+  return out;
+}
+
+function _lampNumCell(fld, val){
+  // Selalu dipaksa jadi angka: nilainya bisa datang dari model JSON tersimpan,
+  // dan di sini ia masuk ke atribut HTML tanpa escaping.
+  const n = +val || 0;
+  return '<td><input type="number" class="laporan-form-input" data-lfld="' + fld +
+    '" value="' + (n || '') + '" placeholder="0"></td>';
+}
+
+function _lampTextCell(fld, val, ph){
+  return '<td class="txt"><input type="text" class="lamp-text-input" data-lfld="' + fld +
+    '" value="' + escapeHtml(val || '') + '" placeholder="' + ph + '"></td>';
+}
+
+// Satu baris mitra. `manual` -> nama mitra jadi input teks + tombol hapus.
+// `key` mengidentifikasi baris secara unik: satu mitra bisa punya DUA kontrak di
+// PLTU yang sama (nama pemasok identik), jadi nama saja tidak cukup — memakai
+// nama sebagai kunci membuat isian kedua baris saling menimpa saat re-render.
+function _lampRowHtml(pltu, r){
+  const manual = !!r.manual;
+  const tr = '<tr data-lamp-row data-key="' + escapeHtml(r.key || '') + '" data-pltu="' + escapeHtml(pltu) + '"' +
+    (manual ? ' data-manual="1" class="manual"' : ' data-mitra="' + escapeHtml(r.mitra) + '"') + '>';
+  const nameCell = manual
+    ? '<td class="mitra"><input type="text" class="lamp-mitra-input" value="' + escapeHtml(r.mitra || '') +
+      '" placeholder="Nama mitra…"></td>'
+    : '<td class="mitra">' + escapeHtml(r.mitra || '—') + '</td>';
+  const act = manual
+    ? '<td class="act"><button type="button" class="lamp-row-del" onclick="removeLampiranMitra(this)" title="Hapus baris">✕</button></td>'
+    : '<td class="act"></td>';
+  return tr + nameCell + _lampTextCell('jenis', r.jenis, 'mis. Sawdust') +
+    _lampNumCell('vol', r.vol) + _lampNumCell('prev', r.prev) +
+    _lampNumCell('real', r.real) + _lampNumCell('prognosa', r.prognosa) +
+    _lampNumCell('do', r.do) + act + '</tr>';
+}
+
+// Bangun editor lampiran.
+//  force     — buang isian yang ada, tarik ulang dari Daftar Kontrak
+//  seedRows  — sumber nilai awal (dipakai saat memuat laporan tersimpan);
+//              bila kosong, nilai diambil dari DOM saat ini agar tidak hilang
+//              ketika grid dibangun ulang (mis. tanggal checkpoint diubah).
+function renderLaporanLampiran(force, seedRows){
+  const wrap = document.getElementById('laporanLampiranWrap');
+  if (!wrap) return;
+  const hint = document.getElementById('laporanLampiranHint');
+  const setHint = (t) => { if (hint) hint.textContent = t; };
+  const scope = _lampFormScope();
+  if (!scope){
+    wrap.innerHTML = '<div class="lamp-empty">Pilih wilayah &amp; tanggal checkpoint dulu.</div>';
+    setHint(''); return;
+  }
+  const plants = _laporanRegionPlants(scope.prov);
+  if (!plants.length){
+    wrap.innerHTML = '<div class="lamp-empty">Tidak ada PLTU untuk wilayah ini.</div>';
+    setHint(''); return;
+  }
+
+  // Nilai yang sudah ada: seedRows > isian DOM saat ini > kosong (bila force).
+  const prev = seedRows || (force ? [] : _lampReadForm());
+  const prevMap = {}, manualByPltu = {};
+  prev.forEach(r => {
+    if (!r.mitra && !r.manual) return;
+    if (r.manual){ (manualByPltu[r.pltu] = manualByPltu[r.pltu] || []).push(r); return; }
+    if (r.key) prevMap[r.key] = r;
+    // Cadangan untuk laporan yang tersimpan sebelum baris punya `key`.
+    const legacy = r.pltu + '||' + r.mitra;
+    if (!prevMap[legacy]) prevMap[legacy] = r;
+  });
+
+  const mName = LAPORAN_MONTHS[scope.mi];
+  const prevName = scope.mi > 0 ? LAPORAN_MONTHS[scope.mi - 1] : '—';
+  let html = '', nMitra = 0, nManual = 0;
+  plants.forEach(p => {
+    const pltu = p.name || '—';
+    const cs = _lampActiveContracts(p, scope.year, scope.mi);
+    const seenKey = {};
+    let rows = '';
+    cs.forEach(c => {
+      const mitra = c.pemasok || '—';
+      // Kunci per KONTRAK, bukan per nama mitra. doSigForContract() sudah memuat
+      // nomor kontrak; kalau dua kontrak tetap bertabrakan, dibedakan sufiks.
+      let key = (typeof doSigForContract === 'function' && doSigForContract(c)) || (pltu + '||' + mitra);
+      seenKey[key] = (seenKey[key] || 0) + 1;
+      if (seenKey[key] > 1) key += '#' + seenKey[key];
+      const saved = prevMap[key] || prevMap[pltu + '||' + mitra];
+      const def = _lampContractDefaults(c, scope.year, scope.mi);
+      const pick = (a, b) => (a === undefined || a === null) ? b : a;
+      rows += _lampRowHtml(pltu, saved
+        ? { key, mitra, jenis: saved.jenis || def.jenis,
+            vol: pick(saved.vol, def.vol), prev: pick(saved.prev, def.prev),
+            do: saved.do, real: saved.real, prognosa: saved.prognosa }
+        : { key, mitra, jenis: def.jenis, vol: def.vol, prev: def.prev,
+            do: def.do, real: def.real, prognosa: def.real });
+      nMitra++;
+    });
+    (manualByPltu[pltu] || []).forEach(r => {
+      rows += _lampRowHtml(pltu, { key: r.key || _lampManualKey(), mitra: r.mitra, jenis: r.jenis,
+        vol: r.vol, prev: r.prev, do: r.do, real: r.real, prognosa: r.prognosa, manual: true });
+      nManual++;
+    });
+    const cnt = cs.length + (manualByPltu[pltu] || []).length;
+    html += '<div class="lamp-pltu" data-lamp-pltu="' + escapeHtml(pltu) + '">' +
+      '<div class="lamp-pltu-head"><div>' +
+        '<div class="lamp-pltu-name">' + escapeHtml(pltu) + '</div>' +
+        '<div class="lamp-pltu-sub">' + cnt + ' kontrak · ' + mName + ' ' + scope.year + '</div>' +
+      '</div>' +
+      '<button type="button" class="laporan-mini-btn" onclick="addLampiranMitra(this)">+ Tambah mitra</button>' +
+      '</div>' +
+      '<div class="laporan-form-grid-wrap" style="margin:0">' +
+        '<table class="lamp-table"><thead><tr>' +
+          '<th class="mitra">Mitra</th><th class="txt">Jenis Biomassa</th>' +
+          '<th>Volume Kontrak (ton)</th><th>Realisasi s.d. ' + prevName + ' (ton)</th>' +
+          '<th>Realisasi ' + mName + ' (ton)</th><th>Prognosa ' + mName + ' (ton)</th>' +
+          '<th class="do-h">DO ' + mName + ' (ton)</th><th class="act"></th>' +
+        '</tr></thead><tbody>' +
+        (rows || '<tr><td class="mitra" colspan="8"><span style="color:var(--text-dim);font-size:11px">Tidak ada kontrak aktif di bulan ini — tambah manual bila perlu.</span></td></tr>') +
+        '</tbody></table>' +
+      '</div></div>';
+  });
+  wrap.innerHTML = html;
+  setHint(nMitra + ' kontrak aktif di ' + mName + ' ' + scope.year + ' dari Daftar Kontrak' +
+    (nManual ? ' + ' + nManual + ' mitra manual' : '') +
+    ' · jenis, volume kontrak, realisasi s.d. ' + prevName + ', DO & realisasi terisi otomatis; ' +
+    'prognosa default = realisasi. Satu mitra bisa muncul lebih dari sekali bila punya beberapa kontrak. Satuan: ton.');
+}
+window.renderLaporanLampiran = renderLaporanLampiran;
+
+function _lampManualKey(){ return 'man-' + Math.random().toString(36).slice(2, 10); }
+
+// Segarkan "N mitra" di header grup setelah baris manual ditambah/dihapus.
+function _lampSyncCount(box){
+  const sub = box && box.querySelector('.lamp-pltu-sub');
+  if (!sub) return;
+  const n = box.querySelectorAll('tr[data-lamp-row]').length;
+  sub.textContent = n + ' kontrak' + sub.textContent.replace(/^\d+ kontrak/, '');
+}
+
+// Tombol "+ Tambah mitra" pada satu grup PLTU.
+function addLampiranMitra(btn){
+  const box = btn && btn.closest('.lamp-pltu');
+  if (!box) return;
+  const tbody = box.querySelector('.lamp-table tbody');
+  if (!tbody) return;
+  const placeholder = tbody.querySelector('td[colspan]');
+  if (placeholder && placeholder.parentNode) placeholder.parentNode.remove();
+  const pltu = box.getAttribute('data-lamp-pltu') || '';
+  tbody.insertAdjacentHTML('beforeend', _lampRowHtml(pltu, { key: _lampManualKey(), mitra: '',
+    jenis: '', vol: 0, prev: 0, do: 0, real: 0, prognosa: 0, manual: true }));
+  const inp = tbody.lastElementChild && tbody.lastElementChild.querySelector('.lamp-mitra-input');
+  if (inp) inp.focus();
+  _lampSyncCount(box);
+}
+window.addLampiranMitra = addLampiranMitra;
+
+function removeLampiranMitra(btn){
+  const tr = btn && btn.closest('tr');
+  if (!tr) return;
+  const box = tr.closest('.lamp-pltu');
+  tr.remove();
+  _lampSyncCount(box);
+}
+window.removeLampiranMitra = removeLampiranMitra;
+
+// Checkbox "Tambah halaman Lampiran".
+function toggleLaporanLampiran(){
+  const cb = document.getElementById('laporanLampiranOn');
+  const on = !!(cb && cb.checked);
+  const body = document.getElementById('laporanLampiranBody');
+  const resetBtn = document.getElementById('laporanLampiranResetBtn');
+  if (body) body.classList.toggle('off', !on);
+  if (resetBtn) resetBtn.style.display = on ? '' : 'none';
+  if (on && !document.querySelector('#laporanLampiranWrap .lamp-pltu')) renderLaporanLampiran(true);
+}
+window.toggleLaporanLampiran = toggleLaporanLampiran;
+
+// Kumpulkan lampiran dari form -> objek yang ditempel ke laporanModel.
+// null bila checkbox mati atau tidak ada satu pun mitra bernama.
+function buildLampiranFromForm(){
+  const cb = document.getElementById('laporanLampiranOn');
+  if (!cb || !cb.checked) return null;
+  const scope = _lampFormScope();
+  if (!scope) return null;
+  const rows = _lampReadForm().filter(r => r.mitra && r.pltu);
+  if (!rows.length) return null;
+  return { month: scope.mi, year: scope.year, rows };
+}
+window.buildLampiranFromForm = buildLampiranFromForm;
+
+// ---- Kanvas lampiran ----
+// Baris kanvas: grup PLTU -> mitra… -> subtotal, lalu satu baris total di akhir.
+function _lampLines(model){
+  const L = model && model.lampiran;
+  if (!L || !L.rows || !L.rows.length) return [];
+  const byPltu = {};
+  L.rows.forEach(r => { (byPltu[r.pltu] = byPltu[r.pltu] || []).push(r); });
+  // Urutan PLTU mengikuti tabel laporan utama; sisanya menyusul di belakang.
+  const names = (model.rows || []).map(r => r.pltu).filter(n => byPltu[n]);
+  Object.keys(byPltu).forEach(n => { if (names.indexOf(n) === -1) names.push(n); });
+  const lines = [];
+  names.forEach(n => {
+    const rs = byPltu[n];
+    lines.push({ t: 'grp', pltu: n, n: rs.length });
+    rs.forEach(r => lines.push({ t: 'row', r }));
+    lines.push({ t: 'sub', pltu: n, rows: rs });
+  });
+  return lines;
+}
+
+function _lampSum(rows, fld){ return (rows || []).reduce((s, r) => s + (+r[fld] || 0), 0); }
+
+// Halaman utama memakai RIBU TON karena angkanya seluruh PLTU. Di lampiran
+// angkanya per mitra per bulan — dalam ribu ton, DO 400 ton jadi "0,40" dan
+// mitra kecil menyusut jadi "0,05". Jadi lampiran memakai TON, dan menyebutkan
+// satuannya di label seksi maupun footer supaya tidak tertukar.
+function _lampTon(v){ return (+v || 0).toLocaleString('id-ID', { maximumFractionDigits: 2 }); }
+
+function _lampPages(model){
+  const lines = _lampLines(model);
+  if (!lines.length) return [];
+  const pages = []; let cur = [];
+  for (let i = 0; i < lines.length; i++){
+    // Jangan tinggalkan header grup sendirian di baris terakhir halaman.
+    const orphan = (cur.length === LAMP_LINES_PER_PAGE - 1 && lines[i].t === 'grp');
+    if (cur.length >= LAMP_LINES_PER_PAGE || orphan){ pages.push(cur); cur = []; }
+    cur.push(lines[i]);
+  }
+  if (cur.length) pages.push(cur);
+  pages[pages.length - 1].push({ t: 'total', rows: model.lampiran.rows });
+  return pages;
+}
+
+// Potong teks agar muat di lebar kolom.
+function _lampClip(ctx, text, maxW){
+  let t = String(text == null ? '' : text);
+  if (ctx.measureText(t).width <= maxW) return t;
+  while (t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+
+function buildLampiranCanvas(canvas, model, page, pageNo, pageCount){
+  const S = 2, W = 900, pad = 40, CW = W - pad * 2;
+  const _T = (LAPORAN_THEMES[model.prov] || LAPORAN_THEMES[_laporanProvFromLabel(model.wilayah)]) || LAPORAN_THEMES.sumatera;
+  const bg = _T.bg, ink = _T.ink, green = _T.primary, greenLt = _T.primaryLt, orange = _T.accent;
+  const gray = '#5f6b62', cardBorder = '#e4e3d9';
+  const font = (wt, sz) => wt + ' ' + sz + "px 'Plus Jakarta Sans', sans-serif";
+
+  const headerH = 104, secLabelH = 30, headH = 40, rowH = 26, footerH = 54, gap = 20;
+  const tableH = headH + rowH * page.length;
+  const H = pad + headerH + 14 + secLabelH + tableH + gap + footerH + pad;
+
+  canvas.width = W * S; canvas.height = H * S;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(S, 0, 0, S, 0, 0);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  const L = model.lampiran || {};
+  const mIdx = (typeof L.month === 'number') ? L.month
+    : (typeof model.ckMonthIdx === 'number' ? model.ckMonthIdx : model.lastMonth);
+  const mFull = LAPORAN_MONTHS_FULL[mIdx] || '—';
+  const yr = L.year || model.year;
+
+  // ===== HEADER =====
+  let y = pad;
+  ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.fillStyle = green; ctx.font = font('700', 12);
+  ctx.fillText(('LAMPIRAN · COFIRING PLTU ' + model.wilayah + ' · PLN ENERGI PRIMER INDONESIA').toUpperCase(), pad, y);
+  y += 20;
+  ctx.fillStyle = ink; ctx.font = font('800', 30);
+  ctx.fillText('Realisasi Mitra per PLTU', pad, y);
+  y += 40;
+  ctx.font = font('600', 15); ctx.fillStyle = gray;
+  ctx.fillText('Bulan ', pad, y);
+  const bx = pad + ctx.measureText('Bulan ').width;
+  ctx.fillStyle = orange; ctx.fillText(mFull + ' ' + yr, bx, y);
+  if (pageCount > 1){
+    ctx.fillStyle = gray; ctx.font = font('500', 13); ctx.textAlign = 'right';
+    ctx.fillText('Halaman ' + pageNo + ' dari ' + pageCount, W - pad, y + 2);
+    ctx.textAlign = 'left';
+  }
+  y += 28;
+  ctx.strokeStyle = green; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+  y += 14;
+
+  drawSectionLabel(ctx, pad, y, 'REALISASI MITRA ' + String(LAPORAN_MONTHS[mIdx] || '').toUpperCase() + ' ' + yr,
+    orange, 'SATUAN: TON', W - pad, font, gray);
+  y += secLabelH;
+
+  // ===== TABEL =====
+  // V120: tujuh kolom di lebar 900 memaksa header dua baris (label + periode) —
+  // pola yang sama dipakai tabel laporan utama. `text: true` menandai kolom
+  // non-angka sehingga ia dilewati saat menjumlah subtotal/total.
+  const mShort = LAPORAN_MONTHS[mIdx] || '';
+  const prevShort = mIdx > 0 ? LAPORAN_MONTHS[mIdx - 1] : '-';
+  const cols = [
+    { h1: 'Jenis',     h2: 'biomassa',          w: 110, text: true, fld: 'jenis' },
+    { h1: 'Volume',    h2: 'kontrak',           w: 88, fld: 'vol' },
+    { h1: 'Realisasi', h2: 's.d. ' + prevShort, w: 88, fld: 'prev' },
+    { h1: 'Realisasi', h2: mShort,              w: 88, fld: 'real' },
+    { h1: 'Prognosa',  h2: mShort,              w: 86, fld: 'prognosa', headColor: orange },
+    { h1: 'DO',        h2: mShort,              w: 86, fld: 'do', hi: true, strong: true },
+  ];
+  const mitraW = CW - cols.reduce((a, c) => a + c.w, 0);
+  const colLeft = [];
+  cols.reduce((x, c, i) => { colLeft[i] = x; return x + c.w; }, pad + mitraW);
+  const colR = (ci) => colLeft[ci] + cols[ci].w - 8;   // tepi kanan teks kolom
+  const tableTop = y;
+
+  ctx.fillStyle = '#eaf1e6'; ctx.fillRect(pad, y, CW, headH);
+  cols.forEach((c, ci) => { if (c.hi){ ctx.fillStyle = orange; ctx.fillRect(colLeft[ci], y, c.w, headH); } });
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = ink; ctx.font = font('700', 11); ctx.textAlign = 'left';
+  ctx.fillText('MITRA', pad + 10, y + headH / 2);
+  ctx.textAlign = 'right';
+  cols.forEach((c, ci) => {
+    ctx.fillStyle = c.hi ? '#fff' : (c.headColor || ink);
+    ctx.font = font(c.hi ? '700' : '600', 8.5);
+    ctx.fillText(c.h1, colR(ci), y + headH / 2 - 7);
+    ctx.font = font(c.hi ? '800' : '700', 10.5);
+    ctx.fillText(c.h2, colR(ci), y + headH / 2 + 6);
+  });
+  y += headH;
+
+  // Isi satu baris kolom: nilai per-mitra, atau agregat untuk subtotal/total.
+  const drawCells = (get, weight, color) => {
+    ctx.textAlign = 'right';
+    cols.forEach((c, ci) => {
+      const v = get(c);
+      ctx.font = font((c.strong && weight === '400') ? '700' : weight, c.text ? 10 : 11);
+      ctx.fillStyle = color || ((c.strong || v) ? ink : '#b9b9ad');
+      ctx.fillText(c.text ? _lampClip(ctx, v, c.w - 12) : _lampTon(v), colR(ci), y + rowH / 2);
+    });
+  };
+
+  let zebra = 0;
+  page.forEach(ln => {
+    if (ln.t === 'grp'){
+      ctx.fillStyle = greenLt; ctx.globalAlpha = 0.22; ctx.fillRect(pad, y, CW, rowH); ctx.globalAlpha = 1;
+      ctx.fillStyle = green; ctx.fillRect(pad, y, 4, rowH);
+      ctx.fillStyle = ink; ctx.font = font('800', 11); ctx.textAlign = 'left';
+      ctx.fillText(_lampClip(ctx, ln.pltu, mitraW - 24), pad + 12, y + rowH / 2);
+      ctx.fillStyle = gray; ctx.font = font('600', 9.5); ctx.textAlign = 'right';
+      ctx.fillText(ln.n + ' kontrak', pad + CW - 8, y + rowH / 2);
+      zebra = 0;
+    } else if (ln.t === 'row'){
+      if (zebra % 2 === 1){ ctx.fillStyle = '#faf9f4'; ctx.fillRect(pad, y, CW, rowH); }
+      cols.forEach((c, ci) => {
+        if (!c.hi) return;
+        ctx.fillStyle = orange; ctx.globalAlpha = 0.06; ctx.fillRect(colLeft[ci], y, c.w, rowH); ctx.globalAlpha = 1;
+      });
+      ctx.fillStyle = ink; ctx.font = font('400', 11); ctx.textAlign = 'left';
+      ctx.fillText(_lampClip(ctx, ln.r.mitra, mitraW - 34), pad + 24, y + rowH / 2);
+      drawCells((c) => c.text ? (ln.r[c.fld] || '') : (+ln.r[c.fld] || 0), '400', null);
+      zebra++;
+    } else if (ln.t === 'sub'){
+      ctx.fillStyle = '#f0f4ec'; ctx.fillRect(pad, y, CW, rowH);
+      ctx.fillStyle = green; ctx.font = font('700', 10.5); ctx.textAlign = 'left';
+      ctx.fillText(_lampClip(ctx, 'Subtotal ' + ln.pltu, mitraW - 24), pad + 12, y + rowH / 2);
+      drawCells((c) => c.text ? '' : _lampSum(ln.rows, c.fld), '700', ink);
+    } else if (ln.t === 'total'){
+      ctx.fillStyle = '#e3edda'; ctx.fillRect(pad, y, CW, rowH);
+      ctx.strokeStyle = green; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(pad + CW, y); ctx.stroke();
+      ctx.fillStyle = ink; ctx.font = font('800', 11); ctx.textAlign = 'left';
+      ctx.fillText('TOTAL ' + String(model.wilayah || '').toUpperCase(), pad + 12, y + rowH / 2);
+      drawCells((c) => c.text ? '' : _lampSum(ln.rows, c.fld), '800', ink);
+    }
+    ctx.strokeStyle = '#ecebe1'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad, y + rowH); ctx.lineTo(pad + CW, y + rowH); ctx.stroke();
+    y += rowH;
+  });
+  ctx.strokeStyle = cardBorder; ctx.lineWidth = 1;
+  ctx.strokeRect(pad, tableTop, CW, tableH);
+  y += gap;
+
+  // ===== FOOTER =====
+  ctx.strokeStyle = cardBorder; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = green; ctx.font = font('700', 11); ctx.textAlign = 'left';
+  ctx.fillText(('LAMPIRAN · PT PLN ENERGI PRIMER INDONESIA · COFIRING PLTU ' + model.wilayah).toUpperCase(), pad, y + 12);
+  ctx.fillStyle = gray; ctx.font = font('400', 10); ctx.textAlign = 'right';
+  ctx.fillText('Satuan dalam ton · volume & realisasi kumulatif dihitung sejak awal kontrak', W - pad, y + 12);
+  ctx.fillText('Sumber: Daftar Kontrak Mitra + input manual · checkpoint ' + mFull + ' ' + yr, W - pad, y + 26);
+  ctx.textAlign = 'left';
+}
+
+function _lampiranHasPages(model){
+  return !!(model && model.lampiran && model.lampiran.rows && model.lampiran.rows.length);
+}
+
+// Render seluruh halaman lampiran ke kanvas lepas (tidak menyentuh DOM).
+// Dipakai bersama oleh preview, ekspor gambar, dan penggabungan PDF — satu
+// sumber kebenaran, jadi PDF tidak pernah beda dari yang dilihat user.
+function _lampiranCanvases(model){
+  if (!_lampiranHasPages(model)) return [];
+  const pages = _lampPages(model);
+  const out = [];
+  pages.forEach((pg, i) => {
+    const c = document.createElement('canvas');
+    try { buildLampiranCanvas(c, model, pg, i + 1, pages.length); out.push(c); }
+    catch(e){ console.error('[Lampiran] render failed', e); }
+  });
+  return out;
+}
+
+// Tampilkan halaman lampiran ke dalam sebuah container preview.
+function renderLampiranInto(containerId, boxId, btnId, model, pdfBtnId){
+  const box = document.getElementById(boxId);
+  const cont = document.getElementById(containerId);
+  const btn = btnId ? document.getElementById(btnId) : null;
+  const has = _lampiranHasPages(model);
+  if (box) box.style.display = has ? '' : 'none';
+  if (btn) btn.style.display = has ? '' : 'none';
+  // PDF selalu satu file; labelnya baru menyebut lampiran kalau lampirannya ada.
+  const pdfBtn = pdfBtnId ? document.getElementById(pdfBtnId) : null;
+  if (pdfBtn) pdfBtn.textContent = has ? '⬇ PDF (Laporan + Lampiran)' : '⬇ Unduh PDF';
+  if (!cont) return;
+  cont.innerHTML = '';
+  if (!has) return;
+  const canvases = _lampiranCanvases(model);
+  canvases.forEach((c, i) => {
+    c.className = 'laporan-preview-canvas';
+    if (canvases.length > 1){
+      const badge = document.createElement('div');
+      badge.className = 'lamp-pagebadge';
+      badge.textContent = 'Lampiran — halaman ' + (i + 1) + ' dari ' + canvases.length;
+      cont.appendChild(badge);
+    }
+    cont.appendChild(c);
+  });
+}
+
+// renderLaporanPreview() dipanggil pada setiap ketikan di Kendala/Dukungan, dan
+// menggambar ulang lampiran multi-halaman di situ terasa berat. Halaman lampiran
+// tidak bergantung pada kedua narasi itu, jadi cukup digambar ulang bila isinya
+// (atau temanya) benar-benar berubah.
+let _lampPreviewSig = null;
+function renderLaporanLampiranPreview(force){
+  const L = laporanModel && laporanModel.lampiran;
+  const sig = L ? JSON.stringify([laporanModel.prov, laporanModel.wilayah, L]) : '';
+  if (!force && sig === _lampPreviewSig && document.querySelector('#laporanLampiranPreview canvas')) return;
+  _lampPreviewSig = sig;
+  renderLampiranInto('laporanLampiranPreview', 'laporanLampiranPreviewBox', 'laporanLampiranPngBtn', laporanModel, 'laporanPdfBtn');
+}
+window.renderLaporanLampiranPreview = renderLaporanLampiranPreview;
+
+// ---- Ekspor gambar ----
+function _exportCanvasImage(canvas, filename, mime, quality){
+  if (!canvas){ alert('Preview belum siap.'); return; }
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = filename; link.href = url;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, mime, quality);
+}
+
+// Lampiran -> PNG. Lebih dari satu halaman = beberapa file (…_Lampiran_1.png, …).
+// Gambar selalu PNG, sama seperti laporan utama — satu format saja supaya tidak
+// ada dua berkas berbeda mutu yang beredar untuk laporan yang sama.
+function _exportLampiranPNG(model){
+  if (!_lampiranHasPages(model)){ alert('Laporan ini belum punya lampiran.'); return; }
+  const canvases = _lampiranCanvases(model);
+  if (!canvases.length){ alert('Lampiran gagal dirender.'); return; }
+  const base = _laporanFileStamp(model) + '_Lampiran';
+  canvases.forEach((c, i) => {
+    const name = base + (canvases.length > 1 ? '_' + (i + 1) : '') + '.png';
+    // Jeda antar-unduhan; sebagian browser membatalkan unduhan yang beruntun.
+    setTimeout(() => _exportCanvasImage(c, name, 'image/png'), i * 400);
+  });
+}
+
+function downloadLampiranPNG(){ _exportLampiranPNG(laporanModel); }
+window.downloadLampiranPNG = downloadLampiranPNG;
+
+function downloadLaporanModalLampiranPNG(){ _exportLampiranPNG(laporanPreviewModel); }
+window.downloadLaporanModalLampiranPNG = downloadLaporanModalLampiranPNG;
 
 // ============================================================
 // LAPORAN ARSIP (library) — save/list/open/delete via Supabase.
@@ -13392,6 +14044,8 @@ async function openLaporanPreview(id){
     }
     const canvas = document.getElementById('laporanModalCanvas');
     if (canvas) buildLaporanCanvas(canvas, data.model, data.model.kendala || [], data.model.dukungan || []);
+    // V119: laporan tersimpan yang punya lampiran menampilkannya di bawah halaman utama
+    renderLampiranInto('laporanModalLampiran', 'laporanModalLampiranBox', 'laporanModalLampiranPngBtn', data.model, 'laporanModalPdfBtn');
     const modal = document.getElementById('laporanPreviewModal');
     if (modal) modal.classList.add('open');
   } catch(e){ alert('Gagal memuat laporan: ' + (e && e.message ? e.message : e)); }
@@ -13456,6 +14110,17 @@ function loadLaporanIntoForm(model, id, meta){
     setVal('prognosa', prognosa);
     setVal('do', r.do || 0);
   });
+
+  // V119: pulihkan halaman Lampiran (kalau laporan ini punya) — checkbox dinyalakan
+  // lalu grid dibangun ulang dari Daftar Kontrak dengan nilai tersimpan sebagai seed,
+  // sehingga mitra manual ikut kembali dan mitra baru di kontrak tetap muncul.
+  const lampOn = document.getElementById('laporanLampiranOn');
+  const savedLamp = (model.lampiran && model.lampiran.rows) ? model.lampiran.rows : null;
+  if (lampOn){
+    lampOn.checked = !!savedLamp;
+    toggleLaporanLampiran();
+    if (savedLamp) renderLaporanLampiran(true, savedLamp);
+  }
 
   // rebuild preview from the freshly-populated form + show the editor (no scroll —
   // we want the user on the form itself)
