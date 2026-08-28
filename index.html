@@ -7394,6 +7394,62 @@ html,body{
 .tabs.qol-fade-l::before{opacity:1}
 .tabs.qol-fade-r::after{opacity:1}
 
+
+/* ============================================================================
+   V118: BAR FILTER GLOBAL
+   Chip Genco / Boiler / Regional di panel kiri tab Map Cofiring kini menyempitkan
+   SELURUH tab, bukan hanya peta. Bar ini satu-satunya penanda bahwa penyempitan
+   itu sedang berlaku — tanpa dia, orang yang berpindah ke tab Kontrak melihat
+   angka yang lebih kecil tanpa tahu sebabnya, dan itu lebih berbahaya daripada
+   tidak punya fitur ini sama sekali.
+   Bar mengambil BARIS GRID sendiri, bukan overlay, supaya tidak pernah menutupi
+   isi tab. Barisnya hanya ada saat <body> memakai kelas .gf-on, jadi saat tidak
+   ada filter aktif layout persis seperti sebelum V118.
+   ============================================================================ */
+body.gf-on .shell{grid-template-rows:56px 44px auto 1fr}
+body.gf-on .gf-bar{grid-row:3}
+body.gf-on .view{grid-row:4}
+.gf-bar{display:none}
+body.gf-on .gf-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 14px;background:var(--panel-2);
+  border-bottom:1px solid var(--border);
+  box-shadow:inset 3px 0 0 var(--accent);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+  letter-spacing:.04em;color:var(--text-dim);
+  overflow-x:auto;overflow-y:hidden;white-space:nowrap;
+}
+.gf-bar b{color:var(--text-bright);font-weight:700}
+.gf-bar-label{flex:0 0 auto}
+.gf-chips{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.gf-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:2px 8px;border-radius:999px;
+  border:1px solid var(--border-bright);background:var(--panel);
+  color:var(--text);font-size:10px;font-weight:600;letter-spacing:.02em;
+}
+.gf-chip .gf-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.gf-chip-x{
+  border:none;background:none;padding:0 0 0 2px;cursor:pointer;
+  color:var(--text-dim);font-size:12px;line-height:1;font-family:inherit;
+}
+.gf-chip-x:hover{color:#ef4444}
+.gf-count{margin-left:auto;padding-left:12px;flex:0 0 auto;color:var(--text-dim);font-variant-numeric:tabular-nums}
+.gf-reset{
+  flex:0 0 auto;border:1px solid var(--border-bright);background:transparent;cursor:pointer;
+  color:var(--text);border-radius:var(--r-xs);padding:3px 10px;
+  font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.04em;
+}
+.gf-reset:hover{border-color:#ef4444;color:#ef4444}
+@media (max-width:768px){
+  /* Dua nilai baris pertama menyalin override mobile yang sudah ada (52px + rail
+     tab yang di-nol-kan oleh bottom-nav); !important dipakai karena aturan yang
+     ditimpa juga !important. */
+  body.gf-on .shell{grid-template-rows:52px 0px auto 1fr!important}
+  body.gf-on .gf-bar{padding:5px 10px;font-size:9px;gap:6px}
+  .gf-count{display:none}
+}
+
 @media (prefers-reduced-motion: reduce){
   .cmdk,.kbdhelp,.qtoast,.verbanner{animation:none}
   .qtoast.out{animation:none;opacity:0}
@@ -7642,6 +7698,17 @@ html,body{
     LAPORAN
   </button>
 </nav>
+
+<!-- V118: Bar filter global. Muncul di SEMUA tab (peta termasuk) begitu ada chip
+     Genco/Boiler/Regional yang aktif di panel kiri Map Cofiring. Isinya diisi oleh
+     renderGlobalFilterBar(); kelas .gf-on pada <body> yang membuka barisnya. -->
+<div class="gf-bar" id="globalFilterBar">
+  <span class="gf-bar-label">Filter <b>Map Cofiring</b> aktif di semua tab:</span>
+  <span class="gf-chips" id="globalFilterChips"></span>
+  <button class="gf-reset" onclick="clearGlobalFilter()" title="Hapus semua filter dan tampilkan kembali data nasional">Hapus filter</button>
+  <span class="gf-count" id="globalFilterCount"></span>
+</div>
+
 <!-- Pembangkit jenis dropdown menu (fixed-position to escape tab-bar overflow) -->
 <div class="tab-dd-menu" id="pembangkitDropdownMenu"></div>
 
@@ -7750,7 +7817,7 @@ html,body{
         <div class="kpi neutral">
           <div class="kpi-label">GCV Kalori</div>
           <div class="kpi-value" id="kpi-gcv">—</div>
-          <div class="kpi-meta">kCal/kg</div>
+          <div class="kpi-meta" id="kpi-gcv-meta">kCal/kg</div>
         </div>
         <div class="kpi accent" id="kpi-card-cofiring">
           <div class="kpi-label">% Cofiring</div>
@@ -9807,12 +9874,16 @@ function buildFilters(){
         if (state.filters[key].has(val)) state.filters[key].delete(val);
         else state.filters[key].add(val);
         btn.classList.toggle('active');
-        refreshMarkers();
-        updateKPIs();
+        // V118: chip ini bukan lagi filter peta saja — applyGlobalFilterChange()
+        // menyegarkan marker + KPI peta DAN menandai tab lain agar dibangun ulang.
+        applyGlobalFilterChange();
       };
       container.appendChild(btn);
     });
   }
+  // V118: filter bertahan saat data di-reload (upload/auto-refresh membangun ulang
+  // chip-nya), jadi bar penanda harus ikut disegarkan setiap kali chip dibangun.
+  if (typeof renderGlobalFilterBar === 'function') renderGlobalFilterBar();
 }
 
 // V108: kotak "SEARCH PLTU" adalah alat NAVIGASI peta (menyisakan marker yang dicari),
@@ -9831,6 +9902,233 @@ function currentPlants(opts){
     if (!ignoreSearch && state.search && !p.name.toLowerCase().includes(state.search.toLowerCase())) return false;
     return true;
   });
+}
+
+
+/* ============================================================================
+   V118: FILTER GLOBAL LINTAS TAB
+   Chip Genco / Boiler / Regional di panel kiri tab Map Cofiring bukan lagi milik
+   peta saja — Realisasi, Bottleneck, Pareto Loss, Daftar Kontrak, Usulan Kontrak
+   dan feed Anomali ikut menyempit mengikutinya.
+
+   Satu sumber kebenaran: `state.filters`. Nilainya TIDAK pernah disalin ke state
+   per tab, jadi tidak ada dua salinan yang bisa berbeda. Filter bawaan tiap tab
+   (dropdown Genco di Pareto, Wilayah/PLTU di Realisasi, dst.) tetap hidup dan
+   bekerja DI DALAM lingkup global ini — irisan, bukan penggantian — supaya
+   pengaturan yang sudah biasa dipakai tidak mendadak hilang.
+
+   Tab yang datanya bukan tentang 51 PLTU biomassa SENGAJA tidak ikut: Overview
+   Pembangkit (seluruh pembangkit PLN, banyak yang bukan PLTU), Fasilitas
+   Produksi (titik pemasok, tidak punya genco), Berita, Laporan, MoU, Kalender.
+   Kartu "Comparative Genco" di Realisasi juga tetap nasional — memang itu
+   gunanya, dan tooltipnya sudah menyatakan hal tersebut sejak sebelum V118.
+   ============================================================================ */
+
+function globalFilterActive(){
+  return !!(state.filters.genco.size || state.filters.boiler.size || state.filters.regional.size);
+}
+
+// Daftar chip aktif, urut Genco -> Boiler -> Regional, untuk bar penanda di atas.
+function globalFilterChips(){
+  const out = [];
+  ['genco', 'boiler', 'regional'].forEach(key => {
+    state.filters[key].forEach(val => out.push({ key: key, val: val }));
+  });
+  return out;
+}
+
+// Predikat inti untuk objek plant asli dari DATA.plants.
+function globalPassPlant(p){
+  if (!p) return false;
+  if (state.filters.genco.size && !state.filters.genco.has(p.genco)) return false;
+  if (state.filters.boiler.size && !state.filters.boiler.has(p.boiler)) return false;
+  if (state.filters.regional.size && !state.filters.regional.has(p.regional)) return false;
+  return true;
+}
+
+function _gfKey(s){ return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+// Index nama/kode PLTU -> plant, dibangun ulang hanya bila array DATA.plants diganti
+// (upload/revert/auto-refresh mengganti referensinya, bukan memutasinya).
+let _gfIdx = null, _gfIdxRef = null;
+const _gfNameCache = new Map();
+function _gfPlantIndex(){
+  const plants = (DATA && DATA.plants) || [];
+  if (_gfIdx && _gfIdxRef === plants) return _gfIdx;
+  const byKey = new Map(), names = [];
+  for (const p of plants){
+    const nk = _gfKey(p.name);
+    if (nk){ if (!byKey.has(nk)) byKey.set(nk, p); names.push([nk, p]); }
+    const ck = _gfKey(p.code);
+    if (ck && !byKey.has(ck)) byKey.set(ck, p);
+  }
+  _gfIdx = { byKey: byKey, names: names };
+  _gfIdxRef = plants;
+  _gfNameCache.clear();
+  return _gfIdx;
+}
+
+// Nama PLTU bebas-ketik (dari kontrak / bottleneck / usulan / alert) -> objek plant,
+// atau null bila tidak bisa dipastikan. Pola pencocokan meniru resolveUsulanPltuName():
+// cocok persis dulu, baru "salah satu memuat yang lain" — dan yang kedua HANYA diterima
+// bila kandidatnya tunggal. "SURALAYA" cocok ke dua PLTU sekaligus; menebak salah
+// satunya lebih buruk daripada tidak menebak.
+function globalPlantByName(name){
+  const key = _gfKey(name);
+  if (!key) return null;
+  const idx = _gfPlantIndex();
+  const exact = idx.byKey.get(key);
+  if (exact) return exact;
+  if (_gfNameCache.has(key)) return _gfNameCache.get(key);
+  let hit = null, n = 0;
+  for (const [k, p] of idx.names){
+    if (k.includes(key) || key.includes(k)){ n++; hit = p; if (n > 1) break; }
+  }
+  const out = (n === 1) ? hit : null;
+  _gfNameCache.set(key, out);
+  return out;
+}
+
+// Untuk entitas yang hanya membawa nama PLTU (dan kadang kolom genco sendiri):
+// kontrak, bottleneck, usulan, alert. Aturan bila namanya TIDAK bisa dipetakan
+// ke satu PLTU:
+//   - filter Genco -> masih bisa dinilai lewat kolom genco milik entitas itu;
+//   - filter Boiler / Regional -> tidak bisa dinilai, barisnya DISEMBUNYIKAN.
+// Menyembunyikan lebih jujur daripada meloloskan: orang yang mengklik "Banten"
+// tidak boleh melihat baris yang provinsinya tidak diketahui seolah-olah lolos.
+function globalPassNamed(pltuName, genco){
+  if (!globalFilterActive()) return true;
+  const p = globalPlantByName(pltuName);
+  if (state.filters.genco.size){
+    const g = genco || (p && p.genco);
+    if (!g || !state.filters.genco.has(g)) return false;
+  }
+  if (state.filters.boiler.size && !(p && state.filters.boiler.has(p.boiler))) return false;
+  if (state.filters.regional.size && !(p && state.filters.regional.has(p.regional))) return false;
+  return true;
+}
+
+/* ---- Orkestrasi render ulang -------------------------------------------------
+   Tab yang sedang tersembunyi SENGAJA tidak dirender ulang saat filter berubah:
+   canvas Chart.js di dalam elemen display:none berukuran 0, dan chart yang
+   dibangun di sana keluar gepeng. Jadi tab lain hanya ditandai basi lewat nomor
+   versi, lalu dibangun ulang saat pertama kali dibuka melalui switchTab().     */
+let _gfVersion = 0;
+const _gfRendered = {};
+
+// Apakah tab ini belum pernah dirender sama sekali? Kalau ya, switchTab() yang
+// akan membangunnya untuk pertama kali — kita tidak perlu (dan tidak boleh)
+// menjadwalkan render kedua yang cuma membuang-buang kerja.
+function _gfTabIsFresh(tab){
+  if (tab === 'realisasi') return !realInit;
+  if (tab === 'pareto') return !paretoCharts.main;
+  if (tab === 'kontrak') return !kontrakInit;
+  if (tab === 'bottleneck') return !bnMap;
+  if (tab === 'usulan') return !usulanInit;
+  return true; // tab lain tidak terpengaruh filter global
+}
+
+function _gfRerenderTab(tab){
+  try {
+    if (tab === 'realisasi'){
+      Object.keys(realCharts).forEach(k => {
+        if (realCharts[k] && realCharts[k].destroy){ try { realCharts[k].destroy(); } catch(e){} }
+        delete realCharts[k];
+      });
+      renderRealView();
+    } else if (tab === 'pareto'){
+      renderParetoView();
+    } else if (tab === 'kontrak'){
+      buildKontrakFilters();
+      renderKontrakTable();
+    } else if (tab === 'bottleneck'){
+      if (bnMarkerLayer) refreshBnMap();
+      renderBnList();
+    } else if (tab === 'usulan'){
+      renderUsulanTable();
+    }
+  } catch(e){ console.error('[FilterGlobal] gagal render ulang tab', tab, e); }
+}
+
+// Dipanggil di awal switchTab(): bangun ulang tab bila isinya dirender sebelum
+// filter global berubah.
+function gfSyncTab(tab){
+  if (_gfRendered[tab] === _gfVersion) return;
+  _gfRendered[tab] = _gfVersion;
+  if (_gfTabIsFresh(tab)) return;
+  setTimeout(() => _gfRerenderTab(tab), 40);
+}
+
+// Satu-satunya pintu masuk setelah state.filters berubah.
+function applyGlobalFilterChange(){
+  _gfVersion++;
+  renderGlobalFilterBar();
+  // Peta selalu ikut, dibuka atau tidak: markernya murah dan tidak memakai canvas.
+  try { refreshMarkers(); } catch(e){ console.warn('[FilterGlobal] refreshMarkers:', e); }
+  try { updateKPIs(); } catch(e){ console.warn('[FilterGlobal] updateKPIs:', e); }
+  if (state.selected){
+    // PLTU terpilih bisa jadi tidak lolos filter baru -> tutup panel detailnya.
+    const sel = (DATA.plants || []).find(p => p.code === state.selected);
+    if (sel && !globalPassPlant(sel) && typeof closeDetailPanel === 'function'){
+      try { closeDetailPanel(); } catch(e){}
+    }
+  }
+  _gfRendered.map = _gfVersion;
+  // Tab yang sedang terbuka (bisa bukan peta — tombol "Hapus filter" ada di semua
+  // tab) dirender ulang sekarang juga; sisanya menunggu dibuka.
+  if (state.tab !== 'map') gfSyncTab(state.tab);
+}
+
+function clearGlobalFilter(){
+  state.filters.genco.clear();
+  state.filters.boiler.clear();
+  state.filters.regional.clear();
+  if (typeof buildFilters === 'function' && document.getElementById('filter-genco')) buildFilters();
+  applyGlobalFilterChange();
+}
+window.clearGlobalFilter = clearGlobalFilter;
+
+function removeGlobalFilterChip(key, val){
+  if (!state.filters[key]) return;
+  state.filters[key].delete(val);
+  if (typeof buildFilters === 'function' && document.getElementById('filter-genco')) buildFilters();
+  applyGlobalFilterChange();
+}
+window.removeGlobalFilterChip = removeGlobalFilterChip;
+
+// V118: potongan nama berkas yang menyebut filter aktif, mis. "_filter_PIP_CFB".
+// Ekspor Excel ikut lingkup global (kalau tidak, berkas yang diunduh tidak akan
+// cocok dengan angka yang barusan dilihat di layar), jadi namanya harus
+// mengatakannya — berkas ini akan berpindah tangan tanpa membawa layarnya.
+function globalFilterFileTag(){
+  if (!globalFilterActive()) return '';
+  return '_filter_' + globalFilterChips().map(c => String(c.val).replace(/[^A-Za-z0-9]+/g, '')).join('_');
+}
+
+function renderGlobalFilterBar(){
+  const bar = document.getElementById('globalFilterBar');
+  const on = globalFilterActive();
+  document.body.classList.toggle('gf-on', on);
+  if (!bar || !on) return;
+  const chipsEl = document.getElementById('globalFilterChips');
+  const countEl = document.getElementById('globalFilterCount');
+  if (chipsEl){
+    chipsEl.innerHTML = globalFilterChips().map(c => {
+      const color = (c.key === 'genco') ? gencoColor(c.val) : 'var(--accent)';
+      const label = escapeHtml(c.val);
+      const arg = escapeHtml(JSON.stringify(c.val));
+      return '<span class="gf-chip"><span class="gf-dot" style="background:' + color + '"></span>' +
+             label +
+             '<button class="gf-chip-x" title="Hapus filter ' + label + '"' +
+             ' onclick="removeGlobalFilterChip(&quot;' + c.key + '&quot;,' + arg + ')">&times;</button>' +
+             '</span>';
+    }).join('');
+  }
+  if (countEl){
+    const n = currentPlants({ ignoreSearch: true }).length;
+    const all = (DATA.plants || []).length;
+    countEl.textContent = n + ' dari ' + all + ' PLTU lolos filter';
+  }
 }
 
 // V27: Backfill missing historical_target[2023/2024] and historical_do[2025] fields
@@ -10613,12 +10911,34 @@ function updateKPIs(){
   // only correct itself on the next updateKPIs (e.g. a filter toggle).
   const kpiGen = (window._kpiAnimGen = (window._kpiAnimGen || 0) + 1);
   const UNIT = '<span class="kpi-unit">ton</span>';
-  // ---- Basis target: Deklarasi (per-PLTU, ikut filter) atau FGD (total nasional 2026) ----
-  // FGD hanya tersedia untuk 2026 dan hanya di level nasional (tak ada rincian per-PLTU),
-  // jadi angka target FGD TIDAK terpengaruh filter Genco/Boiler/Regional. Realisasi & DO
-  // tetap sama (ikut filter) di kedua basis; hanya Target, Target Berjalan, dan Gap berubah.
-  const fgdAnnual = Number(DATA.target_fgd_2026) || 0;
-  const fgdMonthly = (_tbYear === '2026' && Array.isArray(DATA.target_fgd_2026_monthly)) ? DATA.target_fgd_2026_monthly : [];
+  // ---- Basis target: Deklarasi atau FGD. Keduanya kini ikut filter. ----
+  // V118: Target FGD tidak lagi kebal filter Genco/Boiler/Regional.
+  // Sheet "Target 2026 FGD" memuat rincian PER-PLTU (51 baris, dibaca ke
+  // DATA.target_fgd_2026_plants sejak V71) DAN baris Total di bawahnya. Angka nasional
+  // yang dipakai kartu ini selama ini adalah baris Total tersebut. Karena itu
+  // "memfilter" = menjumlah ulang baris per-PLTU yang lolos filter — bukan memprorata
+  // angka nasional, yang akan mengarang pembagian yang tidak ada di sumbernya.
+  // Saat TIDAK ada filter aktif, baris Total tetap dipakai apa adanya supaya angka
+  // headline persis sama dengan sebelum V118 (Total adalah angka sumber; penjumlahan
+  // ulang di klien bisa meleset beberapa ton karena pembulatan per baris).
+  const _fgdFiltered = globalFilterActive() && (_tbYear === '2026');
+  let fgdAnnual, fgdMonthly;
+  let _fgdNoMonthly = 0; // PLTU yang punya total FGD tapi tanpa rincian bulanan
+  if (_fgdFiltered){
+    fgdAnnual = 0;
+    const _fgdAcc = new Array(12).fill(0);
+    for (const p of plants){
+      const _t = plantTargetFgd(p) || 0;
+      fgdAnnual += _t;
+      const _m = plantTargetFgdMonthly(p);
+      if (_m){ for (let i = 0; i < 12; i++) _fgdAcc[i] += (_m[i] || 0); }
+      else if (_t > 0) _fgdNoMonthly++;
+    }
+    fgdMonthly = _fgdAcc;
+  } else {
+    fgdAnnual = Number(DATA.target_fgd_2026) || 0;
+    fgdMonthly = (_tbYear === '2026' && Array.isArray(DATA.target_fgd_2026_monthly)) ? DATA.target_fgd_2026_monthly : [];
+  }
   const fgdReady = (_tbYear === '2026') && (fgdAnnual > 0);
   const useFgd = (state.targetBasis === 'fgd') && fgdReady;
   // Periode "elapsed" untuk Gap & %: bulan tertentu → satu bulan; 'all' → Jan s/d cutoff.
@@ -10660,14 +10980,21 @@ function updateKPIs(){
   const _cBulanTxt = (_tbMonth === 'all') ? 'seluruh 12 bulan' : ('bulan ' + MONTHS[parseInt(_tbMonth, 10)]);
   setCalc(document.getElementById('kpi-target'), useFgd ? {
     title: 'Target FGD',
-    formula: 'Target FGD nasional untuk ' + _cBulanTxt + ' ' + _tbYear,
+    formula: _fgdFiltered
+      ? ('Σ target FGD per PLTU yang lolos filter, untuk ' + _cBulanTxt + ' ' + _tbYear)
+      : ('Target FGD nasional untuk ' + _cBulanTxt + ' ' + _tbYear),
     steps: [
+      _fgdFiltered
+        ? ['PLTU lolos filter', fmtInt(plants.length) + ' dari ' + fmtInt((DATA.plants || []).length)]
+        : ['Cakupan', 'nasional (seluruh PLTU)'],
       ['Target FGD setahun', fmtInt(fgdAnnual) + ' ton'],
       ['Periode terpilih', _cPeriode],
       (_tbMonth === 'all') ? ['Bulan «all» → dipakai angka setahun penuh'] : ['Diambil dari rincian FGD bulanan']
     ],
     result: ['Target FGD', fmtInt(targetVal) + ' ton'],
-    note: 'FGD hanya tersedia sebagai angka nasional — tidak ada rincian per-PLTU — sehingga filter Genco / Boiler / Regional tidak mengubah nilai ini.'
+    note: _fgdFiltered
+      ? 'Angka terfilter dijumlah ulang dari rincian per-PLTU sheet «Target 2026 FGD». Tanpa filter, kartu ini memakai baris Total sheet yang sama, jadi selisih beberapa ton karena pembulatan per baris adalah hal yang wajar.'
+      : 'Rincian per-PLTU tersedia: aktifkan chip Genco / Boiler / Regional di panel kiri untuk menyempitkan angka ini.'
   } : {
     title: 'Target Deklarasi',
     formula: 'Σ target deklarasi dari seluruh PLTU yang lolos filter, untuk ' + _cBulanTxt,
@@ -10682,10 +11009,11 @@ function updateKPIs(){
   const tLabelEl = document.getElementById('kpi-target-label');
   const tMetaEl = document.getElementById('kpi-target-meta');
   if (tLabelEl) tLabelEl.textContent = useFgd ? 'Target FGD' : 'Target Deklarasi';
-  // V72: "NASIONAL" tetap dipertahankan karena FGD memang tidak terpengaruh filter
-  // Genco/Boiler/Regional; yang ditambahkan hanya penanda bulan agar sejalan dengan nilainya.
+  // V118: kata "NASIONAL" hanya boleh muncul kalau angkanya memang nasional. Begitu
+  // ada chip filter aktif, labelnya berganti jadi "TERFILTER" — label yang berbohong
+  // lebih berbahaya daripada label yang panjang.
   if (tMetaEl) tMetaEl.textContent = useFgd
-    ? ('TARGET FGD NASIONAL ' + (_tbMonth === 'all' ? _tbYear : ((MONTHS[parseInt(_tbMonth, 10)] || '').toUpperCase() + ' ' + _tbYear).trim()))
+    ? ('TARGET FGD ' + (_fgdFiltered ? 'TERFILTER ' : 'NASIONAL ') + (_tbMonth === 'all' ? _tbYear : ((MONTHS[parseInt(_tbMonth, 10)] || '').toUpperCase() + ' ' + _tbYear).trim()))
     : 'TARGET DEKLARASI PERIODE';
 
   // TARGET BERJALAN
@@ -10709,11 +11037,17 @@ function updateKPIs(){
             ? ['Cutoff = bulan terakhir yang sudah punya realisasi']
             : ['Cutoff = bulan yang dipilih di filter'],
           ['Jumlah bulan diakumulasi', (tbCutoff + 1) + ' bulan'],
-          useFgd ? ['Sumber', 'rincian FGD bulanan (nasional)']
-                 : ['Sumber', 'target bulanan ' + fmtInt(plants.length) + ' PLTU terfilter']
+          useFgd
+            ? ['Sumber', _fgdFiltered
+                ? ('rincian FGD bulanan ' + fmtInt(plants.length) + ' PLTU terfilter')
+                : 'rincian FGD bulanan (nasional)']
+            : ['Sumber', 'target bulanan ' + fmtInt(plants.length) + ' PLTU terfilter']
         ],
         result: ['Target Berjalan', fmtInt(tbVal) + ' ton'],
         note: 'Kartu ini ada supaya realisasi dibandingkan dengan target pada rentang bulan yang sama — bukan dengan target 12 bulan penuh.'
+          + ((useFgd && _fgdNoMonthly > 0)
+             ? (' PERHATIAN: ' + _fgdNoMonthly + ' PLTU terfilter punya total FGD tetapi tanpa rincian bulanan, jadi kontribusinya BELUM masuk angka ini — nilainya lebih rendah dari yang seharusnya.')
+             : '')
       });
     } else {
       // No realisasi yet for this period → nothing to accumulate.
@@ -10820,6 +11154,12 @@ function updateKPIs(){
     const yr = state.mapPeriod.year || '2026';
     const gcvVal = gcvNat[yr];
     gcvEl.innerHTML = (gcvVal && gcvVal > 0) ? Number(gcvVal).toLocaleString('id-ID') : '—';
+    // V118: kartu ini SENGAJA tetap nasional. Sumbernya baris "Total" sheet Rekap Kalor —
+    // angka yang dihitung Excel, bukan rerata yang boleh disusun ulang di klien (lihat
+    // catatan V101 di parser). Jadi daripada mengarang rerata terfilter, kartunya
+    // menyatakan sendiri bahwa ia tidak ikut filter.
+    const gcvMetaEl = document.getElementById('kpi-gcv-meta');
+    if (gcvMetaEl) gcvMetaEl.textContent = globalFilterActive() ? 'kCal/kg · NASIONAL (TIDAK IKUT FILTER)' : 'kCal/kg';
   }
   // V85: % Cofiring nasional — rumus yang sama dengan baris "% Cofiring" di tooltip PLTU
   // (realisasi kumulatif ÷ kebutuhan batubara yang diprorata per bulan berjalan), hanya
@@ -13365,7 +13705,9 @@ window.setRealSubtab = setRealSubtab;
 
 // Get the list of plants that pass the Realisasi tab filters
 function realFilteredPlants(){
-  const allPlants = (DATA && DATA.plants) || [];
+  // V118: lingkup global (chip Genco/Boiler/Regional tab Map Cofiring) dipakai lebih
+  // dulu; filter Wilayah/PLTU milik tab ini lalu bekerja DI DALAM lingkup itu.
+  const allPlants = ((DATA && DATA.plants) || []).filter(globalPassPlant);
   const byProv = allPlants.filter(p => plantInProvince(p, state.realPltuFilterProvince));
   if (state.realPltuFilterPltu === 'all') return byProv;
   return byProv.filter(p => p.code === state.realPltuFilterPltu);
@@ -14159,6 +14501,7 @@ function countBnByKeyword(){
   const counts = {};
   // Pre-filter by sumber and month (but NOT by keyword)
   const preFiltered = DATA.bottlenecks.filter(b => {
+    if (!globalPassNamed(b.pltu)) return false; // V118: lingkup global
     if (state.bnFilter !== 'all'){
       if (state.bnFilter === 'PLTU' && b.sumber !== 'PLTU') return false;
       if (state.bnFilter === 'Mitra' && b.sumber !== 'Mitra') return false;
@@ -14175,6 +14518,7 @@ function countBnByKeyword(){
 
 function currentBottlenecks(){
   return DATA.bottlenecks.filter(b => {
+    if (!globalPassNamed(b.pltu)) return false; // V118: lingkup global
     if (state.bnFilter !== 'all'){
       if (state.bnFilter === 'PLTU' && b.sumber !== 'PLTU') return false;
       if (state.bnFilter === 'Mitra' && b.sumber !== 'Mitra') return false;
@@ -14210,7 +14554,7 @@ function refreshBnMap(){
   // piksel saat peta di-zoom keluar, pada tampilan awal kedua marker tetap menumpuk —
   // sekaligus melesetkan letaknya ~13 km saat di-zoom masuk. Versi piksel memisahkan
   // keduanya dengan jarak yang sama di semua zoom, dan mencakup keenam pasangan.
-  const bnPlants = DATA.plants.filter(p => p.lat);
+  const bnPlants = DATA.plants.filter(p => p.lat && globalPassPlant(p)); // V118: lingkup global
   const bnSizeOf = p => {
     const c = (byPlant[p.name] || []).length;
     return c > 0 ? Math.max(26, Math.min(44, 22 + c * 1.8)) : 22;
@@ -14998,7 +15342,10 @@ function renderParetoAll(){
 
 // Return plants filtered by current Genco selection.
 function getFilteredPlants(){
-  const plants = (DATA.pareto && DATA.pareto.plants) || [];
+  // V118: baris Pareto dikenali lewat nama PLTU + kolom genco-nya sendiri, lalu
+  // dropdown Genco tab ini menyaring lagi di dalam lingkup global.
+  const plants = ((DATA.pareto && DATA.pareto.plants) || [])
+    .filter(p => globalPassNamed(p.name, p.genco));
   if (paretoState.gencoSel === 'all') return plants;
   return plants.filter(p => p.genco === paretoState.gencoSel);
 }
@@ -15067,7 +15414,15 @@ function periodLabel(){
 }
 
 function gencoLabel(){
-  return paretoState.gencoSel === 'all' ? 'Semua Genco' : paretoState.gencoSel;
+  // V118: dropdown tab ini bekerja DI DALAM lingkup filter global. Kalau lingkupnya
+  // sudah menyempit, "Semua Genco" adalah kebohongan — sebutkan chip yang berlaku.
+  const scope = (typeof globalFilterActive === 'function' && globalFilterActive())
+    ? globalFilterChips().map(c => c.val).join(' + ')
+    : '';
+  if (paretoState.gencoSel !== 'all'){
+    return scope ? (paretoState.gencoSel + ' · dalam filter ' + scope) : paretoState.gencoSel;
+  }
+  return scope ? ('Semua Genco dalam filter ' + scope) : 'Semua Genco';
 }
 
 // =====================================================
@@ -15782,6 +16137,12 @@ function switchTab(tab){
     }
   }
   state.tab = tab;
+  // V118: tab yang isinya dirender SEBELUM filter global berubah harus dibangun
+  // ulang di sini — bukan saat filternya diklik. Canvas Chart.js di dalam elemen
+  // display:none berukuran 0, jadi chart yang dibangun saat tab masih tersembunyi
+  // keluar gepeng. Dipanggil sebelum blok lazy-init di bawah supaya tab yang belum
+  // pernah dirender tidak dirender dua kali.
+  gfSyncTab(tab);
   document.querySelectorAll('.tab').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === tab);
   });
@@ -16117,7 +16478,7 @@ function buildKontrakFilters(){
 function buildKontrakPltuOptions(){
   const sel = document.getElementById('kontrak-pltu-filter');
   if (!sel) return;
-  const contracts = (DATA && DATA.contracts) || [];
+  const contracts = ((DATA && DATA.contracts) || []).filter(c => globalPassNamed(c.pltu, c.genco)); // V118
   let scoped = contracts;
   if (state.kontrakFilters.genco !== 'all') scoped = scoped.filter(c => c.genco === state.kontrakFilters.genco);
   if (state.kontrakFilters.regional && state.kontrakFilters.regional !== 'all') scoped = scoped.filter(c => contractProvince(c) === state.kontrakFilters.regional);
@@ -16140,7 +16501,7 @@ function buildKontrakMitraOptions(){
   // matching by case-insensitive substring instead of exact dropdown selection.
   const inp = document.getElementById('kontrak-mitra-filter');
   if (!inp) return;
-  const contracts = (DATA && DATA.contracts) || [];
+  const contracts = ((DATA && DATA.contracts) || []).filter(c => globalPassNamed(c.pltu, c.genco)); // V118
   let scoped = contracts;
   if (state.kontrakFilters.genco !== 'all') scoped = scoped.filter(c => c.genco === state.kontrakFilters.genco);
   if (state.kontrakFilters.pltu !== 'all') scoped = scoped.filter(c => c.pltu === state.kontrakFilters.pltu);
@@ -16244,6 +16605,7 @@ function filteredContracts(){
   const contracts = (DATA && DATA.contracts) || [];
   const today = todayISO();
   return contracts.filter(c => {
+    if (!globalPassNamed(c.pltu, c.genco)) return false; // V118: lingkup global
     if (state.kontrakOnlyActive && !isContractActive(c, today)) return false;
     if (f.regional && f.regional !== 'all' && contractProvince(c) !== f.regional) return false;
     if (f.genco !== 'all' && c.genco !== f.genco) return false;
@@ -16708,7 +17070,8 @@ window.revertDoEditor = revertDoEditor;
 function renderKontrakSummary(){
   const summaryEl = document.getElementById('kontrak-summary');
   if (!summaryEl) return;
-  const all = (DATA && DATA.contracts) || [];
+  // V118: kartu ringkasan ikut lingkup global; bar di atas tab menjelaskan penyempitannya.
+  const all = ((DATA && DATA.contracts) || []).filter(c => globalPassNamed(c.pltu, c.genco));
   const today = todayISO();
   // Active contracts = akhir kontrak >= today
   const active = all.filter(c => isContractActive(c, today));
@@ -16857,7 +17220,7 @@ function renderKontrakPasokanCells(){
 // Satu baris per PLTU yang punya entri di `kontrak_pasokan`. `sisa` null bila
 // realisasi DO belum ada — PLTU itu tetap dihitung pada Volume, tidak pada Sisa.
 function kontrakPasokanRows(){
-  const plants = (DATA && DATA.plants) || [];
+  const plants = ((DATA && DATA.plants) || []).filter(globalPassPlant); // V118: lingkup global
   const out = [];
   for (const p of plants){
     const vol = plantKontrakBerjalan(p);
@@ -16904,7 +17267,7 @@ function renderKontrakJenisPie(){
   const legendEl = document.getElementById('kontrakJenisLegend');
   if (!canvas) return;
 
-  const all = (DATA && DATA.contracts) || [];
+  const all = ((DATA && DATA.contracts) || []).filter(c => globalPassNamed(c.pltu, c.genco)); // V118
   const year = kontrakJenisYear;
 
   // Aggregate realisasi per jenis
@@ -17085,7 +17448,8 @@ function renderKontrakBreakdownBody(){
   const bodyEl = document.getElementById('kontrakBreakdownBody');
   if (!bodyEl) return;
 
-  const all = (DATA && DATA.contracts) || [];
+  // V118: modal breakdown dibuka dari kartu ringkasan, jadi lingkupnya harus sama persis.
+  const all = ((DATA && DATA.contracts) || []).filter(c => globalPassNamed(c.pltu, c.genco));
   const today = todayISO();
   // V103: complement of isContractActive() for contracts whose term has simply run out.
   // Deliberately NOT `!isContractActive(c)` — that also swallows terminated contracts and
@@ -18997,6 +19361,13 @@ function renderUsulanTable(){
   merged = merged.filter(u => !usulanDeletedNos.has(u.no));
   // Sort by no for stable display
   merged.sort((a, b) => a.no - b.no);
+  // V118: lingkup global dari chip Map Cofiring. Di tab ini kolomnya tertukar --
+  // eff.regional memuat NAMA PLTU (lihat catatan di penyaring bawah), jadi itulah
+  // yang dipetakan ke plant. Diterapkan sebelum dropdown Regional/Jenis dibangun
+  // supaya pilihannya tidak menawarkan nilai yang barisnya sudah di luar lingkup.
+  if (globalFilterActive()){
+    merged = merged.filter(u => globalPassNamed(getEffectiveRow(u).regional));
+  }
 
   // Populate dynamic filter dropdowns (Regional, Jenis) from current merged data
   const ufRegional = document.getElementById('uf-regional');
@@ -19559,7 +19930,8 @@ function downloadUsulanExcel(){
 
 // V64: Export ALL bottleneck records (tab Bottlenecks) to a formatted Excel file.
 function downloadBottlenecksExcel(){
-  const rows = ((DATA && DATA.bottlenecks) || []).slice();
+  // V118: ikut lingkup filter global.
+  const rows = ((DATA && DATA.bottlenecks) || []).filter(b => globalPassNamed(b.pltu));
   if (!rows.length){ alert('Belum ada data bottleneck untuk diunduh.'); return; }
   const MONTH_ORDER = { January:1, February:2, March:3, April:4, May:5, June:6, July:7, August:8, September:9, October:10, November:11, December:12 };
   rows.sort((a, b) => {
@@ -19618,7 +19990,7 @@ function downloadBottlenecksExcel(){
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Bottlenecks');
-  XLSX.writeFile(wb, 'Bottlenecks_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+  XLSX.writeFile(wb, 'Bottlenecks_' + new Date().toISOString().slice(0, 10) + globalFilterFileTag() + '.xlsx');
 }
 
 // ============================================================
@@ -19670,7 +20042,8 @@ function _styleExcelSheet(ws, opts){
 }
 
 function downloadMapCofiringExcel(){
-  const plants = (DATA && DATA.plants) ? DATA.plants.slice() : [];
+  // V118: ikut lingkup filter global — isinya harus sama dengan yang tampil di layar.
+  const plants = ((DATA && DATA.plants) || []).filter(globalPassPlant);
   if (!plants.length){ alert('Belum ada data PLTU untuk diunduh.'); return; }
   plants.sort((a, b) => (a.genco || '').localeCompare(b.genco || '') || (a.name || '').localeCompare(b.name || ''));
   const STATUS_LABEL = { on_track: 'On Track', at_risk: 'At Risk', behind: 'Behind', no_data: 'No Data' };
@@ -19746,7 +20119,7 @@ function downloadMapCofiringExcel(){
     if (hasDO) monthlySheet('DO Bulanan ' + yr, p => getMonthly(p, 'do', yr));
   });
 
-  XLSX.writeFile(wb, 'Map_Cofiring_PLTU_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+  XLSX.writeFile(wb, 'Map_Cofiring_PLTU_' + new Date().toISOString().slice(0, 10) + globalFilterFileTag() + '.xlsx');
 }
 
 // ============================================================
@@ -19764,7 +20137,8 @@ function _fmtDateID(iso){
 }
 function downloadKontrakExcel(){
   if (typeof XLSX === 'undefined'){ alert('Modul Excel belum termuat, coba lagi sebentar.'); return; }
-  const all = (DATA && DATA.contracts) ? DATA.contracts.slice() : [];
+  // V118: ikut lingkup filter global.
+  const all = ((DATA && DATA.contracts) || []).filter(c => globalPassNamed(c.pltu, c.genco));
   if (!all.length){ alert('Belum ada data kontrak untuk diunduh.'); return; }
   const btn = document.getElementById('kontrakExportBtn');
   if (btn) btn.disabled = true;
@@ -19845,7 +20219,7 @@ function downloadKontrakExcel(){
     });
     XLSX.utils.book_append_sheet(wb, ws2, 'DO & Realisasi Bulanan');
 
-    XLSX.writeFile(wb, 'Daftar_Kontrak_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    XLSX.writeFile(wb, 'Daftar_Kontrak_' + new Date().toISOString().slice(0, 10) + globalFilterFileTag() + '.xlsx');
   } catch (e) {
     console.error('[Kontrak] Excel export failed:', e);
     alert('Gagal membuat file Excel: ' + (e && e.message ? e.message : e));
@@ -25921,9 +26295,11 @@ function renderAnomalySection(){
 
 function computeAlerts(){
   const alerts = [];
-  const plants = DATA.plants || [];
-  const contracts = DATA.contracts || [];
-  const bns = DATA.bottlenecks || [];
+  // V118: feed anomali ikut lingkup global. Disaring di SUMBER, bukan di penyaring
+  // tampilan, supaya hitungan "N alerts - N critical" di header ikut menyempit juga.
+  const plants = (DATA.plants || []).filter(globalPassPlant);
+  const contracts = (DATA.contracts || []).filter(c => globalPassNamed(c.pltu, c.genco));
+  const bns = (DATA.bottlenecks || []).filter(b => globalPassNamed(b.pltu));
 
   // Compute current month index (last month with non-zero real)
   let curMonth = 0;
