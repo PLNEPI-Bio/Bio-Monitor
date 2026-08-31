@@ -7738,34 +7738,34 @@ body.gf-on .gf-bar{
 <div class="mobile-more-backdrop" id="mobMoreBackdrop" onclick="mobCloseMore()"></div>
 <div class="mobile-more-menu" id="mobMoreMenu">
   <div class="mobile-more-group" id="mobPembangkitGroup">
-    <button class="mobile-more-item mobile-more-parent" onclick="mobTogglePembangkitSub()">
+    <button class="mobile-more-item mobile-more-parent" data-mob-tab="pembangkit" onclick="mobTogglePembangkitSub()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
       <span style="flex:1;text-align:left">Overview Pembangkit</span>
       <svg class="mob-more-caret" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l4 4 4-4"/></svg>
     </button>
     <div class="mobile-more-sub" id="mobPembangkitSub"></div>
   </div>
-  <button class="mobile-more-item" onclick="mobNav('fasilitas')">
+  <button class="mobile-more-item" data-mob-tab="fasilitas" onclick="mobNav('fasilitas')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
     Fasilitas Produksi
   </button>
-  <button class="mobile-more-item" onclick="mobNav('pareto')">
+  <button class="mobile-more-item" data-mob-tab="pareto" onclick="mobNav('pareto')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V2M2 14h12M4 12V7M7 12V4M10 12V9M13 12V6"/></svg>
     Pareto Loss
   </button>
-  <button class="mobile-more-item" onclick="mobNav('mou-timeline')">
+  <button class="mobile-more-item" data-mob-tab="mou-timeline" onclick="mobNav('mou-timeline')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12M2 7h10M2 11h8M2 15h6"/></svg>
     Monitoring MoU
   </button>
-  <button class="mobile-more-item" onclick="mobNav('usulan')">
+  <button class="mobile-more-item" data-mob-tab="usulan" onclick="mobNav('usulan')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12v10H2zM2 6h12M5 8h6M5 10h4"/></svg>
     Usulan Kontrak
   </button>
-  <button class="mobile-more-item" onclick="mobNav('laporan')">
+  <button class="mobile-more-item" data-mob-tab="laporan" onclick="mobNav('laporan')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12v12H2zM2 10l3-3 3 3 5-5"/></svg>
     Laporan
   </button>
-  <button class="mobile-more-item" onclick="mobNav('berita')">
+  <button class="mobile-more-item" data-mob-tab="berita" onclick="mobNav('berita')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h10v10H2zM12 5h2v8a1 1 0 0 1-1 1H4M4 6h6M4 8h6M4 10h4"/></svg>
     Berita
   </button>
@@ -8935,6 +8935,176 @@ body.gf-on .gf-bar{
   .laporan-input,.laporan-textarea{font-size:16px}
   .laporan-alt-section .update-upload-zone{flex-direction:column;align-items:stretch}
   .lamp-mitra-input,.lamp-text-input{font-size:16px}
+}
+
+/* ==================================================================================
+   V122 — MOBILE AUDIT PASS
+   ----------------------------------------------------------------------------------
+   Everything here comes from driving the real page in headless Chrome at 390×844 and
+   360×640 with touch emulation, walking all eleven tabs, and MEASURING — not from
+   reading the stylesheet. V97/V102/V103 built the mobile layer correctly; what this
+   block fixes is that three of its lists were written once and never revisited, so
+   every panel and control added after them (V103 → V120) fell outside the floor.
+
+   IT SITS AT THE END OF THE SECOND STYLESHEET BLOCK, for the reason the V97 rule
+   just above already gives: this block is later in source than the first one, so a
+   rule here beats an equal-specificity rule there without an !important.
+
+   --mobnav-safe (57px + safe-area) is declared on :root inside the V97 block. Custom
+   properties resolve off :root regardless of which stylesheet declared them, so it is
+   available here — and it is used rather than a repeated literal so the day the bar
+   changes height, all of this follows.
+   ================================================================================== */
+@media (max-width:768px){
+
+  /* --- 1. BOTTOM-BAR CLEARANCE, second enumeration --------------------------------
+     V97 padded the four scrollers that existed then (.kontrak-cards, .detail-body,
+     .bn-list, .bn-pltu-panel) and V101/V107 gave Realisasi and Laporan their own
+     `padding-bottom:calc(76px + safe-area)`. Five more scrollers never got one, and
+     measuring each at its scroll-bottom shows exactly how much is unreachable:
+       pareto        .pareto-view   padding-bottom 12px → last card cut by 45px
+       usulan        .real-view     padding-bottom 12px → last row  cut by 45px
+       berita        .berita-view   padding-bottom 12px → last card cut by 45px
+       mou-timeline  .real-view     padding-bottom 12px → table foot cut by 57px
+       kontrak       .real-view     padding-bottom  0px → last card cut by 57px
+     Not "looks tight" — genuinely unreachable: the bar is position:fixed at z-index
+     2000 and the scroller ends at the viewport edge underneath it, so no amount of
+     scrolling brings that content out. Same shape of fix as the two tabs that work.
+     Kontrak is included even though .real-view is `overflow:visible` there and the
+     .view is the scroller — padding on the last child still buys the same space. */
+  .view[data-view="pareto"] .pareto-view,
+  .view[data-view="usulan"] .real-view,
+  .view[data-view="berita"] .berita-view,
+  .view[data-view="mou-timeline"] .real-view,
+  .view[data-view="kontrak"] .real-view{
+    padding-bottom:calc(24px + var(--mobnav-safe));
+  }
+
+  /* --- 2. LEAFLET ATTRIBUTION -----------------------------------------------------
+     Measured at y=627 on a 640px-tall phone with the bar starting at y=583: the
+     attribution — an OSM/CARTO licence requirement, not decoration — was entirely
+     behind the bar on all four map tabs. Same class of mistake as the .legend /
+     .terrain-toggle-btn / .trends-panel rules in V102; it was simply not in that
+     list because it is Leaflet's own element, not one of ours. margin, not bottom:
+     the control is laid out by .leaflet-bottom, which we should not fight.
+     The descendant selector is not decoration: leaflet.css sets
+     `.leaflet-bottom .leaflet-control{margin-bottom:0}` at (0,2,0), so a bare
+     `.leaflet-control-attribution` at (0,1,0) loses and the first attempt at this
+     rule did nothing. Matching its specificity is enough — this stylesheet is later
+     in the document than the CDN <link>, so the tie goes to us. */
+  .leaflet-bottom .leaflet-control-attribution{margin-bottom:var(--mobnav-safe)}
+
+  /* --- 3. TOUCH FLOOR, second enumeration ------------------------------------------
+     V97 grew --ctl-h-* to 44px and then enumerated, by hand, every control that
+     hardcodes a height instead of reading the token. Measured widths/heights of what
+     that list missed — all of it added after V97, all of it a real target:
+       .topbar-cmdk-btn            32×32   the ONLY visible entry to global search
+       .usulan-action-trigger      28×28   per-row Edit/Hapus menu (× ~25 rows)
+       .usulan-change-name-btn     72×20
+       .mou-filter-btn             ..×25   year + category filter chips
+       .mou-link-pill              72×19   "Add Link"
+       .berita-refresh-btn        101×31
+       .bn-panel-collapse-btn      88×30   the only way to close the bottleneck list
+       .pembangkit-filter-mini-btn 37×16   All / None
+       .real-reset-btn             73×32
+       .fas-add-point-btn         118×32
+       .pareto-chart-meta label   105×30   (Realisasi's twin, .real-toggle-mini, IS
+                                            in the V97 list and measures 44px — this
+                                            one is a bare <label> and was missed)
+     min-height only, never a fixed height: every one of these sizes off its text, and
+     a hard height would clip the two that wrap at 360px. */
+  .topbar-cmdk-btn{width:44px;min-height:44px}
+  .usulan-change-name-btn,
+  .usulan-action-trigger,
+  .mou-filter-btn,
+  .mou-link-pill,
+  .berita-refresh-btn,
+  .bn-panel-collapse-btn,
+  .pembangkit-filter-mini-btn,
+  .real-reset-btn,
+  .fas-add-point-btn{min-height:44px}
+  /* Square targets need the other axis stated too — .usulan-action-trigger is a "⋯"
+     glyph, so its width comes from a single character. Its dropdown is positioned
+     `top:32px` against a trigger that used to be 28px tall (28 + 4 of gap); growing
+     the trigger to 44 without moving the menu would drop the menu's first item over
+     the bottom third of the button that opened it. 44 + 4. */
+  .usulan-action-trigger{min-width:44px}
+  .usulan-action-menu{top:48px}
+  .pareto-chart-meta label{display:inline-flex;align-items:center;min-height:44px}
+  /* The Deklarasi/FGD basis toggle is an underline tab with `padding:var(--sp-1) 0`,
+     so its width IS its text width: "FGD" measured 21px. min-width rather than
+     horizontal padding, so the two tabs keep the same gap and only the shorter
+     underline grows to meet the floor. */
+  .tbt-btn{min-width:44px}
+  /* 24×24 logo link and a 39px search field — both one measurement short of the
+     floor rather than badly wrong, but the floor is the floor. The logo keeps its
+     24px mark and grows only its hit area. */
+  .brand-logo-link{min-width:44px;min-height:44px;align-items:center;justify-content:center}
+  .search-bar input{min-height:44px}
+
+  /* --- 4. THE TOPBAR'S LEFT CLUSTER -------------------------------------------------
+     .brand holds the logo (24px) AND the calendar button (36px) = 72px of content,
+     but it is `flex-shrink:1` next to a `flex-shrink:0` .topbar-right, so it was
+     handed 44px at 390px wide and 14px at 360px. .topbar is `overflow:hidden`, so the
+     calendar button was being cut in half on every phone — visible in a screenshot,
+     which is how it was found.
+     NOT flex-shrink:0 — that was the first attempt and it over-corrected: .brand's
+     basis becomes its max-content width, .brand-text stops being starved to zero and
+     claims ~200px, and the right cluster gets pushed off the bar instead. The two
+     icons are the only part that must not shrink, so that is what is stated: a
+     min-width equal to them (44 logo + 12 gap + 36 calendar), leaving .brand-text
+     free to keep absorbing the squeeze exactly as it does today.
+
+     Measuring the bar across 430 / 390 / 360 / 320 then exposed a SECOND and worse
+     fault underneath that one. .topbar-right's content is 336px wide and none of it
+     shrinks, in a bar that is 390px (or 360, or 320) minus the brand. It only ever
+     "fit" because .brand was being crushed to 44px — and even then it was 6px over,
+     which IS the clipped calendar button. Stop crushing the brand and the overflow
+     surfaces for what it is: with .topbar{overflow:hidden}, the Update-data button
+     and the login/avatar button are pushed clean off the right edge at every phone
+     width. For an admin on a phone, two controls simply were not there.
+
+     Three rules make the whole cluster fit, and none of them is a redesign. All
+     three drop TEXT and keep every control:
+
+     a) .brand-text goes, and .brand can then stop shrinking. The bar cannot afford
+        ~130px of wordmark next to seven controls, and the earlier
+        `.brand-sub{display:none}` / shrinking `.brand-title` rules were written
+        when the right cluster was smaller. The logo carries the identity on a
+        phone; this is a bookmarked internal tool, not a page that has to introduce
+        itself. Note the order matters: `flex-shrink:0` ALONE over-corrects, because
+        .brand's basis becomes its max-content width and the wordmark stops being
+        starved to zero. With .brand-text out, that max-content width IS the two
+        icons (44 logo + 12 gap + 36 calendar = 92px), so the two rules are only
+        correct together.
+     b) .topbar-pause-btn loses its "Auto-refresh: ON" label — it is 176px where
+        every other control is a 44px icon button. Same move .topbar-cmdk-btn
+        already makes above (`.cmdk-btn-label{display:none}`): the coloured dot,
+        the amber border of .paused and the play/pause glyph all still state the
+        mode, and title= carries the full sentence.
+     c) .do-warn-text likewise. It is admin-only and normally display:none, but it
+        is a ~250px sentence that appears exactly when the DO SharePoint link
+        breaks — i.e. it would re-create this whole bug for the one user who has
+        the most controls in the bar. Its red warning triangle is the signal;
+        tapping it still jumps to the Kontrak tab, and title= still explains.
+
+     92 + 16 + 204 = 312px. Fits at 320, with room to spare at 390. */
+  .brand-text{display:none}
+  .brand{flex-shrink:0}
+  .pause-label{display:none}
+  .topbar-pause-btn{width:44px;padding:0;justify-content:center}
+  .do-link-warning .do-warn-text{display:none}
+
+  /* --- 5. iOS ZOOM, one field the V97 §6 list predates -----------------------------
+     The command palette is V107 — two batches after the rule that lists every other
+     text input in the app. Its input measured 14px, so focusing it zooms iOS Safari
+     and does not zoom back out, which is exactly what that rule exists to prevent.
+     The palette is now the primary way to reach a PLTU on a phone, so it is the worst
+     possible field to have missed. */
+  .cmdk-input{font-size:16px}
+  /* ↑↓ / ↵ / esc — the palette's footer teaches keys a phone does not have, and it
+     costs 26px at the bottom of a 66vh sheet. */
+  .cmdk-foot{display:none}
 }
 </style>
 <div class="view" data-view="laporan">
@@ -22534,6 +22704,7 @@ function mobTogglePembangkitSub(){
   if (!grp) return;
   buildMobilePembangkitSub();
   grp.classList.toggle('expanded');
+  qolSyncMobNavA11y();  // V122: aria-expanded pada tombol induknya
 }
 
 function selectPembangkitJenis(j){
@@ -27946,30 +28117,31 @@ document.addEventListener('keydown', function(e){
 });
 
 // --- Mobile Bottom Navigation ---
+// V122: keadaan-aktif bilah bawah dulu dihitung di TIGA tempat — di sini, di
+// MutationObserver di bawah, dan tidak sama sekali untuk lembar "More" saat
+// perpindahan datang dari palet perintah. Ketiganya sekarang memanggil satu fungsi,
+// qolSyncMobNavA11y(), yang menurunkan segalanya dari .view.active dan sekaligus
+// memasang ARIA-nya. Dua akibat yang disengaja:
+//   - Sorotan mengikuti PANEL YANG BENAR-BENAR AKTIF, bukan tab yang diketuk.
+//     switchTab() punya satu jalan keluar lebih awal — gerbang identitas Update
+//     Data, yang diperiksa SEBELUM state.tab dan sebelum .view di-toggle — dan
+//     dulu bilahnya tetap menyorot tab yang tidak pernah terbuka. (Gerbang Usulan
+//     Kontrak BUKAN kasus itu: ia dijalankan setelah panelnya sudah tampil, jadi
+//     penolakannya hanya melewatkan bootUsulan(). Perlindungan sesungguhnya untuk
+//     usulan_base/usulan_tahap ada di RLS Supabase, bukan di sini.)
+//   - Pencocokan lewat textContent untuk butir lembar "More" hilang, diganti
+//     data-mob-tab pada markup-nya.
 function mobNav(tab){
   mobCloseMore();
   switchTab(tab);
-  // Update active state
-  document.querySelectorAll('.mobile-nav-item').forEach(b => {
-    b.classList.toggle('active', b.dataset.mobTab === tab);
-  });
-  // If tab is in "More" menu, highlight the More button
-  const moreTabs1 = ['pareto','mou-timeline','usulan','berita','pembangkit','fasilitas','laporan'];
-  if (moreTabs1.includes(tab)){
-    document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
-    const moreBtn = document.querySelector('[data-mob-tab="more"]');
-    if (moreBtn) moreBtn.classList.add('active');
-    // Highlight in more menu
-    document.querySelectorAll('.mobile-more-item').forEach(item => {
-      item.classList.toggle('active', item.textContent.trim().toLowerCase().includes(tab.replace('-timeline','').replace('mou','mou')));
-    });
-  }
+  qolSyncMobNavA11y();
 }
 function mobToggleMore(){
   const menu = document.getElementById('mobMoreMenu');
   const bd = document.getElementById('mobMoreBackdrop');
   if (menu) menu.classList.toggle('open');
   if (bd) bd.classList.toggle('open');
+  qolSyncMobNavA11y();
   if (typeof updatePembangkitHeatmap === 'function') updatePembangkitHeatmap();
 }
 function mobCloseMore(){
@@ -27979,6 +28151,7 @@ function mobCloseMore(){
   if (bd) bd.classList.remove('open');
   const grp = document.getElementById('mobPembangkitGroup');
   if (grp) grp.classList.remove('expanded');
+  qolSyncMobNavA11y();
   if (typeof updatePembangkitHeatmap === 'function') updatePembangkitHeatmap();
 }
 
@@ -27987,24 +28160,16 @@ const _origSwitchTab = switchTab;
 const _mobSyncTimeout = { t: null };
 window.addEventListener('DOMContentLoaded', () => {
   // Observe tab changes and sync mobile nav
+  // V122: badannya dulu adalah salinan ketiga dari logika keadaan-aktif, lengkap
+  // dengan salinan ketiga daftar tujuh tab "More". Sekarang ia hanya memanggil
+  // fungsi yang sama. Pengamatnya sendiri dipertahankan sebagai jaring pengaman
+  // untuk jalur mana pun yang menukar .view.active tanpa lewat switchTab; ia
+  // di-debounce 100ms dan idempoten, jadi tulisan kelas dari sinkronisasi itu
+  // sendiri berhenti setelah satu putaran (classList.toggle ke nilai yang sama
+  // tidak mengubah atribut, jadi tidak ada rekaman mutasi baru).
   const observer = new MutationObserver(() => {
     clearTimeout(_mobSyncTimeout.t);
-    _mobSyncTimeout.t = setTimeout(() => {
-      const active = document.querySelector('.view.active');
-      if (!active) return;
-      const tab = active.dataset.view;
-      document.querySelectorAll('.mobile-nav-item').forEach(b => {
-        const t = b.dataset.mobTab;
-        if (t === 'more') return;
-        b.classList.toggle('active', t === tab);
-      });
-      const moreTabs2 = ['pareto','mou-timeline','usulan','berita','pembangkit','fasilitas','laporan'];
-      if (moreTabs2.includes(tab)){
-        document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
-        const moreBtn = document.querySelector('[data-mob-tab="more"]');
-        if (moreBtn) moreBtn.classList.add('active');
-      }
-    }, 100);
+    _mobSyncTimeout.t = setTimeout(qolSyncMobNavA11y, 100);
   });
   const shell = document.querySelector('.shell');
   if (shell) observer.observe(shell, { subtree: true, attributes: true, attributeFilter: ['class'] });
@@ -28628,6 +28793,91 @@ function qolSyncTabsA11y(){
       }
     }
   });
+  // V122: bilah bawah mobile mendapat perlakuan yang sama. Ia menavigasi PANEL YANG
+  // SAMA dengan bilah tab desktop, jadi ia harus mengatakan hal yang sama — sebelum
+  // ini ia tidak punya satu pun atribut ARIA, sehingga pembaca layar di ponsel tidak
+  // pernah diberi tahu tab mana yang sedang aktif.
+  // Dipasang di SINI, bukan di markup, dengan alasan yang persis sama seperti bilah
+  // desktop di atas: dipanggil ulang tiap perpindahan tab lewat pembungkus switchTab,
+  // jadi keadaannya tidak pernah basi — termasuk saat perpindahan datang dari palet
+  // perintah atau pintasan angka, bukan dari ketukan di bilah itu sendiri.
+  qolSyncMobNavA11y();
+}
+// Tujuh dari sebelas tab hidup di balik tombol "More", yang membuka menu, bukan
+// panel. Itu kasus yang sama persis dengan .tab-dd-trigger di atas, jadi ia
+// diperlakukan sama: haspopup + expanded, dan TIDAK PERNAH aria-controls ke panel
+// yang belum tentu jadi terbuka.
+function qolSyncMobNavA11y(){
+  const bar = document.querySelector('.mobile-bottom-nav');
+  if (!bar) return;
+  const menu = document.getElementById('mobMoreMenu');
+  // SATU sumber kebenaran: panel yang benar-benar aktif. Bukan tab yang diketuk
+  // (switchTab bisa menolak), bukan kelas .active pada tombolnya (itu yang sedang
+  // kita hitung), bukan daftar tab yang ditulis tangan (itu yang basi tiap kali
+  // sebuah tab pindah antara bilah dan lembar "More").
+  const activeView = document.querySelector('.view.active');
+  const activeTab = activeView ? activeView.dataset.view : null;
+  // Tombol "More" menyala kalau — dan hanya kalau — panel yang aktif benar-benar
+  // ADA di dalam lembar itu. Diturunkan dengan menanyainya langsung, bukan dengan
+  // menegasikan daftar tombol di bilah: ada tiga belas .view tetapi hanya sebelas
+  // yang punya tombol di mana pun. `calendar` dan `update` dibuka dari topbar dan
+  // tidak ada di bilah MAUPUN di lembar, jadi negasi menyalakan "More" untuk dua
+  // panel yang tidak pernah bisa ditemukan di dalamnya.
+  const activeIsInMore = !!activeTab &&
+    !!document.querySelector('#mobMoreMenu [data-mob-tab="' + activeTab + '"]');
+
+  bar.setAttribute('role', 'tablist');
+  bar.setAttribute('aria-label', 'Bagian dashboard');
+  bar.querySelectorAll('.mobile-nav-item').forEach(btn => {
+    const tab = btn.dataset.mobTab;
+    if (tab === 'more'){
+      // Kasus yang sama persis dengan .tab-dd-trigger di bilah desktop — sebuah
+      // tombol di dalam tablist yang membuka MENU, bukan panel — jadi diperlakukan
+      // sama persis: tetap role="tab" (anak sebuah tablist harus ber-role tab;
+      // role="button" di sini menjadikannya owned element yang tidak sah dan
+      // membuat hitungan "tab n dari m" pembaca layar tidak konsisten), ditambah
+      // aria-haspopup. TIDAK ADA aria-controls: sama seperti kembaran desktopnya,
+      // menu ini tidak menjanjikan panel mana pun akan terbuka.
+      // aria-expanded adalah tambahan di atas presedennya, dan memang benar di
+      // sini karena lembar ini punya keadaan terbuka/tertutup yang kelihatan.
+      btn.classList.toggle('active', activeIsInMore);
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-haspopup', 'menu');
+      btn.setAttribute('aria-selected', activeIsInMore ? 'true' : 'false');
+      btn.setAttribute('aria-expanded', menu && menu.classList.contains('open') ? 'true' : 'false');
+      btn.removeAttribute('aria-controls');
+      return;
+    }
+    const on = !!tab && tab === activeTab;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    if (tab){
+      const view = document.querySelector('.view[data-view="' + tab + '"]');
+      if (view){
+        if (!view.id) view.id = 'view-' + tab;
+        btn.setAttribute('aria-controls', view.id);
+      }
+    }
+  });
+  // Butir lembar "More" menavigasi panel juga, tetapi mereka bukan anak
+  // .mobile-bottom-nav dan karena itu bukan bagian dari tablist di atas.
+  // aria-current adalah pernyataan yang benar untuk mereka: "inilah yang sedang
+  // Anda lihat". Dicocokkan lewat data-mob-tab pada markup — sebelum V122 ini
+  // adalah pencocokan substring pada textContent, yang berarti mengganti label
+  // sebuah butir diam-diam mematikan sorotannya.
+  document.querySelectorAll('#mobMoreMenu [data-mob-tab]').forEach(it => {
+    const on = !!activeTab && it.dataset.mobTab === activeTab;
+    it.classList.toggle('active', on);
+    if (on) it.setAttribute('aria-current', 'page');
+    else it.removeAttribute('aria-current');
+  });
+  const grp = document.getElementById('mobPembangkitGroup');
+  const parent = grp ? grp.querySelector('.mobile-more-parent') : null;
+  if (parent){
+    parent.setAttribute('aria-expanded', grp.classList.contains('expanded') ? 'true' : 'false');
+    parent.setAttribute('aria-controls', 'mobPembangkitSub');
+  }
 }
 
 // ---------- 4 & 5. Ingat tab terakhir + posisi gulir ----------
