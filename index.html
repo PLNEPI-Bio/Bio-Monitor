@@ -18577,8 +18577,8 @@ function _kontrakDoAnomaly(c, realCols){
 // =====================================================
 // V113 — KOLOM "Avg Real" DAN "Min DO" DI TABEL DAFTAR KONTRAK
 //
-// Min DO   = volume kontrak ÷ durasi kontrak dalam bulan (inklusif: bulan
-//            `awal` s.d. bulan `akhir`). Laju kirim bulanan MINIMUM agar
+// Min DO   = volume kontrak ÷ durasi kontrak dalam bulan (V121: durasi
+//            prorata per hari lalu dibulatkan KE BAWAH). Laju kirim bulanan MINIMUM agar
 //            volume kontrak habis tepat pada tanggal akhir. Tidak mengikuti
 //            filter Tahun/Bulan — ia sifat kontrak, bukan sifat periode.
 // Avg Real = rata-rata realisasi BULANAN mitra pada kontrak ini, MENGIKUTI
@@ -18593,22 +18593,46 @@ function _kontrakDoAnomaly(c, realCols){
 // Keduanya sengaja bersebelahan: Avg Real < Min DO berarti laju kirim mitra
 // belum cukup untuk menghabiskan kontrak sampai tanggal akhir.
 // =====================================================
-function _kontrakParseYm(iso){
+function _kontrakParseYmd(iso){
   if (!iso) return null;
   const p = String(iso).split('-');
-  if (p.length < 2) return null;
-  const y = parseInt(p[0], 10), m = parseInt(p[1], 10);
-  if (!isFinite(y) || !isFinite(m) || m < 1 || m > 12) return null;
-  return { y: y, m: m - 1 };
+  if (p.length < 3) return null;
+  const y = parseInt(p[0], 10), m = parseInt(p[1], 10), d = parseInt(p[2], 10);
+  if (!isFinite(y) || !isFinite(m) || !isFinite(d)) return null;
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  return { y: y, m: m - 1, d: d };
 }
-// Durasi kontrak dalam bulan, inklusif kedua ujung: 1 Jan 2026 → 31 Des 2026
-// menghasilkan 12, bukan 11. 0 berarti tanggal tidak lengkap/terbalik.
-function _kontrakDurasiBulan(c){
-  const a = _kontrakParseYm(c && c.awal), b = _kontrakParseYm(c && c.akhir);
+function _hariDalamBulan(y, m){ return new Date(y, m + 1, 0).getDate(); }
+// V121: durasi kontrak dalam PECAHAN bulan, dihitung dari hari yang benar-benar
+// tercakup. Bulan penuh bernilai 1; bulan ujung yang cuma terpakai sebagian
+// dihitung prorata (hari terpakai ÷ jumlah hari bulan itu), inklusif tanggal
+// Awal dan tanggal Akhir.
+//   1 Jan 2026  – 31 Des 2026 → 1 + 10 + 1        = 12,00
+//   21 Sep 2025 – 8 Okt 2026  → 10/30 + 12 + 8/31 = 12,59
+// Rumus lama menghitung jumlah bulan kalender yang TERSENTUH, sehingga kasus
+// kedua jadi 14 — bulan ujung yang hanya terpakai 10 dan 8 hari ikut dihitung
+// penuh, penyebut membengkak, dan Min DO jadi terlalu ringan.
+// 0 berarti tanggal tidak lengkap atau terbalik.
+function _kontrakDurasiBulanRaw(c){
+  const a = _kontrakParseYmd(c && c.awal), b = _kontrakParseYmd(c && c.akhir);
   if (!a || !b) return 0;
-  const n = (b.y - a.y) * 12 + (b.m - a.m) + 1;
-  return n > 0 ? n : 0;
+  const span = (b.y - a.y) * 12 + (b.m - a.m);
+  if (span < 0) return 0;
+  const dimA = _hariDalamBulan(a.y, a.m);
+  if (span === 0) return b.d >= a.d ? (b.d - a.d + 1) / dimA : 0;
+  const dimB = _hariDalamBulan(b.y, b.m);
+  return (dimA - Math.min(a.d, dimA) + 1) / dimA + (span - 1) + Math.min(b.d, dimB) / dimB;
 }
+// V121: durasi yang dipakai sebagai penyebut Min DO — dibulatkan KE BAWAH,
+// jadi 12,6 dan 12,1 sama-sama menjadi 12. Kontrak yang lebih pendek dari
+// sebulan tetap dihitung 1 agar Min DO tidak dibagi nol.
+function _kontrakDurasiBulan(c){
+  const raw = _kontrakDurasiBulanRaw(c);
+  if (raw <= 0) return 0;
+  return Math.max(1, Math.floor(raw + 1e-9));
+}
+// Durasi pecahan untuk ditampilkan di tooltip: 12,59 → "12,6".
+function _fmtDurasiBulan(n){ return (Math.round(n * 10) / 10).toFixed(1).replace('.', ','); }
 function _kontrakMinDO(c){
   const n = _kontrakDurasiBulan(c);
   return n > 0 ? ((c && c.vol_mt) || 0) / n : 0;
@@ -18865,6 +18889,7 @@ function renderKontrakTable(){
     // V113 — Avg Real & Min DO
     const rm = _kontrakRealMonths(c);
     const avgReal = rm.n > 0 ? rm.sum / rm.n : 0;
+    const durasiRaw = _kontrakDurasiBulanRaw(c);
     const durasiBln = _kontrakDurasiBulan(c);
     const minDO = durasiBln > 0 ? vol / durasiBln : 0;
     // Merah hanya bila KEDUANYA diketahui dan laju kirim memang tertinggal;
@@ -18888,10 +18913,13 @@ function renderKontrakTable(){
       formula: 'Volume kontrak ÷ durasi kontrak dalam bulan',
       steps: [
         ['Volume kontrak', fmtInt(vol) + ' MT'],
-        ['÷ Durasi kontrak', (durasiBln ? fmtInt(durasiBln) + ' bulan' : 'tanggal tidak lengkap')]
+        ['÷ Durasi kontrak', (durasiBln
+          ? fmtInt(durasiBln) + ' bulan' + (durasiRaw && Math.abs(durasiRaw - durasiBln) > 0.05
+              ? ' (' + _fmtDurasiBulan(durasiRaw) + ' → bulat ke bawah)' : '')
+          : 'tanggal tidak lengkap')]
       ],
       result: ['Min DO', (minDO ? fmtInt(minDO) : '—') + ' MT/bulan'],
-      note: 'Durasi dihitung inklusif dari bulan tanggal Awal s.d. bulan tanggal Akhir (1 Jan–31 Des = 12 bulan). TIDAK mengikuti filter tahun/bulan, karena ini sifat kontrak. Kosong bila tanggal Awal/Akhir tidak lengkap.'
+      note: 'Durasi dihitung dari hari yang benar-benar tercakup: bulan penuh = 1, bulan ujung yang terpakai sebagian dihitung prorata (1 Jan–31 Des = 12,0 bulan; 21 Sep 2025–8 Okt 2026 = 12,6 bulan). Hasilnya dibulatkan KE BAWAH, minimal 1 bulan. TIDAK mengikuti filter tahun/bulan, karena ini sifat kontrak. Kosong bila tanggal Awal/Akhir tidak lengkap.'
     }) + '>' + (minDO ? fmtInt(minDO) : '—') + '</td>';
     if (c.amandemen){
       const amText = escapeHtml(c.amandemen).split('\n').join('<br>');
