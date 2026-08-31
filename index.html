@@ -18096,6 +18096,52 @@ const JENIS_COLORS = [
 
 let kontrakJenisPieChart = null;
 let kontrakJenisYear = '2026';
+// V123: snapshot hasil agregasi terakhir, dipakai fungsi unduh gambar agar
+// tabel legend ikut tergambar di PNG (chart canvas saja tidak memuat legend).
+let kontrakJenisSnap = null;
+
+// V123: label persentase di dalam ring donat. Slice yang terlalu tipis dilewati —
+// tanpa filter ini angka-angka kecil saling menumpuk di sisi kanan chart.
+// Tiga syarat harus lolos semua: porsi minimal, panjang busur cukup untuk teks,
+// dan tebal ring cukup untuk tinggi teks.
+const kontrakJenisPctLabelPlugin = {
+  id: 'kontrakJenisPctLabel',
+  afterDatasetsDraw(chart){
+    const meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data || !meta.data.length) return;
+    const values = chart.data.datasets[0].data || [];
+    const total = values.reduce((s, v) => s + (v || 0), 0);
+    if (!total) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 12px "Plus Jakarta Sans", sans-serif';
+    meta.data.forEach((arc, i) => {
+      const val = values[i] || 0;
+      const pct = val / total * 100;
+      if (pct < 2.5) return;                       // porsi terlalu kecil
+      // Nilai ter-animasi (bukan final): label ikut tumbuh bersama arc-nya,
+      // jadi tidak ada angka melayang di atas donat yang belum tergambar.
+      const p = arc.getProps(['x','y','startAngle','endAngle','innerRadius','outerRadius'], false);
+      const thickness = p.outerRadius - p.innerRadius;
+      if (thickness < 22) return;                  // ring terlalu tipis
+      const r = p.innerRadius + thickness * 0.56;
+      const sweep = Math.abs(p.endAngle - p.startAngle);
+      const text = pct.toFixed(1) + '%';
+      const tw = ctx.measureText(text).width;
+      if (sweep * r < tw + 10) return;             // busur tidak muat teks
+      const mid = (p.startAngle + p.endAngle) / 2;
+      const x = p.x + Math.cos(mid) * r;
+      const y = p.y + Math.sin(mid) * r;
+      ctx.fillStyle = 'rgba(15,23,42,0.35)';
+      ctx.fillText(text, x, y + 1);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, x, y);
+    });
+    ctx.restore();
+  }
+};
 
 function renderKontrakJenisPie(){
   const canvas = document.getElementById('kontrakJenisPieCanvas');
@@ -18136,6 +18182,7 @@ function renderKontrakJenisPie(){
     ctx.textAlign = 'center';
     ctx.fillText('Tidak ada realisasi di tahun terpilih', canvas.width / 2, canvas.height / 2);
     if (legendEl) legendEl.innerHTML = '';
+    kontrakJenisSnap = null; // V123
     return;
   }
 
@@ -18145,8 +18192,21 @@ function renderKontrakJenisPie(){
 
   const textColor = '#475569';
 
+  // V123: dipakai exportKontrakJenisPieImage()
+  kontrakJenisSnap = {
+    rows: sorted.map(([j, v], i) => ({
+      name: j,
+      val: v,
+      pct: grandTotal > 0 ? (v / grandTotal * 100) : 0,
+      color: JENIS_COLORS[i % JENIS_COLORS.length],
+    })),
+    grandTotal,
+    yearLabel: year === 'all' ? 'Total 2023–2026' : year,
+  };
+
   kontrakJenisPieChart = new Chart(canvas, {
     type: 'doughnut',
+    plugins: [kontrakJenisPctLabelPlugin], // V123
     data: {
       labels,
       datasets: [{
@@ -18196,6 +18256,138 @@ function renderKontrakJenisPie(){
     legendEl.innerHTML = html;
   }
 }
+
+// V123: unduh gambar komposisi jenis biomassa — donat + tabel legend lengkap.
+// downloadChart() generik cuma menyalin canvas, jadi legend (nama/ton/persen/warna)
+// hilang dari PNG. Di sini legend digambar ulang ke canvas ekspor, semua baris
+// disertakan (di UI legend-nya di-scroll, di gambar tidak boleh terpotong).
+function exportKontrakJenisPieImage(){
+  const canvas = document.getElementById('kontrakJenisPieCanvas');
+  const snap = kontrakJenisSnap;
+  if (!canvas || !snap || !snap.rows.length){
+    alert('Belum ada data komposisi untuk diunduh.');
+    return;
+  }
+  const F = '"Plus Jakarta Sans", sans-serif';
+  const S = 2;                                   // skala ekspor (retina)
+  const PAD = 28, GAP = 28;
+  const srcW = canvas.clientWidth || 420;
+  const chartH = canvas.clientHeight || 320;
+  // Donat selalu terkunci pada tinggi kartu, jadi canvas yang lebar menyisakan
+  // ruang kosong kiri-kanan. Ambil pita tengahnya saja supaya gambar tidak melompong.
+  const chartW = Math.min(srcW, Math.round(chartH * 1.35));
+  const legendW = 470;
+  const rowH = 30, legendHeadH = 34;
+  const legendH = legendHeadH + snap.rows.length * rowH;
+  const headerH = 60;
+  const bodyH = Math.max(chartH, legendH);
+  const footerH = 30;
+  const W = PAD * 2 + chartW + GAP + legendW;
+  const H = PAD * 2 + headerH + bodyH + footerH;
+
+  const out = document.createElement('canvas');
+  out.width = Math.round(W * S);
+  out.height = Math.round(H * S);
+  const ctx = out.getContext('2d');
+  ctx.scale(S, S);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // Judul + catatan sumber
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#0f172a';
+  ctx.font = '700 18px ' + F;
+  ctx.fillText('Komposisi Jenis Biomassa (Realisasi)', PAD, PAD + 18);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '400 11px ' + F;
+  ctx.fillText('Sumber: data Daftar Kontrak (nasional) — tidak mengikuti filter Wilayah/PLTU.', PAD, PAD + 36);
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD, PAD + headerH - 12.5);
+  ctx.lineTo(W - PAD, PAD + headerH - 12.5);
+  ctx.stroke();
+
+  // Donat (canvas Chart.js sudah memuat label persentase dari plugin)
+  const bodyY = PAD + headerH;
+  const sScale = canvas.width / (srcW || 1);            // px canvas → px CSS
+  const sx = ((srcW - chartW) / 2) * sScale;
+  ctx.drawImage(canvas, sx, 0, chartW * sScale, canvas.height,
+                PAD, bodyY + (bodyH - chartH) / 2, chartW, chartH);
+
+  // Tabel legend
+  const lx = PAD + chartW + GAP;
+  const pctRight = lx + legendW;
+  const valRight = pctRight - 74;
+  let y = bodyY + (bodyH - legendH) / 2;
+
+  ctx.fillStyle = '#64748b';
+  ctx.font = '600 10px ' + F;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
+  ctx.fillText(('Realisasi ' + snap.yearLabel + ' · ' + fmtInt(snap.grandTotal) + ' ton').toUpperCase(), lx, y + 12);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  y += legendHeadH;
+
+  const maxNameW = valRight - (lx + 24) - 14;
+  snap.rows.forEach(r => {
+    const cy = y + rowH / 2;
+    // kotak warna
+    ctx.fillStyle = r.color;
+    ctx.fillRect(lx, cy - 6, 12, 12);
+    // nama (dipotong bila kepanjangan)
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '500 12.5px ' + F;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    let name = r.name;
+    if (ctx.measureText(name).width > maxNameW){
+      while (name.length > 1 && ctx.measureText(name + '…').width > maxNameW) name = name.slice(0, -1);
+      name += '…';
+    }
+    ctx.fillText(name, lx + 24, cy);
+    // ton
+    ctx.textAlign = 'right';
+    ctx.font = '700 12.5px ' + F;
+    ctx.fillText(fmtInt(r.val), valRight, cy);
+    // persen
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 12px ' + F;
+    ctx.fillText(r.pct.toFixed(1) + '%', pctRight, cy);
+    // garis pemisah
+    ctx.strokeStyle = '#eef2f6';
+    ctx.beginPath();
+    ctx.moveTo(lx, y + rowH - 0.5);
+    ctx.lineTo(pctRight, y + rowH - 0.5);
+    ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    y += rowH;
+  });
+
+  // Footer
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '400 10px ' + F;
+  ctx.textAlign = 'left';
+  ctx.fillText('Bioenergy Dashboard · PLN EPI — diunduh ' + dd + '/' + mm + '/' + d.getFullYear(), PAD, H - PAD + 8);
+
+  try {
+    const link = document.createElement('a');
+    const stamp = `${d.getFullYear()}${mm}${dd}`;
+    link.download = 'biomassa_komposisi_jenis_' + (snap.yearLabel.replace(/[^0-9a-zA-Z]/g, '') || 'all') + '_' + stamp + '.png';
+    link.href = out.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (e){
+    console.error('Komposisi jenis download failed:', e);
+    alert('Gagal mengunduh gambar. Coba lagi.');
+  }
+}
+window.exportKontrakJenisPieImage = exportKontrakJenisPieImage;
 
 // Wire year selector for jenis pie chart (called once at init)
 function wireKontrakJenisYearSel(){
@@ -26352,6 +26544,12 @@ window.addEventListener('DOMContentLoaded', () => {
     host.appendChild(btn);
   }
   function downloadChart(canvas, title){
+    // V123: kartu Komposisi Jenis Biomassa punya eksporter sendiri karena
+    // gambarnya harus memuat tabel legend, bukan cuma canvas donatnya.
+    if (canvas && canvas.id === 'kontrakJenisPieCanvas' && typeof window.exportKontrakJenisPieImage === 'function'){
+      window.exportKontrakJenisPieImage();
+      return;
+    }
     try {
       // Composite: white background + canvas content so transparent charts don't export empty
       const exportCanvas = document.createElement('canvas');
