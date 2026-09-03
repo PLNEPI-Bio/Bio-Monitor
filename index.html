@@ -401,6 +401,7 @@ body.gate-locked{overflow:hidden}
   --ctl-bg-disabled:var(--panel-3);
   --on-accent:#FFFFFF;       /* 9.55:1 on the PLN blue fill */
   --purple-ink:#6D28D9;      /* 6.52:1 on --panel */
+  --teal-ink:#0F766E;        /* V126: hue keempat untuk badge sumber "Eksternal" */
   --select-chevron:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%235A6470' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
 }
 
@@ -6335,7 +6336,7 @@ html,body{
 .detail-tag{background:var(--panel-3);border-color:var(--border);color:var(--text);letter-spacing:1px}
 .alert-tag{background:var(--panel-3);border-color:var(--border);color:var(--text);font-size:9px;letter-spacing:.5px;margin-right:6px}
 .kontrak-jenis-pill{background:var(--panel-3);border-color:var(--border);color:var(--text);font-weight:600;letter-spacing:.3px;text-transform:none;font-size:10px}
-/* Source badges: the LABEL already says PLTU / MITRA / EPI, so the hue only has to
+/* Source badges: the LABEL already says PLTU / MITRA / EPI / EKSTERNAL, so the hue only has to
    differentiate, not carry the meaning alone. Ink moves to --text (14.7:1 light,
    12.1:1 dark) and the identity hue moves to the border, where a 3:1 non-text
    contrast target applies instead of 4.5:1. */
@@ -6344,6 +6345,7 @@ html,body{
 .bn-badge.pltu-src{border-color:color-mix(in srgb,var(--status-warn) 55%,transparent)}
 .bn-badge.mitra-src{border-color:color-mix(in srgb,var(--accent) 55%,transparent)}
 .bn-badge.epi-src{border-color:color-mix(in srgb,var(--purple-ink) 55%,transparent)}
+.bn-badge.ext-src{border-color:color-mix(in srgb,var(--teal-ink) 55%,transparent)}
 .bn-badge.complete{background:color-mix(in srgb,var(--status-ok) 12%,var(--panel));color:var(--status-ok-ink);border-color:color-mix(in srgb,var(--status-ok) 40%,transparent)}
 /* Genco pills take colour and border-colour from gencoColor() as INLINE style, which
    outranks everything here — only their geometry is normalised. Same for .detail-tag
@@ -8339,6 +8341,7 @@ body.gf-on .gf-bar{
           <button data-filter="PLTU">PLTU</button>
           <button data-filter="Mitra">MITRA</button>
           <button data-filter="PLN EPI">PLN EPI</button>
+          <button data-filter="Eksternal">EKSTERNAL</button>
         </div>
         <div class="bn-month-filter-wrap">
           <select id="bn-month-filter">
@@ -8424,6 +8427,7 @@ body.gf-on .gf-bar{
             <option value="PLN EPI">PLN EPI</option>
             <option value="PLTU">PLTU</option>
             <option value="Mitra">Mitra</option>
+            <option value="Eksternal">Eksternal</option>
           </select>
         </div>
       </div>
@@ -15346,9 +15350,9 @@ function countBnByKeyword(){
   const preFiltered = DATA.bottlenecks.filter(b => {
     if (!globalPassNamed(b.pltu)) return false; // V118: lingkup global
     if (state.bnFilter !== 'all'){
-      if (state.bnFilter === 'PLTU' && b.sumber !== 'PLTU') return false;
-      if (state.bnFilter === 'Mitra' && b.sumber !== 'Mitra') return false;
-      if (state.bnFilter === 'PLN EPI' && b.sumber !== 'PLN EPI') return false;
+      // V126: dulu tiga perbandingan hardcode; nilai filter di luar ketiganya
+      // meloloskan SEMUA baris. Cocokkan langsung supaya chip baru ikut bekerja.
+      if (b.sumber !== state.bnFilter) return false;
     }
     if (state.bnMonthFilter !== 'all' && b.bulan !== state.bnMonthFilter) return false;
     return true;
@@ -15363,9 +15367,9 @@ function currentBottlenecks(){
   return DATA.bottlenecks.filter(b => {
     if (!globalPassNamed(b.pltu)) return false; // V118: lingkup global
     if (state.bnFilter !== 'all'){
-      if (state.bnFilter === 'PLTU' && b.sumber !== 'PLTU') return false;
-      if (state.bnFilter === 'Mitra' && b.sumber !== 'Mitra') return false;
-      if (state.bnFilter === 'PLN EPI' && b.sumber !== 'PLN EPI') return false;
+      // V126: dulu tiga perbandingan hardcode; nilai filter di luar ketiganya
+      // meloloskan SEMUA baris. Cocokkan langsung supaya chip baru ikut bekerja.
+      if (b.sumber !== state.bnFilter) return false;
     }
     if (state.bnMonthFilter !== 'all' && b.bulan !== state.bnMonthFilter) return false;
     // Keyword filter: if no keyword selected, currentBottlenecks returns the
@@ -15530,6 +15534,16 @@ function showBnPltuDetail(cl){
 
 let _bnDetailCluster = null;
 
+// V126: kelas warna badge sumber. Sebelumnya ternary yang sama disalin di dua
+// tempat dan apa pun selain PLTU/Mitra jatuh ke 'epi-src' — sumber baru
+// "Eksternal" akan mewarisi ungu milik PLN EPI kalau dibiarkan begitu.
+function bnSrcClass(sumber){
+  if (sumber === 'PLTU') return 'pltu-src';
+  if (sumber === 'Mitra') return 'mitra-src';
+  if (sumber === 'Eksternal') return 'ext-src';
+  return 'epi-src';
+}
+
 function renderBnPltuDetailPanel(){
   const cl = _bnDetailCluster;
   if (!cl) return;
@@ -15591,7 +15605,7 @@ function renderBnPltuDetailPanel(){
           <div>Tidak ada records dengan keyword ini.</div>
         </div>
       ` : items.map((b,i) => {
-        const srcClass = b.sumber === 'PLTU' ? 'pltu-src' : b.sumber === 'Mitra' ? 'mitra-src' : 'epi-src';
+        const srcClass = bnSrcClass(b.sumber);
         const monthShort = MONTH_FULL[b.bulan] || b.bulan;
         return `
           <div class="bn-record">
@@ -15700,7 +15714,7 @@ function renderBnList(){
   const allItems = currentBottlenecks();
   container.innerHTML = items.map((b) => {
     const fullIdx = allItems.indexOf(b);
-    const srcClass = b.sumber === 'PLTU' ? 'pltu-src' : b.sumber === 'Mitra' ? 'mitra-src' : 'epi-src';
+    const srcClass = bnSrcClass(b.sumber);
     const monthShort = MONTH_FULL[b.bulan] || b.bulan;
     const bottleneckPreview = (b.bottleneck||'').substring(0, 110) + (b.bottleneck && b.bottleneck.length > 110 ? '…' : '');
     const actionPreview = (b.action_plan||'').substring(0, 110) + (b.action_plan && b.action_plan.length > 110 ? '…' : '');
@@ -19567,7 +19581,8 @@ let usulanInitialLoadDone = false;
 // ========= BOTTLENECK ENTRIES (Supabase-synced) =========
 // V61: bottlenecks are now created/edited directly on the site and synced to all
 // users via the `bottleneck_entries` table (mirrors the usulan realtime pattern).
-const BN_SUMBER_OPTIONS = ['PLN EPI', 'PLTU', 'Mitra'];
+// V126: 'Eksternal' untuk kendala di luar kendali ketiga pihak di atas.
+const BN_SUMBER_OPTIONS = ['PLN EPI', 'PLTU', 'Mitra', 'Eksternal'];
 const BN_MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 let bnRemoteRows = [];          // server rows (non-deleted), each with numeric id
 let bnSupabaseLoaded = false;   // true once server rows have populated DATA.bottlenecks
