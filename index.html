@@ -8474,7 +8474,7 @@ body.gf-on .gf-bar{
       <div class="pareto-controls">
         <label class="pareto-control-label">Periode</label>
         <select id="paretoMonthSel" class="pareto-month-select">
-          <option value="ytd">YTD (Jan-Apr)</option>
+          <option value="ytd">Kumulatif</option>
           <option value="0">Januari</option>
           <option value="1">Februari</option>
           <option value="2">Maret</option>
@@ -8486,6 +8486,14 @@ body.gf-on .gf-bar{
           <option value="PNP">PNP</option>
           <option value="PIP">PIP</option>
           <option value="UIW">UIW</option>
+        </select>
+        <label class="pareto-control-label">Region</label>
+        <select id="paretoRegionSel" class="pareto-month-select">
+          <option value="all" selected>Semua</option>
+          <option value="sumatera">Sumatera</option>
+          <option value="jawa">Jawa</option>
+          <option value="kalimantan">Kalimantan</option>
+          <option value="sulmapana">Sulmapana</option>
         </select>
         <button class="compare-toggle" id="paretoCompareBtn" title="Compare 2 PLTU side-by-side">⇔ Compare</button>
       </div>
@@ -16094,6 +16102,9 @@ const paretoState = {
   monthSel: 'ytd',
   showValues: true,     // default: YTD (sum across Jan-last data month).
   gencoSel: 'all',   // 'all' | 'PNP' | 'PIP' | 'UIW'
+  // V124: 'all' | 'sumatera' | 'jawa' | 'kalimantan' | 'sulmapana' — dipetakan
+  // lewat PROVINCE_GROUPS dari kolom `regional` PLTU di DATA.plants.
+  regionSel: 'all',
 };
 
 const paretoCharts = {};
@@ -16133,9 +16144,10 @@ function renderParetoView(){
   const gencoSel = document.getElementById('paretoGencoSel');
   if (monthSel){
     const ID_MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-    const ID_MONTHS_SHORT = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
     const safeIdx = Math.max(0, Math.min(11, lastIdx));
-    let opts = '<option value="ytd">YTD (Jan-' + ID_MONTHS_SHORT[safeIdx] + ')</option>';
+    // V125: label opsi ini dulu "YTD (Jan-<bulan terakhir>)". Sekarang cukup
+    // "Kumulatif" — rentang bulannya sudah terbaca dari daftar bulan di bawahnya.
+    let opts = '<option value="ytd">Kumulatif</option>';
     for (let m = 0; m <= safeIdx; m++){
       opts += '<option value="' + m + '">' + ID_MONTHS[m] + '</option>';
     }
@@ -16155,6 +16167,13 @@ function renderParetoView(){
     gencoSel.value = paretoState.gencoSel;
     gencoSel.onchange = () => { paretoState.gencoSel = gencoSel.value; renderParetoAll(); };
     gencoSel.dataset.wired = '1';
+  }
+  // V124: filter Region (Sumatera/Jawa/Kalimantan/Sulmapana).
+  const regionSel = document.getElementById('paretoRegionSel');
+  if (regionSel && !regionSel.dataset.wired){
+    regionSel.value = paretoState.regionSel;
+    regionSel.onchange = () => { paretoState.regionSel = regionSel.value; renderParetoAll(); };
+    regionSel.dataset.wired = '1';
   }
 
   renderParetoAll();
@@ -16179,10 +16198,26 @@ function renderParetoAll(){
 function getFilteredPlants(){
   // V118: baris Pareto dikenali lewat nama PLTU + kolom genco-nya sendiri, lalu
   // dropdown Genco tab ini menyaring lagi di dalam lingkup global.
-  const plants = ((DATA.pareto && DATA.pareto.plants) || [])
-    .filter(p => globalPassNamed(p.name, p.genco));
-  if (paretoState.gencoSel === 'all') return plants;
-  return plants.filter(p => p.genco === paretoState.gencoSel);
+  // V124: baris Pareto menyimpan nama PLTU di kolom `pltu` — BUKAN `name`.
+  // Sebelumnya di sini terbaca `p.name` (selalu undefined), sehingga chip
+  // Regional/Boiler pada filter global menyembunyikan SELURUH baris Pareto.
+  let plants = ((DATA.pareto && DATA.pareto.plants) || [])
+    .filter(p => globalPassNamed(p.pltu, p.genco));
+  if (paretoState.gencoSel !== 'all'){
+    plants = plants.filter(p => p.genco === paretoState.gencoSel);
+  }
+  // V124: baris Pareto hanya membawa nama PLTU, jadi wilayahnya dicari lewat
+  // globalPlantByName() -> plant.regional -> PROVINCE_GROUPS. Nama yang tidak
+  // bisa dipetakan ke satu PLTU DISEMBUNYIKAN saat filter Region aktif —
+  // aturan yang sama dengan globalPassNamed(): meloloskan baris yang wilayahnya
+  // tak diketahui akan membuat angka Region terlihat lebih besar dari kenyataan.
+  if (paretoState.regionSel !== 'all'){
+    plants = plants.filter(p => {
+      const rec = globalPlantByName(p.pltu);
+      return rec ? plantInProvince(rec, paretoState.regionSel) : false;
+    });
+  }
+  return plants;
 }
 
 // Aggregate target/real/loss/breakdown for the current month selection.
@@ -16244,7 +16279,9 @@ function aggregateForPeriod(plants){
 }
 
 function periodLabel(){
-  if (paretoState.monthSel === 'ytd') return 'YTD (Jan-Apr)';
+  // V125: ikut dropdown. Nilai lama 'YTD (Jan-Apr)' di-hardcode, jadi subtitle
+  // tetap menulis "Jan-Apr" walau data sudah sampai Juli.
+  if (paretoState.monthSel === 'ytd') return 'Kumulatif';
   return MONTH_FULL_LABEL[paretoState.monthSel] || '';
 }
 
@@ -16260,13 +16297,20 @@ function gencoLabel(){
   return scope ? ('Semua Genco dalam filter ' + scope) : 'Semua Genco';
 }
 
+// V124: label wilayah untuk subtitle.
+function regionLabel(){
+  if (paretoState.regionSel === 'all') return 'Semua Region';
+  return (typeof LAPORAN_REGION_LABEL === 'object' && LAPORAN_REGION_LABEL[paretoState.regionSel])
+    || paretoState.regionSel;
+}
+
 // =====================================================
 // Subtitle update
 // =====================================================
 function renderParetoSubtitle(){
   const el = document.getElementById('paretoSubtitle');
   if (!el) return;
-  el.textContent = 'Periode: ' + periodLabel() + ' · ' + gencoLabel();
+  el.textContent = 'Periode: ' + periodLabel() + ' · ' + gencoLabel() + ' · ' + regionLabel();
 }
 
 // =====================================================
