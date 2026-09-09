@@ -26123,7 +26123,33 @@ const _CONTRACT_CFG = {
     year_blocks: {
       '2024': [10,11,12,13,14,15,16,17,18,19,20,21],
       '2025': [26,27,28,29,30,31,32,33,34,35,36,37],
-      '2026': [41,42,43,44,45,46,47,48,49,50,51,52],
+      // V132: dulu [41..52] — mulai SATU kolom terlalu awal, sehingga seluruh
+      // realisasi 2026 milik PLTU UIW tergeser satu bulan: slot Januari terisi
+      // kolom 41 (bukan tonase, nilainya 0,4–1,1) dan realisasi Januari yang asli
+      // mendarat di slot Februari, Februari di Maret, dan seterusnya.
+      //
+      // Bukti bahwa 42 yang benar, bukan 41:
+      //  - PIP memakai layout kolom identik (pltu:0 … jenis:9) dan blok 2024/2025
+      //    yang sama persis; hanya 2026-nya berbeda — PIP 42, UIW 41.
+      //  - Jarak antar-blok di UIW jadi tidak konsisten dengan dirinya sendiri:
+      //    2024→2025 menyisakan 4 kolom (22–25), 2025→2026 cuma 3 (38–40).
+      //    PNP dan PIP dua-duanya menyisakan 4.
+      //  - Digeser satu bulan, 7 dari 9 PLTU UIW cocok PERSIS dengan realisasi
+      //    produksi (galat Jan–Ags = 0,00). Blok 2025 UIW cocok 9/9 tanpa digeser,
+      //    jadi yang rusak memang hanya blok 2026.
+      //  - Nilai <2 ton di slot Januari muncul di 24 baris UIW dan NOL baris
+      //    PNP/PIP; di tahun 2024 dan 2025 tidak ada sama sekali.
+      //
+      // BELUM TERVERIFIKASI: tepi KANAN blok. Kolom 53 kini jadi slot Desember,
+      // dan Sep–Des 2026 semuanya nol sehingga tidak ada data yang menguatkannya.
+      // Sebelum upload ulang, pastikan kolom BB pada sheet UIW memang "Des 2026"
+      // dan bukan kolom total/subtotal — bila salah, nilainya akan mendarat di
+      // Desember dan menggelembungkan realisasi_total['2026'] tanpa error.
+      //
+      // Dampaknya nasional: realisasi Januari kurang 9.964 ton dibanding data
+      // produksi. Perbaikan ini baru berlaku setelah Excel Daftar Kontrak
+      // di-upload ulang — data yang sudah tersimpan dihasilkan parser lama.
+      '2026': [42,43,44,45,46,47,48,49,50,51,52,53],
     },
   },
 };
