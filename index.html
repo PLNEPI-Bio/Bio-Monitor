@@ -8192,7 +8192,7 @@ body.gf-on .gf-bar{
             </select>
           </div>
         </div>
-        <div class="real-card-note">Sumber: data Daftar Kontrak (nasional) — tidak mengikuti filter Wilayah/PLTU di atas.</div>
+        <div class="real-card-note" id="kontrakJenisNote">Sumber: data Daftar Kontrak (nasional) — tidak mengikuti filter Wilayah/PLTU di atas.</div>
         <div class="kontrak-jenis-chart-grid">
           <div class="chart-wrap h320"><canvas id="kontrakJenisPieCanvas"></canvas></div>
           <div class="kontrak-jenis-legend" id="kontrakJenisLegend"></div>
@@ -18286,8 +18286,14 @@ const kontrakJenisPctLabelPlugin = {
     const meta = chart.getDatasetMeta(0);
     if (!meta || !meta.data || !meta.data.length) return;
     const values = chart.data.datasets[0].data || [];
-    const total = values.reduce((s, v) => s + (v || 0), 0);
-    if (!total) return;
+    // V131: pakai pctBase (jumlah jenis positif) — penyebut yang sama dengan legend
+    // DAN dengan geometri arc yang digambar Chart.js, jadi label tidak mungkin
+    // berselisih dengan besar irisannya. Fallback dipakai hanya bila snapshot belum
+    // ada; `> 0` menjaga penyebut nol/negatif tidak lolos lewat `||`.
+    const total = (kontrakJenisSnap && kontrakJenisSnap.pctBase > 0)
+      ? kontrakJenisSnap.pctBase
+      : values.reduce((s, v) => s + (v || 0), 0);
+    if (!(total > 0)) return;
     const ctx = chart.ctx;
     ctx.save();
     ctx.textAlign = 'center';
@@ -18319,9 +18325,31 @@ const kontrakJenisPctLabelPlugin = {
   }
 };
 
+// V131: catatan sumber di bawah judul kartu. Sebelumnya teksnya statis dan menulis
+// "(nasional)", padahal sejak V118 pie ini ikut menyempit mengikuti filter global
+// (Genco/Boiler/Regional) — yang tidak diikuti hanya filter Wilayah/PLTU milik tab
+// Realisasi. Teks dibuat dinamis supaya jujur di kedua keadaan. Dipakai bersama
+// oleh <div id="kontrakJenisNote"> dan caption di exportKontrakJenisPieImage().
+function _kontrakJenisScopeNote(){
+  if (typeof globalFilterActive === 'function' && globalFilterActive()){
+    // Caption ini juga digambar satu baris tanpa wrap di PNG ekspor, jadi daftar
+    // chip dipotong di 3 — empat nama regional yang panjang sudah cukup mendorong
+    // ujung kalimat keluar dari tepi kanvas.
+    const all = globalFilterChips().map(c => c.val);
+    const chips = all.length > 3
+      ? all.slice(0, 3).join(', ') + ', +' + (all.length - 3) + ' lainnya'
+      : all.join(', ');
+    return 'Sumber: data Daftar Kontrak — mengikuti filter global (' + chips + '), '
+         + 'tidak mengikuti filter Wilayah/PLTU di atas.';
+  }
+  return 'Sumber: data Daftar Kontrak (nasional) — tidak mengikuti filter Wilayah/PLTU di atas.';
+}
+
 function renderKontrakJenisPie(){
   const canvas = document.getElementById('kontrakJenisPieCanvas');
   const legendEl = document.getElementById('kontrakJenisLegend');
+  const noteEl = document.getElementById('kontrakJenisNote');
+  if (noteEl) noteEl.textContent = _kontrakJenisScopeNote();
   if (!canvas) return;
 
   const all = ((DATA && DATA.contracts) || []).filter(c => globalPassNamed(c.pltu, c.genco)); // V118
@@ -18338,25 +18366,47 @@ function renderKontrakJenisPie(){
     } else {
       val = yt[year] || 0;
     }
-    if (val > 0){
-      jenisMap[j] = (jenisMap[j] || 0) + val;
-    }
+    // V131: nilai negatif (koreksi realisasi) ikut dijumlah. Guard `val > 0` yang
+    // lama membuangnya tanpa jejak, sehingga total pie bisa lebih TINGGI daripada
+    // total Realisasi di Daftar Kontrak dan selisihnya tidak terlihat di mana pun.
+    if (val) jenisMap[j] = (jenisMap[j] || 0) + val;
   }
 
-  // Sort by value desc
-  const sorted = Object.entries(jenisMap).sort((a, b) => b[1] - a[1]);
-  const grandTotal = sorted.reduce((s, [_, v]) => s + v, 0);
+  // Sort by value desc. `grandTotal` menjumlah SEMUA jenis — termasuk yang net
+  // negatif — supaya angka di header legend identik dengan total Realisasi di
+  // Daftar Kontrak. Donat sendiri hanya bisa menggambar irisan positif; jenis yang
+  // net negatif tetap muncul di legend dengan nilainya, hanya tanpa irisan.
+  const sortedAll = Object.entries(jenisMap).sort((a, b) => b[1] - a[1]);
+  const grandTotal = sortedAll.reduce((s, [_, v]) => s + v, 0);
+  const sorted = sortedAll.filter(([_, v]) => v > 0);
+  // Warna dikunci ke urutan sortedAll agar legend dan donat tidak bergeser warna
+  // ketika ada jenis yang tidak tergambar.
+  const colorOf = new Map(sortedAll.map(([j], i) => [j, JENIS_COLORS[i % JENIS_COLORS.length]]));
+  // V131: BASIS PERSENTASE = jumlah jenis positif, bukan grandTotal. Dua sebab:
+  //  - Geometri donat digambar Chart.js atas dasar data yang diberikan (hanya yang
+  //    positif), jadi memakai penyebut lain akan membuat label persen tidak cocok
+  //    dengan besar irisannya sendiri.
+  //  - grandTotal bisa <= 0 pada lingkup yang isinya didominasi koreksi. Penyebut
+  //    negatif/nol akan membuat SETIAP baris legend tampil "0.0%" padahal tonasenya
+  //    nyata — salah tanpa peringatan.
+  // Tanpa nilai negatif, pctBase === grandTotal, jadi tampilan normal tidak berubah.
+  const pctBase = sorted.reduce((s, [_, v]) => s + v, 0);
 
   // Destroy old chart
   if (kontrakJenisPieChart){ kontrakJenisPieChart.destroy(); kontrakJenisPieChart = null; }
 
-  if (sorted.length === 0 || grandTotal === 0){
+  // V131: `sorted` kosong berarti tidak ada irisan yang bisa digambar. Bedakan
+  // "memang tidak ada data" dari "ada data tapi net negatif" — dua hal yang sangat
+  // berbeda bagi pembacanya.
+  if (sorted.length === 0){
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = '13px Plus Jakarta Sans, sans-serif';
     ctx.fillStyle = '#94a3b8';
     ctx.textAlign = 'center';
-    ctx.fillText('Tidak ada realisasi di tahun terpilih', canvas.width / 2, canvas.height / 2);
+    ctx.fillText(sortedAll.length
+      ? 'Realisasi net negatif di tahun terpilih (' + fmtInt(grandTotal) + ' ton)'
+      : 'Tidak ada realisasi di tahun terpilih', canvas.width / 2, canvas.height / 2);
     if (legendEl) legendEl.innerHTML = '';
     kontrakJenisSnap = null; // V123
     return;
@@ -18364,20 +18414,23 @@ function renderKontrakJenisPie(){
 
   const labels = sorted.map(([j]) => j);
   const data = sorted.map(([_, v]) => v);
-  const colors = sorted.map((_, i) => JENIS_COLORS[i % JENIS_COLORS.length]);
+  const colors = sorted.map(([j]) => colorOf.get(j));
 
   const textColor = '#475569';
 
   // V123: dipakai exportKontrakJenisPieImage()
   kontrakJenisSnap = {
-    rows: sorted.map(([j, v], i) => ({
+    rows: sortedAll.map(([j, v]) => ({
       name: j,
       val: v,
-      pct: grandTotal > 0 ? (v / grandTotal * 100) : 0,
-      color: JENIS_COLORS[i % JENIS_COLORS.length],
+      pct: pctBase > 0 ? (v / pctBase * 100) : 0,
+      color: colorOf.get(j),
     })),
     grandTotal,
+    pctBase,                          // V131
+    nHidden: sortedAll.length - sorted.length,   // V131
     yearLabel: year === 'all' ? 'Total 2023–2026' : year,
+    note: _kontrakJenisScopeNote(),   // V131
   };
 
   kontrakJenisPieChart = new Chart(canvas, {
@@ -18407,7 +18460,7 @@ function renderKontrakJenisPie(){
           borderWidth: 1, padding: 10,
           callbacks: {
             label: ctx => {
-              const pct = grandTotal > 0 ? (ctx.parsed / grandTotal * 100).toFixed(1) : 0;
+              const pct = pctBase > 0 ? (ctx.parsed / pctBase * 100).toFixed(1) : 0;   // V131
               return ctx.label + ': ' + fmtInt(ctx.parsed) + ' ton (' + pct + '%)';
             }
           }
@@ -18420,15 +18473,25 @@ function renderKontrakJenisPie(){
   if (legendEl){
     const yearLabel = year === 'all' ? 'Total 2023–2026' : year;
     let html = '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:9px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:600">Realisasi ' + yearLabel + ' · ' + fmtInt(grandTotal) + ' ton</div>';
-    html += sorted.map(([j, v], i) => {
-      const pct = grandTotal > 0 ? (v / grandTotal * 100).toFixed(1) : 0;
+    html += sortedAll.map(([j, v]) => {
+      const pct = pctBase > 0 ? (v / pctBase * 100).toFixed(1) : 0;   // V131
       return '<div class="kontrak-jenis-legend-row">'
-        + '<span class="kontrak-jenis-legend-dot" style="background:' + (JENIS_COLORS[i % JENIS_COLORS.length]) + '"></span>'
+        + '<span class="kontrak-jenis-legend-dot" style="background:' + colorOf.get(j) + '"></span>'
         + '<span class="kontrak-jenis-legend-name">' + escapeHtml(j) + '</span>'
         + '<span class="kontrak-jenis-legend-val">' + fmtInt(v) + '</span>'
         + '<span class="kontrak-jenis-legend-pct">' + pct + '%</span>'
         + '</div>';
     }).join('');
+    // V131: tanpa baris ini, jenis yang net negatif tampil di legend tapi hilang dari
+    // donat tanpa penjelasan apa pun — pembaca akan mengira donatnya yang salah.
+    const nHidden = sortedAll.length - sorted.length;
+    if (nHidden > 0){
+      html += '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:9px;'
+        + 'color:var(--text-dim);margin-top:8px;line-height:1.5">'
+        + nHidden + ' jenis bernilai net negatif (koreksi) tidak digambar di donat. '
+        + 'Persentase dihitung terhadap realisasi positif ' + fmtInt(pctBase) + ' ton.'
+        + '</div>';
+    }
     legendEl.innerHTML = html;
   }
 }
@@ -18477,7 +18540,7 @@ function exportKontrakJenisPieImage(){
   ctx.fillText('Komposisi Jenis Biomassa (Realisasi)', PAD, PAD + 18);
   ctx.fillStyle = '#94a3b8';
   ctx.font = '400 11px ' + F;
-  ctx.fillText('Sumber: data Daftar Kontrak (nasional) — tidak mengikuti filter Wilayah/PLTU.', PAD, PAD + 36);
+  ctx.fillText(snap.note || _kontrakJenisScopeNote(), PAD, PAD + 36);   // V131
   ctx.strokeStyle = '#e2e8f0';
   ctx.lineWidth = 1;
   ctx.beginPath();
