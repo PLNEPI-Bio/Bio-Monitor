@@ -54,8 +54,12 @@ Folder share anonim berisi dua subfolder:
 
 | Subfolder | Isi | Konvensi nama |
 | :--- | :--- | :--- |
-| `PIP` | 28 workbook (PIP + UIW + 2 UIK) | `Profil_Pasokan_<Nama PLTU>_<GENCO>_2026.xlsx` |
+| `PIP` | 28 workbook (PIP + UIW + 2 UIK) | `Profil Pasokan PLTU <Nama PLTU> per <Bulan> <Tahun>.xlsx` (sejak 2026-09-11); skema lama `Profil_Pasokan_<Nama PLTU>_<GENCO>_2026.xlsx` masih dikenali |
 | `PNP` | 20 workbook + 1 kertas kerja | `<NAMA PLTU>.xlsx` |
+
+Bila satu PLTU punya lebih dari satu file (mis. "per Agustus" dan "per September", atau
+file skema lama tertinggal), hanya file dengan `lastModifiedDateTime` terbaru yang dipakai;
+sisanya dicatat di log sebagai `duplicate:`.
 
 Di tiap workbook, sheet **"Profil Pasokan"** memuat empat baris total di kolom B:
 
@@ -69,8 +73,19 @@ Di tiap workbook, sheet **"Profil Pasokan"** memuat empat baris total di kolom B
 Kolom G–R = Jan–Des, kolom **S = SUM**.
 
 Baris total **tidak berada di posisi tetap** (teramati di baris 32, 33, dan 34 tergantung
-jumlah mitra), sehingga dicari berdasarkan **label**, bukan nomor baris. Kolom S dibaca
-lebih dulu; bila kosong, G–R dijumlahkan sebagai cadangan.
+jumlah mitra), sehingga dicari berdasarkan **label**, bukan nomor baris. Urutan baca:
+
+1. Kolom S bila berisi angka — dipakai apa adanya, **termasuk 0**.
+2. Bila S kosong: G–R pada baris label, bila ada yang berisi angka.
+3. Bila baris label kosong seluruhnya: jumlah G–R baris mitra di antara judul seksi
+   (kolom A seperti `2. RENCANA …`) dan baris label. Ini untuk workbook PIP sejak
+   2026-09-11 yang dibuat script: baris TOTAL berisi `=SUM(G13:G33)` **tanpa nilai
+   cache**, sehingga terbaca kosong. Rentang rumus itu tepat sama dengan baris mitra.
+   Bila penelusuran ke atas bertemu baris `TOTAL …` lain sebelum judul seksi, hasilnya
+   `null` (tidak diketahui), bukan 0 — agar DO seksi 3 tidak ikut terjumlah.
+
+Hanya sel bertipe angka yang dihitung (seperti `SUM` di Excel yang mengabaikan teks).
+`r` null → PLTU masuk `failed`; `d` null → "Sisa Kontrak" tampil "—".
 
 > Perhatikan `TOTAL DO` vs `TOTAL REALISASI DO`: pola `/^TOTAL DO/` **tidak** cocok
 > dengan "TOTAL REALISASI DO", jadi keduanya tidak pernah tertukar.
@@ -103,9 +118,19 @@ Ganti link tanpa redeploy lewat function secret `KONTRAK_SHARE_URL`.
 
 - Peta dengan < 20 PLTU **ditolak** (`MIN_PLANTS`) — melindungi dari link dicabut atau
   folder diacak.
-- Hanya field `kontrak_pasokan_2026` yang diganti; field lain diteruskan apa adanya.
-- Peta yang tidak berubah → tulis dilewati (menghemat egress; tulis ke id=1 menyiarkan
-  seluruh baris ~860 KB lewat Realtime).
+- **Shrink guard** (V133): tulis ditolak bila hasil parse segar turun di bawah 90% dari
+  data tersimpan pada salah satu hitungan: jumlah PLTU, PLTU dengan rencana > 0, PLTU
+  dengan realisasi DO terbaca. Dievaluasi juga saat `?dry=1`. Latar: 2026-09-11 satu run
+  hanya mencocokkan 20/48 file (nama berubah) dan lolos `MIN_PLANTS`. Realisasi DO > 0
+  sengaja tidak dijaga karena seluruh PLTU sah bernilai 0 di bulan Januari.
+  **Tidak ada override otomatis** — bila guard memblokir perubahan yang sah (mis. PLTU
+  dikeluarkan dari roster), perbaiki lewat SQL manual pada `kontrak_pasokan`.
+- **Carry-over** (V133): PLTU yang masih ada di roster tetapi tidak menghasilkan entri
+  pada run ini memakai entri tersimpan terakhir, dicatat di log dan di `last_error`
+  sebagai `WARN carried …` walaupun run sukses.
+- Hanya tabel `kontrak_pasokan` yang ditulis; `dashboard_data` hanya dibaca (roster).
+- Peta yang tidak berubah → tulis dilewati (menghemat egress; tulis menyiarkan baris
+  lewat Realtime).
 - File yang namanya tidak cocok PLTU mana pun dilewati — inilah yang menyaring
   "Z Kertas Kerja FGD…".
 

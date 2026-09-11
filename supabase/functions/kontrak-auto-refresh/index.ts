@@ -44,10 +44,15 @@ function nameKey(s: unknown): string {
   return String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+// Two naming schemes live side by side in the share:
+//   "Profil_Pasokan_Adipala_PIP_2026.xlsx"                (old)
+//   "Profil Pasokan PLTU Adipala per Agustus 2026.xlsx"   (V133: PIP folder, Sep 2026)
 function plantNameFromFile(fn: string): string {
   let n = fn.replace(/\.xls[xmb]?$/i, "");
-  n = n.replace(/^profil[_ ]pasokan[_ ]/i, "");
-  n = n.replace(/[_ ](PIP|UIW|PNP|UIK)[_ ]\d{4}$/i, "");
+  n = n.replace(/^profil[_ ]+pasokan[_ ]+/i, "");
+  n = n.replace(/^PLTU[_ ]+/i, "");
+  n = n.replace(/[_ ]+(PIP|UIW|PNP|UIK)[_ ]+\d{4}$/i, "");
+  n = n.replace(/[_ ]+per[_ ]+[A-Za-z]+[_ ]+\d{4}$/i, "");
   return n.replace(/_/g, " ").trim();
 }
 
@@ -100,6 +105,12 @@ async function getJson(url: string, cookie: string): Promise<any> {
   return await res.json();
 }
 
+// A cell counts as a value only when SheetJS hands back a number. Excel's SUM ignores
+// text, and a formula saved without a cached result arrives as null.
+function _cellNum(v: unknown): number | null {
+  return (typeof v === "number" && isFinite(v)) ? v : null;
+}
+
 // Total rows are located by their LABEL in column B, never by row number -- they sit
 // at different rows per plant depending on how many mitra it has (observed 32/33/34).
 // Column S (idx 18) holds the SUM; G..R (idx 6..17) are Jan..Des as a fallback.
@@ -111,17 +122,44 @@ async function getJson(url: string, cookie: string): Promise<any> {
 //                                       /^TOTAL DO/ test does not match "TOTAL REALISASI
 //                                       DO", so the two never collide.
 //   "TOTAL RENCANA TAMBAHAN"         <- section 5, not used.
+//
+// null means "total could not be determined" -- callers treat that differently from 0
+// (a plant with no realisasi yet is a legitimate 0).
 function totalByLabel(m: any[][], labelRe: RegExp): number | null {
   for (let r = 0; r < m.length; r++) {
     const row = m[r] || [];
     if (!labelRe.test(_safeStr(row[1]))) continue;
-    const s = _safeNum(row[18]);
-    if (s > 0) return round2(s);
-    let sum = 0;
-    for (let c = 6; c <= 17; c++) sum += _safeNum(row[c]);
-    // 0 is a legitimate value here (a plant with no realisasi yet), so distinguish
-    // "found the row, total is zero" from "row not found" -- only the latter is null.
-    return round2(sum);
+    // Cached total in S is taken as-is, 0 included.
+    const s = _cellNum(row[18]);
+    if (s !== null) return round2(s);
+    // S has no value: Jan..Des on the label row, if any of them carries one.
+    let sum = 0, any = false;
+    for (let c = 6; c <= 17; c++) {
+      const v = _cellNum(row[c]);
+      if (v !== null) { sum += v; any = true; }
+    }
+    if (any) return round2(sum);
+    // V133: the "per <Bulan>" workbooks are written by a script, not saved by Excel,
+    // so the TOTAL row holds =SUM(G13:G33) with NO cached value and reads as empty.
+    // Sum the mitra rows instead: in all 28 such files that formula range is exactly
+    // "row after the section header" .. "row before the TOTAL label".
+    const sec = sumSectionRows(m, r);
+    return sec === null ? null : round2(sec);
+  }
+  return null;
+}
+
+// Sums Jan..Des of the rows between the section header above `labelRow` (col A like
+// "2. RENCANA PASOKAN BULANAN") and the label row. null when the walk reaches another
+// TOTAL row (the previous section's) or the top of the sheet before any header -- a
+// layout surprise must never fold section 1 targets or section 3 DO into this total.
+function sumSectionRows(m: any[][], labelRow: number): number | null {
+  let sum = 0;
+  for (let r = labelRow - 1; r >= 0; r--) {
+    const row = m[r] || [];
+    if (typeof row[0] === "string" && /^\d+\.\s/.test(row[0].trim())) return sum;
+    if (/^TOTAL/i.test(_safeStr(row[1]))) return null;
+    for (let c = 6; c <= 17; c++) sum += _cellNum(row[c]) ?? 0;
   }
   return null;
 }
@@ -190,12 +228,15 @@ Deno.serve(async (req: Request) => {
     }
     log.push(`Root: ${folders.map((f) => `${f.name}(${f.folder.childCount})`).join(", ")}`);
 
-    const files: { name: string; url: string }[] = [];
+    type SrcFile = { name: string; url: string; modified: string };
+    const files: SrcFile[] = [];
     for (const f of folders) {
       const kids = await getJson(`${origin}/_api/v2.0/drives/${driveId}/items/${f.id}/children`, cookie);
       for (const it of (kids.value || [])) {
         const dl = it["@content.downloadUrl"];
-        if (it.file && dl && /\.xls[xmb]?$/i.test(it.name)) files.push({ name: it.name, url: dl });
+        if (it.file && dl && /\.xls[xmb]?$/i.test(it.name)) {
+          files.push({ name: it.name, url: dl, modified: _safeStr(it.lastModifiedDateTime) });
+        }
       }
     }
     log.push(`Found ${files.length} workbooks`);
@@ -214,20 +255,40 @@ Deno.serve(async (req: Request) => {
     const byName = new Map<string, string>();
     for (const p of plants) { if (p.name && p.code) byName.set(nameKey(p.name), p.code); }
 
+    // V133: pick ONE file per plant before downloading. Names now carry the month, so
+    // "per Agustus" and "per September" (or a leftover old-scheme file) can sit side by
+    // side for the same PLTU; parsing both let whichever download finished last win,
+    // at random, with every guard passing. Newest lastModifiedDateTime wins, then name.
+    const unmatched: string[] = [];
+    const duplicates: string[] = [];
+    const groups = new Map<string, SrcFile[]>();
+    for (const f of files) {
+      const code = byName.get(nameKey(plantNameFromFile(f.name)));
+      if (!code) { unmatched.push(f.name); continue; }
+      if (!groups.has(code)) groups.set(code, []);
+      groups.get(code)!.push(f);
+    }
+    const picked: (SrcFile & { code: string })[] = [];
+    for (const [code, fs] of groups) {
+      fs.sort((a, b) => b.modified.localeCompare(a.modified) || b.name.localeCompare(a.name));
+      picked.push({ ...fs[0], code });
+      if (fs.length > 1) {
+        duplicates.push(`${code} -> ${fs[0].name} (ignored: ${fs.slice(1).map((x) => x.name).join(" | ")})`);
+      }
+    }
+
     // data[kode] = { r: total rencana pasokan, d: total realisasi DO }.
     // Klien memakai r sebagai "Kontrak <tahun>" dan r-d sebagai "Sisa Kontrak <tahun>".
     const map: Record<string, { r: number; d: number | null }> = {};
-    const unmatched: string[] = [];
     const unparsed: string[] = [];
     const noRealisasi: string[] = [];
     // V78: turun dari 6 ke 4. Bersama pembatasan `sheets` di XLSX.read, ini menjaga
     // fungsi tetap di bawah batas memori edge runtime (pernah kena
     // WORKER_RESOURCE_LIMIT saat masih 6 + parse seluruh sheet).
     const CONC = 4;
-    for (let i = 0; i < files.length; i += CONC) {
-      await Promise.all(files.slice(i, i + CONC).map(async (f) => {
-        const code = byName.get(nameKey(plantNameFromFile(f.name)));
-        if (!code) { unmatched.push(f.name); return; }
+    for (let i = 0; i < picked.length; i += CONC) {
+      await Promise.all(picked.slice(i, i + CONC).map(async (f) => {
+        const code = f.code;
         try {
           const dl = await fetch(f.url, { headers: { "User-Agent": UA, "Cookie": cookie } });
           if (!dl.ok) { await dl.body?.cancel(); unparsed.push(`${f.name} (HTTP ${dl.status})`); return; }
@@ -256,6 +317,7 @@ Deno.serve(async (req: Request) => {
     const n = Object.keys(map).length;
     log.push(`Parsed ${n} plants · skipped ${unmatched.length} unmatched · ${unparsed.length} failed`);
     if (unmatched.length) log.push(`  unmatched: ${unmatched.join(", ")}`);
+    if (duplicates.length) log.push(`  duplicate: ${duplicates.join("; ")}`);
     if (unparsed.length) log.push(`  failed: ${unparsed.join(", ")}`);
     if (noRealisasi.length) log.push(`  no "TOTAL REALISASI DO" row: ${noRealisasi.join(", ")}`);
 
@@ -263,29 +325,63 @@ Deno.serve(async (req: Request) => {
       return await markError(`Only ${n} plants parsed (min ${MIN_PLANTS}) - refusing to overwrite.`);
     }
 
+    // Read BEFORE the dry-run branch so ?dry=1 evaluates the same guards a live run
+    // would (markError writes nothing in dry-run).
+    const prevRes = await fetch(`${SUPABASE_URL}/rest/v1/kontrak_pasokan?id=eq.1&select=data`, {
+      headers: restHeaders(),
+    });
+    if (!prevRes.ok) return await markError(`Read kontrak_pasokan: HTTP ${prevRes.status}`);
+    const prevRows = await prevRes.json();
+    const prev: Record<string, any> = (Array.isArray(prevRows) && prevRows.length) ? (prevRows[0].data || {}) : {};
+
+    // V133: SHRINK GUARDS, measured on this run's fresh parse (before carry-over below).
+    // MIN_PLANTS alone let a run through that matched only 20 of 48 PLTU (files renamed
+    // on SharePoint) and wiped 28 plants from the dashboard. The other counts catch a
+    // layout change that matches every file yet reads nothing: r > 0, and d present
+    // (totalByLabel returns null, not 0, when it cannot find a total). d > 0 is
+    // deliberately NOT guarded -- every plant legitimately has 0 realisasi in January.
+    const guards: [string, (e: any) => boolean][] = [
+      ["plants", () => true],
+      ["plants with rencana > 0", (e) => _safeNum(e?.r) > 0],
+      ["plants with realisasi DO", (e) => e?.d !== null && e?.d !== undefined],
+    ];
+    for (const [label, ok] of guards) {
+      const was = Object.values(prev).filter(ok).length;
+      const now = Object.values(map).filter(ok).length;
+      if (was > 0 && now < Math.ceil(was * 0.9)) {
+        return await markError(`Only ${now} ${label} vs ${was} stored - refusing to overwrite (file rename or layout change on SharePoint?).`);
+      }
+    }
+
+    // V133: CARRY-OVER. A PLTU that is still in the roster but produced no entry this run
+    // (file renamed, unparseable) keeps its last stored entry instead of vanishing from
+    // the tooltip -- and so the stored count cannot ratchet down 10% per run under the
+    // guard above. Recorded in last_error so it is not silent even when the run is ok.
+    const rosterCodes = new Set(byName.values());
+    const carried = Object.keys(prev).filter((c) => !(c in map) && rosterCodes.has(c));
+    for (const c of carried) map[c] = prev[c];
+    if (carried.length) log.push(`  carried over from stored map (no fresh entry): ${carried.join(", ")}`);
+    const warn = carried.length ? `WARN carried ${carried.length} PLTU without a fresh entry: ${carried.join(", ")}` : null;
+    const total = Object.keys(map).length;
+
     if (dryRun) {
       const codes = Object.keys(map).sort();
-      log.push(`DRY RUN - no write performed. ${n} PLTU (rencana / realisasiDO / sisa):`);
+      log.push(`DRY RUN - no write performed. ${total} PLTU (rencana / realisasiDO / sisa):`);
       for (const c of codes) {
         const e = map[c];
         const sisa = (e.d === null) ? "-" : round2(e.r - e.d);
-        log.push(`  ${c} = ${e.r} / ${e.d === null ? "-" : e.d} / ${sisa}`);
+        log.push(`  ${c} = ${e.r} / ${e.d === null ? "-" : e.d} / ${sisa}${carried.includes(c) ? "  (carried)" : ""}`);
       }
       return out(true);
     }
 
     // EGRESS GUARD - a write broadcasts the row over Realtime, so skip when identical.
-    const prevRes = await fetch(`${SUPABASE_URL}/rest/v1/kontrak_pasokan?id=eq.1&select=data`, {
-      headers: restHeaders(),
-    });
-    const prevRows = prevRes.ok ? await prevRes.json() : [];
-    const prev = (Array.isArray(prevRows) && prevRows.length) ? (prevRows[0].data || {}) : {};
     if (stableStringify(map) === stableStringify(prev)) {
-      log.push(`No change vs stored kontrak map - skipped write (saves egress). ${n} PLTU`);
+      log.push(`No change vs stored kontrak map - skipped write (saves egress). ${total} PLTU`);
       await fetch(`${SUPABASE_URL}/rest/v1/kontrak_pasokan?id=eq.1`, {
         method: "PATCH",
         headers: restHeaders({ "Prefer": "return=minimal" }),
-        body: JSON.stringify({ last_ok_at: new Date().toISOString(), last_error: null }),
+        body: JSON.stringify({ last_ok_at: new Date().toISOString(), last_error: warn }),
       });
       return out(true);
     }
@@ -297,17 +393,17 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         id: 1,
         data: map,
-        n_pltu: n,
+        n_pltu: total,
         source_url: SHARE_URL.split("?")[0],
         last_ok_at: new Date().toISOString(),
-        last_error: null,
+        last_error: warn,
         updated_at: new Date().toISOString(),
       }),
     });
     if (!upRes.ok) {
       return await markError(`Upsert kontrak_pasokan: HTTP ${upRes.status} ${await upRes.text()}`);
     }
-    log.push(`OK kontrak_pasokan.data updated · ${n} PLTU`);
+    log.push(`OK kontrak_pasokan.data updated · ${total} PLTU (${carried.length} carried)`);
     return out(true);
   } catch (e) {
     return await markError("Exception: " + ((e as Error)?.message || String(e)));
