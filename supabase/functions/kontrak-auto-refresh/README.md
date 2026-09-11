@@ -37,10 +37,17 @@ Skema:
 
 | Kolom | Isi |
 | :--- | :--- |
-| `data` | `{ kode_pltu: ton }` |
-| `n_pltu` | jumlah PLTU pada parse terakhir |
+| `data` | `{ kode_pltu: { r: rencana, d: realisasi DO } }` |
+| `n_pltu` | jumlah PLTU pada tulis terakhir (termasuk carry-over) |
 | `source_url` | link share yang dipakai |
-| `last_ok_at` / `last_error` | kesehatan run terakhir |
+| `last_ok_at` / `last_error` | kesehatan run terakhir; `WARN carried …` bila ada carry-over |
+| `prev_data` / `prev_saved_at` | isi `data` tepat sebelum tulis terakhir (V134) |
+| `force_until` | override shrink guard + carry-over selama `now() < force_until` (V134) |
+
+Log setiap run live juga ditulis ke `refresh_heartbeat` (`fn = 'kontrak-auto-refresh'`):
+satu kali saat mulai (`ok=false`, log `started`) dan satu kali di akhir. Run yang diblokir
+guard atau gagal meninggalkan baris FAIL; worker yang dibunuh di tengah jalan meninggalkan
+baris `started` dengan `ok=false`.
 
 RLS: baca publik (dashboard memakai anon key), **tanpa policy write** — penulisan hanya
 lewat service-role di edge function. Klien memuatnya via `fetchKontrakPasokan()`.
@@ -123,8 +130,8 @@ Ganti link tanpa redeploy lewat function secret `KONTRAK_SHARE_URL`.
   dengan realisasi DO terbaca. Dievaluasi juga saat `?dry=1`. Latar: 2026-09-11 satu run
   hanya mencocokkan 20/48 file (nama berubah) dan lolos `MIN_PLANTS`. Realisasi DO > 0
   sengaja tidak dijaga karena seluruh PLTU sah bernilai 0 di bulan Januari.
-  **Tidak ada override otomatis** — bila guard memblokir perubahan yang sah (mis. PLTU
-  dikeluarkan dari roster), perbaiki lewat SQL manual pada `kontrak_pasokan`.
+  Bila guard memblokir perubahan yang sah (mis. PLTU dikeluarkan dari roster), pakai
+  **override sekali pakai** — lihat bagian *Override & revert* di bawah.
 - **Carry-over** (V133): PLTU yang masih ada di roster tetapi tidak menghasilkan entri
   pada run ini memakai entri tersimpan terakhir, dicatat di log dan di `last_error`
   sebagai `WARN carried …` walaupun run sukses.
@@ -133,6 +140,50 @@ Ganti link tanpa redeploy lewat function secret `KONTRAK_SHARE_URL`.
   lewat Realtime).
 - File yang namanya tidak cocok PLTU mana pun dilewati — inilah yang menyaring
   "Z Kertas Kerja FGD…".
+
+## Override & revert (V134)
+
+Kenapa run terakhir diblokir / apa yang dilakukannya:
+
+```sql
+select last_run_at, ok, wrote, log from public.refresh_heartbeat where fn = 'kontrak-auto-refresh';
+```
+
+**Override** bila guard memblokir perubahan yang sah. Selama `now() < force_until`, run
+live melewati shrink guard **dan** carry-over (hasil parse diterima apa adanya;
+`MIN_PLANTS` tetap berlaku). Run live yang sukses mengosongkan `force_until`. Dry-run
+menghormatinya tetapi tidak mengosongkannya — jalankan dry-run dulu untuk melihat hasilnya.
+
+```sql
+update public.kontrak_pasokan set force_until = now() + interval '1 hour' where id = 1;
+-- lalu picu fungsi SEKARANG (lihat Dry run) dan periksa heartbeat.
+-- Jangan pakai jendela panjang untuk "menunggu cron".
+```
+
+Sengaja berbatas waktu, bukan boolean: bila run paksa gagal, override kedaluwarsa sendiri
+alih-alih tetap menyala dan mematikan guard pada run tak diawasi berikutnya (cron, atau
+siapa pun yang memanggil fungsi dengan anon key publik). Kolom ini hanya bisa diset lewat
+SQL / service role: RLS tabel ini tanpa policy tulis. Jangan menggantinya dengan query param.
+
+**Revert satu langkah** setelah tulis yang salah (setiap tulis menyimpan peta
+sebelumnya ke `prev_data` dalam statement yang sama). **Jeda cron dulu** — sumber yang
+sama rusaknya akan lolos guard lagi pada run berikutnya dan menimpa hasil revert (serta
+`prev_data`):
+
+```sql
+select cron.alter_job((select jobid from cron.job where jobname='kontrak-auto-refresh-monthly'), active := false);
+
+update public.kontrak_pasokan
+   set data = prev_data,
+       n_pltu = (select count(*) from jsonb_object_keys(prev_data)),
+       updated_at = now()
+ where id = 1 and prev_data is not null and prev_data <> '{}'::jsonb;
+
+-- setelah sumber di SharePoint diperbaiki dan dry-run bersih:
+select cron.alter_job((select jobid from cron.job where jobname='kontrak-auto-refresh-monthly'), active := true);
+```
+
+Revert tidak menyalin `data` ke `prev_data`; hanya satu langkah ke belakang yang tersedia.
 
 ## Dry run
 
@@ -197,4 +248,6 @@ select cron.unschedule('kontrak-auto-refresh-monthly');
 
 **Catatan:** jadwal bulanan berarti satu kegagalan = data basi sebulan penuh. Karena
 tulis dilewati saat data tidak berubah, mengubah jadwal jadi `0 1 1-3 * *` (tanggal 1–3)
-memberi percobaan ulang otomatis tanpa efek samping.
+memberi percobaan ulang otomatis tanpa efek samping. Percobaan ulang itu juga akan
+memakai `force_until` yang masih berlaku — satu alasan lagi untuk memberi override
+jendela pendek.

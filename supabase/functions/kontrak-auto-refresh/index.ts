@@ -194,11 +194,37 @@ Deno.serve(async (req: Request) => {
   // ?dry=1 -> run the whole pipeline but write nothing.
   let dryRun = false;
   try { dryRun = new URL(req.url).searchParams.get("dry") === "1"; } catch { /* ignore */ }
-  const out = (ok: boolean, status = 200) =>
-    new Response(JSON.stringify({ ok, dryRun, log, ms: Date.now() - t0 }, null, 2), {
+  // V134: heartbeat in refresh_heartbeat on every live exit path (same table and
+  // pattern as prod-auto-refresh). A blocked or failed run used to leave its log
+  // only in net._http_response, whose retention is short. Dry-run writes nothing.
+  let hbWrote = false;
+  const beat = async (ok: boolean) => {
+    if (dryRun) return;
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/refresh_heartbeat?on_conflict=fn`, {
+        method: "POST",
+        headers: restHeaders({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
+        body: JSON.stringify({
+          fn: "kontrak-auto-refresh",
+          last_run_at: new Date().toISOString(),
+          ok,
+          wrote: hbWrote,
+          duration_ms: Date.now() - t0,
+          // Tail, not head: the verdict (FAIL/OK) is always the last line.
+          log: log.join("\n").slice(-4000),
+        }),
+      });
+    } catch (_e) {
+      // A heartbeat failure must never turn a good refresh into a bad one.
+    }
+  };
+  const out = async (ok: boolean, status = 200) => {
+    await beat(ok);
+    return new Response(JSON.stringify({ ok, dryRun, log, ms: Date.now() - t0 }, null, 2), {
       status,
       headers: { "Content-Type": "application/json" },
     });
+  };
 
   const markError = async (why: string) => {
     log.push("FAIL " + why);
@@ -213,6 +239,12 @@ Deno.serve(async (req: Request) => {
   };
 
   try {
+    // Attempt beat before the 48 downloads: a worker killed mid-run (this function has
+    // hit WORKER_RESOURCE_LIMIT before) never reaches out(), and without this the row
+    // would keep showing the previous run's verdict.
+    log.push("started");
+    await beat(false);
+
     const origin = new URL(SHARE_URL).origin;
 
     const cookie = await redeemShare(SHARE_URL, log);
@@ -327,12 +359,23 @@ Deno.serve(async (req: Request) => {
 
     // Read BEFORE the dry-run branch so ?dry=1 evaluates the same guards a live run
     // would (markError writes nothing in dry-run).
-    const prevRes = await fetch(`${SUPABASE_URL}/rest/v1/kontrak_pasokan?id=eq.1&select=data`, {
+    const prevRes = await fetch(`${SUPABASE_URL}/rest/v1/kontrak_pasokan?id=eq.1&select=data,force_until`, {
       headers: restHeaders(),
     });
     if (!prevRes.ok) return await markError(`Read kontrak_pasokan: HTTP ${prevRes.status}`);
     const prevRows = await prevRes.json();
-    const prev: Record<string, any> = (Array.isArray(prevRows) && prevRows.length) ? (prevRows[0].data || {}) : {};
+    const prevRow: any = (Array.isArray(prevRows) && prevRows.length) ? prevRows[0] : {};
+    const prev: Record<string, any> = prevRow.data || {};
+    // V134: time-boxed override, set only via SQL (the table has no RLS write policy, so
+    // the public anon key cannot set it). Skips the shrink guards AND carry-over: the
+    // point is to accept this parse as the truth, e.g. after a PLTU leaves the roster.
+    // MIN_PLANTS still applies. Cleared by the next successful live run. Deliberately a
+    // deadline, not a boolean: a flag left on after a FAILED forced run would silently
+    // disable every guard on the next unattended run (cron, or anyone with the anon key).
+    const forceUntil = prevRow.force_until ? Date.parse(prevRow.force_until) : NaN;
+    const force = forceUntil > Date.now();
+    if (force) log.push(`FORCE force_until=${prevRow.force_until} - shrink guards and carry-over skipped for this run.`);
+    else if (prevRow.force_until) log.push(`force_until=${prevRow.force_until} has expired - ignored, guards active.`);
 
     // V133: SHRINK GUARDS, measured on this run's fresh parse (before carry-over below).
     // MIN_PLANTS alone let a run through that matched only 20 of 48 PLTU (files renamed
@@ -345,7 +388,7 @@ Deno.serve(async (req: Request) => {
       ["plants with rencana > 0", (e) => _safeNum(e?.r) > 0],
       ["plants with realisasi DO", (e) => e?.d !== null && e?.d !== undefined],
     ];
-    for (const [label, ok] of guards) {
+    for (const [label, ok] of (force ? [] : guards)) {
       const was = Object.values(prev).filter(ok).length;
       const now = Object.values(map).filter(ok).length;
       if (was > 0 && now < Math.ceil(was * 0.9)) {
@@ -358,7 +401,7 @@ Deno.serve(async (req: Request) => {
     // the tooltip -- and so the stored count cannot ratchet down 10% per run under the
     // guard above. Recorded in last_error so it is not silent even when the run is ok.
     const rosterCodes = new Set(byName.values());
-    const carried = Object.keys(prev).filter((c) => !(c in map) && rosterCodes.has(c));
+    const carried = force ? [] : Object.keys(prev).filter((c) => !(c in map) && rosterCodes.has(c));
     for (const c of carried) map[c] = prev[c];
     if (carried.length) log.push(`  carried over from stored map (no fresh entry): ${carried.join(", ")}`);
     const warn = carried.length ? `WARN carried ${carried.length} PLTU without a fresh entry: ${carried.join(", ")}` : null;
@@ -378,15 +421,20 @@ Deno.serve(async (req: Request) => {
     // EGRESS GUARD - a write broadcasts the row over Realtime, so skip when identical.
     if (stableStringify(map) === stableStringify(prev)) {
       log.push(`No change vs stored kontrak map - skipped write (saves egress). ${total} PLTU`);
-      await fetch(`${SUPABASE_URL}/rest/v1/kontrak_pasokan?id=eq.1`, {
+      const okRes = await fetch(`${SUPABASE_URL}/rest/v1/kontrak_pasokan?id=eq.1`, {
         method: "PATCH",
         headers: restHeaders({ "Prefer": "return=minimal" }),
-        body: JSON.stringify({ last_ok_at: new Date().toISOString(), last_error: warn }),
+        body: JSON.stringify({ last_ok_at: new Date().toISOString(), last_error: warn, force_until: null }),
       });
+      // This PATCH is also what clears force_until when the map is unchanged.
+      if (!okRes.ok) return await markError(`Update kontrak_pasokan status: HTTP ${okRes.status} ${await okRes.text()}`);
       return out(true);
     }
 
     // Write to its own table. dashboard_data is never touched.
+    // V134: the map being replaced goes to prev_data in the SAME statement, so a bad
+    // write can always be reverted one step with SQL (see README) -- no manual snapshot.
+    const nowIso = new Date().toISOString();
     const upRes = await fetch(`${SUPABASE_URL}/rest/v1/kontrak_pasokan?on_conflict=id`, {
       method: "POST",
       headers: restHeaders({ "Prefer": "resolution=merge-duplicates,return=minimal" }),
@@ -395,15 +443,20 @@ Deno.serve(async (req: Request) => {
         data: map,
         n_pltu: total,
         source_url: SHARE_URL.split("?")[0],
-        last_ok_at: new Date().toISOString(),
+        last_ok_at: nowIso,
         last_error: warn,
-        updated_at: new Date().toISOString(),
+        updated_at: nowIso,
+        // null, not {}: an empty backup must not pass the README revert's null check.
+        prev_data: Object.keys(prev).length ? prev : null,
+        prev_saved_at: nowIso,
+        force_until: null,
       }),
     });
     if (!upRes.ok) {
       return await markError(`Upsert kontrak_pasokan: HTTP ${upRes.status} ${await upRes.text()}`);
     }
-    log.push(`OK kontrak_pasokan.data updated · ${total} PLTU (${carried.length} carried)`);
+    hbWrote = true;
+    log.push(`OK kontrak_pasokan.data updated · ${total} PLTU (${carried.length} carried) · previous map kept in prev_data`);
     return out(true);
   } catch (e) {
     return await markError("Exception: " + ((e as Error)?.message || String(e)));
