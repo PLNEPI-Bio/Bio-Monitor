@@ -8921,6 +8921,10 @@ body.gf-on .gf-bar{
 .lamp-row-del{background:transparent;border:none;color:var(--danger);font-size:13px;line-height:1;cursor:pointer;padding:2px 5px;border-radius:4px}
 .lamp-row-del:hover{background:rgba(192,57,43,.12)}
 .lamp-empty{padding:10px 12px;font-size:11px;color:var(--text-dim)}
+/* V135: baris TOTAL per PLTU di editor lampiran */
+.lamp-table tfoot td{border-top:1px solid var(--border);border-bottom:none;background:var(--panel-3);font-weight:700;color:var(--text-bright)}
+.lamp-table tfoot td.mitra{font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-dim)}
+.lamp-table tfoot td.lamp-sum-do{color:#d98324}
 .lamp-preview-stack{display:flex;flex-direction:column;gap:12px}
 .lamp-pagebadge{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim)}
 @media (max-width:768px){
@@ -13546,6 +13550,54 @@ function _lampTextCell(fld, val, ph){
     '" value="' + escapeHtml(val || '') + '" placeholder="' + ph + '"></td>';
 }
 
+// V135: baris TOTAL di kaki tabel tiap PLTU. Menjumlah isian mitra secara
+// langsung supaya user bisa mencocokkannya dengan angka per PLTU di laporan
+// utama tanpa menjumlah manual. Barisnya sengaja TIDAK memakai data-lamp-row
+// agar tak ikut terbaca _lampReadForm() / terhitung _lampSyncCount().
+const LAMP_SUM_FLDS = ['vol', 'prev', 'real', 'prognosa', 'do'];
+
+function _lampFootHtml(){
+  return '<tfoot><tr class="lamp-sum"><td class="mitra">Total</td><td class="txt"></td>' +
+    LAMP_SUM_FLDS.map(f => '<td class="lamp-sum-' + f + '" data-lsum="' + f + '">0</td>').join('') +
+    '<td class="act"></td></tr></tfoot>';
+}
+
+// Hitung ulang baris total satu grup PLTU dari isian yang ada di DOM.
+function _lampSyncSubtotal(box){
+  if (!box) return;
+  const tbody = box.querySelector('.lamp-table tbody');
+  const foot = box.querySelector('.lamp-table tfoot');
+  if (!tbody || !foot) return;
+  const sums = {};
+  LAMP_SUM_FLDS.forEach(f => { sums[f] = 0; });
+  tbody.querySelectorAll('tr[data-lamp-row]').forEach(tr => {
+    LAMP_SUM_FLDS.forEach(f => {
+      const el = tr.querySelector('.laporan-form-input[data-lfld="' + f + '"]');
+      if (el) sums[f] += parseFloat(el.value) || 0;
+    });
+  });
+  LAMP_SUM_FLDS.forEach(f => {
+    const cell = foot.querySelector('[data-lsum="' + f + '"]');
+    if (cell) cell.textContent = _lampTon(sums[f]);
+  });
+}
+
+function _lampSyncAllSubtotals(){
+  document.querySelectorAll('#laporanLampiranWrap .lamp-pltu').forEach(_lampSyncSubtotal);
+}
+
+// Satu listener delegasi untuk seluruh editor: baris mitra lahir & mati kapan
+// saja, jadi handler tidak dipasang per input.
+function _lampBindSubtotal(wrap){
+  if (!wrap || wrap._lampSumBound) return;
+  wrap._lampSumBound = true;
+  wrap.addEventListener('input', (e) => {
+    const t = e.target;
+    if (!t || !t.classList || !t.classList.contains('laporan-form-input')) return;
+    _lampSyncSubtotal(t.closest('.lamp-pltu'));
+  });
+}
+
 // Satu baris mitra. `manual` -> nama mitra jadi input teks + tombol hapus.
 // `key` mengidentifikasi baris secara unik: satu mitra bisa punya DUA kontrak di
 // PLTU yang sama (nama pemasok identik), jadi nama saja tidak cukup — memakai
@@ -13687,10 +13739,12 @@ function renderLaporanLampiran(force, seedRows, seedRemoved){
           (nHidden ? 'Semua mitra PLTU ini dihapus dari lampiran.'
                    : 'Tidak ada kontrak aktif di bulan ini — tambah manual bila perlu.') +
           '</span></td></tr>') +
-        '</tbody></table>' +
+        '</tbody>' + _lampFootHtml() + '</table>' +
       '</div></div>';
   });
   wrap.innerHTML = html;
+  _lampBindSubtotal(wrap);
+  _lampSyncAllSubtotals();
   setHint(nMitra + ' kontrak aktif di ' + mName + ' ' + scope.year + ' dari Daftar Kontrak' +
     (nManual ? ' + ' + nManual + ' mitra manual' : '') +
     ' · jenis, volume kontrak, realisasi s.d. ' + prevName + ', DO & realisasi terisi otomatis; ' +
@@ -13722,6 +13776,7 @@ function addLampiranMitra(btn){
   const inp = tbody.lastElementChild && tbody.lastElementChild.querySelector('.lamp-mitra-input');
   if (inp) inp.focus();
   _lampSyncCount(box);
+  _lampSyncSubtotal(box);
 }
 window.addLampiranMitra = addLampiranMitra;
 
@@ -13742,6 +13797,7 @@ function removeLampiranMitra(btn){
       'Semua mitra PLTU ini dihapus dari lampiran.</span></td></tr>';
   }
   _lampSyncCount(box);
+  _lampSyncSubtotal(box);
   _lampUpdateHint();
 }
 window.removeLampiranMitra = removeLampiranMitra;
