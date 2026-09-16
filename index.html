@@ -13352,13 +13352,116 @@ function renderLaporanForm(){
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
-  if (hint) hint.textContent = plants.length + ' PLTU · bulan berjalan (Jan–' + (ck > 0 ? LAPORAN_MONTHS[ck - 1] : '—') + ') otomatis dari data dashboard; isi Realisasi saat ini, Prognosa & DO ' + ckName + '. Satuan: ton.';
+  if (hint) hint.textContent = plants.length + ' PLTU · bulan berjalan (Jan–' + (ck > 0 ? LAPORAN_MONTHS[ck - 1] : '—') + ') otomatis dari data dashboard; isi Realisasi saat ini, Prognosa & DO ' + ckName + '. Satuan: ton · ↑↓←→ pindah antar sel.';
   // V119: wilayah/tanggal berubah → daftar mitra di Lampiran ikut dibangun ulang
   // (isian yang sudah diketik dipertahankan lewat _lampReadForm di dalamnya).
   const lampOn = document.getElementById('laporanLampiranOn');
   if (lampOn && lampOn.checked) renderLaporanLampiran(false);
 }
 window.renderLaporanForm = renderLaporanForm;
+
+// ============================================================
+// V136: NAVIGASI PANAH DI TABEL ISIAN LAPORAN
+// Pada <input type="number">, ↑/↓ bawaan browser menaik-turunkan nilai satu
+// langkah — gampang mengubah angka tanpa sadar saat mengisi tabel panjang.
+// Di tab Laporan (grid PLTU + tabel lampiran per mitra) panah dipakai seperti
+// di spreadsheet: pindah sel. Berlaku untuk grid utama maupun lampiran karena
+// keduanya <table> dengan input di dalam <td>.
+// Catatan: type=number tidak punya selectionStart, jadi ←/→ di sana selalu
+// pindah sel. Pada input TEKS (jenis biomassa, nama mitra) ←/→ tetap
+// menggerakkan kursor selama belum di ujung teks.
+// ============================================================
+const LAP_NAV_SEL = 'input.laporan-form-input, input.lamp-text-input, input.lamp-mitra-input';
+
+function _lapNavCells(tr){
+  return tr ? Array.prototype.slice.call(tr.querySelectorAll(LAP_NAV_SEL)) : [];
+}
+
+function _lapNavRows(table){
+  return Array.prototype.slice.call(table.querySelectorAll('tbody tr'))
+    .filter(tr => tr.querySelector(LAP_NAV_SEL));
+}
+
+// Tabel grup PLTU berikutnya/sebelumnya di editor lampiran — grup bersebelahan
+// diperlakukan sebagai satu grid panjang supaya ↑/↓ tidak mentok di batas grup.
+function _lapNavSiblingTable(table, dir){
+  if (!table.classList.contains('lamp-table')) return null;
+  const box = table.closest('.lamp-pltu');
+  if (!box) return null;
+  let sib = box;
+  while ((sib = (dir > 0 ? sib.nextElementSibling : sib.previousElementSibling))){
+    if (!sib.classList || !sib.classList.contains('lamp-pltu')) continue;
+    const t = sib.querySelector('.lamp-table');
+    if (t && _lapNavRows(t).length) return t;
+  }
+  return null;
+}
+
+// Input pada baris `tr` yang kolomnya paling dekat dengan kolom `ci`. Perlu
+// karena tidak semua baris punya input di kolom yang sama (mis. nama mitra
+// dari Daftar Kontrak berupa teks biasa, bukan input).
+function _lapNavPick(tr, ci){
+  const cells = _lapNavCells(tr);
+  if (!cells.length) return null;
+  let best = null, bd = Infinity;
+  cells.forEach(el => {
+    const td = el.closest('td');
+    const d = Math.abs((td ? td.cellIndex : 0) - ci);
+    if (d < bd){ bd = d; best = el; }
+  });
+  return best;
+}
+
+function _lapNavFocus(el){
+  if (!el) return;
+  el.focus();
+  try { el.select(); } catch(e){}
+}
+
+function _lapArrowNav(e){
+  const k = e.key;
+  if (k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'ArrowLeft' && k !== 'ArrowRight') return;
+  if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+  const el = e.target;
+  if (!el || !el.matches || !el.matches(LAP_NAV_SEL)) return;
+  const td = el.closest('td'), tr = el.closest('tr'), table = el.closest('table');
+  if (!td || !tr || !table) return;
+  const horiz = (k === 'ArrowLeft' || k === 'ArrowRight');
+  if (horiz && el.type !== 'number'){
+    const s = el.selectionStart, t2 = el.selectionEnd;
+    if (s === null || s !== t2) return;                       // ada teks terseleksi
+    if (k === 'ArrowLeft' && s > 0) return;                   // kursor belum di awal
+    if (k === 'ArrowRight' && s < el.value.length) return;    // kursor belum di akhir
+  }
+  let next = null;
+  if (horiz){
+    const cells = _lapNavCells(tr);
+    const i = cells.indexOf(el);
+    next = cells[i + (k === 'ArrowRight' ? 1 : -1)] || null;
+    // Mentok di ujung baris → lanjut ke baris berikutnya/sebelumnya.
+    if (!next){
+      const rows = _lapNavRows(table);
+      const nr = rows[rows.indexOf(tr) + (k === 'ArrowRight' ? 1 : -1)];
+      const nc = nr ? _lapNavCells(nr) : [];
+      if (nc.length) next = (k === 'ArrowRight') ? nc[0] : nc[nc.length - 1];
+    }
+  } else {
+    const dir = (k === 'ArrowDown') ? 1 : -1;
+    const rows = _lapNavRows(table);
+    let nr = rows[rows.indexOf(tr) + dir];
+    if (!nr){
+      const t2 = _lapNavSiblingTable(table, dir);
+      const r2 = t2 ? _lapNavRows(t2) : [];
+      nr = r2.length ? (dir > 0 ? r2[0] : r2[r2.length - 1]) : null;
+    }
+    next = nr ? _lapNavPick(nr, td.cellIndex) : null;
+  }
+  // Pada input angka default SELALU dicegah, termasuk saat tidak ada sel tujuan
+  // — kalau tidak, panah di baris paling bawah/atas kembali mengubah nilai.
+  if (next || el.type === 'number') e.preventDefault();
+  _lapNavFocus(next);
+}
+document.addEventListener('keydown', _lapArrowNav);
 
 // Assemble a laporanModel from the on-page form + dashboard data.
 function buildLaporanModelFromForm(){
@@ -13748,7 +13851,8 @@ function renderLaporanLampiran(force, seedRows, seedRemoved){
   setHint(nMitra + ' kontrak aktif di ' + mName + ' ' + scope.year + ' dari Daftar Kontrak' +
     (nManual ? ' + ' + nManual + ' mitra manual' : '') +
     ' · jenis, volume kontrak, realisasi s.d. ' + prevName + ', DO & realisasi terisi otomatis; ' +
-    'prognosa default = realisasi. Satu mitra bisa muncul lebih dari sekali bila punya beberapa kontrak. Satuan: ton.');
+    'prognosa default = realisasi. Satu mitra bisa muncul lebih dari sekali bila punya beberapa kontrak. ' +
+    'Satuan: ton · ↑↓←→ pindah antar sel.');
 }
 window.renderLaporanLampiran = renderLaporanLampiran;
 
