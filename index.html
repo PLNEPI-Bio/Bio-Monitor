@@ -8815,8 +8815,18 @@ body.gf-on .gf-bar{
 .laporan-form-table td.ro{color:var(--text-dim);background:rgba(0,0,0,.06)}
 .laporan-form-table th.inp{color:#2e7d47}
 .laporan-form-table th.do-h{color:var(--warn)}
+/* V137: baris TOTAL grid isian per PLTU */
+.laporan-form-table tfoot td{background:var(--panel-3);font-weight:700;color:var(--text-bright)}
+.laporan-form-table tfoot td.pltu{font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:var(--text-dim)}
 /* sm tier: this one lives inside a data grid cell, so it stays dense. */
 .laporan-form-input{width:74px;box-sizing:border-box;background:var(--ctl-bg);border:var(--ctl-border-w) solid var(--border);border-radius:var(--ctl-radius);color:var(--text);font-size:11px;padding:4px var(--ctl-px-sm);min-height:var(--ctl-h-sm);text-align:right;font-family:inherit;transition:border-color var(--dur-fast) var(--ease-in-out)}
+/* V138: buang spinner ▲▼ bawaan <input type=number> di seluruh isian Laporan
+   (grid per PLTU & tabel lampiran per mitra). Sejak V136 panah keyboard dipakai
+   untuk pindah sel, jadi tombol naik-turun itu tinggal jadi jebakan klik yang
+   mengubah angka — sekaligus memakan lebar sel yang sudah sempit. */
+.laporan-form-input::-webkit-outer-spin-button,
+.laporan-form-input::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none;margin:0}
+.laporan-form-input{-moz-appearance:textfield;appearance:textfield}
 .laporan-form-input:hover{border-color:var(--border-bright)}
 .laporan-form-input:focus{border-color:#2e7d47}
 .laporan-form-input:disabled{background:var(--ctl-bg-disabled);color:var(--text-dim);opacity:.6;cursor:not-allowed}
@@ -13335,10 +13345,20 @@ function renderLaporanForm(){
   let html = '<table class="laporan-form-table"><thead><tr><th class="pltu">PLTU</th>';
   for (let m = 0; m < ck; m++) html += '<th>' + LAPORAN_MONTHS[m] + '</th>';
   html += '<th class="inp">Realisasi ' + ckName + ' saat ini</th><th class="inp">Prognosa ' + ckName + '</th><th class="do-h">DO ' + ckName + '</th></tr></thead><tbody>';
+  // V137: jumlah kolom bulan berjalan dihitung saat baris dibangun — nilainya
+  // read-only, jadi cukup sekali; kolom isian dijumlah ulang tiap ketikan.
+  const monthSums = new Array(ck).fill(0);
   plants.forEach((p, i) => {
     const real = p.real_2026 || [], doArr = p.do_2026 || [];
     html += '<tr><td class="pltu">' + escapeHtml(p.name || '—') + '</td>';
-    for (let m = 0; m < ck; m++) html += '<td class="ro">' + fmtInt(real[m] || 0) + '</td>';
+    for (let m = 0; m < ck; m++){
+      // Dijumlah dari nilai yang SUDAH dibulatkan seperti yang tampil di sel,
+      // bukan dari nilai mentah — baris ini untuk mencocokkan angka di layar,
+      // jadi kolomnya harus benar-benar bisa dijumlah dengan mata. Selisihnya
+      // terhadap total mentah paling banyak beberapa ton.
+      monthSums[m] += Math.round(+real[m] || 0);
+      html += '<td class="ro">' + fmtInt(real[m] || 0) + '</td>';
+    }
     // Keep the user's entered values on re-render; only fall back to the data
     // default (realisasi bulan berjalan / DO) for a fresh, untouched row.
     const saved = prevVals[(p.name || '—').trim()];
@@ -13350,8 +13370,10 @@ function renderLaporanForm(){
     html += '<td><input type="number" class="laporan-form-input" data-row="' + i + '" data-fld="do" value="' + dovV + '" placeholder="0"></td>';
     html += '</tr>';
   });
-  html += '</tbody></table>';
+  html += '</tbody>' + _lapFormFootHtml(monthSums) + '</table>';
   wrap.innerHTML = html;
+  _lapFormBindTotals(wrap);
+  _lapFormSyncTotals();
   if (hint) hint.textContent = plants.length + ' PLTU · bulan berjalan (Jan–' + (ck > 0 ? LAPORAN_MONTHS[ck - 1] : '—') + ') otomatis dari data dashboard; isi Realisasi saat ini, Prognosa & DO ' + ckName + '. Satuan: ton · ↑↓←→ pindah antar sel.';
   // V119: wilayah/tanggal berubah → daftar mitra di Lampiran ikut dibangun ulang
   // (isian yang sudah diketik dipertahankan lewat _lampReadForm di dalamnya).
@@ -13359,6 +13381,54 @@ function renderLaporanForm(){
   if (lampOn && lampOn.checked) renderLaporanLampiran(false);
 }
 window.renderLaporanForm = renderLaporanForm;
+
+// ============================================================
+// V137: BARIS TOTAL DI GRID ISIAN PER PLTU
+// Sepadan dengan baris TOTAL di editor lampiran (V135): kolom bulan berjalan
+// dijumlah sekali saat render (read-only), kolom isian — Realisasi saat ini,
+// Prognosa, DO — dihitung ulang tiap ketikan. Angkanya memakai fmtInt seperti
+// sel bulan berjalan di atasnya, jadi ikut dibulatkan ke ton penuh.
+// Baris ini duduk di <tfoot>, di luar <tbody>, supaya tidak terbaca oleh
+// prevVals di renderLaporanForm, buildLaporanModelFromForm, maupun navigasi
+// panah (_lapNavRows hanya melihat tbody).
+// ============================================================
+const LAP_FORM_SUM_FLDS = ['realnow', 'prognosa', 'do'];
+
+// Kolom isian menampilkan angka apa adanya (bisa desimal), jadi totalnya juga
+// desimal — beda dari kolom bulan berjalan yang memang bulat di layar.
+function _lapFormSumFmt(n){ return (+n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+
+function _lapFormFootHtml(monthSums){
+  let h = '<tfoot><tr><td class="pltu">Total</td>';
+  (monthSums || []).forEach(v => { h += '<td>' + fmtInt(v || 0) + '</td>'; });
+  LAP_FORM_SUM_FLDS.forEach(f => { h += '<td data-fsum="' + f + '">0</td>'; });
+  return h + '</tr></tfoot>';
+}
+
+function _lapFormSyncTotals(){
+  const table = document.querySelector('#laporanFormGridWrap .laporan-form-table');
+  const foot = table && table.querySelector('tfoot');
+  if (!table || !foot) return;
+  LAP_FORM_SUM_FLDS.forEach(f => {
+    let s = 0;
+    table.querySelectorAll('tbody .laporan-form-input[data-fld="' + f + '"]')
+      .forEach(el => { s += parseFloat(el.value) || 0; });
+    const cell = foot.querySelector('[data-fsum="' + f + '"]');
+    if (cell) cell.textContent = _lapFormSumFmt(s);
+  });
+}
+
+// Satu listener delegasi di pembungkus grid — barisnya dibangun ulang tiap
+// wilayah/tanggal berubah, jadi jangan dipasang per input.
+function _lapFormBindTotals(wrap){
+  if (!wrap || wrap._lapSumBound) return;
+  wrap._lapSumBound = true;
+  wrap.addEventListener('input', (e) => {
+    const t = e.target;
+    if (!t || !t.classList || !t.classList.contains('laporan-form-input')) return;
+    _lapFormSyncTotals();
+  });
+}
 
 // ============================================================
 // V136: NAVIGASI PANAH DI TABEL ISIAN LAPORAN
@@ -14555,6 +14625,9 @@ function loadLaporanIntoForm(model, id, meta){
     setVal('prognosa', prognosa);
     setVal('do', r.do || 0);
   });
+  // V137: nilai diisi lewat .value (tanpa event 'input'), jadi baris TOTAL
+  // harus dihitung ulang sendiri.
+  _lapFormSyncTotals();
 
   // V119: pulihkan halaman Lampiran (kalau laporan ini punya) — checkbox dinyalakan
   // lalu grid dibangun ulang dari Daftar Kontrak dengan nilai tersimpan sebagai seed,
