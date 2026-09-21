@@ -56,6 +56,19 @@ function plantNameFromFile(fn: string): string {
   return n.replace(/_/g, " ").trim();
 }
 
+// V140: "AGUSTUS 2026" -> 2026*12+8, comparable across years; 0 when the folder name
+// carries no period (e.g. "PNP", "BULANAN").
+const MONTHS: Record<string, number> = {
+  JANUARI: 1, JANUARY: 1, FEBRUARI: 2, FEBRUARY: 2, MARET: 3, MARCH: 3, APRIL: 4,
+  MEI: 5, MAY: 5, JUNI: 6, JUNE: 6, JULI: 7, JULY: 7, AGUSTUS: 8, AUGUST: 8,
+  SEPTEMBER: 9, OKTOBER: 10, OCTOBER: 10, NOVEMBER: 11, DESEMBER: 12, DECEMBER: 12,
+};
+function folderPeriod(name: string): number {
+  const m = /^\s*([A-Za-z]+)[\s_-]+(\d{4})\s*$/.exec(name);
+  const mon = m ? MONTHS[m[1].toUpperCase()] : undefined;
+  return mon ? Number(m![2]) * 12 + mon : 0;
+}
+
 function shareToken(url: string): string {
   const b64 = btoa(url);
   return "u!" + b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -260,17 +273,27 @@ Deno.serve(async (req: Request) => {
     }
     log.push(`Root: ${folders.map((f) => `${f.name}(${f.folder.childCount})`).join(", ")}`);
 
-    type SrcFile = { name: string; url: string; modified: string };
+    // V140: PNP moved its workbooks into per-period subfolders on 2026-09-21
+    // ("PNP/AGUSTUS 2026", "PNP/JUNI 2026", "PNP/BULANAN"), so walk one level deeper.
+    // Each file carries the period of the nearest folder named "<BULAN> <TAHUN>";
+    // per PLTU the newest period wins, so a plant missing from the latest folder
+    // falls back to its newest earlier file instead of disappearing.
+    type SrcFile = { name: string; url: string; modified: string; period: number; path: string };
     const files: SrcFile[] = [];
-    for (const f of folders) {
-      const kids = await getJson(`${origin}/_api/v2.0/drives/${driveId}/items/${f.id}/children`, cookie);
+    const walk = async (id: string, path: string, period: number, depth: number) => {
+      const kids = await getJson(`${origin}/_api/v2.0/drives/${driveId}/items/${id}/children`, cookie);
       for (const it of (kids.value || [])) {
         const dl = it["@content.downloadUrl"];
         if (it.file && dl && /\.xls[xmb]?$/i.test(it.name)) {
-          files.push({ name: it.name, url: dl, modified: _safeStr(it.lastModifiedDateTime) });
+          files.push({ name: it.name, url: dl, modified: _safeStr(it.lastModifiedDateTime), period, path });
+        } else if (it.folder && depth < 2) {
+          const sub = `${path}/${it.name}`;
+          log.push(`  subfolder ${sub} (${it.folder.childCount})`);
+          await walk(it.id, sub, folderPeriod(it.name) || period, depth + 1);
         }
       }
-    }
+    };
+    for (const f of folders) await walk(f.id, f.name, folderPeriod(f.name), 1);
     log.push(`Found ${files.length} workbooks`);
     if (!files.length) return await markError("No workbooks found.");
 
@@ -302,12 +325,21 @@ Deno.serve(async (req: Request) => {
     }
     const picked: (SrcFile & { code: string })[] = [];
     for (const [code, fs] of groups) {
-      fs.sort((a, b) => b.modified.localeCompare(a.modified) || b.name.localeCompare(a.name));
+      // V140: newest folder period first, then lastModifiedDateTime, then name.
+      fs.sort((a, b) => b.period - a.period || b.modified.localeCompare(a.modified) || b.name.localeCompare(a.name));
       picked.push({ ...fs[0], code });
       if (fs.length > 1) {
-        duplicates.push(`${code} -> ${fs[0].name} (ignored: ${fs.slice(1).map((x) => x.name).join(" | ")})`);
+        duplicates.push(`${code} -> ${fs[0].path}/${fs[0].name} (ignored: ${fs.slice(1).map((x) => `${x.path}/${x.name}`).join(" | ")})`);
       }
     }
+    // V140: plants whose file came from an older period than the newest one in the
+    // same top folder -- the fallback case, listed so it is visible in the heartbeat.
+    const topOf = (p: string) => p.split("/")[0];
+    const maxPeriod = new Map<string, number>();
+    for (const f of files) maxPeriod.set(topOf(f.path), Math.max(maxPeriod.get(topOf(f.path)) || 0, f.period));
+    const fallback = picked
+      .filter((f) => f.period < (maxPeriod.get(topOf(f.path)) || 0))
+      .map((f) => `${f.code} <- ${f.path}/${f.name}`);
 
     // data[kode] = { r: total rencana pasokan, d: total realisasi DO }.
     // Klien memakai r sebagai "Kontrak <tahun>" dan r-d sebagai "Sisa Kontrak <tahun>".
@@ -350,6 +382,7 @@ Deno.serve(async (req: Request) => {
     log.push(`Parsed ${n} plants · skipped ${unmatched.length} unmatched · ${unparsed.length} failed`);
     if (unmatched.length) log.push(`  unmatched: ${unmatched.join(", ")}`);
     if (duplicates.length) log.push(`  duplicate: ${duplicates.join("; ")}`);
+    if (fallback.length) log.push(`  older period (not in latest folder): ${fallback.join("; ")}`);
     if (unparsed.length) log.push(`  failed: ${unparsed.join(", ")}`);
     if (noRealisasi.length) log.push(`  no "TOTAL REALISASI DO" row: ${noRealisasi.join(", ")}`);
 

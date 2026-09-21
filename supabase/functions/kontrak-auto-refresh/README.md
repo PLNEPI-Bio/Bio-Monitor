@@ -62,11 +62,17 @@ Folder share anonim berisi dua subfolder:
 | Subfolder | Isi | Konvensi nama |
 | :--- | :--- | :--- |
 | `PIP` | 28 workbook (PIP + UIW + 2 UIK) | `Profil Pasokan PLTU <Nama PLTU> per <Bulan> <Tahun>.xlsx` (sejak 2026-09-11); skema lama `Profil_Pasokan_<Nama PLTU>_<GENCO>_2026.xlsx` masih dikenali |
-| `PNP` | 20 workbook + 1 kertas kerja | `<NAMA PLTU>.xlsx` |
+| `PNP` | subfolder per periode (sejak 2026-09-21): `AGUSTUS 2026/`, `JUNI 2026/`, `BULANAN/` | `<NAMA PLTU>.xlsx` / `<NAMA_PLTU>.xlsx` |
 
-Bila satu PLTU punya lebih dari satu file (mis. "per Agustus" dan "per September", atau
-file skema lama tertinggal), hanya file dengan `lastModifiedDateTime` terbaru yang dipakai;
-sisanya dicatat di log sebagai `duplicate:`.
+Fungsi menelusuri satu tingkat subfolder (V140). Tiap file diberi **periode** dari nama
+folder terdekat berbentuk `<BULAN> <TAHUN>` (Indonesia/Inggris); folder tanpa periode
+(`PNP`, `BULANAN`) bernilai 0.
+
+Bila satu PLTU punya lebih dari satu file, urutan pemilihan: **periode folder terbaru**,
+lalu `lastModifiedDateTime` terbaru, lalu nama. Jadi PNP memakai folder bulan terbaru,
+dan PLTU yang belum ada di folder itu jatuh ke file periode sebelumnya (dicatat di log
+sebagai `older period`). File yang kalah dicatat sebagai `duplicate:`. Folder bulan baru
+(mis. `SEPTEMBER 2026/`) otomatis menang tanpa redeploy.
 
 Di tiap workbook, sheet **"Profil Pasokan"** memuat empat baris total di kolom B:
 
