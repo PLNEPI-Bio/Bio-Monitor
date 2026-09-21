@@ -8823,9 +8823,14 @@ body.gf-on .gf-bar{
 /* V138: buang spinner ▲▼ bawaan <input type=number> di seluruh isian Laporan
    (grid per PLTU & tabel lampiran per mitra). Sejak V136 panah keyboard dipakai
    untuk pindah sel, jadi tombol naik-turun itu tinggal jadi jebakan klik yang
-   mengubah angka — sekaligus memakan lebar sel yang sudah sempit. */
+   mengubah angka — sekaligus memakan lebar sel yang sudah sempit.
+   V139: `display:none` WAJIB, bukan cuma `appearance:none`. Chromium memproses
+   scroll-wheel pada input angka yang sedang fokus lewat elemen spin-button; selama
+   elemen itu masih punya layout box (appearance:none hanya menyembunyikan
+   gambarnya), scroll tetap menaik-turunkan nilai. Dengan display:none layout box-nya
+   hilang, jadi scroll kembali menggulung halaman. Teruji lewat CDP mouseWheel. */
 .laporan-form-input::-webkit-outer-spin-button,
-.laporan-form-input::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none;margin:0}
+.laporan-form-input::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none;margin:0;display:none}
 .laporan-form-input{-moz-appearance:textfield;appearance:textfield}
 .laporan-form-input:hover{border-color:var(--border-bright)}
 .laporan-form-input:focus{border-color:#2e7d47}
