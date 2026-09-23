@@ -18600,7 +18600,8 @@ function renderKontrakJenisPie(){
     const yt = c.realisasi_total || {};
     let val = 0;
     if (year === 'all'){
-      val = (yt['2023']||0) + (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
+      // V142: "Semua" = 2024–2026, selaras dengan opsi dropdown (tanpa 2023).
+      val = (yt['2024']||0) + (yt['2025']||0) + (yt['2026']||0);
     } else {
       val = yt[year] || 0;
     }
@@ -18667,7 +18668,7 @@ function renderKontrakJenisPie(){
     grandTotal,
     pctBase,                          // V131
     nHidden: sortedAll.length - sorted.length,   // V131
-    yearLabel: year === 'all' ? 'Total 2023–2026' : year,
+    yearLabel: year === 'all' ? 'Total 2024–2026' : year,
     note: _kontrakJenisScopeNote(),   // V131
   };
 
@@ -18709,7 +18710,7 @@ function renderKontrakJenisPie(){
 
   // Render legend table
   if (legendEl){
-    const yearLabel = year === 'all' ? 'Total 2023–2026' : year;
+    const yearLabel = year === 'all' ? 'Total 2024–2026' : year;
     let html = '<div style="font-family:Plus Jakarta Sans,sans-serif;font-size:9px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-weight:600">Realisasi ' + yearLabel + ' · ' + fmtInt(grandTotal) + ' ton</div>';
     html += sortedAll.map(([j, v]) => {
       const pct = pctBase > 0 ? (v / pctBase * 100).toFixed(1) : 0;   // V131
