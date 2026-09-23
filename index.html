@@ -7456,6 +7456,88 @@ body.gf-on .gf-bar{
   .cmdk,.kbdhelp,.qtoast,.verbanner{animation:none}
   .qtoast.out{animation:none;opacity:0}
 }
+
+/* ===========================================================================
+   V144 — TABEL DAFTAR KONTRAK, TATA ULANG. Di-scope ke .kt-v2 (hanya tabel utama
+   tab Daftar Kontrak) karena .kontrak-table juga dipakai tabel popup breakdown.
+   Prinsip: struktur dibawa oleh GARIS (hairline antar baris, rule antar blok
+   kolom), bukan kotak; angka rata kanan tabular; warna hanya untuk kondisi.
+   =========================================================================== */
+.kontrak-table.kt-v2{font-size:var(--fs-body)}
+.kontrak-table.kt-v2 th,.kontrak-table.kt-v2 td{padding:9px 10px}
+/* Baris kelompok: label kecil di atas rule tebal, sticky di atas baris kolom. */
+.kontrak-table.kt-v2 thead tr.kt-group-row th{
+  height:26px;box-sizing:border-box;padding:6px 10px 4px;top:0;
+  background:var(--panel);box-shadow:none;border-bottom:var(--bar);
+  font-size:var(--fs-note);letter-spacing:1.2px;color:var(--text-bright);font-weight:800;
+  text-align:left;cursor:default;
+}
+.kontrak-table.kt-v2 thead tr.kt-group-row th.kt-grp-real{color:var(--accent-cyan-ink)}
+.kontrak-table.kt-v2 thead tr.kt-col-row th{
+  top:26px;padding:8px 10px;font-size:var(--fs-note);letter-spacing:.7px;
+  background:var(--panel-3);border-bottom:var(--rule);vertical-align:bottom;
+}
+.kontrak-table.kt-v2 thead th.kt-num{text-align:right}
+.kontrak-table.kt-v2 .kt-unit{font-weight:600;color:var(--text-dim);letter-spacing:.3px;text-transform:none;margin-left:2px}
+/* Garis pemisah antar blok kolom — di header, badan, dan footer. */
+.kontrak-table.kt-v2 .kt-grp-sep,.kontrak-table.kt-v2 .kt-sep{border-left:1px solid var(--rule-ink-hair)}
+.kontrak-table.kt-v2 td.year-real,.kontrak-table.kt-v2 th.year-header,
+.kontrak-table.kt-v2 td.derived-cell,.kontrak-table.kt-v2 th.derived-header,
+.kontrak-table.kt-v2 td.old-year-cell{border-left:none}
+.kontrak-table.kt-v2 .kt-sep.year-real,.kontrak-table.kt-v2 .kt-sep.year-header,
+.kontrak-table.kt-v2 .kt-sep.derived-cell,.kontrak-table.kt-v2 .kt-sep.derived-header{border-left:1px solid var(--rule-ink-hair)}
+/* Badan: hairline antar baris, zebra halus, angka lebih tegas. */
+.kontrak-table.kt-v2 tbody td{border-bottom:var(--hairline);vertical-align:middle}
+.kontrak-table.kt-v2 td.num,.kontrak-table.kt-v2 td.year-real{font-size:var(--fs-lead);padding-right:12px}
+.kontrak-table.kt-v2 td.kt-na{color:var(--text-dim);opacity:.45}
+/* Penanda rumus (garis titik-titik) hanya muncul saat baris disorot — di tabel
+   sepadat ini garis di SETIAP angka jadi derau yang menenggelamkan angkanya. */
+.kontrak-table.kt-v2 tbody [data-calc]{text-decoration-color:transparent}
+.kontrak-table.kt-v2 tbody tr:hover [data-calc],
+.kontrak-table.kt-v2 [data-calc]:focus-visible{text-decoration-color:var(--border-bright)}
+.kontrak-table.kt-v2 [data-calc]:hover,
+.kontrak-table.kt-v2 [data-calc].calc-open{text-decoration-color:var(--accent)}
+/* PLTU + genco */
+.kontrak-table.kt-v2 td.kt-pltu{min-width:96px;white-space:normal}
+.kt-pltu-name{font-weight:700;color:var(--text-bright);line-height:1.3}
+.kt-genco{margin-top:3px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-note);font-weight:700;letter-spacing:1px;color:var(--text-dim)}
+.kt-genco::before{content:'';width:7px;height:7px;background:var(--gc)}
+/* Mitra + nomor kontrak */
+.kontrak-table.kt-v2 td.kt-mitra{min-width:190px;max-width:260px;white-space:normal;line-height:1.35}
+.kontrak-table.kt-v2 td.kt-mitra .kontrak-pemasok-link{font-weight:600;font-size:var(--fs-lead)}
+.kt-nokontrak{margin-top:3px;font-size:var(--fs-note);color:var(--text-dim);letter-spacing:.2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;font-variant-numeric:tabular-nums}
+.kontrak-table.kt-v2 td.kt-mitra .do-anom-badge{margin-left:6px}
+/* Periode */
+.kontrak-table.kt-v2 td.kt-periode{min-width:150px}
+.kt-dates{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.kt-dates .kontrak-date{font-size:var(--fs-data);color:var(--text)}
+.kt-arrow{color:var(--text-dim);font-size:var(--fs-note)}
+.kt-time{margin-top:5px;display:flex;align-items:center;gap:6px}
+.kt-time-track{flex:1;min-width:48px;height:3px;background:var(--rule-ink-hair);position:relative;overflow:hidden}
+.kt-time-fill{position:absolute;inset:0 auto 0 0;background:var(--text-dim)}
+.kt-time-lbl{font-size:var(--fs-note);color:var(--text-dim);white-space:nowrap;min-width:58px}
+.kt-time.done .kt-time-fill{background:var(--rule-ink-rule);opacity:.5}
+.kt-time.done .kt-time-lbl{opacity:.7}
+.kt-time.soon .kt-time-fill{background:var(--status-warn)}
+.kt-time.soon .kt-time-lbl{color:var(--status-warn-ink);font-weight:700}
+/* Progres realisasi: bar + angka */
+.kontrak-table.kt-v2 td.kt-prog-cell{min-width:112px}
+.kt-prog{display:flex;align-items:center;gap:7px;--pc:var(--status-crit);--pi:var(--status-crit-ink)}
+.kt-prog.mid{--pc:var(--status-warn);--pi:var(--status-warn-ink)}
+.kt-prog.high{--pc:var(--status-ok);--pi:var(--status-ok-ink)}
+.kt-prog.over{--pc:var(--purple-ink);--pi:var(--purple-ink)}
+.kt-prog-track{flex:1;min-width:52px;height:6px;background:color-mix(in srgb,var(--pc) 14%,var(--panel-3));position:relative;overflow:hidden}
+.kt-prog-fill{position:absolute;inset:0 auto 0 0;background:var(--pc)}
+.kt-prog-val{min-width:40px;text-align:right;font-size:var(--fs-data);font-weight:700;color:var(--pi);font-variant-numeric:tabular-nums}
+/* Amandemen */
+.kt-amd{display:inline-block;padding:2px 7px;border:1px solid var(--accent-line);background:var(--accent-soft);
+  color:var(--accent);font-size:var(--fs-note);font-weight:700;letter-spacing:.4px;white-space:nowrap}
+.kontrak-table.kt-v2 .kt-amd[data-calc]{text-decoration:none}
+.kt-amd-none{color:var(--text-dim);opacity:.45}
+/* Footer */
+.kontrak-table.kt-v2 tfoot td{border-top:var(--bar);padding:10px;font-size:var(--fs-lead)}
+.kontrak-table.kt-v2 tfoot td.kt-total-label{text-align:left;font-size:var(--fs-note);letter-spacing:1.2px;text-transform:uppercase;color:var(--text-bright);font-weight:800}
 </style>
 </head>
 <body>
@@ -19499,6 +19581,160 @@ function _kontrakAvgReal(c){
   const r = _kontrakRealMonths(c);
   return r.n > 0 ? r.sum / r.n : 0;
 }
+// V144: isi sel "Periode" — Awal → Akhir plus bar waktu berjalan hari ini.
+function _kontrakPeriodeCell(c){
+  const a = _kontrakParseYmd(c && c.awal), b = _kontrakParseYmd(c && c.akhir);
+  let bar = '';
+  if (a && b){
+    const t0 = new Date(a.y, a.m, a.d).getTime(), t1 = new Date(b.y, b.m, b.d).getTime();
+    const now = Date.now();
+    if (t1 > t0){
+      const p = Math.max(0, Math.min(1, (now - t0) / (t1 - t0)));
+      const sisaHari = Math.ceil((t1 - now) / 864e5);
+      const lbl = now < t0 ? 'Belum mulai'
+        : now > t1 ? 'Berakhir'
+        : (sisaHari <= 30 ? sisaHari + ' hari lagi' : Math.round(p * 100) + '% waktu');
+      const cls = now > t1 ? ' done' : (now >= t0 && sisaHari <= 30 ? ' soon' : '');
+      bar = '<div class="kt-time' + cls + '" title="Waktu kontrak berjalan per hari ini: ' + Math.round(p * 100) + '%">' +
+        '<span class="kt-time-track"><span class="kt-time-fill" style="width:' + (p * 100).toFixed(1) + '%"></span></span>' +
+        '<span class="kt-time-lbl">' + lbl + '</span></div>';
+    }
+  }
+  return '<div class="kt-dates">' + fmtKontrakDate(c && c.awal) + '<span class="kt-arrow">→</span>' + fmtKontrakDate(c && c.akhir) + '</div>' + bar;
+}
+
+// =====================================================
+// V143 — KOLOM "HARGA" DI TABEL DAFTAR KONTRAK
+//
+// Sumber: workbook "Data Kontrak Aktif 2025-2026.xlsx" (sheet Terkontrak 2025 &
+// Terkontrak 2026), kolom Harga Satuan Molekul / Transport / Exc PPN, dalam
+// Rp per ton. V146: disimpan di tabel Supabase `kontrak_harga` (satu baris per
+// baris Excel; ditulis hanya lewat SQL/service role, anon cuma SELECT) — BUKAN
+// ditanam di HTML (repo publik) dan BUKAN di dashboard_data (ditimpa utuh oleh
+// prod-auto-refresh tiap 20 menit). Setelah fetch, KONTRAK_HARGA_SRC berisi
+// baris: [no kontrak, mitra, PLTU, jenis, volume, harga molekul, harga
+// transport, harga satuan exc PPN]. null = kosong/"-" di Excel.
+//
+// Pencocokan dengan DATA.contracts, berurutan:
+//  1. Nomor kontrak — nomor urut + jenis dokumen (SPK/Pj). Tahun di ujung
+//     nomor boleh beda (ada salah ketik 2024/2025 di data dashboard), TETAPI
+//     kalau beda maka PLTU dan jenis wajib cocok.
+//  2. Mitra — wajib mirip. Toleran salah eja ("Esa Cakti"/"Eca Sakti",
+//     "Grup"/"Group") lewat kemiripan bigram, tetapi menolak nomor yang sama
+//     dengan mitra lain sama sekali (nomor salah input).
+//  3. PLTU + jenis — memilih di antara beberapa baris Excel bernomor sama
+//     (satu kontrak Pj bisa memasok beberapa PLTU/jenis dengan harga berbeda).
+// Bila setelah itu masih tersisa beberapa baris (kontrak yang sama dipecah
+// jadi beberapa pos harga), harga ditampilkan rata-rata tertimbang volume.
+// Kontrak 2021–2024 memang tidak ada di workbook ini → sel kosong.
+// =====================================================
+// V146: diisi fetchKontrakHarga() dari tabel Supabase `kontrak_harga` — datanya
+// TIDAK boleh ditanam di sini: repo ini publik (GitHub Pages).
+let KONTRAK_HARGA_SRC = [];
+function _hargaNoKey(s){
+  const t = String(s || '').toUpperCase().trim();
+  const m = /^0*(\d+)\s*\.?\s*([A-Z]+)/.exec(t);
+  if (!m) return null;
+  const y = /(20\d\d)\s*$/.exec(t);
+  return { k: m[1] + '|' + m[2], y: y ? y[1] : '' };
+}
+function _hargaCompact(s){
+  return String(s || '').toLowerCase()
+    .replace(/\b(pt|cv|kso|ud|tbk|koperasi|konsorsium|antara|produsen)\b/g, ' ')
+    .replace(/[^a-z0-9]/g, '');
+}
+// Dice coefficient atas bigram huruf — 1 = identik.
+function _hargaDice(a, b){
+  if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return 0;
+  if (a.indexOf(b) >= 0 || b.indexOf(a) >= 0) return 0.95;
+  const bg = {};
+  for (let i = 0; i < a.length - 1; i++){ const g = a.substr(i, 2); bg[g] = (bg[g] || 0) + 1; }
+  let hit = 0;
+  for (let i = 0; i < b.length - 1; i++){ const g = b.substr(i, 2); if (bg[g] > 0){ bg[g]--; hit++; } }
+  return 2 * hit / (a.length + b.length - 2);
+}
+// PLTU cocok bila sama atau salah satu awalan yang lain ("Paiton" ↔ "Paiton 9",
+// "Labuan" ↔ "Labuan Banten").
+function _hargaPltuSama(a, b){
+  const x = _hargaCompact(a), y = _hargaCompact(b);
+  return !!x && !!y && (x === y || x.indexOf(y) === 0 || y.indexOf(x) === 0);
+}
+// V145: jenis harus SAMA PERSIS (setelah dinormalisasi). Substring dulu membuat
+// "Sekam Padi" dianggap sama dengan "Pellet Sekam Padi" — padahal itu dua
+// komoditas berbeda dengan harga berbeda (dikonfirmasi user 2026-09-23).
+function _hargaJenisSama(a, b){
+  const x = _hargaCompact(a), y = _hargaCompact(b);
+  return !!x && x === y;
+}
+// Nomor kontrak yang mitranya sah berbeda nama antara dashboard dan Excel
+// (perubahan nama/pengalihan mitra, dikonfirmasi user 2026-09-23) — cek
+// kemiripan mitra dilewati. Kunci: hasil _hargaNoKey → k + '@' + y.
+const KONTRAK_HARGA_MITRA_BEDA = {
+  '3063|PJ@2025': 1,   // PLN EPI Investasi ↔ PT Energi Biomasa Indonesia (Suralaya)
+  '1982|SPK@2025': 1   // Bumi Hijau Prima ↔ Bumi Hijau Putra (Pulang Pisau)
+};
+// Nomor kontrak yang jenisnya sah berbeda tulisan antara dashboard dan Excel
+// (dikonfirmasi user 2026-09-23) — jenis dianggap cocok. Kunci sama seperti di atas.
+const KONTRAK_HARGA_JENIS_BEDA = {
+  '968|PJ@2026': 1,    // Indramayu: Serbuk ↔ Sawdust
+  '2975|PJ@2025': 1,   // Barru: Pellet Sekam ↔ Pellet Sekam Padi
+  '2434|PJ@2025': 1    // Ropa: (kosong) ↔ Cangkang Kemiri
+};
+let _kontrakHargaIdx = null;
+function _kontrakHargaIndex(){
+  if (_kontrakHargaIdx) return _kontrakHargaIdx;
+  const idx = {};
+  for (const r of KONTRAK_HARGA_SRC){
+    const nk = _hargaNoKey(r[0]);
+    if (!nk) continue;
+    (idx[nk.k] = idx[nk.k] || []).push({ no: r[0], y: nk.y, mitra: r[1], pltu: r[2], jenis: r[3],
+      vol: r[4] || 0, hm: r[5], ht: r[6], h: r[7] });
+  }
+  return (_kontrakHargaIdx = idx);
+}
+let _kontrakHargaCache = new WeakMap();
+// → null, atau { h, hm, ht, rows:[baris Excel], pltuOk, jenisOk, mitraExact }
+function getKontrakHarga(c){
+  if (!c) return null;
+  if (_kontrakHargaCache.has(c)) return _kontrakHargaCache.get(c);
+  let res = null;
+  const nk = _hargaNoKey(c.kontrak);
+  const cand = nk ? (_kontrakHargaIndex()[nk.k] || []) : [];
+  const mc = _hargaCompact(c.pemasok);
+  const mitraBebas = !!(nk && KONTRAK_HARGA_MITRA_BEDA[nk.k + '@' + nk.y]);
+  const jenisBebas = !!(nk && KONTRAK_HARGA_JENIS_BEDA[nk.k + '@' + nk.y]);
+  let best = [], bestScore = -1;
+  for (const r of cand){
+    if (!mitraBebas && _hargaDice(mc, _hargaCompact(r.mitra)) < 0.75) continue;
+    const pOk = _hargaPltuSama(c.pltu, r.pltu), jOk = jenisBebas || _hargaJenisSama(c.jenis, r.jenis);
+    if (nk.y && r.y && nk.y !== r.y && !(pOk && jOk)) continue;
+    const sc = (pOk ? 2 : 0) + (jOk ? 1 : 0) + (nk.y === r.y ? 0.5 : 0);
+    if (sc > bestScore){ best = [r]; bestScore = sc; }
+    else if (sc === bestScore) best.push(r);
+  }
+  if (best.length){
+    const r0 = best[0];
+    const pltuOk = _hargaPltuSama(c.pltu, r0.pltu), jenisOk = jenisBebas || _hargaJenisSama(c.jenis, r0.jenis);
+    // Beberapa baris setara tapi untuk PLTU berbeda (mis. Sanggau & Sintang
+    // tanpa PLTU yang cocok) → ambigu, lebih baik kosong daripada salah.
+    const ambigu = best.some(r => _hargaCompact(r.pltu) !== _hargaCompact(r0.pltu) ||
+                                  _hargaCompact(r.jenis) !== _hargaCompact(r0.jenis));
+    if (!ambigu){
+      const wAvg = (key) => {
+        let s = 0, w = 0;
+        for (const r of best){ if (r[key] == null) return null; const v = r.vol || 1; s += r[key] * v; w += v; }
+        return w > 0 ? s / w : null;
+      };
+      res = { h: wAvg('h'), hm: wAvg('hm'), ht: wAvg('ht'), rows: best, pltuOk, jenisOk,
+              mitraExact: _hargaCompact(r0.mitra) === mc };
+      if (res.h == null) res = null;
+    }
+  }
+  _kontrakHargaCache.set(c, res);
+  return res;
+}
+window.getKontrakHarga = getKontrakHarga;
 
 // =====================================================
 // V110 — SORTIR TABEL "DAFTAR KONTRAK"
@@ -19542,6 +19778,8 @@ function _kontrakSortKey(c, col, realCols){
     case 'awal':      return c.awal || '';
     case 'akhir':     return c.akhir || '';
     case 'vol':       return c.vol_mt || 0;
+    // V143: kontrak tanpa harga diberi -1 agar selalu di ujung bawah saat menurun.
+    case 'harga':     { const hg = getKontrakHarga(c); return hg ? hg.h : -1; }
     // V113: keduanya angka, jadi klik pertama mengurutkan MENURUN — mitra
     // dengan laju kirim terbesar/kewajiban bulanan terberat muncul di atas.
     case 'avgreal':   return _kontrakAvgReal(c);
@@ -19638,25 +19876,33 @@ function renderKontrakTable(){
       ' onkeydown="kontrakSortKeydown(event,\'' + col + '\')"' +
       ' title="Klik untuk mengurutkan menurut ' + escapeHtml(plain) + '">' + label + '</th>';
   };
-  let header = '<thead><tr>';
-  header += kth('genco', 'Genco');
+  // V144: header dua tingkat. Baris atas = kelompok kolom, supaya 15+ kolom
+  // terbaca sebagai 5 blok (Kontrak · Volume · DO & Realisasi · Laju · Amd).
+  // Genco digabung ke sel PLTU, No Kontrak ke sel Mitra, Awal/Akhir ke Periode
+  // — baris jadi jauh lebih pendek tanpa ada data yang hilang.
+  let header = '<thead><tr class="kt-group-row">';
+  header += '<th colspan="5" class="kt-grp">Kontrak</th>';
+  header += '<th colspan="3" class="kt-grp kt-grp-sep">Volume (MT)</th>';
+  if (realCols.length) header += '<th colspan="' + realCols.length + '" class="kt-grp kt-grp-sep kt-grp-real">DO &amp; Realisasi (MT)</th>';
+  header += '<th colspan="2" class="kt-grp kt-grp-sep">Laju (MT/bln)</th>';
+  header += '<th class="kt-grp kt-grp-sep"></th>';
+  header += '</tr><tr class="kt-col-row">';
   header += kth('pltu', 'PLTU');
-  header += kth('pemasok', 'Pemasok');
-  header += kth('vol', 'Vol (MT)');
-  header += kth('kontrak', 'Kontrak');
-  header += kth('awal', 'Awal');
-  header += kth('akhir', 'Akhir');
+  header += kth('pemasok', 'Mitra · No. Kontrak');
   header += kth('jenis', 'Jenis');
-  header += kth('sisa', 'Sisa');
-  header += kth('pct', '%');
+  header += kth('akhir', 'Periode');
+  header += kth('harga', 'Harga <span class="kt-unit">Rp/ton</span>', 'kt-num');
+  header += kth('vol', 'Kontrak', 'kt-num kt-sep');
+  header += kth('sisa', 'Sisa', 'kt-num');
+  header += kth('pct', 'Progres');
   for (let i = 0; i < realCols.length; i++){
     header += kth('real' + i, realCols[i].label,
-      'year-header' + (realCols[i].metric === 'do' ? ' do-header' : '') + (realCols[i].isOld ? ' old-year' : ''));
+      'kt-num year-header' + (realCols[i].metric === 'do' ? ' do-header' : '') + (realCols[i].isOld ? ' old-year' : '') + (i === 0 ? ' kt-sep' : ''));
   }
   // V113: dua kolom turunan, tepat di kiri "Amandemen".
-  header += kth('avgreal', 'Avg Real', 'derived-header');
-  header += kth('mindo', 'Min DO', 'derived-header');
-  header += kth('amandemen', 'Amandemen');
+  header += kth('avgreal', 'Avg Real', 'kt-num derived-header kt-sep');
+  header += kth('mindo', 'Min DO', 'kt-num derived-header');
+  header += kth('amandemen', 'Amd', 'kt-sep');
   header += '</tr></thead>';
 
   // Body
@@ -19682,15 +19928,42 @@ function renderKontrakTable(){
       : '';
 
     let row = '<tr' + (doAnom.anomaly ? ' class="row-do-anom"' : '') + '>';
-    row += '<td><span class="kontrak-genco-pill" style="color:' + gcColor + ';border-color:' + gcColor + '40">' + c.genco + '</span></td>';
-    row += '<td class="wrap" style="color:var(--text-bright);font-weight:500">' + escapeHtml(c.pltu) + '</td>';
-    row += '<td class="wrap"><a href="#" class="kontrak-pemasok-link" data-pemasok="' + escapeHtml(pemasokAttr) + '" data-pltu="' + escapeHtml(c.pltu) + '" data-kontrak="' + escapeHtml(c.kontrak || '') + '">' + escapeHtml(c.pemasok) + '</a>' + doAnomBadge + '</td>';
-    row += '<td class="num">' + fmtInt(vol) + '</td>';
-    row += '<td class="wrap" style="font-size:9px;color:var(--text-dim);line-height:1.4">' + (c.kontrak ? escapeHtml(c.kontrak) : '—') + '</td>';
-    row += '<td>' + fmtKontrakDate(c.awal) + '</td>';
-    row += '<td>' + fmtKontrakDate(c.akhir) + '</td>';
+    // V144: PLTU + Genco dalam satu sel; Mitra + No Kontrak dalam satu sel.
+    row += '<td class="kt-pltu"><div class="kt-pltu-name">' + escapeHtml(c.pltu) + '</div>' +
+      '<div class="kt-genco" style="--gc:' + gcColor + '">' + escapeHtml(c.genco || '') + '</div></td>';
+    row += '<td class="kt-mitra"><a href="#" class="kontrak-pemasok-link" data-pemasok="' + escapeHtml(pemasokAttr) + '" data-pltu="' + escapeHtml(c.pltu) + '" data-kontrak="' + escapeHtml(c.kontrak || '') + '">' + escapeHtml(c.pemasok) + '</a>' + doAnomBadge +
+      '<div class="kt-nokontrak" title="' + escapeHtml(c.kontrak || '') + '">' + (c.kontrak ? escapeHtml(c.kontrak) : '—') + '</div></td>';
     row += '<td>' + (c.jenis ? '<span class="kontrak-jenis-pill">' + escapeHtml(c.jenis) + '</span>' : '<span style="opacity:.4">—</span>') + '</td>';
+    // V144: Periode = Awal → Akhir + bar waktu berjalan (hari ini terhadap masa
+    // kontrak). Sengaja netral/abu, bukan warna status: ini posisi waktu, bukan
+    // penilaian — dan tidak mengikuti filter periode seperti kolom Progres.
+    row += '<td class="kt-periode">' + _kontrakPeriodeCell(c) + '</td>';
+    // V143 — Harga satuan exc PPN dari workbook Data Kontrak Aktif 2025-2026
+    const hg = getKontrakHarga(c);
+    if (hg){
+      const steps = [];
+      if (hg.hm != null) steps.push(['Harga molekul', 'Rp ' + fmtInt(hg.hm) + '/ton']);
+      if (hg.ht != null) steps.push(['+ Harga transport', 'Rp ' + fmtInt(hg.ht) + '/ton']);
+      if (hg.rows.length > 1){
+        for (const r of hg.rows) steps.push(['Pos ' + fmtInt(r.vol) + ' ton', 'Rp ' + fmtInt(r.h) + '/ton']);
+      }
+      const notes = ['Sumber: Data Kontrak Aktif 2025-2026 (Excel), cocok Nomor Kontrak ' + hg.rows[0].no + '.'];
+      if (hg.rows.length > 1) notes.push('Kontrak ini punya ' + hg.rows.length + ' pos harga — yang tampil rata-rata tertimbang volume.');
+      if (!hg.mitraExact) notes.push('Nama mitra di Excel: "' + hg.rows[0].mitra + '".');
+      if (!hg.pltuOk) notes.push('PLTU di Excel: ' + hg.rows[0].pltu + '.');
+      if (!hg.jenisOk) notes.push('Jenis di Excel: ' + (hg.rows[0].jenis || '—') + '.');
+      row += '<td class="num"' + calcAttr({
+        title: 'Harga Satuan (exc. PPN)',
+        formula: hg.hm != null && hg.ht != null ? 'Harga molekul + harga transport' : 'Harga satuan exc. PPN sesuai kontrak',
+        steps: steps,
+        result: ['Harga', 'Rp ' + fmtInt(hg.h) + '/ton'],
+        note: notes.join(' ')
+      }) + '>' + fmtInt(hg.h) + '</td>';
+    } else {
+      row += '<td class="num kt-na" title="Tidak ditemukan di Data Kontrak Aktif 2025-2026">—</td>';
+    }
     const sisaColor = displayedSisa < 0 ? 'var(--danger)' : (displayedSisa < vol * 0.1 ? 'var(--warn)' : 'var(--text-bright)');
+    row += '<td class="num kt-sep">' + fmtInt(vol) + '</td>';
     row += '<td class="num" style="color:' + sisaColor + '"' + calcAttr({
       title: 'Sisa Kontrak',
       formula: 'Volume kontrak − realisasi (mengikuti filter tahun/bulan yang aktif)',
@@ -19701,7 +19974,9 @@ function renderKontrakTable(){
       result: ['Sisa', fmtInt(displayedSisa) + ' MT'],
       note: 'Nilai ini ikut berubah bila filter tahun/bulan di atas tabel diubah, karena realisasi yang dikurangkan hanya yang masuk periode terpilih.'
     }) + '>' + fmtInt(displayedSisa) + '</td>';
-    row += '<td style="text-align:center"><span class="kontrak-pct-badge ' + pctClass + '"' + calcAttr({
+    // V144: badge % diganti bar progres — panjang bar terbaca sekilas saat
+    // memindai kolom, angka tetap di sebelahnya. Warna ikut pctBadgeClass.
+    row += '<td class="kt-prog-cell"><span class="kt-prog ' + pctClass + '"' + calcAttr({
       title: '% Realisasi',
       formula: 'Realisasi (terfilter) ÷ Volume kontrak × 100',
       steps: [
@@ -19711,7 +19986,8 @@ function renderKontrakTable(){
       ],
       result: ['% Realisasi', displayedPct.toFixed(1) + '%'],
       note: 'Terhadap volume seumur kontrak. Bila filter periode dipersempit, pembilangnya mengecil sementara pembaginya tetap.'
-    }) + '>' + displayedPct.toFixed(1) + '%</span></td>';
+    }) + '><span class="kt-prog-track"><span class="kt-prog-fill" style="width:' + Math.max(0, Math.min(100, displayedPct)).toFixed(1) + '%"></span></span>' +
+      '<span class="kt-prog-val">' + displayedPct.toFixed(1) + '%</span></span></td>';
     for (let i = 0; i < realCols.length; i++){
       const col = realCols[i];
       const v = _kontrakRealColValue(c, col);
@@ -19721,7 +19997,7 @@ function renderKontrakTable(){
         const realV = _kontrakRealColValue(c, Object.assign({}, col, { metric: 'real' }));
         doMissing = realV > 0;
       }
-      const cellCls = 'year-real' + (col.metric === 'do' ? ' do-cell' : '') +
+      const cellCls = 'year-real' + (col.metric === 'do' ? ' do-cell' : '') + (i === 0 ? ' kt-sep' : '') +
         (v === 0 ? ' zero' : '') + (col.isOld ? ' old-year-cell' : '') + (doMissing ? ' do-missing' : '');
       const cellContent = doMissing ? '<span class="do-missing-mark" title="Realisasi ada, DO kosong">⚠</span>' : (v ? fmtInt(v) : '—');
       row += '<td class="' + cellCls + '">' + cellContent + '</td>';
@@ -19737,7 +20013,7 @@ function renderKontrakTable(){
     const avgColor = (minDO > 0 && avgReal > 0)
       ? (avgReal < minDO ? '#ef4444' : '#10b981')
       : '';
-    row += '<td class="num derived-cell' + (avgReal ? '' : ' dim') + '"' +
+    row += '<td class="num derived-cell kt-sep' + (avgReal ? '' : ' dim') + '"' +
       (avgColor ? ' style="color:' + avgColor + '"' : '') + calcAttr({
       title: 'Avg Real (rata-rata realisasi bulanan)',
       formula: 'Σ realisasi ÷ jumlah bulan yang ada realisasinya (mengikuti filter tahun/bulan)',
@@ -19761,11 +20037,18 @@ function renderKontrakTable(){
       result: ['Min DO', (minDO ? fmtInt(minDO) : '—') + ' MT/bulan'],
       note: 'Durasi dihitung dari hari yang benar-benar tercakup: bulan penuh = 1, bulan ujung yang terpakai sebagian dihitung prorata (1 Jan–31 Des = 12,0 bulan; 21 Sep 2025–8 Okt 2026 = 12,6 bulan). Hasilnya dibulatkan KE BAWAH, minimal 1 bulan. TIDAK mengikuti filter tahun/bulan, karena ini sifat kontrak. Kosong bila tanggal Awal/Akhir tidak lengkap.'
     }) + '>' + (minDO ? fmtInt(minDO) : '—') + '</td>';
+    // V144: teks amandemen (nomor surat panjang) dulu memenuhi kolom dan
+    // terpotong di tepi kanan. Kini chip ringkas "N amd"; klik membuka daftar
+    // lengkapnya di popover rumus yang sama dengan sel angka lain.
     if (c.amandemen){
-      const amText = escapeHtml(c.amandemen).split('\n').join('<br>');
-      row += '<td class="wrap"><div class="kontrak-amandemen-text" title="' + escapeHtml(c.amandemen) + '">' + amText + '</div></td>';
+      const amLines = String(c.amandemen).split('\n').map(s => s.trim()).filter(Boolean);
+      row += '<td class="kt-sep"><span class="kt-amd"' + calcAttr({
+        title: 'Amandemen kontrak',
+        formula: amLines.length + ' amandemen tercatat',
+        steps: amLines.map(s => [s])
+      }) + '>' + amLines.length + ' amd</span></td>';
     } else {
-      row += '<td><span class="kontrak-amandemen-text none">No amendment</span></td>';
+      row += '<td class="kt-sep"><span class="kt-amd-none">—</span></td>';
     }
     row += '</tr>';
     rowParts.push(row);
@@ -19802,10 +20085,26 @@ function renderKontrakTable(){
   }
 
   let footer = '<tfoot><tr>';
-  footer += '<td colspan="3" style="text-align:right;padding-right:14px"><b>TOTAL (' + contracts.length + ')</b></td>';
-  footer += '<td class="num"><b>' + fmtInt(totalVol) + '</b></td>';
-  footer += '<td colspan="3"></td>';
-  footer += '<td></td>';
+  // V144: urutan kolom baru — PLTU, Mitra, Jenis, Periode | Harga | Vol, Sisa, Progres.
+  footer += '<td colspan="4" class="kt-total-label">Total · ' + fmtInt(contracts.length) + ' kontrak</td>';
+  // V143: rata-rata harga tertimbang volume, hanya dari kontrak yang harganya ketemu.
+  let hgSum = 0, hgVol = 0, hgN = 0;
+  for (const c of contracts){
+    const hg = getKontrakHarga(c), v = c.vol_mt || 0;
+    if (hg && v > 0){ hgSum += hg.h * v; hgVol += v; hgN++; }
+  }
+  const hgAvg = hgVol > 0 ? hgSum / hgVol : 0;
+  footer += '<td class="num"' + (hgAvg ? calcAttr({
+    title: 'Rata-rata Harga (tertimbang volume)',
+    formula: 'Σ (harga × volume kontrak) ÷ Σ volume kontrak',
+    steps: [
+      ['Kontrak berharga', fmtInt(hgN) + ' dari ' + fmtInt(contracts.length)],
+      ['Σ volume kontrak tsb', fmtInt(hgVol) + ' MT']
+    ],
+    result: ['Rata-rata', 'Rp ' + fmtInt(hgAvg) + '/ton'],
+    note: 'Kontrak tanpa harga (tidak ada di Data Kontrak Aktif 2025-2026) tidak ikut dihitung.'
+  }) : '') + '><b>' + (hgAvg ? fmtInt(hgAvg) : '—') + '</b></td>';
+  footer += '<td class="num kt-sep"><b>' + fmtInt(totalVol) + '</b></td>';
   footer += '<td class="num"' + calcAttr({
     title: 'Total Sisa Kontrak',
     formula: 'Σ (volume kontrak − realisasi terfilter) untuk seluruh baris',
@@ -19817,7 +20116,7 @@ function renderKontrakTable(){
     result: ['Total Sisa', fmtInt(totalSisa) + ' MT'],
     note: 'Tanpa clamp ke 0: kontrak yang over-realisasi menurunkan total ini. Berbeda dengan kartu "Total Sisa Kontrak Aktif" di ringkasan, yang menjepit tiap kontrak di 0 lebih dulu.'
   }) + '><b>' + fmtInt(totalSisa) + '</b></td>';
-  footer += '<td style="text-align:center"' + calcAttr({
+  footer += '<td class="kt-prog-cell"><span class="kt-prog ' + pctBadgeClass(avgPct) + '"' + calcAttr({
     title: 'Average Achievement',
     formula: 'Σ realisasi terfilter ÷ Σ volume kontrak × 100',
     steps: [
@@ -19827,11 +20126,12 @@ function renderKontrakTable(){
     ],
     result: ['Average', avgPct.toFixed(1) + '%'],
     note: 'Rata-rata TERBOBOT (total dibagi total), bukan rata-rata dari kolom % di atasnya — kontrak besar karenanya menimbang lebih berat.'
-  }) + '><b>' + avgPct.toFixed(1) + '%</b></td>';
+  }) + '><span class="kt-prog-track"><span class="kt-prog-fill" style="width:' + Math.max(0, Math.min(100, avgPct)).toFixed(1) + '%"></span></span>' +
+    '<span class="kt-prog-val">' + avgPct.toFixed(1) + '%</span></span></td>';
   for (let i = 0; i < realCols.length; i++){
-    footer += '<td class="num year-real' + (realCols[i].metric === 'do' ? ' do-cell' : '') + (realCols[i].isOld ? ' old-year-cell' : '') + '"><b>' + fmtInt(totalByCol[i]) + '</b></td>';
+    footer += '<td class="num year-real' + (realCols[i].metric === 'do' ? ' do-cell' : '') + (i === 0 ? ' kt-sep' : '') + (realCols[i].isOld ? ' old-year-cell' : '') + '"><b>' + fmtInt(totalByCol[i]) + '</b></td>';
   }
-  footer += '<td class="num derived-cell"' + calcAttr({
+  footer += '<td class="num derived-cell kt-sep"' + calcAttr({
     title: 'Σ Avg Real',
     formula: 'Σ (rata-rata realisasi bulanan tiap kontrak)',
     steps: [
@@ -19851,10 +20151,10 @@ function renderKontrakTable(){
     result: ['Σ Min DO', fmtInt(totalMinDO) + ' MT/bulan'],
     note: 'Kontrak yang tanggal Awal/Akhir-nya tidak lengkap tidak ikut dijumlahkan, jadi total ini bisa lebih rendah dari kewajiban sebenarnya.'
   }) + '><b>' + fmtInt(totalMinDO) + '</b></td>';
-  footer += '<td></td>';
+  footer += '<td class="kt-sep"></td>';
   footer += '</tr></tfoot>';
 
-  container.innerHTML = '<div class="kontrak-table-wrap"><table class="kontrak-table">' + header + '<tbody>' + rowParts.join('') + '</tbody>' + footer + '</table></div>' + buildKontrakCards(contracts, realCols, totalByCol, totalVol, totalSisa, avgPct);
+  container.innerHTML = '<div class="kontrak-table-wrap"><table class="kontrak-table kt-v2">' + header + '<tbody>' + rowParts.join('') + '</tbody>' + footer + '</table></div>' + buildKontrakCards(contracts, realCols, totalByCol, totalVol, totalSisa, avgPct);
   // Wire card expand buttons
   container.querySelectorAll('.kontrak-card-expand').forEach(btn => {
     btn.onclick = (e) => {
@@ -20339,6 +20639,30 @@ async function fetchKontrakPasokan(){
       }
     }
   } catch(e){ console.warn('[Kontrak] fetch failed:', e); }
+}
+
+// V146: harga satuan kontrak dari tabel `kontrak_harga` (lihat catatan V143 di
+// dekat getKontrakHarga). Sesudah data masuk, indeks + cache pencocokan dibuang
+// dan tabel Daftar Kontrak digambar ulang bila sedang tampil.
+async function fetchKontrakHarga(){
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('kontrak_harga')
+      .select('no_kontrak,mitra,pltu,jenis,volume,harga_molekul,harga_transport,harga')
+      .limit(5000);
+    if (error){ console.warn('[Harga] fetch error:', error.message); return; }
+    const n = v => (v == null || v === '' || !isFinite(Number(v))) ? null : Number(v);
+    KONTRAK_HARGA_SRC = (data || []).filter(r => r.no_kontrak && n(r.harga) != null).map(r => [
+      r.no_kontrak, r.mitra || '', r.pltu || '', r.jenis || '',
+      n(r.volume) || 0, n(r.harga_molekul), n(r.harga_transport), n(r.harga)
+    ]);
+    _kontrakHargaIdx = null;
+    _kontrakHargaCache = new WeakMap();
+    if (typeof renderKontrakTable === 'function' && document.querySelector('.view[data-view="kontrak"].active')){
+      try { renderKontrakTable(); } catch(e){}
+    }
+  } catch(e){ console.warn('[Harga] fetch failed:', e); }
 }
 
 // Persist a manual DO override for one contract signature. doMap = {year:[12]}.
@@ -22380,6 +22704,7 @@ async function resyncLiveData(reason, full){
         (typeof fetchAutoRefreshState === 'function') ? fetchAutoRefreshState().catch(()=>{}) : null,
         (typeof fetchDoData === 'function') ? fetchDoData().catch(()=>{}) : null,
         (typeof fetchKontrakPasokan === 'function') ? fetchKontrakPasokan().catch(()=>{}) : null,
+        (typeof fetchKontrakHarga === 'function') ? fetchKontrakHarga().catch(()=>{}) : null,
         (_bnSyncInit && typeof fetchBottlenecksFromServer === 'function')
           ? fetchBottlenecksFromServer().catch(()=>{}) : null,
       ]);
@@ -27354,6 +27679,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof fetchDoData === 'function') fetchDoData();
     // V77: Kontrak pasokan per PLTU — tabel sendiri, dimuat sekali saat boot.
     if (typeof fetchKontrakPasokan === 'function') fetchKontrakPasokan();
+    // V146: harga kontrak — tabel sendiri, dimuat sekali saat boot.
+    if (typeof fetchKontrakHarga === 'function') fetchKontrakHarga();
   }
   // Reflect admin-only pause control on first paint.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();
