@@ -29960,10 +29960,34 @@ window.checkAppVersion = checkAppVersion;
 window.addEventListener('DOMContentLoaded', () => {
   if (!/^https?:$/.test(location.protocol)) return;
 
+  // V141: buang penanda cache-bust dari address bar supaya tidak ikut ter-bookmark
+  // atau tersalin ke orang lain. Halamannya sudah termuat — menghapus parameter di
+  // sini tidak memicu muat ulang.
+  if (location.search.indexOf('_v=') >= 0){
+    try {
+      const u = new URL(location.href);
+      u.searchParams.delete('_v');
+      history.replaceState(null, '', u.pathname + u.search + u.hash);
+    } catch(e){}
+  }
+
   const rel = document.getElementById('verBannerReload');
-  // reload() memakai cache mode "reload": dokumen selalu diminta ulang ke
-  // server, jadi HTML lama yang masih segar di cache browser tidak terpakai.
-  if (rel) rel.addEventListener('click', () => location.reload());
+  // V141: location.reload() hanya MEREVALIDASI — dan revalidasi bisa diabaikan.
+  // Kalau browser atau perantara tetap menyajikan HTML basi, pengguna memuat ulang
+  // lalu mendapat versi lama lagi, dan banner muncul kembali di setiap muat.
+  // Terjadi 21–23 Sep 2026: satu klien tertahan dua hari di build sebelum V140
+  // padahal server stabil (Last-Modified 21 Sep 09:18:16 GMT, ETag tidak berubah).
+  // URL dengan parameter unik bukan entri cache milik siapa pun, jadi pasti diambil
+  // dari origin. `replace()` supaya versi basi tidak tertinggal di riwayat Back.
+  if (rel) rel.addEventListener('click', () => {
+    try {
+      const u = new URL(location.href);
+      u.searchParams.set('_v', Date.now().toString(36));
+      location.replace(u.href);
+    } catch(e){
+      location.reload();
+    }
+  });
 
   const later = document.getElementById('verBannerLater');
   if (later) later.addEventListener('click', () => {
