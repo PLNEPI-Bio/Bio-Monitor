@@ -2033,6 +2033,7 @@ html,body{
 }
 .real-card-head h3{margin-bottom:0;flex:1 1 auto;min-width:0}
 .real-card-head-controls{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2)}
+.real-podt-export-btn{width:auto;margin-top:0;padding:8px 12px} /* V154 */
 /* META EXHIBIT — periode, satuan, cakupan. Optional; the class is new markup, see the
    V97 EXHIBIT layer note at the end of this stylesheet. */
 .real-card-meta{
@@ -8303,6 +8304,11 @@ body.gf-on .gf-bar{
               <option value="2025">2025</option>
               <option value="2026" selected>2026</option>
             </select>
+            <!-- V154: unduh tabel ini (sesuai filter aktif) sebagai Excel berformat -->
+            <button class="map-export-btn real-podt-export-btn" onclick="downloadRealPodtExcel()" title="Unduh tabel ini sesuai filter Wilayah/PLTU dan tahun yang dipilih">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              Unduh Excel
+            </button>
           </div>
         </div>
         <div class="real-card-note">Mengikuti filter Wilayah/PLTU di atas. DO = Delivery Order, Real = Realisasi (ton).</div>
@@ -15643,6 +15649,172 @@ function renderRealPodtTable(){
     : '<tbody><tr><td class="pltu-cell" colspan="28" style="text-align:center;color:var(--text-dim);padding:16px">Tidak ada PLTU sesuai filter.</td></tr></tbody>';
 
   container.innerHTML = `<table class="recap-table">${header}${body}${footer}</table>`;
+}
+
+// V154: Unduh tabel Realisasi & DO per PLTU sebagai .xlsx. Data diambil dari sumber
+// yang sama dengan renderRealPodtTable (realFilteredPlants + tahun terpilih), jadi isi
+// file = isi tabel di layar. Tata letak meniru tabel web: header dua tingkat (bulan →
+// DO/Real), DO ungu, Real biru PLN, kolom Total disorot, baris TOTAL di bawah.
+// Nilai 0 tetap disimpan sebagai angka (agar bisa dijumlah di Excel) tapi tampil "—".
+function downloadRealPodtExcel(){
+  if (typeof XLSX === 'undefined'){ alert('Library Excel belum termuat. Coba lagi sebentar.'); return; }
+  const year = state.realPodtYear || '2026';
+  const plants = realFilteredPlants().slice().sort((a, b) => a.name.localeCompare(b.name));
+  if (!plants.length){ alert('Tidak ada PLTU sesuai filter untuk diunduh.'); return; }
+
+  // ----- Keterangan filter untuk baris info di atas tabel -----
+  const prov = state.realPltuFilterProvince || 'all';
+  const pltuCode = state.realPltuFilterPltu || 'all';
+  const pltuObj = pltuCode === 'all' ? null : ((DATA && DATA.plants) || []).find(p => p.code === pltuCode);
+  const filterParts = [
+    'Tahun: ' + year,
+    'Wilayah: ' + (prov === 'all' ? 'Semua' : prov),
+    'PLTU: ' + (pltuCode === 'all' ? 'Semua' : (pltuObj ? pltuObj.name + ' (' + pltuCode + ')' : pltuCode)),
+  ];
+  const chips = globalFilterChips();
+  if (chips.length) filterParts.push('Filter global: ' + chips.map(c => c.val).join(', '));
+
+  // ----- Susun array-of-arrays -----
+  const FIXED = 4;                       // No, PLTU, Kode, Genco
+  const NCOL = FIXED + 13 * 2;           // 12 bulan + Total, masing-masing DO & Real
+  const blank = () => new Array(NCOL).fill('');
+  const HDR1 = 4, HDR2 = 5, DATA0 = 6;   // indeks baris (0-based)
+
+  const aoa = [];
+  aoa.push(Object.assign(blank(), { 0: 'Realisasi & DO per PLTU · Bulanan — Tahun ' + year }));
+  aoa.push(Object.assign(blank(), { 0: filterParts.join('   |   ') }));
+  aoa.push(Object.assign(blank(), { 0: 'DO = Delivery Order, Real = Realisasi (ton). "—" = tidak ada data. Diunduh ' +
+    new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }) + '.' }));
+  aoa.push(blank());
+
+  const h1 = Object.assign(blank(), { 0: 'No', 1: 'PLTU', 2: 'Kode', 3: 'Genco' });
+  const h2 = blank();
+  for (let i = 0; i <= 12; i++){
+    const c = FIXED + i * 2;
+    h1[c] = i === 12 ? 'Total' : MONTHS[i];
+    h2[c] = 'DO'; h2[c + 1] = 'Real';
+  }
+  aoa.push(h1, h2);
+
+  const doColSum = new Array(12).fill(0), realColSum = new Array(12).fill(0);
+  plants.forEach((p, idx) => {
+    const doArr = (p.historical_do && p.historical_do[year]) || [];
+    const realArr = (p.historical_real && p.historical_real[year]) || [];
+    const row = [idx + 1, p.name || '', p.code || '', p.genco || ''];
+    let doTot = 0, realTot = 0;
+    for (let mi = 0; mi < 12; mi++){
+      const dov = +doArr[mi] || 0, real = +realArr[mi] || 0;
+      doTot += dov; realTot += real;
+      doColSum[mi] += dov; realColSum[mi] += real;
+      row.push(dov, real);
+    }
+    row.push(doTot, realTot);
+    aoa.push(row);
+  });
+  const foot = ['TOTAL', '', '', ''];
+  let grandDo = 0, grandReal = 0;
+  for (let mi = 0; mi < 12; mi++){
+    grandDo += doColSum[mi]; grandReal += realColSum[mi];
+    foot.push(doColSum[mi], realColSum[mi]);
+  }
+  foot.push(grandDo, grandReal);
+  aoa.push(foot);
+  const FOOT = aoa.length - 1;
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // ----- Merge: judul/info, header dua tingkat, label TOTAL -----
+  const merges = [0, 1, 2].map(r => ({ s: { r, c: 0 }, e: { r, c: NCOL - 1 } }));
+  for (let c = 0; c < FIXED; c++) merges.push({ s: { r: HDR1, c }, e: { r: HDR2, c } });
+  for (let i = 0; i <= 12; i++){
+    const c = FIXED + i * 2;
+    merges.push({ s: { r: HDR1, c }, e: { r: HDR1, c: c + 1 } });
+  }
+  merges.push({ s: { r: FOOT, c: 0 }, e: { r: FOOT, c: FIXED - 1 } });
+  ws['!merges'] = merges;
+
+  ws['!cols'] = [{ wch: 5 }, { wch: 26 }, { wch: 10 }, { wch: 9 }]
+    .concat(new Array(24).fill({ wch: 9 }), [{ wch: 11 }, { wch: 11 }]);
+  ws['!rows'] = [{ hpt: 24 }, { hpt: 16 }, { hpt: 16 }, { hpt: 6 }, { hpt: 20 }, { hpt: 18 }];
+
+  // ----- Gaya sel (warna mengikuti tabel web) -----
+  const C_DO = 'A855F7', C_REAL = '0F496E', C_TEXT = '1F2937', C_DIM = '94A3B8';
+  const C_HEAD = 'EEF2F6', C_TOTCOL = 'E7EDF4', C_FOOT = 'E3ECF5';
+  const line = (rgb) => ({ style: 'thin', color: { rgb } });
+  const thin = line('E2E8F0'), grp = line('94A3B8');
+  const hexOf = (col) => { const h = String(col || '').replace('#', ''); return /^[0-9a-fA-F]{6}$/.test(h) ? h.toUpperCase() : C_TEXT; };
+  const NUMFMT = '#,##0;-#,##0;"—"';
+
+  const setS = (r, c, s) => {
+    const addr = XLSX.utils.encode_cell({ r, c });
+    if (!ws[addr]) ws[addr] = { t: 's', v: '' };  // sel kosong di area merge tetap perlu border
+    ws[addr].s = s;
+    return ws[addr];
+  };
+
+  setS(0, 0, { font: { bold: true, sz: 14, color: { rgb: C_REAL } }, alignment: { vertical: 'center' } });
+  setS(1, 0, { font: { sz: 10, color: { rgb: '475569' } }, alignment: { vertical: 'center' } });
+  setS(2, 0, { font: { sz: 9, italic: true, color: { rgb: '64748B' } }, alignment: { vertical: 'center' } });
+
+  for (let r = HDR1; r <= FOOT; r++){
+    const isHead = r === HDR1 || r === HDR2, isFoot = r === FOOT;
+    for (let c = 0; c < NCOL; c++){
+      const isNumCol = c >= FIXED;
+      const isDo = isNumCol && (c - FIXED) % 2 === 0;
+      const isTotCol = c >= NCOL - 2;
+      const border = {
+        top: thin, bottom: isHead && r === HDR2 ? grp : thin, right: thin,
+        left: (isDo || c === FIXED) ? grp : thin,
+      };
+      let fill = isHead ? C_HEAD : isFoot ? C_FOOT : (isTotCol ? C_TOTCOL : 'FFFFFF');
+      if ((isHead || isFoot) && isTotCol) fill = 'DCE5EF';
+
+      const cell = setS(r, c, {});
+      if (isHead){
+        let color = '475569';
+        if (r === HDR2 && isNumCol) color = isDo ? C_DO : C_REAL;
+        if (r === HDR1 && isTotCol) color = C_REAL;
+        cell.s = {
+          font: { bold: true, sz: 10, color: { rgb: color } },
+          fill: { fgColor: { rgb: fill } },
+          alignment: { horizontal: 'center', vertical: 'center' },
+          border,
+        };
+        continue;
+      }
+      if (!isNumCol){
+        let color = C_TEXT;
+        if (c === 2) color = '64748B';
+        if (c === 3 && !isFoot) color = hexOf(gencoColor(cell.v));
+        cell.s = {
+          font: { sz: 10, bold: isFoot || c === 3, color: { rgb: isFoot ? C_REAL : color } },
+          fill: { fgColor: { rgb: fill } },
+          alignment: { horizontal: (c === 1 && !isFoot) ? 'left' : 'center', vertical: 'center' },
+          border,
+        };
+        continue;
+      }
+      const zero = !(Number(cell.v) > 0);
+      cell.z = NUMFMT;
+      cell.s = {
+        font: { sz: 10, bold: isFoot || isTotCol, color: { rgb: zero ? C_DIM : (isDo ? C_DO : C_REAL) } },
+        fill: { fgColor: { rgb: fill } },
+        alignment: { horizontal: 'right', vertical: 'center' },
+        border,
+        numFmt: NUMFMT,
+      };
+    }
+  }
+
+  ws['!freeze'] = { xSplit: 2, ySplit: DATA0, topLeftCell: XLSX.utils.encode_cell({ r: DATA0, c: 2 }), activePane: 'bottomRight', state: 'frozen' };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'DO & Real ' + year);
+  const tag = [
+    prov === 'all' ? '' : '_' + String(prov).replace(/[^A-Za-z0-9]+/g, ''),
+    pltuCode === 'all' ? '' : '_' + String(pltuCode).replace(/[^A-Za-z0-9]+/g, ''),
+  ].join('');
+  XLSX.writeFile(wb, 'Realisasi_DO_per_PLTU_' + year + tag + globalFilterFileTag() + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 
 // V92: Cari baris GCV milik sebuah PLTU di DATA.gcv. Kunci map berasal dari kolom
