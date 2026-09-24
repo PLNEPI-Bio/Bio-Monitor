@@ -18071,13 +18071,58 @@ let DO_STORE = { auto: {}, overrides: {}, link_status: 'unknown', last_ok_at: nu
 function _doNormK(s){ return String(s||'').toUpperCase().replace(/\s+/g,''); }
 function _doLoose(s){ return String(s||'').toUpperCase().replace(/[ \-–—‑'’.()]/g,''); }
 function doSigForContract(c){ return c ? (_doNormK(c.kontrak)+'|'+_doLoose(c.pltu)+'|'+_doLoose(c.pemasok)) : ''; }
+// V153: cadangan bila nama mitra beda ejaan antara Daftar Kontrak dan file DO
+// ("Group" vs "Grup", "Mahesa" vs "Mahesta"). Kunci persis gagal → cocokkan
+// nomor kontrak + PLTU saja, HANYA bila tepat satu kunci DO untuk pasangan itu
+// dan kunci tersebut belum dipakai persis oleh kontrak lain (cegah DO dobel).
+// Lebih dari satu kandidat (mis. 2112 Tarahan) → tetap kosong, jangan menebak.
+const _doFbCache = new WeakMap();
+function _doFallbackKey(src, sig){
+  if (!src || !sig) return null;
+  const contracts = (typeof DATA !== 'undefined' && DATA && DATA.contracts) || [];
+  let idx = _doFbCache.get(src);
+  if (!idx || idx.contracts !== contracts){
+    const claimed = new Set(contracts.map(doSigForContract));
+    // Sig kontrak yang TIDAK cocok persis, per kontrak|PLTU. Bila >1 ejaan mitra
+    // berbeda meleset di pasangan yang sama, jangan pasang — DO bisa terhitung dobel.
+    const missByKP = {};
+    claimed.forEach(sig => {
+      if (!sig || src[sig]) return;
+      const p = sig.split('|');
+      const kp = p[0] + '|' + p[1];
+      (missByKP[kp] = missByKP[kp] || new Set()).add(sig);
+    });
+    const byKP = {};
+    for (const k of Object.keys(src)){
+      const p = k.split('|');
+      if (!/\d/.test(p[0])) continue; // nomor placeholder ("-", "TBD") tidak dicocokkan
+      const kp = p[0] + '|' + p[1];
+      (byKP[kp] = byKP[kp] || []).push(k);
+    }
+    const map = {};
+    for (const kp in byKP){
+      if (byKP[kp].length === 1 && !claimed.has(byKP[kp][0]) &&
+          missByKP[kp] && missByKP[kp].size === 1) map[kp] = byKP[kp][0];
+    }
+    idx = { contracts, map };
+    _doFbCache.set(src, idx);
+  }
+  const p = sig.split('|');
+  return idx.map[p[0] + '|' + p[1]] || null;
+}
+function _doLookup(src, sig){
+  if (!src) return null;
+  if (src[sig]) return src[sig];
+  const k = _doFallbackKey(src, sig);
+  return k ? src[k] : null;
+}
 // Returns the effective DO map for a contract: { '2024':[12], ... } or null.
 // Manual override years replace the corresponding auto/seed year entirely.
 function getContractDO(c){
   const sig = doSigForContract(c);
   if (!sig) return null;
-  const seed = (typeof DELIVERY_ORDERS !== 'undefined' && DELIVERY_ORDERS) ? (DELIVERY_ORDERS[sig] || null) : null;
-  const auto = (DO_STORE.auto && DO_STORE.auto[sig]) || null;
+  const seed = (typeof DELIVERY_ORDERS !== 'undefined' && DELIVERY_ORDERS) ? _doLookup(DELIVERY_ORDERS, sig) : null;
+  const auto = _doLookup(DO_STORE.auto, sig);
   const ovEntry = (DO_STORE.overrides && DO_STORE.overrides[sig]) || null;
   const ov = ovEntry && ovEntry.do ? ovEntry.do : null;
   const base = auto || seed;
