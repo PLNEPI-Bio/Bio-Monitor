@@ -2952,6 +2952,16 @@ html,body{
   font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--text);user-select:none;
 }
 .kontrak-toggle input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
+/* V152: tombol hapus semua filter — didorong ke ujung kanan baris toggle. */
+.kontrak-clear-btn{
+  margin-left:auto;display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--panel);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;color:var(--accent);cursor:pointer;
+  transition:background var(--dur-fast) var(--ease-in-out),border-color var(--dur-fast) var(--ease-in-out);
+}
+.kontrak-clear-btn:hover:not(:disabled){background:var(--panel-3);border-color:var(--accent)}
+.kontrak-clear-btn:disabled{color:var(--text-dim);cursor:default;opacity:.6}
+@media (max-width:768px){ .kontrak-clear-btn{margin-left:0;align-self:stretch;justify-content:center} }
 
 .kontrak-table{width:100%;border-collapse:separate;border-spacing:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;background:var(--panel)}
 .kontrak-table th{
@@ -8725,6 +8735,7 @@ body.gf-on .gf-bar{
         <label class="kontrak-toggle">
           <input type="checkbox" id="kontrak-show-old-years"> Show realisasi 2023-2025 (default hidden)
         </label>
+        <button type="button" class="kontrak-clear-btn" id="kontrak-clear-filters" onclick="clearKontrakFilters()" disabled>Hapus semua filter</button>
       </div>
 
       <!-- Summary card: aggregates for currently displayed contracts -->
@@ -17850,6 +17861,41 @@ function buildKontrakMitraOptions(){
   }
 }
 
+// V152: tombol "Hapus semua filter" di Daftar Kontrak. Yang dihapus: tujuh
+// penyaring di atas tabel + sakelar badge "⚠ DO kosong". Kotak centang "Only
+// active" dan "Show realisasi 2023-2025" TIDAK disentuh — keduanya pilihan
+// tampilan yang terlihat tepat di sebelah tombol, bukan penyaring tersembunyi.
+function _kontrakActiveFilterCount(){
+  const f = state.kontrakFilters;
+  let n = 0;
+  ['regional','genco','pltu','jenis','tahun','bulan'].forEach(k => { if (f[k] && f[k] !== 'all') n++; });
+  if (f.mitra && f.mitra !== 'all') n++;
+  if (state.kontrakDoAnomOnly) n++;
+  return n;
+}
+function _syncKontrakClearBtn(){
+  const btn = document.getElementById('kontrak-clear-filters');
+  if (!btn) return;
+  const n = _kontrakActiveFilterCount();
+  btn.disabled = n === 0;
+  btn.textContent = n ? 'Hapus semua filter (' + n + ')' : 'Hapus semua filter';
+}
+function clearKontrakFilters(){
+  const f = state.kontrakFilters;
+  Object.keys(f).forEach(k => { f[k] = 'all'; });
+  state.kontrakDoAnomOnly = false;
+  ['kontrak-regional-filter','kontrak-genco-filter','kontrak-jenis-filter',
+   'kontrak-tahun-filter','kontrak-bulan-filter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = 'all';
+  });
+  // PLTU & datalist mitra diturunkan dari regional/genco, jadi dibangun ulang;
+  // buildKontrakMitraOptions sekaligus mengosongkan kolom Mitra dari state.
+  buildKontrakPltuOptions();
+  buildKontrakMitraOptions();
+  renderKontrakTable();
+}
+
 function isContractActive(c, refDate){
   // Active if akhir (end date) is on or after reference date.
   // Terminated (struck-through in source Excel) contracts are always inactive.
@@ -19855,6 +19901,7 @@ function renderKontrakTable(){
       state.kontrakDoAnomOnly = false;
     }
   }
+  _syncKontrakClearBtn(); // V152
 
   // Render summary card (always uses the active filter regardless of other filters)
   renderKontrakSummary();
