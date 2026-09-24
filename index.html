@@ -29519,7 +29519,7 @@ function qolBuildCmdkIndex(){
   ((DATA && DATA.plants) || []).forEach(p => {
     if (!p || !p.code) return;
     items.push({
-      kind:'plant', code:p.code, label:p.name || p.code,
+      kind:'plant', code:p.code, label:p.name || p.code, ac:_qolAcronyms(p.name),
       sub: [p.code, p.genco, p.regional].filter(Boolean).join(' · '),
       kw: [p.code, p.name, p.genco, p.regional, p.boiler].filter(Boolean).join(' ').toLowerCase()
     });
@@ -29541,7 +29541,7 @@ function qolBuildCmdkIndex(){
   Array.from(mitraAgg.keys()).sort().forEach(m => {
     const e = mitraAgg.get(m);
     items.push({
-      kind:'mitra', mitra:m, label:m,
+      kind:'mitra', mitra:m, label:m, ac:_qolAcronyms(m),
       sub: e.n + ' kontrak · ' + e.pltu.size + ' PLTU' +
            (e.genco.size ? ' · ' + Array.from(e.genco).sort().join('/') : ''),
       // Nama PLTU ikut masuk kata kunci: mengetik "suralaya" jadi memunculkan
@@ -29602,28 +29602,33 @@ function qolBuildCmdkIndex(){
     const names = Array.from(g.names).sort();
     g.val = names.join('||');
     g.kw = [g.label, g.code].concat(names).filter(Boolean).join(' ').toLowerCase();
+    g.ac = _qolAcronyms([g.label].concat(names));
     items.push({
-      kind:'kontrak', pltu:g.val, jenis:'all', label:g.label,
+      kind:'kontrak', pltu:g.val, jenis:'all', label:g.label, ac:g.ac,
       sub:'Daftar Kontrak · ' + g.n + ' kontrak' + (names.length > 1 ? ' · ' + names.join(' / ') : ''),
       desc:'PLTU ' + g.label, kw:g.kw
     });
   });
+  // V150: tiap bagian kombinasi = { kw, ac } — kata kunci dan singkatannya.
+  const mFacet = new Map(), jFacet = new Map();
+  const facetM = m => mFacet.get(m) || (mFacet.set(m, { kw: m.toLowerCase(), ac: _qolAcronyms(m) }), mFacet.get(m));
+  const facetJ = j => jFacet.get(j) || (jFacet.set(j, { kw: jenisKw(j), ac: _qolAcronyms(j) }), jFacet.get(j));
   kCombo.forEach(e => {
     const facets = [], parts = [], descs = [];
-    if (e.m){ facets.push(e.m.toLowerCase()); parts.push(e.m); descs.push(e.m); }
-    if (e.g){ facets.push(e.g.kw); parts.push(e.g.label); descs.push('PLTU ' + e.g.label); }
-    if (e.j){ facets.push(jenisKw(e.j)); parts.push(e.j.trim()); descs.push(e.j.trim()); }
+    if (e.m){ facets.push(facetM(e.m)); parts.push(e.m); descs.push(e.m); }
+    if (e.g){ facets.push({ kw: e.g.kw, ac: e.g.ac }); parts.push(e.g.label); descs.push('PLTU ' + e.g.label); }
+    if (e.j){ facets.push(facetJ(e.j)); parts.push(e.j.trim()); descs.push(e.j.trim()); }
     items.push({
       kind:'kontrak', combo:true, facets,
       mitra: e.m || '', pltu: e.g ? e.g.val : 'all', jenis: e.j || 'all',
       label: parts.join(' · '), sub:'Daftar Kontrak · ' + e.n + ' kontrak',
-      desc: descs.join(' · '), kw: facets.join(' ')
+      desc: descs.join(' · '), kw: facets.map(f => f.kw).join(' ')
     });
   });
   Array.from(kJenis.keys()).sort().forEach(j => {
     const e = kJenis.get(j);
     items.push({
-      kind:'kontrak', pltu:'all', jenis:j, label:j.trim(),
+      kind:'kontrak', pltu:'all', jenis:j, label:j.trim(), ac:facetJ(j).ac,
       sub:'Jenis biomassa · ' + e.n + ' kontrak · ' + e.pltu.size + ' PLTU',
       desc:'jenis ' + j.trim(), kw:jenisKw(j)
     });
@@ -29652,12 +29657,73 @@ const QOL_JENIS_SYN = [
   ['bonggol jagung', 'tongkol jagung corn cob']
 ];
 
+// V150: singkatan dari huruf depan tiap kata — "PT Sumber Daya Bumi Nusantara"
+// → "sdbn", "Tanjung Jati B" → "tjb". Bentuk badan usaha (PT/CV/UD/…) dibuang
+// karena orang menyingkat nama dagangnya, bukan badan usahanya; kata "pt" yang
+// diketik tetap cocok lewat nama lengkap. Varian kedua membuang kata sambung
+// ("Sawdust dan atau Sekam Padi" → "sdasp" dan "ssp"). Angka ikut utuh supaya
+// "Suralaya 8" (→ "s8") tidak sama dengan "Suralaya 1-7" (→ "s17").
+// Nama satu kata tidak diberi singkatan: huruf depannya saja terlalu umum.
+const QOL_AC_LEGAL = new Set(['pt','cv','ud','pd','kud','koperasi','tbk','persero','perseroan','fa','firma']);
+const QOL_AC_STOP  = new Set(['dan','atau','and','or','of','the','&']);
+// V151: singkatan yang dipakai di lapangan tapi tidak bisa diturunkan dari nama
+// (kunci: nama lengkap huruf kecil, spasi tunggal). Pola huruf depan + huruf
+// sisipan seperti BEST sebenarnya sudah tertangkap _qolAcFlex; entri di sini
+// menjaminnya tetap dikenali dengan peringkat tertinggi.
+const QOL_AC_ALIAS = new Map([
+  ['pt bakti energi sejahtera', ['best']]
+]);
+// Mengembalikan { list, words } atau null. `list` = singkatan baku (huruf depan
+// + alias), `words` = daftar kata per varian untuk pencocokan fleksibel.
+function _qolAcronyms(names){
+  const out = new Set(), words = [];
+  (Array.isArray(names) ? names : [names]).forEach(n => {
+    const full = String(n || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    (QOL_AC_ALIAS.get(full) || []).forEach(a => out.add(a));
+    const ws = full.split(/[^a-z0-9]+/).filter(w => w && !QOL_AC_LEGAL.has(w));
+    if (ws.length < 2) return;
+    const ini = v => v.map(w => /^\d+$/.test(w) ? w : w[0]).join('');
+    [ws, ws.filter(w => !QOL_AC_STOP.has(w))].forEach(v => {
+      const a = ini(v);
+      if (a.replace(/\d/g, '').length >= 2){ out.add(a); words.push(v); }
+    });
+  });
+  return out.size ? { list: Array.from(out), words } : null;
+}
+// V151: singkatan fleksibel — SETIAP kata wajib menyumbang huruf depannya,
+// berurutan, dan boleh menyumbang SATU huruf tambahan dari dalam kata itu:
+// "best" = B(akti) E(nergi) S(ejah)T(era). Dua syarat itu yang membuatnya tetap
+// ketat: tanpa batas satu huruf, kata biasa seperti "bakti" ikut mencocoki
+// "PT Balkaria Trans Indonesia" (B-A-K dari Balkaria, T, I).
+function _qolAcFlex(t, ws){
+  if (t.length <= ws.length || t.length > ws.length * 2 || t[0] !== ws[0][0]) return false;
+  const go = (i, w) => {
+    if (w === ws.length) return i === t.length;
+    if (i >= t.length || t[i] !== ws[w][0]) return false;
+    if (go(i + 1, w + 1)) return true;
+    return i + 1 < t.length && ws[w].indexOf(t[i + 1], 1) > 0 && go(i + 2, w + 1);
+  };
+  return go(0, 0);
+}
+// Tingkat kecocokan singkatan: 3 = baku/alias persis ("sdbn", "best"),
+// 2 = fleksibel, 1 = awalan singkatan baku ("sdb"), 0 = tidak cocok.
+function _qolAcLevel(ac, t){
+  if (!ac || t.length < 2) return 0;
+  if (ac.list.indexOf(t) >= 0) return 3;
+  if (t.length >= 3 && ac.words.some(ws => _qolAcFlex(t, ws))) return 2;
+  return ac.list.some(a => a.startsWith(t)) ? 1 : 0;
+}
+function _qolAcHit(ac, t){ return _qolAcLevel(ac, t) > 0; }
+function _qolFacetHit(f, t){
+  return f.kw.includes(t) || _qolAcHit(f.ac, t);
+}
+
 // V148: adakah pemetaan bagian→kata yang saling berbeda, dengan tiap bagian
 // memuat katanya? Paling banyak 3 bagian, jadi penelusuran mundur cukup.
 function _qolFacetAssign(fs, toks, i, used){
   if (i >= fs.length) return true;
   for (let k = 0; k < toks.length; k++){
-    if (used.has(k) || !fs[i].includes(toks[k])) continue;
+    if (used.has(k) || !_qolFacetHit(fs[i], toks[k])) continue;
     used.add(k);
     if (_qolFacetAssign(fs, toks, i + 1, used)) return true;
     used.delete(k);
@@ -29716,21 +29782,24 @@ function _qolScore(q, item){
     const toks = qp.toks;
     const fs = item.facets;
     if (toks.length < fs.length) return 0;
-    if (!toks.every(t => fs.some(f => f.includes(t)))) return 0;
+    // V150: "cocok" = potongan kata kunci ATAU singkatan ("pt sdbn anggrek").
+    if (!toks.every(t => fs.some(f => _qolFacetHit(f, t)))) return 0;
     if (!_qolFacetAssign(fs, toks, 0, new Set())) return 0;
     // Bila semua kata sudah terjelaskan tanpa salah satu bagian, bagian itu cuma
     // kebetulan cocok: "sekam padi" tidak boleh memunculkan "PT Daya Padi Abadi ·
     // Pellet Sekam Padi" di atas jenis "Sekam Padi". Baris yang lebih sederhana
     // (bagian lebih sedikit) selalu ada dan sudah menangani kueri itu.
     for (let i = 0; i < fs.length; i++){
-      if (toks.every(t => fs.some((f, k) => k !== i && f.includes(t)))) return 0;
+      if (toks.every(t => fs.some((f, k) => k !== i && _qolFacetHit(f, t)))) return 0;
     }
     // Kata yang cocok di awal kata lebih meyakinkan daripada potongan di tengah
-    // ("bakti" vs "akti") — dipakai sebagai pemecah seri.
+    // ("bakti" vs "akti") — dipakai sebagai pemecah seri. Singkatan yang PERSIS
+    // ("sdbn", bukan sekadar awalan "sd") dihitung sama meyakinkannya.
     let pre = 0;
-    for (const re of qp.preRes){
-      if (fs.some(f => re.test(f))) pre++;
-    }
+    qp.preRes.forEach((re, i) => {
+      const t = toks[i];
+      if (fs.some(f => re.test(f.kw) || _qolAcLevel(f.ac, t) >= 2)) pre++;
+    });
     return 370 + fs.length * 3 + pre - Math.min(item.label.length, 80) * 0.1;
   }
   // `sub` SENGAJA tidak ikut dicari. Sub-label mitra dirakit sebagai
@@ -29741,7 +29810,8 @@ function _qolScore(q, item){
   const hay = (item.label + ' ' + (item.kw || '')).toLowerCase();
   const tokens = qp.toks;
   if (tokens.length > 1){
-    if (!tokens.every(t => hay.includes(t))) return 0;
+    // V150: kata juga boleh cocok lewat singkatan ("pt sdbn").
+    if (!tokens.every(t => hay.includes(t) || _qolAcHit(item.ac, t))) return 0;
     // V147: frasa utuh di label diunggulkan — "sekam padi" menaruh jenis
     // "Sekam Padi" di atas "Pellet Sekam Padi".
     return 320 + (item.kind === 'tab' ? 30 : 0) +
@@ -29750,8 +29820,14 @@ function _qolScore(q, item){
   let s;
   if (lbl === q) s = 1000;
   else if (lbl.startsWith(q)) s = 800;
+  // V150: singkatan persis ("sdbn", "tjb") setara kecocokan nama yang kuat;
+  // awalan singkatan ("sdb") hanya dari 3 huruf, di bawah potongan label.
+  else if (_qolAcLevel(item.ac, q) === 3) s = 650;
   else if (qp.wordRe.test(lbl)) s = 600;
+  // V151: singkatan fleksibel ("best") di atas potongan label biasa.
+  else if (_qolAcLevel(item.ac, q) === 2) s = 500;
   else if (lbl.includes(q)) s = 400;
+  else if (q.length >= 3 && _qolAcLevel(item.ac, q) === 1) s = 250;
   else if (hay.includes(q)) s = 200;
   // Anak tangga terakhir sengaja diuji terhadap LABEL saja, bukan hay, DAN dibatasi
   // rentangnya. Dijalankan atas hay tanpa batas, "pareto" mencocoki enam PLTU dan
