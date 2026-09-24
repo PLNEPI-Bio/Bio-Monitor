@@ -9603,7 +9603,7 @@ body.gf-on .gf-bar{
   <div class="cmdk">
     <div class="cmdk-input-wrap">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l4 4"/></svg>
-      <input type="text" class="cmdk-input" id="cmdkInput" placeholder="Cari PLTU, mitra, tab, atau tindakan…" autocomplete="off" spellcheck="false" aria-label="Kata kunci pencarian" aria-controls="cmdkList" aria-expanded="true">
+      <input type="text" class="cmdk-input" id="cmdkInput" placeholder="Cari PLTU, jenis biomassa, mitra, tab, atau tindakan…" autocomplete="off" spellcheck="false" aria-label="Kata kunci pencarian" aria-controls="cmdkList" aria-expanded="true">
       <span class="cmdk-hint">Esc</span>
     </div>
     <div class="cmdk-list" id="cmdkList" role="listbox" aria-label="Hasil"></div>
@@ -17801,9 +17801,19 @@ function buildKontrakPltuOptions(){
   const pltuSet = new Set(scoped.map(c => c.pltu));
   const pltus = Array.from(pltuSet).sort();
   const prev = state.kontrakFilters.pltu;
-  sel.innerHTML = '<option value="all">All PLTU</option>' +
-    pltus.map(p => '<option value="' + p + '">' + p + '</option>').join('');
-  sel.value = pltus.indexOf(prev) >= 0 ? prev : 'all';
+  // V147: palet Ctrl+K bisa memasang SATU PLTU yang di sumber kontrak ditulis dengan
+  // beberapa ejaan ("Nii Tanasa 3" / "Nii Tanasa #3") sebagai nilai gabungan
+  // "a||b". Nilai itu tidak ada di daftar biasa, jadi diberi opsi sendiri supaya
+  // penyaringnya tetap TERLIHAT di dropdown — selama minimal satu ejaannya masih
+  // lolos penyaring regional/genco.
+  const grp = _kontrakPltuList(prev);
+  const grpOpt = (grp && grp.some(n => pltuSet.has(n)))
+    ? '<option value="' + escapeHtml(prev) + '">' + escapeHtml(grp.join(' / ')) + '</option>' : '';
+  sel.innerHTML = '<option value="all">All PLTU</option>' + grpOpt +
+    // V149: di-escape — lompatan palet memeriksa sel.value kembali utuh; nama
+    // dengan `"` atau `&` akan terpotong/berubah dan dikira "disembunyikan".
+    pltus.map(p => '<option value="' + escapeHtml(p) + '">' + escapeHtml(p) + '</option>').join('');
+  sel.value = (grpOpt || pltus.indexOf(prev) >= 0) ? prev : 'all';
   state.kontrakFilters.pltu = sel.value;
   sel.onchange = () => {
     state.kontrakFilters.pltu = sel.value;
@@ -17820,7 +17830,7 @@ function buildKontrakMitraOptions(){
   const contracts = ((DATA && DATA.contracts) || []).filter(c => globalPassNamed(c.pltu, c.genco)); // V118
   let scoped = contracts;
   if (state.kontrakFilters.genco !== 'all') scoped = scoped.filter(c => c.genco === state.kontrakFilters.genco);
-  if (state.kontrakFilters.pltu !== 'all') scoped = scoped.filter(c => c.pltu === state.kontrakFilters.pltu);
+  if (state.kontrakFilters.pltu !== 'all') scoped = scoped.filter(c => _kontrakPltuPass(state.kontrakFilters.pltu, c.pltu));
   const mitras = Array.from(new Set(scoped.map(c => c.pemasok).filter(Boolean))).sort();
   const dl = document.getElementById('kontrak-mitra-list');
   if (dl) dl.innerHTML = mitras.map(m => '<option value="' + escapeHtml(m) + '"></option>').join('');
@@ -17931,6 +17941,17 @@ function contractProvince(c){
   return null;
 }
 
+// V147: penyaring PLTU di Daftar Kontrak berisi satu nama persis, atau nilai
+// gabungan "a||b" dari palet Ctrl+K (lihat buildKontrakPltuOptions).
+function _kontrakPltuList(v){
+  return (typeof v === 'string' && v.indexOf('||') >= 0) ? v.split('||') : null;
+}
+function _kontrakPltuPass(v, name){
+  if (v === name) return true;
+  const list = _kontrakPltuList(v);
+  return !!list && list.indexOf(name) >= 0;
+}
+
 function filteredContracts(){
   const f = state.kontrakFilters;
   const contracts = (DATA && DATA.contracts) || [];
@@ -17940,7 +17961,7 @@ function filteredContracts(){
     if (state.kontrakOnlyActive && !isContractActive(c, today)) return false;
     if (f.regional && f.regional !== 'all' && contractProvince(c) !== f.regional) return false;
     if (f.genco !== 'all' && c.genco !== f.genco) return false;
-    if (f.pltu !== 'all' && c.pltu !== f.pltu) return false;
+    if (f.pltu !== 'all' && !_kontrakPltuPass(f.pltu, c.pltu)) return false;
     if (f.mitra && f.mitra !== 'all' && !(c.pemasok || '').toLowerCase().includes(f.mitra.toLowerCase())) return false;
     if (f.jenis !== 'all' && c.jenis !== f.jenis) return false;
     return true;
@@ -29530,12 +29551,118 @@ function qolBuildCmdkIndex(){
     });
   });
 
+  // V147: lompatan ke Daftar Kontrak per PLTU, per jenis biomassa, dan per
+  // PLTU × jenis. Dikelompokkan dari nama PLTU DI KONTRAK, bukan dari DATA.plants:
+  // penyaring tabel mencocokkan c.pltu persis, dan satu PLTU bisa ditulis dengan
+  // beberapa ejaan ("Tanjung Awar-Awar" / "Tanjung Awar's"). Ejaan yang terpetakan
+  // ke plant yang sama lewat contractPlant() digabung; yang ambigu ("Paiton")
+  // berdiri sendiri — lebih jujur daripada menebak ke Paiton 1-2 atau Paiton 9.
+  //
+  // V148: kombinasi diperluas ke mitra — mitra × PLTU, mitra × jenis, dan
+  // mitra × PLTU × jenis. Tiap kombinasi menyimpan `facets` (kata kunci per
+  // bagian); _qolScore mencocokkan KATA per kata ke bagian-bagian itu, jadi
+  // "pt bakti anggrek woodchip" menemukan "PT Bakti Energi Sejahtera · Anggrek ·
+  // Woodchip" tanpa nama mitra ditulis lengkap.
+  const kGrp = new Map();   // plant object | 'n:<kunci nama>' -> kelompok
+  const kJenis = new Map(); // jenis -> { n, pltu:Set }
+  const kCombo = new Map(); // 'm\u0001g\u0001j' -> { m, g, j, n }
+  const bump = (m, g, j) => {
+    const k = (m || '') + '\u0001' + (g ? g.id : '') + '\u0001' + (j || '');
+    const e = kCombo.get(k);
+    if (e) e.n++; else kCombo.set(k, { m, g, j, n:1 });
+  };
+  ((DATA && DATA.contracts) || []).forEach(c => {
+    const nm = c && typeof c.pltu === 'string' ? c.pltu : '';
+    if (!nm.trim()) return;
+    const p = contractPlant(c);
+    const key = p || ('n:' + _gfKey(canonPltuName(nm)));
+    let g = kGrp.get(key);
+    if (!g){ g = { id: kGrp.size + 1, label: p ? (p.name || nm.trim()) : nm.trim(), code: p ? p.code : '', names:new Set(), n:0 }; kGrp.set(key, g); }
+    g.names.add(nm);
+    g.n++;
+    const j = (c.jenis || '').trim() ? c.jenis : '';
+    const m = (c.pemasok || '').trim();
+    if (j){
+      let je = kJenis.get(j);
+      if (!je){ je = { n:0, pltu:new Set() }; kJenis.set(j, je); }
+      je.n++;
+      je.pltu.add(key);
+      bump('', g, j);
+    }
+    if (m){
+      bump(m, g, '');
+      if (j){ bump(m, null, j); bump(m, g, j); }
+    }
+  });
+  const jenisKw = j => {
+    const lj = j.toLowerCase();
+    return (lj + ' ' + QOL_JENIS_SYN.filter(([pat]) => lj.includes(pat)).map(([, syn]) => syn).join(' ')).trim();
+  };
+  kGrp.forEach(g => {
+    const names = Array.from(g.names).sort();
+    g.val = names.join('||');
+    g.kw = [g.label, g.code].concat(names).filter(Boolean).join(' ').toLowerCase();
+    items.push({
+      kind:'kontrak', pltu:g.val, jenis:'all', label:g.label,
+      sub:'Daftar Kontrak · ' + g.n + ' kontrak' + (names.length > 1 ? ' · ' + names.join(' / ') : ''),
+      desc:'PLTU ' + g.label, kw:g.kw
+    });
+  });
+  kCombo.forEach(e => {
+    const facets = [], parts = [], descs = [];
+    if (e.m){ facets.push(e.m.toLowerCase()); parts.push(e.m); descs.push(e.m); }
+    if (e.g){ facets.push(e.g.kw); parts.push(e.g.label); descs.push('PLTU ' + e.g.label); }
+    if (e.j){ facets.push(jenisKw(e.j)); parts.push(e.j.trim()); descs.push(e.j.trim()); }
+    items.push({
+      kind:'kontrak', combo:true, facets,
+      mitra: e.m || '', pltu: e.g ? e.g.val : 'all', jenis: e.j || 'all',
+      label: parts.join(' · '), sub:'Daftar Kontrak · ' + e.n + ' kontrak',
+      desc: descs.join(' · '), kw: facets.join(' ')
+    });
+  });
+  Array.from(kJenis.keys()).sort().forEach(j => {
+    const e = kJenis.get(j);
+    items.push({
+      kind:'kontrak', pltu:'all', jenis:j, label:j.trim(),
+      sub:'Jenis biomassa · ' + e.n + ' kontrak · ' + e.pltu.size + ' PLTU',
+      desc:'jenis ' + j.trim(), kw:jenisKw(j)
+    });
+  });
+
   // Tindakan.
   items.push({ kind:'action', id:'kbdhelp', label:'Pintasan Keyboard', sub:'Semua tombol cepat', kw:'pintasan keyboard shortcut bantuan help tombol tuts' });
   items.push({ kind:'action', id:'top',     label:'Kembali ke Atas',   sub:'Gulir tab aktif ke puncak', kw:'atas top puncak scroll gulir' });
   items.push({ kind:'action', id:'copy',    label:'Salin Tautan Dashboard', sub:'Bagikan alamat halaman ini', kw:'salin copy link tautan url alamat bagikan share' });
   qolCmdkItems = items;
   return items;
+}
+
+// V147: sinonim jenis biomassa (dicocokkan sebagai potongan nama jenis) supaya
+// istilah Indonesia/singkatan lapangan ikut menemukan jenis yang di sumber
+// ditulis dalam bahasa Inggris. Sengaja TIDAK memuat kata "kontrak"/"biomassa":
+// kata umum itu akan mencocoki semua jenis sekaligus dan menenggelamkan tab.
+const QOL_JENIS_SYN = [
+  ['sawdust',  'serbuk gergaji serbuk kayu'],
+  ['woodchip', 'wood chip serpih kayu cacahan kayu'],
+  ['cangkang sawit', 'pks palm kernel shell'],
+  ['tankos',   'tandan kosong efb'],
+  ['efb',      'tandan kosong tankos'],
+  ['bagasse',  'ampas tebu'],
+  ['sekam',    'rice husk'],
+  ['bonggol jagung', 'tongkol jagung corn cob']
+];
+
+// V148: adakah pemetaan bagian→kata yang saling berbeda, dengan tiap bagian
+// memuat katanya? Paling banyak 3 bagian, jadi penelusuran mundur cukup.
+function _qolFacetAssign(fs, toks, i, used){
+  if (i >= fs.length) return true;
+  for (let k = 0; k < toks.length; k++){
+    if (used.has(k) || !fs[i].includes(toks[k])) continue;
+    used.add(k);
+    if (_qolFacetAssign(fs, toks, i + 1, used)) return true;
+    used.delete(k);
+  }
+  return false;
 }
 
 function _qolReEsc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -29556,26 +29683,74 @@ function _qolSubseqSpan(q, hay){
 // Tangga skor: makin dekat kecocokan ke AWAL label, makin tinggi. Kecocokan
 // hanya di kata kunci ada di anak tangga terbawah supaya sinonim tidak pernah
 // menggeser nama yang benar-benar diketik pengguna.
+// V149: potongan kueri (kata-kata + regex) dihitung SEKALI per kueri, bukan per
+// baris. _qolScore dipanggil untuk ~1.500 baris tiap ketukan; membangun regex di
+// dalamnya berarti ~1.500 kompilasi regex per ketukan.
+let _qolQP = null;
+function _qolQueryParts(q){
+  if (_qolQP && _qolQP.q === q) return _qolQP;
+  const toks = q.split(/\s+/).filter(Boolean);
+  _qolQP = {
+    q, toks,
+    wordRe: new RegExp('\\b' + _qolReEsc(q)),
+    preRes: toks.map(t => new RegExp('(^|[^a-z0-9])' + _qolReEsc(t)))
+  };
+  return _qolQP;
+}
 function _qolScore(q, item){
   // Tanpa kata kunci, palet berfungsi sebagai daftar telusur: tab lebih dulu,
   // lalu tindakan, lalu 51 PLTU.
-  if (!q) return item.kind === 'tab' ? 5 : (item.kind === 'action' ? 3 : 1);
+  // V147: lompatan kontrak tidak ikut daftar telusur — ratusan baris
+  // PLTU × jenis hanya akan menenggelamkan 51 PLTU.
+  if (!q) return item.kind === 'kontrak' ? 0 : item.kind === 'tab' ? 5 : (item.kind === 'action' ? 3 : 1);
   const lbl = item.label.toLowerCase();
+  const qp = _qolQueryParts(q);
+  // V147/V148: baris kombinasi (mitra / PLTU / jenis) hanya muncul bila kueri
+  // menyebut SEMUA bagiannya: setiap kata harus cocok ke salah satu bagian, dan
+  // setiap bagian harus diklaim oleh kata yang BERBEDA. Tanpa syarat kedua,
+  // "sawdust" saja memunculkan puluhan baris kombinasi, dan "sekam padi" (dua
+  // kata, keduanya jenis) memunculkan kombinasi di setiap PLTU. Kata dicocokkan
+  // sebagai potongan, jadi nama mitra tidak perlu ditulis lengkap:
+  // "pt bakti anggrek woodchip" → PT Bakti Energi Sejahtera · Anggrek · Woodchip.
+  if (item.combo){
+    const toks = qp.toks;
+    const fs = item.facets;
+    if (toks.length < fs.length) return 0;
+    if (!toks.every(t => fs.some(f => f.includes(t)))) return 0;
+    if (!_qolFacetAssign(fs, toks, 0, new Set())) return 0;
+    // Bila semua kata sudah terjelaskan tanpa salah satu bagian, bagian itu cuma
+    // kebetulan cocok: "sekam padi" tidak boleh memunculkan "PT Daya Padi Abadi ·
+    // Pellet Sekam Padi" di atas jenis "Sekam Padi". Baris yang lebih sederhana
+    // (bagian lebih sedikit) selalu ada dan sudah menangani kueri itu.
+    for (let i = 0; i < fs.length; i++){
+      if (toks.every(t => fs.some((f, k) => k !== i && f.includes(t)))) return 0;
+    }
+    // Kata yang cocok di awal kata lebih meyakinkan daripada potongan di tengah
+    // ("bakti" vs "akti") — dipakai sebagai pemecah seri.
+    let pre = 0;
+    for (const re of qp.preRes){
+      if (fs.some(f => re.test(f))) pre++;
+    }
+    return 370 + fs.length * 3 + pre - Math.min(item.label.length, 80) * 0.1;
+  }
   // `sub` SENGAJA tidak ikut dicari. Sub-label mitra dirakit sebagai
   // "33 kontrak · 16 PLTU · PIP/PNP", jadi memasukkannya membuat kata "kontrak"
   // dan "pltu" cocok ke seluruh 198 mitra sekaligus — mengetik "kontrak"
   // mengembalikan 60 baris, bukan tab Daftar Kontrak saja. Semua yang memang
   // layak dicari sudah ada di `kw`, yang ditulis eksplisit per jenis.
   const hay = (item.label + ' ' + (item.kw || '')).toLowerCase();
-  const tokens = q.split(/\s+/).filter(Boolean);
+  const tokens = qp.toks;
   if (tokens.length > 1){
     if (!tokens.every(t => hay.includes(t))) return 0;
-    return 320 + (item.kind === 'tab' ? 30 : 0);
+    // V147: frasa utuh di label diunggulkan — "sekam padi" menaruh jenis
+    // "Sekam Padi" di atas "Pellet Sekam Padi".
+    return 320 + (item.kind === 'tab' ? 30 : 0) +
+           (lbl === q ? 15 : lbl.includes(q) ? 8 : 0) - Math.min(item.label.length, 40) * 0.1;
   }
   let s;
   if (lbl === q) s = 1000;
   else if (lbl.startsWith(q)) s = 800;
-  else if (new RegExp('\\b' + _qolReEsc(q)).test(lbl)) s = 600;
+  else if (qp.wordRe.test(lbl)) s = 600;
   else if (lbl.includes(q)) s = 400;
   else if (hay.includes(q)) s = 200;
   // Anak tangga terakhir sengaja diuji terhadap LABEL saja, bukan hay, DAN dibatasi
@@ -29589,6 +29764,9 @@ function _qolScore(q, item){
   else return 0;
   if (item.kind === 'tab') s += 30;
   else if (item.kind === 'action') s += 15;
+  // V147: lompatan kontrak berlabel sama dengan PLTU-nya; sedikit di bawah supaya
+  // "Suralaya 8" → peta tetap di atas, "Suralaya 8" → kontrak tepat di bawahnya.
+  else if (item.kind === 'kontrak') s -= 5;
   return s - Math.min(item.label.length, 40) * 0.3;
 }
 
@@ -29596,9 +29774,10 @@ const QOL_KIND_ICON = {
   tab:    '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="10" rx="1"/><path d="M1.5 6.5h13"/></svg>',
   plant:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V7l4-2v2l4-2v2l4-2v9z"/><path d="M5 14v-2.5M9 14v-2.5"/></svg>',
   mitra:  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1.5h6l3 3v10H3zM9 1.5v3h3M5 8h6M5 11h4"/></svg>',
-  action: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>'
+  action: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>',
+  kontrak:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5h12M2 8h12M2 12.5h12M5.5 3.5v9"/></svg>'
 };
-const QOL_KIND_GROUP = { tab:'Tab', plant:'PLTU', mitra:'Mitra', action:'Tindakan' };
+const QOL_KIND_GROUP = { tab:'Tab', plant:'PLTU', mitra:'Mitra', kontrak:'Daftar Kontrak', action:'Tindakan' };
 
 function qolRenderCmdk(){
   const list = document.getElementById('cmdkList');
@@ -29632,7 +29811,8 @@ function qolRenderCmdk(){
     }
     const tagText = it.kind === 'tab' ? (it.digit || 'tab')
                   : it.kind === 'plant' ? 'PLTU'
-                  : it.kind === 'mitra' ? 'mitra' : 'aksi';
+                  : it.kind === 'mitra' ? 'mitra'
+                  : it.kind === 'kontrak' ? 'kontrak' : 'aksi';
     const tag = '<span class="cmdk-item-tag">' + tagText + '</span>';
     html += '<div class="cmdk-item' + (i === qolCmdkSel ? ' sel' : '') + '" role="option"' +
               ' aria-selected="' + (i === qolCmdkSel ? 'true' : 'false') + '" data-i="' + i + '">' +
@@ -29692,6 +29872,7 @@ function qolRunCmdk(i){
   if (it.kind === 'tab'){ switchTab(it.tab); return; }
   if (it.kind === 'plant'){ qolGotoPlant(it.code); return; }
   if (it.kind === 'mitra'){ qolGotoMitra(it.mitra); return; }
+  if (it.kind === 'kontrak'){ qolGotoKontrak({ mitra: it.mitra, pltu: it.pltu, jenis: it.jenis }, it.desc); return; }
   if (it.id === 'kbdhelp') openKbdHelp();
   else if (it.id === 'top') qolScrollActiveToTop();
   else if (it.id === 'copy') qolCopy(location.href);
@@ -29739,20 +29920,33 @@ function qolGotoPlant(code){
 // pekerjaan sebelumnya, pengguna melihat sebagian hasil dan mengira itu semuanya.
 // Jadi kelimanya dibuka. Tahun/Bulan TIDAK disentuh: keduanya hanya mengubah
 // angka realisasi mana yang dijumlahkan, bukan baris mana yang muncul.
-function qolApplyMitraFilter(mitra){
+// V147: dipakai juga untuk lompatan PLTU / jenis / PLTU × jenis. `opts` berisi
+// nilai penyaring yang dituju ({ mitra, pltu, jenis }); sisanya dibuka ke 'all'
+// dengan alasan yang sama seperti di atas.
+function qolApplyKontrakFilter(opts){
   const f = state.kontrakFilters;
   f.regional = 'all';
   f.genco    = 'all';
-  f.pltu     = 'all';
-  f.jenis    = 'all';
-  f.mitra    = mitra;
+  f.pltu     = opts.pltu  || 'all';
+  f.jenis    = opts.jenis || 'all';
+  f.mitra    = opts.mitra || 'all';
   state.kontrakOnlyActive = false;   // kontrak yang sudah berakhir tetap hasil yang sah
   state.kontrakDoAnomOnly = false;   // sakelar badge "⚠ DO kosong"
   // Selaraskan kontrol di layar supaya keadaan itu TERLIHAT, bukan tersembunyi.
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
   set('kontrak-regional-filter', 'all');
   set('kontrak-genco-filter', 'all');
-  set('kontrak-jenis-filter', 'all');
+  // Opsi jenis dibangun sekali dari data saat tab pertama dibuka; jenis yang
+  // baru muncul setelah refresh data belum ada di sana. Tanpa opsi, <select>
+  // diam-diam kembali ke "All Jenis" padahal tabelnya tersaring.
+  const jSel = document.getElementById('kontrak-jenis-filter');
+  if (jSel && jSel.dataset.built && f.jenis !== 'all' &&
+      !Array.from(jSel.options).some(o => o.value === f.jenis)){
+    const o = document.createElement('option');
+    o.value = f.jenis; o.textContent = f.jenis;
+    jSel.appendChild(o);
+  }
+  set('kontrak-jenis-filter', f.jenis);
   const act = document.getElementById('kontrak-only-active');
   if (act) act.checked = false;
   // Daftar PLTU dan datalist mitra diturunkan dari penyaring di atas, jadi harus
@@ -29776,27 +29970,43 @@ function qolRevealKontrakFilters(){
 }
 
 function qolGotoMitra(mitra){
+  qolGotoKontrak({ mitra: mitra }, mitra, 'atas nama "' + mitra + '"');
+}
+
+// V147: lompat ke Daftar Kontrak dengan penyaring `opts` ({ mitra, pltu, jenis }).
+// `desc` tampil di toast; `emptyDesc` menggantikannya pada pesan "tidak ada".
+function qolGotoKontrak(opts, desc, emptyDesc){
   // Penyaring dipasang SEBELUM pindah tab. Kalau Daftar Kontrak baru dibuka
   // pertama kali, lazy-init-nya (setTimeout 30 ms di switchTab) langsung
   // membangun tabel dengan penyaring yang benar — bukan membangun yang salah
   // lalu ditimpa, yang akan terlihat berkedip.
-  qolApplyMitraFilter(mitra);
+  qolApplyKontrakFilter(opts);
   switchTab('kontrak');
   // Lalu diulang setelah init selesai: pada panggilan pertama sebagian kontrol
   // belum terbangun (select genco/jenis diisi oleh buildKontrakFilters), dan
   // buildKontrakFilters mengembalikannya ke 'all' — sama dengan yang kita mau,
   // tapi urutannya tidak dijamin. Pemanggilan kedua ini idempoten.
   setTimeout(() => {
-    qolApplyMitraFilter(mitra);
+    qolApplyKontrakFilter(opts);
+    // buildKontrakPltuOptions() membuang PLTU yang tidak lolos filter global
+    // (Genco/Boiler/Regional di header) dan kembali ke "All PLTU". Tabelnya lalu
+    // memuat SEMUA PLTU — jangan biarkan itu terlihat seperti hasil pencarian.
+    const want = opts.pltu || 'all';
+    if (want !== 'all' && state.kontrakFilters.pltu !== want){
+      try { renderKontrakTable(); } catch(e){}
+      qolRevealKontrakFilters();
+      showToast('Kontrak ' + desc + ' disembunyikan oleh filter global di header.', 'warn', 5200);
+      return;
+    }
     try { renderKontrakTable(); } catch(e){ console.warn('[QoL] renderKontrakTable gagal:', e); }
     qolRevealKontrakFilters();
 
     let n = null;
     try { n = filteredContracts().length; } catch(e){}
     if (n === 0){
-      showToast('Tidak ada kontrak atas nama "' + mitra + '".', 'warn', 4500);
+      showToast('Tidak ada kontrak ' + (emptyDesc || desc) + '.', 'warn', 4500);
     } else {
-      showToast((n === null ? '' : n + ' kontrak · ') + mitra +
+      showToast((n === null ? '' : n + ' kontrak · ') + desc +
                 ' — penyaring lain direset, termasuk "only active".', 'ok', 5200);
     }
 
