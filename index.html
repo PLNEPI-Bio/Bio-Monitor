@@ -31089,6 +31089,20 @@ const MS_NM = 48;                      // Jan 2023 … Des 2026
 // Bobot skor indikatif. Komponen yang tidak bisa dihitung (mis. mitra tanpa DO)
 // dikeluarkan dan bobot sisanya dinormalkan ulang — lihat _msAggregate.
 const MS_W = { sr:40, pace:30, cons:20, keep:10 };
+// Penimbang volume (keputusan user 2026-09-24): persentase dari volume kecil lebih
+// mudah dicapai, jadi SR dan Serapan vs Jadwal yang MASUK SKOR ditarik ke patokan
+// `p` sebesar `k` MT volume bayangan:
+//   tertimbang = (realisasi + k × p) ÷ (volume + k)
+// 10.000 MT @75% → 66,7%; 500 MT @80% → 52,7% — volume besar menang walau
+// persentasenya sedikit lebih rendah. Patokan SENGAJA 50%, bukan rata-rata
+// kelompok: patokan yang lebih tinggi dari keduanya justru mengangkat kontrak kecil.
+// Volume = volume DO (untuk SR) dan volume prorata (untuk serapan) — bukti yang
+// benar-benar mendasari persentasenya. Angka mentah tetap ditampilkan di KPI.
+const MS_SHRINK = { p:0.5, k:5000 };
+function _msShrink(num, den){
+  if (!(den > 0)) return null;
+  return (Math.min(num, den) + MS_SHRINK.k * MS_SHRINK.p) / (den + MS_SHRINK.k) * 100;
+}
 const MS_GRADES = [
   { min:85, g:'A', t:'Sangat baik',     c:'#10b981' },
   { min:70, g:'B', t:'Baik',            c:'#0A6E96' },
@@ -31214,8 +31228,12 @@ function _msAggregate(stats){
   o.cons    = o.actM > 0 ? o.supM / o.actM * 100 : null;
   o.keep    = o.n > 0 ? (1 - o.ter / o.n) * 100 : null;
   o.serapan = o.vol > 0 ? o.real / o.vol * 100 : null;
+  // Pembilang dijepit ke penyebut (Math.min di _msShrink): kelebihan kirim tidak
+  // boleh menutupi kekurangan bukti volume.
+  o.srAdj   = _msShrink(o.srR, o.srD);
+  o.paceAdj = _msShrink(o.expReal, o.exp);
   let wSum = 0, sc = 0;
-  const comps = { sr:o.sr, pace:o.pace, cons:o.cons, keep:o.keep };
+  const comps = { sr:o.srAdj, pace:o.paceAdj, cons:o.cons, keep:o.keep };
   for (const k in MS_W){
     const v = comps[k];
     if (v === null) continue;
@@ -31531,8 +31549,8 @@ function renderMitraSummary(keepScroll){
           title: 'Skor Kinerja Mitra (indikatif)',
           formula: 'Rata-rata tertimbang komponen yang tersedia, tiap komponen dijepit 0–100',
           steps: [
-            ['Supply reliability × ' + MS_W.sr, _msFmtPct(a.sr)],
-            ['Serapan vs jadwal × ' + MS_W.pace, _msFmtPct(a.pace)],
+            ['SR tertimbang volume × ' + MS_W.sr, _msFmtPct(a.srAdj)],
+            ['Serapan tertimbang volume × ' + MS_W.pace, _msFmtPct(a.paceAdj)],
             ['Konsistensi × ' + MS_W.cons, _msFmtPct(a.cons)],
             ['Keberlanjutan × ' + MS_W.keep, _msFmtPct(a.keep)],
             ['÷ bobot terpakai', String(a.wUsed)]
@@ -31575,16 +31593,16 @@ function renderMitraSummary(keepScroll){
         result:['Serapan', _msFmtPct(a.serapan)],
         note:'Terhadap volume SEUMUR kontrak — kontrak yang masih berjalan wajar belum 100%.' } : null) +
       kpi('Kiriman Terakhir', a.lastSup === null ? '—' : _msYMLabel(MS_YM0 + a.lastSup, true), a.firstSup === null ? 'Belum ada realisasi' : 'Pertama ' + _msYMLabel(MS_YM0 + a.firstSup, true)) +
-      kpi('Supply Reliability', '<span style="color:' + _msPctColor(a.sr) + '">' + _msFmtPct(a.sr) + '</span>', a.withDO + ' dari ' + a.n + ' kontrak punya DO', a.sr === null ? null : {
+      kpi('Supply Reliability', '<span style="color:' + _msPctColor(a.sr) + '">' + _msFmtPct(a.sr) + '</span>', (a.srAdj === null ? '' : 'Tertimbang volume ' + _msFmtPct(a.srAdj) + ' · ') + a.withDO + '/' + a.n + ' kontrak ber-DO', a.sr === null ? null : {
         title:'Supply Reliability (SR)', formula:'Σ realisasi ÷ Σ DO, hanya bulan yang ada DO-nya',
         steps:[['Realisasi di bulan ber-DO', fmtInt(a.srR) + ' MT'], ['÷ DO', fmtInt(a.srD) + ' MT']],
         result:['SR', _msFmtPct(a.sr)],
-        note:'Bulan dengan realisasi tetapi DO kosong tidak ikut — jumlahnya ditampilkan di Temuan.' }) +
-      kpi('Serapan vs Jadwal', '<span style="color:' + _msPctColor(a.pace) + '">' + _msFmtPct(a.pace) + '</span>', 'Realisasi ÷ volume prorata s.d. ' + _msYMLabel(M.lastYM), a.pace === null ? null : {
+        note:'Bulan dengan realisasi tetapi DO kosong tidak ikut. Yang masuk skor adalah SR tertimbang volume = (realisasi + ' + fmtInt(MS_SHRINK.k * MS_SHRINK.p) + ') ÷ (DO + ' + fmtInt(MS_SHRINK.k) + ') = ' + _msFmtPct(a.srAdj) + ' — persentase dari volume DO kecil ditarik ke 50%.' }) +
+      kpi('Serapan vs Jadwal', '<span style="color:' + _msPctColor(a.pace) + '">' + _msFmtPct(a.pace) + '</span>', (a.paceAdj === null ? '' : 'Tertimbang volume ' + _msFmtPct(a.paceAdj) + ' · ') + 'prorata s.d. ' + _msYMLabel(M.lastYM), a.pace === null ? null : {
         title:'Serapan vs Jadwal', formula:'Σ realisasi ÷ Σ (volume × bulan berjalan ÷ lama kontrak)',
         steps:[['Realisasi (kontrak non-terminasi)', fmtInt(a.expReal) + ' MT'], ['÷ volume prorata', fmtInt(a.exp) + ' MT']],
         result:['Serapan vs jadwal', _msFmtPct(a.pace)],
-        note:'Bulan berjalan dihitung dari Jan 2023 (awal data realisasi) sampai bulan data terakhir. Asumsi pengiriman merata per bulan.' }) +
+        note:'Bulan berjalan dihitung dari Jan 2023 (awal data realisasi) sampai bulan penuh terakhir. Asumsi pengiriman merata per bulan. Yang masuk skor: versi tertimbang volume = ' + _msFmtPct(a.paceAdj) + '.' }) +
       kpi('Konsistensi', '<span style="color:' + _msPctColor(a.cons) + '">' + _msFmtPct(a.cons, 0) + '</span>', a.supM + ' dari ' + a.actM + ' bulan ada kiriman', a.cons === null ? null : {
         title:'Konsistensi Pasokan', formula:'Bulan-kontrak dengan realisasi > 0 ÷ bulan-kontrak berjalan',
         steps:[['Bulan ada kiriman', String(a.supM)], ['÷ bulan kontrak berjalan', String(a.actM)]],
@@ -31643,6 +31661,7 @@ function renderMitraSummary(keepScroll){
     '<div class="ms-card"><dl class="ms-method">' +
       '<dt>Sumber</dt><dd>Daftar Kontrak (volume, periode, realisasi bulanan 2023–2026, status terminasi) dan DO bulanan (otomatis + koreksi admin) — sama dengan tab Daftar Kontrak. Realisasi di sini adalah realisasi <i>kontrak</i>, bukan realisasi produksi di tab Realisasi. Filter global di header tidak diterapkan.</dd>' +
       '<dt>Supply Reliability (bobot ' + MS_W.sr + ')</dt><dd>Σ realisasi ÷ Σ DO pada bulan yang ada DO-nya. Mengukur seberapa banyak yang dipesan benar-benar dikirim.</dd>' +
+      '<dt>Penimbang volume</dt><dd>Persentase dari volume kecil lebih mudah dicapai. Karena itu SR dan Serapan vs Jadwal yang masuk skor ditarik ke patokan 50% sebesar ' + fmtInt(MS_SHRINK.k) + ' MT volume bayangan: <b>(realisasi + ' + fmtInt(MS_SHRINK.k * MS_SHRINK.p) + ') ÷ (volume + ' + fmtInt(MS_SHRINK.k) + ')</b>. Contoh: DO 10.000 MT dengan SR 75% → 66,7%, sedangkan DO 500 MT dengan SR 80% → 52,7%. Makin besar volumenya, makin dekat ke persentase aslinya. Kelebihan kirim (&gt;100%) tidak menambah nilai. Angka mentah tetap ditampilkan di kartu KPI.</dd>' +
       '<dt>Serapan vs Jadwal (bobot ' + MS_W.pace + ')</dt><dd>Σ realisasi ÷ volume yang semestinya sudah terkirim bila pengiriman merata per bulan sepanjang periode kontrak, dihitung sejak Jan 2023 sampai bulan data terakhir (' + _msYMLabel(M.lastYM, true) + '). Kontrak terminasi tidak ikut.</dd>' +
       '<dt>Konsistensi (bobot ' + MS_W.cons + ')</dt><dd>Porsi bulan kontrak berjalan yang punya realisasi &gt; 0.</dd>' +
       '<dt>Keberlanjutan (bobot ' + MS_W.keep + ')</dt><dd>100% − porsi kontrak yang diterminasi (baris dicoret di Excel sumber).</dd>' +
@@ -31669,8 +31688,8 @@ function _msCompRows(a){
       '<div class="ms-bar"><i style="width:' + pct.toFixed(1) + '%;background:' + _msPctColor(has ? v : null) + '"></i></div>' +
       '<div class="ms-comp-v' + (has ? '' : ' na') + '" style="' + (has ? 'color:' + _msPctColor(v) : '') + '">' + (has ? v.toFixed(0) + '%' : 'n/a') + '</div></div>';
   };
-  return row('Supply Reliability', 'Real ÷ DO', a.sr, MS_W.sr) +
-         row('Serapan vs Jadwal', 'Real ÷ prorata', a.pace, MS_W.pace) +
+  return row('Supply Reliability', 'Real ÷ DO, tertimbang vol.', a.srAdj, MS_W.sr) +
+         row('Serapan vs Jadwal', 'Real ÷ prorata, tertimbang vol.', a.paceAdj, MS_W.pace) +
          row('Konsistensi', 'Bulan ada kiriman', a.cons, MS_W.cons) +
          row('Keberlanjutan', 'Tanpa terminasi', a.keep, MS_W.keep);
 }
@@ -31938,14 +31957,14 @@ function _msRenderPeers(M){
   }
   h += '</div>';
   h += '<div class="ms-two" style="margin-top:0"><div class="ms-card"><div class="ms-card-t">Skor Teratas' + (me ? ' · posisi mitra ini disorot' : '') + '</div><div class="ms-chart" id="msPeerChartBox"><canvas id="msPeerChart"></canvas></div></div>' +
-    '<div class="ms-tbl-wrap" style="max-height:460px;overflow-y:auto"><table class="ms-tbl"><thead><tr><th class="num">#</th><th>Mitra</th><th class="num">Kontrak</th><th class="num">Realisasi</th><th class="num">SR</th><th class="num">Skor</th></tr></thead><tbody>';
+    '<div class="ms-tbl-wrap" style="max-height:460px;overflow-y:auto"><table class="ms-tbl"><thead><tr><th class="num">#</th><th>Mitra</th><th class="num">Kontrak</th><th class="num">DO (MT)</th><th class="num">SR</th><th class="num">Skor</th></tr></thead><tbody>';
   // Tabel: 5 di atas & 5 di bawah posisi mitra ini, atau 12 teratas.
   let from = 0, to = Math.min(ranked.length, 12);
   if (rank > 8){ from = Math.max(0, rank - 6); to = Math.min(ranked.length, rank + 5); }
   for (let i = from; i < to; i++){
     const p = ranked[i], gr = _msGrade(p.ag.score);
     h += '<tr class="' + (p === me ? 'me' : '') + '" data-m="' + escapeHtml(p.m) + '" onclick="openMitraSummary(this.dataset.m)" title="Buka ringkasan mitra ini">' +
-      '<td class="num">' + (i + 1) + '</td><td class="wrap">' + escapeHtml(p.m) + '</td><td class="num">' + p.n + '</td><td class="num">' + fmtInt(p.ag.real) + '</td>' +
+      '<td class="num">' + (i + 1) + '</td><td class="wrap">' + escapeHtml(p.m) + '</td><td class="num">' + p.n + '</td><td class="num">' + fmtInt(p.ag.srD) + '</td>' +
       '<td class="num ms-pct" style="color:' + _msPctColor(p.ag.sr) + '">' + _msFmtPct(p.ag.sr, 0) + '</td>' +
       '<td class="num ms-pct" style="color:' + gr.c + '">' + gr.g + ' · ' + p.ag.score.toFixed(0) + '</td></tr>';
   }
@@ -32100,7 +32119,7 @@ function _msBuildPdf(JsPDF, M){
 
   // ---- Komponen skor + temuan ----
   section('Komponen Skor (indikatif)');
-  const comps = [['Supply Reliability', a.sr, MS_W.sr], ['Serapan vs Jadwal', a.pace, MS_W.pace], ['Konsistensi', a.cons, MS_W.cons], ['Keberlanjutan', a.keep, MS_W.keep]];
+  const comps = [['SR tertimbang vol.', a.srAdj, MS_W.sr], ['Serapan tertimbang vol.', a.paceAdj, MS_W.pace], ['Konsistensi', a.cons, MS_W.cons], ['Keberlanjutan', a.keep, MS_W.keep]];
   comps.forEach(([l, v, w]) => {
     ensure(16);
     font(8.5, 'bold', INK); doc.text(T(l), X, y + 7);
@@ -32191,6 +32210,7 @@ function _msBuildPdf(JsPDF, M){
   [
     'Sumber: Daftar Kontrak (volume, periode, realisasi bulanan 2023-2026, status terminasi) dan DO bulanan (otomatis + koreksi admin). Realisasi = realisasi kontrak, bukan realisasi produksi.',
     'Supply Reliability (bobot ' + MS_W.sr + '): jumlah realisasi / jumlah DO pada bulan yang ada DO-nya.',
+    'Penimbang volume: SR dan serapan yang masuk skor = (realisasi + ' + fmtInt(MS_SHRINK.k * MS_SHRINK.p) + ') / (volume + ' + fmtInt(MS_SHRINK.k) + '), sehingga persentase dari volume kecil ditarik ke 50%. Contoh: DO 10.000 MT @75% = 66,7%; DO 500 MT @80% = 52,7%.',
     'Serapan vs Jadwal (bobot ' + MS_W.pace + '): realisasi / volume prorata linear per bulan sepanjang periode kontrak, dihitung sejak Jan 2023 s.d. bulan data terakhir. Kontrak terminasi tidak ikut.',
     'Konsistensi (bobot ' + MS_W.cons + '): porsi bulan kontrak berjalan yang ada realisasinya.',
     'Keberlanjutan (bobot ' + MS_W.keep + '): 100% dikurangi porsi kontrak terminasi.',
