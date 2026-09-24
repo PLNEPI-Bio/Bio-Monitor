@@ -9479,6 +9479,178 @@ body.gf-on .gf-bar{
   </div>
 </div>
 
+<!-- ====== V-MITRA: RINGKASAN MITRA ======
+     Halaman profil satu mitra/pemasok: kinerja historis 2023–2026, skor indikatif,
+     sebaran per PLTU, daftar kontrak, dan perbandingan dengan mitra lain. SENGAJA
+     tidak punya tombol di bilah tab (desktop maupun mobile) — pintu masuknya palet
+     Ctrl+K dan tombol "Ringkasan mitra" di modal detail kontrak. Pola yang sama
+     dengan view `calendar`. -->
+<style>
+.view[data-view="mitra"] .ms-view{display:block;height:100%;overflow-y:auto;overflow-x:hidden;padding:20px 24px 48px;background:var(--bg);box-sizing:border-box}
+.ms-hero > div{min-width:0}
+.ms-wrap{max-width:1240px;margin:0 auto}
+.ms-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.ms-back{display:inline-flex;align-items:center;gap:6px;min-height:var(--ctl-h-sm);padding:0 10px;background:transparent;border:1px solid var(--border);border-radius:var(--ctl-radius);color:var(--text);font:600 var(--fs-body) 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+.ms-back:hover{border-color:var(--border-bright);color:var(--text-bright)}
+.ms-back svg{width:12px;height:12px;flex-shrink:0}
+.ms-crumb{font-size:var(--fs-data);letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--text-dim)}
+.ms-top-sp{flex:1}
+.ms-switch{position:relative}
+.ms-switch input{min-height:var(--ctl-h-sm);width:240px;max-width:60vw;padding:0 10px;border:1px solid var(--border);border-radius:var(--ctl-radius);background:var(--panel);color:var(--text);font:500 var(--fs-body) 'Plus Jakarta Sans',sans-serif}
+.ms-btn{display:inline-flex;align-items:center;gap:6px;min-height:var(--ctl-h-sm);padding:0 12px;border-radius:var(--ctl-radius);font:700 var(--fs-body) 'Plus Jakarta Sans',sans-serif;cursor:pointer;border:1px solid var(--accent);background:transparent;color:var(--accent);white-space:nowrap}
+.ms-btn:hover{background:var(--accent-soft)}
+.ms-btn.primary{background:var(--accent);color:#fff}
+.ms-btn.primary:hover{filter:brightness(1.1);background:var(--accent)}
+.ms-btn[disabled]{opacity:.55;cursor:wait}
+.ms-btn svg{width:13px;height:13px;flex-shrink:0}
+
+.ms-hero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:stretch;background:var(--panel);border-top:var(--bar);border-bottom:var(--hairline);padding:20px 22px}
+.ms-kicker{font-size:var(--fs-note);letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--text-dim);font-weight:700}
+.ms-name{font-size:26px;font-weight:800;color:var(--text-bright);letter-spacing:-.4px;line-height:1.15;margin:4px 0 8px}
+.ms-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:var(--fs-body);color:var(--text-dim)}
+.ms-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid var(--border);background:var(--panel-2);font-size:var(--fs-data);font-weight:700;color:var(--text);letter-spacing:.02em}
+.ms-pill.g-PNP{border-color:var(--pnp);color:var(--pnp)}
+.ms-pill.g-PIP{border-color:var(--accent-2-ink);color:var(--accent-2-ink)}
+.ms-pill.g-UIW{border-color:var(--accent-cyan-ink);color:var(--accent-cyan-ink)}
+.ms-hero-lead{margin-top:12px;font-size:var(--fs-lead);line-height:var(--lh-body);color:var(--text);max-width:720px}
+.ms-grade{display:flex;align-items:center;gap:16px;padding-left:24px;border-left:var(--hairline);min-width:260px}
+.ms-grade-ring{position:relative;width:96px;height:96px;flex-shrink:0}
+.ms-grade-ring svg{width:96px;height:96px;transform:rotate(-90deg)}
+.ms-grade-ring .ms-ring-bg{stroke:var(--panel-3)}
+.ms-grade-letter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.ms-grade-letter b{font-size:34px;font-weight:800}
+.ms-grade-letter span{font-size:var(--fs-data);color:var(--text-dim);margin-top:3px;font-weight:700}
+.ms-grade-txt b{display:block;font-size:var(--fs-title);color:var(--text-bright)}
+.ms-grade-txt span{display:block;font-size:var(--fs-data);color:var(--text-dim);line-height:1.45;margin-top:4px;max-width:180px}
+
+.ms-nav{position:sticky;top:-20px;z-index:5;display:flex;gap:2px;overflow-x:auto;background:var(--bg);padding:12px 0 0;margin-bottom:4px;border-bottom:var(--hairline);scrollbar-width:none}
+.ms-nav::-webkit-scrollbar{display:none}
+.ms-nav button{flex-shrink:0;background:transparent;border:none;border-bottom:3px solid transparent;padding:8px 12px 9px;font:700 var(--fs-body) 'Plus Jakarta Sans',sans-serif;color:var(--text-dim);cursor:pointer;letter-spacing:.02em}
+.ms-nav button:hover{color:var(--text-bright)}
+.ms-nav button.on{color:var(--text-bright);border-bottom-color:var(--accent-2)}
+.ms-scope{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;padding:12px 0 4px}
+.ms-scope label{display:block;font-size:var(--fs-note);letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--text-dim);font-weight:700;margin-bottom:4px}
+.ms-scope select{min-height:var(--ctl-h-sm);min-width:170px;max-width:100%;padding:0 var(--ctl-chevron-gutter) 0 8px;border:1px solid var(--border);border-radius:var(--ctl-radius);background-color:var(--panel);color:var(--text);font:500 var(--fs-body) 'Plus Jakarta Sans',sans-serif}
+.ms-scope-note{font-size:var(--fs-data);color:var(--text-dim);padding-bottom:6px}
+.ms-scope-note a{color:var(--accent);cursor:pointer;text-decoration:underline}
+
+.ms-sec{margin-top:var(--exhibit-gap);scroll-margin-top:56px}
+.ms-sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:var(--bar);padding-top:10px;margin-bottom:12px}
+.ms-sec-h h3{margin:0;font-size:var(--fs-sub);font-weight:800;color:var(--text-bright);letter-spacing:var(--ls-title)}
+.ms-sec-h h3 small{font-weight:600;color:var(--text-dim);font-size:var(--fs-data);margin-left:6px;letter-spacing:0}
+.ms-seg{display:inline-flex;border:1px solid var(--border);border-radius:var(--ctl-radius);overflow:hidden}
+.ms-seg button{background:var(--panel);border:none;border-left:1px solid var(--border);padding:5px 10px;font:700 var(--fs-data) 'Plus Jakarta Sans',sans-serif;color:var(--text-dim);cursor:pointer}
+.ms-seg button:first-child{border-left:none}
+.ms-seg button.on{background:var(--accent);color:#fff}
+
+.ms-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border)}
+.ms-kpi{background:var(--panel);padding:14px 16px;min-width:0}
+.ms-kpi-l{font-size:var(--fs-note);letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--text-dim);font-weight:700}
+.ms-kpi-v{font-size:var(--fs-fig);font-weight:800;color:var(--text-bright);letter-spacing:var(--ls-fig);margin-top:6px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-kpi-v small{font-size:var(--fs-body);font-weight:600;color:var(--text-dim);margin-left:3px}
+.ms-kpi-s{font-size:var(--fs-data);color:var(--text-dim);margin-top:4px;line-height:1.4}
+
+.ms-two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:var(--gutter);margin-top:var(--gutter)}
+.ms-card{background:var(--panel);border:1px solid var(--border);padding:16px 18px;min-width:0}
+.ms-card-t{font-size:var(--fs-note);letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--text-dim);font-weight:800;margin-bottom:12px}
+.ms-comp{display:grid;grid-template-columns:130px 1fr 52px;gap:10px;align-items:center;padding:7px 0;border-bottom:var(--hairline)}
+.ms-comp:last-of-type{border-bottom:none}
+.ms-comp-l{font-size:var(--fs-body);font-weight:700;color:var(--text)}
+.ms-comp-l span{display:block;font-size:var(--fs-note);font-weight:600;color:var(--text-dim);margin-top:1px}
+.ms-bar{height:8px;background:var(--panel-3);position:relative;overflow:hidden}
+.ms-bar i{position:absolute;left:0;top:0;bottom:0;display:block;transition:width var(--dur-slow) var(--ease-out)}
+.ms-comp-v{font-size:var(--fs-lead);font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.ms-comp-v.na{color:var(--text-dim);font-weight:600;font-size:var(--fs-data)}
+.ms-ins{list-style:none;margin:0;padding:0}
+.ms-ins li{display:grid;grid-template-columns:18px 1fr;gap:8px;padding:7px 0;border-bottom:var(--hairline);font-size:var(--fs-body);line-height:var(--lh-body);color:var(--text)}
+.ms-ins li:last-child{border-bottom:none}
+.ms-ins li b{color:var(--text-bright)}
+.ms-ins-ic{width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;margin-top:1px}
+.ms-ins-ic.good{background:#10b981}.ms-ins-ic.warn{background:#f59e0b}.ms-ins-ic.bad{background:#ef4444}.ms-ins-ic.info{background:var(--accent-cyan-ink)}
+
+.ms-chart{position:relative;height:300px}
+.ms-chart.sm{height:240px}
+.ms-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:var(--fs-data);color:var(--text-dim);margin-top:8px}
+.ms-legend i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px}
+.ms-yearstrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-top:12px}
+.ms-yearstrip > div{background:var(--panel);padding:10px 12px}
+.ms-yearstrip b{display:block;font-size:var(--fs-title);color:var(--text-bright);font-variant-numeric:tabular-nums}
+.ms-yearstrip span{font-size:var(--fs-note);color:var(--text-dim);letter-spacing:var(--ls-caps-tight);text-transform:uppercase;font-weight:700}
+.ms-yearstrip em{display:block;font-style:normal;font-size:var(--fs-data);color:var(--text-dim);margin-top:2px}
+
+.ms-tbl-wrap{overflow-x:auto;border:1px solid var(--border);background:var(--panel);-webkit-overflow-scrolling:touch}
+.ms-tbl{width:100%;border-collapse:collapse;font-size:var(--fs-data);font-variant-numeric:tabular-nums}
+.ms-tbl th{background:var(--panel-3);color:var(--text-dim);text-align:left;font-weight:800;letter-spacing:var(--ls-caps-tight);text-transform:uppercase;font-size:var(--fs-note);padding:8px 10px;white-space:nowrap;cursor:pointer;user-select:none}
+.ms-tbl th.num,.ms-tbl td.num{text-align:right}
+.ms-tbl th:hover{color:var(--text-bright)}
+.ms-tbl th .ar{opacity:.35;margin-left:3px}
+.ms-tbl th.sorted .ar{opacity:1;color:var(--text-bright)}
+.ms-tbl td{padding:8px 10px;border-top:var(--hairline);color:var(--text);white-space:nowrap}
+.ms-tbl tbody tr{cursor:pointer}
+.ms-tbl tbody tr:hover td{background:var(--accent-soft)}
+.ms-tbl tr.me td{background:rgba(255,199,44,.18);font-weight:800}
+.ms-tbl td.wrap{white-space:normal;min-width:160px}
+.ms-st{display:inline-block;padding:1px 6px;font-size:var(--fs-note);font-weight:800;letter-spacing:.06em;text-transform:uppercase;border:1px solid}
+.ms-st.act{color:#047857;border-color:#10b981;background:rgba(16,185,129,.1)}
+.ms-st.exp{color:var(--text-dim);border-color:var(--border-bright)}
+.ms-st.ter{color:var(--danger);border-color:var(--danger);background:rgba(182,48,43,.08)}
+.ms-st.fut{color:var(--accent-cyan-ink);border-color:var(--accent-cyan-ink)}
+.ms-pct{font-weight:800}
+
+.ms-gantt{position:relative;background:var(--panel);border:1px solid var(--border);padding:10px 14px 12px;margin-top:var(--gutter)}
+.ms-gantt-axis{position:relative;height:18px;margin-left:190px;border-bottom:var(--hairline);font-size:var(--fs-note);color:var(--text-dim);font-weight:700}
+.ms-gantt-axis span{position:absolute;top:0;transform:translateX(-50%)}
+.ms-gantt-row{display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center;min-height:24px;border-bottom:var(--hairline);cursor:pointer}
+.ms-gantt-row:last-child{border-bottom:none}
+.ms-gantt-row:hover{background:var(--accent-soft)}
+.ms-gantt-lbl{font-size:var(--fs-data);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-gantt-lbl span{color:var(--text-dim)}
+.ms-gantt-track{position:relative;height:24px}
+.ms-gantt-bar{position:absolute;top:7px;height:10px;min-width:3px;overflow:hidden}
+.ms-gantt-bar i{position:absolute;left:0;top:0;bottom:0;background:rgba(0,0,0,.28)}
+.ms-gantt-today{position:absolute;top:0;bottom:0;width:0;border-left:2px dashed var(--danger);pointer-events:none}
+
+.ms-rank{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:12px}
+.ms-rank-big{font-size:var(--fs-display);font-weight:800;color:var(--text-bright);line-height:1}
+.ms-rank-big small{font-size:var(--fs-lead);color:var(--text-dim);font-weight:600}
+.ms-rank-txt{font-size:var(--fs-body);color:var(--text);line-height:var(--lh-body);max-width:560px}
+.ms-method{font-size:var(--fs-body);line-height:var(--lh-body);color:var(--text);margin:0}
+.ms-method dt{font-weight:800;color:var(--text-bright);margin-top:10px}
+.ms-method dt:first-child{margin-top:0}
+.ms-method dd{margin:2px 0 0}
+.ms-empty{padding:40px 20px;text-align:center;color:var(--text-dim);font-size:var(--fs-lead)}
+
+@media (max-width:900px){
+  /* minmax(0,…) bukan 1fr: 1fr = minmax(auto,1fr), dan tabel lebar di dalamnya
+     akan mendorong seluruh halaman melebar melewati layar. */
+  .ms-hero{grid-template-columns:minmax(0,1fr)}
+  .ms-grade{border-left:none;border-top:var(--hairline);padding:16px 0 0;min-width:0}
+  .ms-two{grid-template-columns:minmax(0,1fr)}
+  .ms-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:768px){
+  .view[data-view="mitra"]{height:calc(100vh - 52px)!important;height:calc(100dvh - 52px)!important}
+  .view[data-view="mitra"] .ms-view{padding:12px 12px calc(76px + env(safe-area-inset-bottom,0))}
+  .ms-name{font-size:20px}
+  .ms-hero{padding:14px}
+  .ms-switch{flex:1 1 100%}
+  .ms-switch input{width:100%;max-width:none}
+  .ms-top-sp{display:none}
+  .ms-nav{top:-12px}
+  .ms-kpi-v{font-size:var(--fs-head)}
+  .ms-yearstrip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ms-comp{grid-template-columns:100px 1fr 44px}
+  .ms-gantt-axis{display:none}
+  .ms-gantt-row{grid-template-columns:1fr;gap:0;padding:4px 0}
+  .ms-chart{height:240px}
+}
+</style>
+<div class="view" data-view="mitra">
+  <div class="ms-view" id="msView">
+    <div class="ms-wrap" id="msWrap"><div class="ms-empty">Pilih mitra lewat pencarian (Ctrl+K).</div></div>
+  </div>
+</div>
+
 <!-- ====== TAB 8: UPDATE DATA ====== -->
 <div class="view" data-view="update">
   <div class="real-view">
@@ -9729,6 +9901,8 @@ body.gf-on .gf-bar{
         <div class="pemasok-modal-title" id="pemasokModalTitle">—</div>
         <div class="pemasok-modal-meta" id="pemasokModalMeta"></div>
       </div>
+      <!-- V-MITRA: pintu kedua ke Ringkasan Mitra (yang pertama palet Ctrl+K). -->
+      <button class="pemasok-modal-close" id="pemasokModalMitraBtn" style="margin-right:8px" title="Buka ringkasan kinerja historis mitra ini" onclick="openMitraSummary(window._pemasokOpenArgs &amp;&amp; window._pemasokOpenArgs[0])">Ringkasan mitra →</button>
       <button class="pemasok-modal-close" id="pemasokModalClose" title="Close">× CLOSE</button>
     </div>
     <div class="pemasok-modal-body" id="pemasokModalBody"></div>
@@ -29806,7 +29980,7 @@ function qolBuildCmdkIndex(){
     const e = mitraAgg.get(m);
     items.push({
       kind:'mitra', mitra:m, label:m, ac:_qolAcronyms(m),
-      sub: e.n + ' kontrak · ' + e.pltu.size + ' PLTU' +
+      sub: 'Ringkasan Mitra · ' + e.n + ' kontrak · ' + e.pltu.size + ' PLTU' +
            (e.genco.size ? ' · ' + Array.from(e.genco).sort().join('/') : ''),
       // Nama PLTU ikut masuk kata kunci: mengetik "suralaya" jadi memunculkan
       // PLTU-nya lebih dulu (cocok di label, skor jauh lebih tinggi) lalu para
@@ -29885,7 +30059,7 @@ function qolBuildCmdkIndex(){
     items.push({
       kind:'kontrak', combo:true, facets,
       mitra: e.m || '', pltu: e.g ? e.g.val : 'all', jenis: e.j || 'all',
-      label: parts.join(' · '), sub:'Daftar Kontrak · ' + e.n + ' kontrak',
+      label: parts.join(' · '), sub:(e.m ? 'Ringkasan Mitra · ' : 'Daftar Kontrak · ') + e.n + ' kontrak',
       desc: descs.join(' · '), kw: facets.map(f => f.kw).join(' ')
     });
   });
@@ -30149,14 +30323,16 @@ function qolRenderCmdk(){
       html += '<div class="cmdk-group">' + QOL_KIND_GROUP[it.kind] + '</div>';
       lastKind = it.kind;
     }
-    const tagText = it.kind === 'tab' ? (it.digit || 'tab')
-                  : it.kind === 'plant' ? 'PLTU'
-                  : it.kind === 'mitra' ? 'mitra'
-                  : it.kind === 'kontrak' ? 'kontrak' : 'aksi';
+    // V-MITRA: kombinasi yang memuat mitra membuka Ringkasan Mitra → ditandai mitra.
+    const vk = (it.kind === 'kontrak' && it.combo && it.mitra) ? 'mitra' : it.kind;
+    const tagText = vk === 'tab' ? (it.digit || 'tab')
+                  : vk === 'plant' ? 'PLTU'
+                  : vk === 'mitra' ? 'mitra'
+                  : vk === 'kontrak' ? 'kontrak' : 'aksi';
     const tag = '<span class="cmdk-item-tag">' + tagText + '</span>';
     html += '<div class="cmdk-item' + (i === qolCmdkSel ? ' sel' : '') + '" role="option"' +
               ' aria-selected="' + (i === qolCmdkSel ? 'true' : 'false') + '" data-i="' + i + '">' +
-              '<span class="cmdk-item-icon" aria-hidden="true">' + QOL_KIND_ICON[it.kind] + '</span>' +
+              '<span class="cmdk-item-icon" aria-hidden="true">' + QOL_KIND_ICON[vk] + '</span>' +
               '<span class="cmdk-item-main">' +
                 '<span class="cmdk-item-label">' + escapeHtml(it.label) + '</span>' +
                 (it.sub ? '<span class="cmdk-item-sub">' + escapeHtml(it.sub) + '</span>' : '') +
@@ -30211,7 +30387,11 @@ function qolRunCmdk(i){
   closeCmdk();
   if (it.kind === 'tab'){ switchTab(it.tab); return; }
   if (it.kind === 'plant'){ qolGotoPlant(it.code); return; }
-  if (it.kind === 'mitra'){ qolGotoMitra(it.mitra); return; }
+  // V-MITRA: mitra — sendiri atau bersama PLTU/jenis — membuka Ringkasan Mitra,
+  // bukan lagi Daftar Kontrak. Daftar Kontrak tetap satu klik dari halaman itu
+  // (tombol "Daftar Kontrak"), dan lompatan PLTU/jenis tanpa mitra tidak berubah.
+  if (it.kind === 'mitra'){ openMitraSummary(it.mitra); return; }
+  if (it.kind === 'kontrak' && it.combo && it.mitra){ openMitraSummary(it.mitra, { pltu: it.pltu, jenis: it.jenis }); return; }
   if (it.kind === 'kontrak'){ qolGotoKontrak({ mitra: it.mitra, pltu: it.pltu, jenis: it.jenis }, it.desc); return; }
   if (it.id === 'kbdhelp') openKbdHelp();
   else if (it.id === 'top') qolScrollActiveToTop();
@@ -30885,6 +31065,1185 @@ window.addEventListener('DOMContentLoaded', () => {
     if (document.visibilityState === 'visible') checkAppVersion();
   });
 });
+
+// =====================================================================
+// V-MITRA: RINGKASAN MITRA
+// =====================================================================
+// Nomor revisi sementara "V-MITRA": fitur ini dikembangkan di cabang terpisah
+// (feat/mitra-summary) dan baru diberi nomor V1xx saat digabung ke main, supaya
+// tidak bertabrakan dengan nomor yang dipakai pekerjaan lain di main.
+//
+// Sumber angka — SEMUANYA yang sudah dipakai tab Daftar Kontrak, tidak ada sumber
+// baru: DATA.contracts (volume, periode, realisasi bulanan 2023–2026, status
+// terminated), getContractDO() (DO bulanan, auto + override admin), dan
+// getKontrakHarga(). Realisasi di sini = realisasi KONTRAK, bukan realisasi
+// produksi (lihat catatan "realisasi dua sumber") — jangan dibandingkan dengan
+// angka tab Realisasi.
+//
+// Filter global di header SENGAJA tidak diterapkan: halaman ini profil satu mitra,
+// dan skornya tidak boleh berubah hanya karena chip Genco/Regional kebetulan menyala.
+const MS_YEARS = ['2023','2024','2025','2026'];
+const MS_MON = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const MS_YM0 = 2023 * 12;             // Jan 2023 — indeks bulan 0
+const MS_NM = 48;                      // Jan 2023 … Des 2026
+// Bobot skor indikatif. Komponen yang tidak bisa dihitung (mis. mitra tanpa DO)
+// dikeluarkan dan bobot sisanya dinormalkan ulang — lihat _msAggregate.
+const MS_W = { sr:40, pace:30, cons:20, keep:10 };
+const MS_GRADES = [
+  { min:85, g:'A', t:'Sangat baik',     c:'#10b981' },
+  { min:70, g:'B', t:'Baik',            c:'#0A6E96' },
+  { min:50, g:'C', t:'Cukup',           c:'#f59e0b' },
+  { min:0,  g:'D', t:'Perlu perhatian', c:'#ef4444' }
+];
+const msState = { mitra:'', pltu:'all', jenis:'all', prevTab:'map', trend:'month', peer:'jenis',
+                  ctSort:{ k:'awal', d:-1 }, plSort:{ k:'real', d:-1 }, model:null };
+const mitraCharts = {};
+
+function _msYM(iso){
+  const m = /^(\d{4})-(\d{2})/.exec(iso || '');
+  return m ? (+m[1]) * 12 + (+m[2] - 1) : null;
+}
+function _msYMLabel(ym, long){
+  const y = Math.floor(ym / 12), m = ym - y * 12;
+  return MS_MON[m] + ' ' + (long ? y : String(y).slice(2));
+}
+function _msGrade(score){
+  if (score === null || score === undefined) return null;
+  return MS_GRADES.find(g => score >= g.min) || MS_GRADES[MS_GRADES.length - 1];
+}
+function _msPctColor(p){
+  if (p === null || p === undefined) return 'var(--text-dim)';
+  return p > 100 ? '#8b5cf6' : p >= 70 ? '#10b981' : p >= 30 ? '#f59e0b' : '#ef4444';
+}
+function _msFmtPct(p, d){ return (p === null || p === undefined || !isFinite(p)) ? '—' : p.toFixed(d === undefined ? 1 : d) + '%'; }
+function _msCss(name, fb){
+  try { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fb; } catch(e){ return fb; }
+}
+
+// Bulan data terakhir: bulan TERBARU yang punya realisasi > 0 di kontrak mana pun.
+// Konsistensi & kecepatan serapan hanya dihitung sampai bulan ini — bulan berjalan
+// yang belum dilaporkan tidak boleh dihitung sebagai "tidak mengirim".
+function _msLastDataYM(){
+  const cs = (DATA && DATA.contracts) || [];
+  let last = null;
+  for (const c of cs){
+    const R = c && c.realisasi;
+    if (!R) continue;
+    for (let yi = MS_YEARS.length - 1; yi >= 0; yi--){
+      const arr = R[MS_YEARS[yi]] || [];
+      let hit = -1;
+      for (let mi = 11; mi >= 0; mi--) if ((+arr[mi] || 0) > 0){ hit = mi; break; }
+      if (hit >= 0){ const v = MS_YM0 + yi * 12 + hit; if (last === null || v > last) last = v; break; }
+    }
+  }
+  const d = new Date();
+  const now = d.getFullYear() * 12 + d.getMonth();
+  if (last === null || last > now) last = Math.min(now, MS_YM0 + MS_NM - 1);
+  return last;
+}
+// Bulan EVALUASI: bulan data terakhir, tetapi tidak pernah bulan berjalan — bulan
+// yang belum selesai datanya parsial, dan mitra yang biasa mengirim di akhir bulan
+// akan tercatat "tidak mengirim". Grafik tetap memakai _msLastDataYM.
+function _msEvalYM(lastData){
+  const d = new Date();
+  return Math.min(lastData, d.getFullYear() * 12 + d.getMonth() - 1);
+}
+
+// Statistik satu kontrak. Indeks bulan k = 0 (Jan 2023) … 47 (Des 2026).
+function _msContractStats(c, lastYM, today){
+  const vol = +c.vol_mt || 0;
+  const R = c.realisasi || {};
+  const DO = getContractDO(c);
+  const real = new Array(MS_NM).fill(0), dov = new Array(MS_NM).fill(0);
+  for (let yi = 0; yi < MS_YEARS.length; yi++){
+    const ra = R[MS_YEARS[yi]] || [], da = (DO && DO[MS_YEARS[yi]]) || [];
+    for (let mi = 0; mi < 12; mi++){
+      real[yi * 12 + mi] = +ra[mi] || 0;
+      dov[yi * 12 + mi] = +da[mi] || 0;
+    }
+  }
+  let totReal = 0, totDo = 0, srReal = 0, srDo = 0, doAnom = 0, lastSup = null, firstSup = null;
+  for (let k = 0; k < MS_NM; k++){
+    totReal += real[k]; totDo += dov[k];
+    if (dov[k] > 0){ srReal += real[k]; srDo += dov[k]; }
+    else if (real[k] > 0) doAnom++;
+    if (real[k] > 0){ lastSup = k; if (firstSup === null) firstSup = k; }
+  }
+  const status = c.terminated ? 'ter'
+    : !c.akhir ? 'exp'
+    : c.akhir < today ? 'exp'
+    : (c.awal && c.awal > today) ? 'fut' : 'act';
+  // Konsistensi & kecepatan serapan: hanya kontrak yang tidak diterminasi dan
+  // periodenya lengkap. Kontrak terminasi sudah dihukum lewat komponen
+  // Keberlanjutan; tanggal terminasinya tidak tercatat, jadi menghitung bulan
+  // "tanpa kiriman" sesudahnya akan menghukumnya dua kali.
+  const a = _msYM(c.awal), b = _msYM(c.akhir);
+  let actM = 0, supM = 0, expected = null, realEval = 0;
+  for (let k = 0; k <= Math.min(MS_NM - 1, lastYM - MS_YM0); k++) realEval += real[k];
+  if (!c.terminated && a !== null && b !== null && b >= a){
+    const s = Math.max(a, MS_YM0), e = Math.min(b, lastYM, MS_YM0 + MS_NM - 1);
+    for (let ym = s; ym <= e; ym++){ actM++; if (real[ym - MS_YM0] > 0) supM++; }
+    // Volume yang "semestinya" sudah terkirim: prorata linear per bulan atas
+    // periode kontrak, dihitung dari Jan 2023 (awal data realisasi) sampai bulan
+    // data terakhir. Kontrak yang mulai sebelum 2023 hanya dinilai bagian 2023+.
+    if (vol > 0) expected = vol * Math.max(0, e - s + 1) / (b - a + 1);
+  }
+  return { c, vol, real, dov, hasDO: !!DO, totReal, totDo, srReal, srDo, doAnom,
+           lastSup, firstSup, status, actM, supM, expected, realEval, a, b };
+}
+
+function _msAggregate(stats){
+  const o = { n: stats.length, vol:0, real:0, doTot:0, srR:0, srD:0, actM:0, supM:0, exp:0, expReal:0,
+              ter:0, act:0, exp_:0, fut:0, withDO:0, anom:0, lastSup:null, firstSup:null,
+              mReal:new Array(MS_NM).fill(0), mDo:new Array(MS_NM).fill(0) };
+  stats.forEach(s => {
+    o.vol += s.vol; o.real += s.totReal; o.doTot += s.totDo;
+    o.srR += s.srReal; o.srD += s.srDo; o.actM += s.actM; o.supM += s.supM;
+    // Pembilang & penyebut dipotong di bulan yang SAMA (bulan evaluasi).
+    if (s.expected !== null){ o.exp += s.expected; o.expReal += s.realEval; }
+    if (s.status === 'ter') o.ter++; else if (s.status === 'act') o.act++;
+    else if (s.status === 'fut') o.fut++; else o.exp_++;
+    if (s.hasDO) o.withDO++;
+    o.anom += s.doAnom;
+    if (s.lastSup !== null && (o.lastSup === null || s.lastSup > o.lastSup)) o.lastSup = s.lastSup;
+    if (s.firstSup !== null && (o.firstSup === null || s.firstSup < o.firstSup)) o.firstSup = s.firstSup;
+    for (let k = 0; k < MS_NM; k++){ o.mReal[k] += s.real[k]; o.mDo[k] += s.dov[k]; }
+  });
+  o.sr      = o.srD > 0 ? o.srR / o.srD * 100 : null;
+  o.pace    = o.exp > 0 ? o.expReal / o.exp * 100 : null;
+  o.cons    = o.actM > 0 ? o.supM / o.actM * 100 : null;
+  o.keep    = o.n > 0 ? (1 - o.ter / o.n) * 100 : null;
+  o.serapan = o.vol > 0 ? o.real / o.vol * 100 : null;
+  let wSum = 0, sc = 0;
+  const comps = { sr:o.sr, pace:o.pace, cons:o.cons, keep:o.keep };
+  for (const k in MS_W){
+    const v = comps[k];
+    if (v === null) continue;
+    wSum += MS_W[k];
+    sc += MS_W[k] * Math.min(100, Math.max(0, v));
+  }
+  // Keberlanjutan saja bukan riwayat kinerja — tanpa satu pun dari SR/serapan/
+  // konsistensi (mis. semua kontraknya baru mulai bulan depan), skor tidak diberikan.
+  o.score = (o.sr !== null || o.pace !== null || o.cons !== null) && wSum > 0 ? sc / wSum : null;
+  o.wUsed = wSum;
+  return o;
+}
+
+function _msMitraContracts(m){
+  return ((DATA && DATA.contracts) || []).filter(c => (c && c.pemasok || '').trim() === m);
+}
+function _msScopePass(c){
+  if (msState.pltu !== 'all' && !_kontrakPltuPass(msState.pltu, c.pltu)) return false;
+  if (msState.jenis !== 'all' && (c.jenis || '') !== msState.jenis) return false;
+  return true;
+}
+function _msMainJenis(contracts){
+  const by = {};
+  contracts.forEach(c => { const j = (c.jenis || '').trim(); if (j) by[j] = (by[j] || 0) + (+c.vol_mt || 0) + 1e-6; });
+  let best = '', bv = -1;
+  for (const j in by) if (by[j] > bv){ bv = by[j]; best = j; }
+  return best;
+}
+
+// Semua mitra, dihitung atas SELURUH kontraknya (tanpa lingkup PLTU/jenis) —
+// perbandingan harus apel dengan apel.
+function _msPeers(lastYM, today){
+  const by = new Map();
+  ((DATA && DATA.contracts) || []).forEach(c => {
+    const m = (c && c.pemasok || '').trim();
+    if (!m) return;
+    if (!by.has(m)) by.set(m, []);
+    by.get(m).push(c);
+  });
+  const list = [];
+  by.forEach((arr, m) => {
+    const ag = _msAggregate(arr.map(c => _msContractStats(c, lastYM, today)));
+    list.push({ m, n: arr.length, ag, jenis: _msMainJenis(arr),
+                jenisSet: new Set(arr.map(c => (c.jenis || '').trim()).filter(Boolean)),
+                pltu: new Set(arr.map(c => c.pltu)).size });
+  });
+  return list;
+}
+
+// Model lengkap untuk lingkup saat ini — dipakai layar DAN PDF, jadi keduanya
+// selalu menampilkan angka yang sama.
+function _msBuildModel(){
+  const m = msState.mitra;
+  const today = todayISO();
+  const lastDataYM = _msLastDataYM();
+  const lastYM = _msEvalYM(lastDataYM);
+  const all = _msMitraContracts(m);
+  const scoped = all.filter(_msScopePass);
+  const stats = scoped.map(c => _msContractStats(c, lastYM, today));
+  const ag = _msAggregate(stats);
+  const grade = _msGrade(ag.score);
+
+  // Per PLTU (dikelompokkan lewat contractPlant agar ejaan berbeda menyatu).
+  const pMap = new Map();
+  stats.forEach(s => {
+    const p = contractPlant(s.c);
+    const key = p ? 'p:' + p.code : 'n:' + (s.c.pltu || '');
+    if (!pMap.has(key)) pMap.set(key, { label: p ? (p.name || s.c.pltu) : (s.c.pltu || '—'), genco: s.c.genco || '', names: new Set(), stats: [] });
+    const e = pMap.get(key);
+    e.names.add(s.c.pltu);
+    e.stats.push(s);
+  });
+  const pltuRows = Array.from(pMap.values()).map(e => {
+    const a = _msAggregate(e.stats);
+    return { label: e.label, genco: e.genco, names: Array.from(e.names), n: e.stats.length, ag: a,
+             jenis: Array.from(new Set(e.stats.map(s => (s.c.jenis || '').trim()).filter(Boolean))) };
+  });
+
+  // Per jenis.
+  const jMap = new Map();
+  stats.forEach(s => {
+    const j = (s.c.jenis || '').trim() || '(tanpa jenis)';
+    if (!jMap.has(j)) jMap.set(j, []);
+    jMap.get(j).push(s);
+  });
+  const jenisRows = Array.from(jMap.entries()).map(([j, arr]) => ({ j, ag: _msAggregate(arr) }))
+    .sort((a, b) => b.ag.real - a.ag.real || b.ag.vol - a.ag.vol);
+
+  // Pembanding.
+  const peers = _msPeers(lastYM, today);
+  const mainJenis = _msMainJenis(all);
+  const me = peers.find(p => p.m === m);
+
+  const model = { m, today, lastYM, lastDataYM, all, scoped, stats, ag, grade, pltuRows, jenisRows, peers, me, mainJenis,
+                  gencos: Array.from(new Set(all.map(c => c.genco).filter(Boolean))).sort(),
+                  scopeDesc: _msScopeDesc() };
+  model.insights = _msInsights(model);
+  model.lead = _msLead(model);
+  return model;
+}
+
+function _msScopeDesc(){
+  const parts = [];
+  if (msState.pltu !== 'all') parts.push('PLTU ' + msState.pltu.split('||').join(' / '));
+  if (msState.jenis !== 'all') parts.push(msState.jenis);
+  return parts.length ? parts.join(' · ') : 'Semua PLTU & jenis';
+}
+
+function _msLead(M){
+  const a = M.ag;
+  if (!a.n) return 'Tidak ada kontrak pada lingkup ini.';
+  const jen = M.jenisRows.map(r => r.j).slice(0, 3);
+  const firstYear = M.stats.reduce((y, s) => { const v = (s.c.awal || '').slice(0, 4); return v && (!y || v < y) ? v : y; }, '');
+  let t = M.m + ' memasok ' + (jen.length ? jen.join(', ') + (M.jenisRows.length > 3 ? ' dan lainnya' : '') : 'biomassa') +
+          ' ke ' + M.pltuRows.length + ' PLTU lewat ' + a.n + ' kontrak' + (firstYear ? ' sejak ' + firstYear : '') + '. ';
+  if (a.sr !== null) t += 'Dari ' + fmtInt(a.srD) + ' MT yang dipesan lewat DO, ' + _msFmtPct(a.sr, 0) + ' benar-benar terkirim. ';
+  if (a.serapan !== null) t += 'Realisasi total ' + fmtInt(a.real) + ' MT, setara ' + _msFmtPct(a.serapan, 0) + ' volume kontrak.';
+  return t;
+}
+
+// Poin-poin temuan otomatis: { t:'good'|'warn'|'bad'|'info', h:html }.
+function _msInsights(M){
+  const a = M.ag, out = [];
+  const e = escapeHtml;
+  if (!a.n) return out;
+  if (a.sr !== null){
+    if (a.sr >= 90) out.push({ t:'good', h:'Pengiriman <b>sesuai DO</b>: ' + _msFmtPct(a.sr, 0) + ' volume DO terealisasi.' });
+    else if (a.sr >= 70) out.push({ t:'warn', h:'Pengiriman cukup andal, tetapi <b>' + _msFmtPct(100 - a.sr, 0) + ' volume DO tidak terkirim</b>.' });
+    else out.push({ t:'bad', h:'Pengiriman <b>jauh di bawah DO</b>: hanya ' + _msFmtPct(a.sr, 0) + ' volume DO terealisasi.' });
+  } else {
+    out.push({ t:'info', h:'Belum ada data DO untuk kontrak mitra ini — keandalan pengiriman tidak bisa dinilai.' });
+  }
+  if (a.pace !== null){
+    if (a.pace >= 90) out.push({ t:'good', h:'Serapan <b>sesuai jadwal kontrak</b> (' + _msFmtPct(a.pace, 0) + ' dari volume yang semestinya sudah terkirim).' });
+    else if (a.pace >= 60) out.push({ t:'warn', h:'Serapan <b>agak tertinggal</b> dari jadwal: ' + _msFmtPct(a.pace, 0) + ' dari volume prorata.' });
+    else out.push({ t:'bad', h:'Serapan <b>tertinggal jauh</b> dari jadwal: baru ' + _msFmtPct(a.pace, 0) + ' dari volume yang semestinya sudah terkirim.' });
+  }
+  if (a.cons !== null){
+    const miss = a.actM - a.supM;
+    if (a.cons >= 85) out.push({ t:'good', h:'<b>Konsisten</b>: ada kiriman di ' + a.supM + ' dari ' + a.actM + ' bulan kontrak berjalan.' });
+    else out.push({ t: a.cons >= 60 ? 'warn' : 'bad', h:'<b>' + miss + ' bulan tanpa kiriman</b> dari ' + a.actM + ' bulan kontrak berjalan (' + _msFmtPct(a.cons, 0) + ' bulan aktif).' });
+  }
+  if (a.ter > 0) out.push({ t:'bad', h:'<b>' + a.ter + ' kontrak diterminasi</b> dari ' + a.n + ' kontrak.' });
+  // Tren 6 bulan terakhir vs 6 bulan sebelumnya.
+  const L = M.lastYM - MS_YM0;
+  if (L >= 11){
+    let r6 = 0, p6 = 0;
+    for (let k = L - 5; k <= L; k++) r6 += a.mReal[k] || 0;
+    for (let k = L - 11; k <= L - 6; k++) p6 += a.mReal[k] || 0;
+    if (p6 > 0){
+      const ch = (r6 - p6) / p6 * 100;
+      if (Math.abs(ch) >= 10) out.push({ t: ch > 0 ? 'good' : 'warn', h:'Realisasi 6 bulan terakhir <b>' + (ch > 0 ? 'naik ' : 'turun ') + Math.abs(ch).toFixed(0) + '%</b> dibanding 6 bulan sebelumnya (' + fmtInt(r6) + ' vs ' + fmtInt(p6) + ' MT).' });
+      else out.push({ t:'info', h:'Realisasi 6 bulan terakhir <b>stabil</b> (' + fmtInt(r6) + ' MT, ' + (ch >= 0 ? '+' : '') + ch.toFixed(0) + '%).' });
+    } else if (r6 > 0){
+      out.push({ t:'good', h:'Mulai aktif mengirim dalam 6 bulan terakhir (' + fmtInt(r6) + ' MT).' });
+    }
+  }
+  if (a.lastSup !== null && M.lastYM - (MS_YM0 + a.lastSup) >= 3 && a.act > 0){
+    out.push({ t:'warn', h:'Kiriman terakhir tercatat <b>' + _msYMLabel(MS_YM0 + a.lastSup, true) + '</b>, padahal masih ada ' + a.act + ' kontrak aktif.' });
+  }
+  const withSr = M.pltuRows.filter(r => r.ag.sr !== null);
+  if (withSr.length >= 2){
+    withSr.sort((x, y) => y.ag.sr - x.ag.sr);
+    const best = withSr[0], worst = withSr[withSr.length - 1];
+    if (best.ag.sr - worst.ag.sr >= 15)
+      out.push({ t:'info', h:'Terbaik di <b>' + e(best.label) + '</b> (SR ' + _msFmtPct(best.ag.sr, 0) + '), terlemah di <b>' + e(worst.label) + '</b> (SR ' + _msFmtPct(worst.ag.sr, 0) + ').' });
+  }
+  const soon = M.stats.filter(s => s.status === 'act' && s.c.akhir &&
+    (new Date(s.c.akhir) - new Date(M.today)) / 864e5 <= 90);
+  if (soon.length){
+    soon.sort((x, y) => x.c.akhir.localeCompare(y.c.akhir));
+    out.push({ t:'info', h:'<b>' + soon.length + ' kontrak aktif berakhir dalam 90 hari</b> — terdekat ' + e(soon[0].c.pltu) + ', ' + fmtKontrakDate(soon[0].c.akhir) + '.' });
+  }
+  if (a.anom > 0) out.push({ t:'info', h:a.anom + ' bulan-kontrak punya realisasi tetapi <b>DO kosong</b> — tidak ikut dihitung di SR.' });
+  return out;
+}
+
+// ---------- Masuk / keluar ----------
+function openMitraSummary(mitra, opts){
+  mitra = String(mitra || '').trim();
+  if (!mitra) return;
+  if (!_msMitraContracts(mitra).length){
+    showToast('Mitra "' + mitra + '" tidak ditemukan di Daftar Kontrak.', 'warn', 4000);
+    return;
+  }
+  const bd0 = document.getElementById('pemasokModalBackdrop');
+  // Tombol "Ringkasan mitra" di modal detail yang dibuka DARI halaman ini: cukup
+  // tutup modalnya — lingkup PLTU/jenis yang sedang dipilih jangan direset.
+  if (state.tab === 'mitra' && mitra === msState.mitra && !opts){
+    if (bd0 && bd0.classList.contains('open')){ try { closePemasokModal(); } catch(e){} }
+    return;
+  }
+  if (state.tab !== 'mitra') msState.prevTab = state.tab || 'map';
+  msState.mitra = mitra;
+  msState.pltu  = (opts && opts.pltu)  || 'all';
+  msState.jenis = (opts && opts.jenis) || 'all';
+  msState.peer  = 'jenis';
+  const bd = document.getElementById('pemasokModalBackdrop');
+  if (bd && bd.classList.contains('open')){ try { closePemasokModal(); } catch(e){} }
+  // Posisi gulir mitra sebelumnya tidak relevan untuk mitra yang baru dibuka.
+  try { delete qolScrollMem.mitra; } catch(e){}
+  switchTab('mitra');
+  // Setelah view terlihat: canvas di dalam elemen display:none berukuran 0.
+  setTimeout(() => {
+    renderMitraSummary();
+    const v = document.getElementById('msView');
+    if (v) v.scrollTop = 0;
+  }, 30);
+}
+function msGoBack(){
+  const t = msState.prevTab && msState.prevTab !== 'mitra' ? msState.prevTab : 'map';
+  switchTab(t);
+}
+function msOpenInKontrak(){
+  qolGotoKontrak({ mitra: msState.mitra, pltu: msState.pltu, jenis: msState.jenis },
+                 msState.mitra, 'atas nama "' + msState.mitra + '"');
+}
+function msSetScope(kind, v){
+  if (kind === 'pltu') msState.pltu = v || 'all';
+  else if (kind === 'jenis') msState.jenis = v || 'all';
+  renderMitraSummary(true);
+}
+function msSetTrend(mode){ msState.trend = mode; _msRenderTrend(msState.model); }
+function msSetPeer(mode){ msState.peer = mode; _msRenderPeers(msState.model); }
+function msSort(tbl, k){
+  const s = tbl === 'ct' ? msState.ctSort : msState.plSort;
+  if (s.k === k) s.d = -s.d; else { s.k = k; s.d = (k === 'pltu' || k === 'jenis' || k === 'kontrak' || k === 'label') ? 1 : -1; }
+  if (tbl === 'ct') _msRenderContracts(msState.model); else _msRenderPltu(msState.model);
+}
+function msGoSection(id){
+  const el = document.getElementById(id);
+  if (!el) return;
+  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ block:'start', behavior: still ? 'auto' : 'smooth' });
+}
+function msSwitchMitra(v){
+  const m = String(v || '').trim();
+  if (!m || m === msState.mitra) return;
+  if (_msMitraContracts(m).length) openMitraSummary(m);
+}
+
+// ---------- Render ----------
+const MS_SECTIONS = [
+  ['msSecRingkasan', 'Ringkasan'], ['msSecTren', 'Tren Pasokan'], ['msSecPltu', 'Per PLTU'],
+  ['msSecKontrak', 'Kontrak'], ['msSecPeer', 'Perbandingan'], ['msSecMetode', 'Metodologi']
+];
+const MS_IC = {
+  back:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 3L5 8l5 5"/></svg>',
+  pdf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  list:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3.5h12M2 8h12M2 12.5h12M5.5 3.5v9"/></svg>'
+};
+
+function renderMitraSummary(keepScroll){
+  const wrap = document.getElementById('msWrap');
+  if (!wrap) return;
+  if (!msState.mitra){ wrap.innerHTML = '<div class="ms-empty">Pilih mitra lewat pencarian (Ctrl+K).</div>'; return; }
+  const view = document.getElementById('msView');
+  const st = view ? view.scrollTop : 0;
+  let M;
+  try { M = _msBuildModel(); }
+  catch(e){ console.error('[Mitra] model gagal:', e); wrap.innerHTML = '<div class="ms-empty">Gagal menyusun ringkasan mitra.</div>'; return; }
+  msState.model = M;
+  const e = escapeHtml, a = M.ag, g = M.grade;
+
+  // Opsi lingkup — dari SELURUH kontrak mitra, bukan yang sudah tersaring.
+  const pNames = Array.from(new Set(M.all.map(c => c.pltu).filter(Boolean))).sort();
+  let pOpts = '<option value="all">Semua PLTU (' + pNames.length + ')</option>';
+  if (msState.pltu !== 'all' && pNames.indexOf(msState.pltu) < 0)
+    pOpts += '<option value="' + e(msState.pltu) + '" selected>' + e(msState.pltu.split('||').join(' / ')) + '</option>';
+  pNames.forEach(n => { pOpts += '<option value="' + e(n) + '"' + (n === msState.pltu ? ' selected' : '') + '>' + e(n) + '</option>'; });
+  const jNames = Array.from(new Set(M.all.map(c => c.jenis || '').filter(Boolean))).sort();
+  let jOpts = '<option value="all">Semua jenis (' + jNames.length + ')</option>';
+  jNames.forEach(n => { jOpts += '<option value="' + e(n) + '"' + (n === msState.jenis ? ' selected' : '') + '>' + e(n.trim()) + '</option>'; });
+
+  const mitraList = Array.from(new Set(((DATA && DATA.contracts) || []).map(c => (c.pemasok || '').trim()).filter(Boolean))).sort();
+  const scoped = msState.pltu !== 'all' || msState.jenis !== 'all';
+
+  // Cincin skor.
+  const R = 42, C = 2 * Math.PI * R;
+  const frac = a.score === null ? 0 : Math.max(0, Math.min(1, a.score / 100));
+  const ring = '<div class="ms-grade-ring">' +
+    '<svg viewBox="0 0 96 96"><circle class="ms-ring-bg" cx="48" cy="48" r="' + R + '" fill="none" stroke-width="8"/>' +
+    '<circle cx="48" cy="48" r="' + R + '" fill="none" stroke="' + (g ? g.c : 'var(--border)') + '" stroke-width="8" stroke-dasharray="' + (C * frac).toFixed(1) + ' ' + C.toFixed(1) + '"/></svg>' +
+    '<div class="ms-grade-letter"><b style="color:' + (g ? g.c : 'var(--text-dim)') + '">' + (g ? g.g : '—') + '</b>' +
+    '<span>' + (a.score === null ? 'n/a' : a.score.toFixed(0) + ' / 100') + '</span></div></div>';
+
+  const jenisPills = M.jenisRows.slice(0, 4).map(r => '<span class="ms-pill">' + e(r.j) + '</span>').join('') +
+    (M.jenisRows.length > 4 ? '<span class="ms-pill">+' + (M.jenisRows.length - 4) + '</span>' : '');
+
+  let html = '' +
+    '<div class="ms-top">' +
+      '<button class="ms-back" onclick="msGoBack()" title="Kembali ke tab sebelumnya">' + MS_IC.back + ' Kembali</button>' +
+      '<span class="ms-crumb">Ringkasan Mitra</span>' +
+      '<span class="ms-top-sp"></span>' +
+      '<div class="ms-switch"><input type="text" id="msMitraInput" list="msMitraList" placeholder="Ganti mitra…" autocomplete="off" aria-label="Ganti mitra" ' +
+        'onchange="msSwitchMitra(this.value)" onkeydown="if(event.key===\'Enter\')msSwitchMitra(this.value)">' +
+        '<datalist id="msMitraList">' + mitraList.map(x => '<option value="' + e(x) + '">').join('') + '</datalist></div>' +
+      '<button class="ms-btn" onclick="msOpenInKontrak()" title="Buka kontrak mitra ini di tab Daftar Kontrak">' + MS_IC.list + ' Daftar Kontrak</button>' +
+      '<button class="ms-btn primary" id="msPdfBtn" onclick="msExportPdf()" title="Unduh laporan mitra ini sebagai PDF">' + MS_IC.pdf + ' Unduh PDF</button>' +
+    '</div>' +
+    '<div class="ms-hero">' +
+      '<div>' +
+        '<div class="ms-kicker">Profil Mitra Biomassa' + (scoped ? ' · ' + e(M.scopeDesc) : '') + '</div>' +
+        '<div class="ms-name">' + e(M.m) + '</div>' +
+        '<div class="ms-meta">' +
+          M.gencos.map(x => '<span class="ms-pill g-' + e(x) + '">' + e(x) + '</span>').join('') +
+          '<span class="ms-pill">' + a.n + ' kontrak</span>' +
+          '<span class="ms-pill">' + M.pltuRows.length + ' PLTU</span>' + jenisPills +
+        '</div>' +
+        '<div class="ms-hero-lead">' + e(M.lead) + '</div>' +
+      '</div>' +
+      '<div class="ms-grade"' + (a.score === null ? '' : calcAttr({
+          title: 'Skor Kinerja Mitra (indikatif)',
+          formula: 'Rata-rata tertimbang komponen yang tersedia, tiap komponen dijepit 0–100',
+          steps: [
+            ['Supply reliability × ' + MS_W.sr, _msFmtPct(a.sr)],
+            ['Serapan vs jadwal × ' + MS_W.pace, _msFmtPct(a.pace)],
+            ['Konsistensi × ' + MS_W.cons, _msFmtPct(a.cons)],
+            ['Keberlanjutan × ' + MS_W.keep, _msFmtPct(a.keep)],
+            ['÷ bobot terpakai', String(a.wUsed)]
+          ],
+          result: ['Skor', a.score.toFixed(1) + ' → ' + g.g],
+          note: 'A ≥ 85 · B ≥ 70 · C ≥ 50 · D < 50. Indikatif — bukan penilaian resmi vendor.'
+        })) + '>' + ring +
+        '<div class="ms-grade-txt"><b>' + (g ? g.t : 'Belum bisa dinilai') + '</b>' +
+          '<span>' + (g ? 'Skor indikatif dari keandalan pengiriman, serapan, konsistensi, dan keberlanjutan kontrak.' : 'Belum ada riwayat pasokan pada lingkup ini.') + '</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<nav class="ms-nav" id="msNav" aria-label="Bagian ringkasan mitra">' +
+      MS_SECTIONS.map(([id, t], i) => '<button type="button" data-sec="' + id + '"' + (i === 0 ? ' class="on"' : '') + ' onclick="msGoSection(\'' + id + '\')">' + t + '</button>').join('') +
+    '</nav>' +
+    '<div class="ms-scope">' +
+      '<div><label for="msPltuSel">PLTU</label><select id="msPltuSel" onchange="msSetScope(\'pltu\', this.value)">' + pOpts + '</select></div>' +
+      '<div><label for="msJenisSel">Jenis biomassa</label><select id="msJenisSel" onchange="msSetScope(\'jenis\', this.value)">' + jOpts + '</select></div>' +
+      '<div class="ms-scope-note">Menampilkan <b>' + a.n + '</b> dari ' + M.all.length + ' kontrak' +
+        (scoped ? ' · <a onclick="msState.pltu=\'all\';msState.jenis=\'all\';renderMitraSummary(true)">tampilkan semua</a>' : '') + '</div>' +
+    '</div>';
+
+  if (!a.n){
+    html += '<div class="ms-empty">Tidak ada kontrak ' + e(M.m) + ' untuk ' + e(M.scopeDesc) + '.</div>';
+    wrap.innerHTML = html;
+    return;
+  }
+
+  // ---- Ringkasan ----
+  const kpi = (l, v, s, calc) => '<div class="ms-kpi"><div class="ms-kpi-l">' + l + '</div><div class="ms-kpi-v"' + (calc ? calcAttr(calc) : '') + '>' + v + '</div><div class="ms-kpi-s">' + s + '</div></div>';
+  const statusTxt = [a.act ? a.act + ' aktif' : '', a.exp_ ? a.exp_ + ' selesai' : '', a.fut ? a.fut + ' belum mulai' : '', a.ter ? a.ter + ' terminasi' : ''].filter(Boolean).join(' · ');
+  html += '<section class="ms-sec" id="msSecRingkasan" style="margin-top:16px">' +
+    '<div class="ms-sec-h"><h3>Ringkasan Kinerja<small>data s.d. ' + _msYMLabel(M.lastDataYM, true) +
+      (M.lastDataYM !== M.lastYM ? ' · dinilai s.d. ' + _msYMLabel(M.lastYM, true) + ' (bulan penuh)' : '') + '</small></h3></div>' +
+    '<div class="ms-kpis">' +
+      kpi('Kontrak', a.n, statusTxt) +
+      kpi('Volume Kontrak', fmtInt(a.vol) + '<small>MT</small>', 'Seumur kontrak, ' + M.pltuRows.length + ' PLTU') +
+      kpi('Realisasi 2023–2026', fmtInt(a.real) + '<small>MT</small>', 'Serapan ' + _msFmtPct(a.serapan) + ' dari volume', a.vol > 0 ? {
+        title:'Serapan Kontrak', formula:'Realisasi total ÷ Volume kontrak × 100',
+        steps:[['Realisasi 2023–2026', fmtInt(a.real) + ' MT'], ['÷ Volume kontrak', fmtInt(a.vol) + ' MT']],
+        result:['Serapan', _msFmtPct(a.serapan)],
+        note:'Terhadap volume SEUMUR kontrak — kontrak yang masih berjalan wajar belum 100%.' } : null) +
+      kpi('Kiriman Terakhir', a.lastSup === null ? '—' : _msYMLabel(MS_YM0 + a.lastSup, true), a.firstSup === null ? 'Belum ada realisasi' : 'Pertama ' + _msYMLabel(MS_YM0 + a.firstSup, true)) +
+      kpi('Supply Reliability', '<span style="color:' + _msPctColor(a.sr) + '">' + _msFmtPct(a.sr) + '</span>', a.withDO + ' dari ' + a.n + ' kontrak punya DO', a.sr === null ? null : {
+        title:'Supply Reliability (SR)', formula:'Σ realisasi ÷ Σ DO, hanya bulan yang ada DO-nya',
+        steps:[['Realisasi di bulan ber-DO', fmtInt(a.srR) + ' MT'], ['÷ DO', fmtInt(a.srD) + ' MT']],
+        result:['SR', _msFmtPct(a.sr)],
+        note:'Bulan dengan realisasi tetapi DO kosong tidak ikut — jumlahnya ditampilkan di Temuan.' }) +
+      kpi('Serapan vs Jadwal', '<span style="color:' + _msPctColor(a.pace) + '">' + _msFmtPct(a.pace) + '</span>', 'Realisasi ÷ volume prorata s.d. ' + _msYMLabel(M.lastYM), a.pace === null ? null : {
+        title:'Serapan vs Jadwal', formula:'Σ realisasi ÷ Σ (volume × bulan berjalan ÷ lama kontrak)',
+        steps:[['Realisasi (kontrak non-terminasi)', fmtInt(a.expReal) + ' MT'], ['÷ volume prorata', fmtInt(a.exp) + ' MT']],
+        result:['Serapan vs jadwal', _msFmtPct(a.pace)],
+        note:'Bulan berjalan dihitung dari Jan 2023 (awal data realisasi) sampai bulan data terakhir. Asumsi pengiriman merata per bulan.' }) +
+      kpi('Konsistensi', '<span style="color:' + _msPctColor(a.cons) + '">' + _msFmtPct(a.cons, 0) + '</span>', a.supM + ' dari ' + a.actM + ' bulan ada kiriman', a.cons === null ? null : {
+        title:'Konsistensi Pasokan', formula:'Bulan-kontrak dengan realisasi > 0 ÷ bulan-kontrak berjalan',
+        steps:[['Bulan ada kiriman', String(a.supM)], ['÷ bulan kontrak berjalan', String(a.actM)]],
+        result:['Konsistensi', _msFmtPct(a.cons)],
+        note:'Dihitung per kontrak lalu dijumlahkan; kontrak terminasi tidak ikut.' }) +
+      kpi('Keberlanjutan', '<span style="color:' + _msPctColor(a.keep) + '">' + _msFmtPct(a.keep, 0) + '</span>', a.ter ? a.ter + ' kontrak diterminasi' : 'Tidak ada terminasi') +
+    '</div>' +
+    '<div class="ms-two">' +
+      '<div class="ms-card"><div class="ms-card-t">Komponen Skor</div>' + _msCompRows(a) + '</div>' +
+      '<div class="ms-card"><div class="ms-card-t">Temuan Utama</div><ul class="ms-ins">' +
+        M.insights.map(x => '<li><span class="ms-ins-ic ' + x.t + '" aria-hidden="true">' + ({ good:'✓', warn:'!', bad:'×', info:'i' })[x.t] + '</span><span>' + x.h + '</span></li>').join('') +
+      '</ul></div>' +
+    '</div>' +
+  '</section>';
+
+  // ---- Tren ----
+  const seg = (cur, fn, opts) => '<div class="ms-seg" role="group">' + opts.map(([v, t]) => '<button type="button"' + (v === cur ? ' class="on"' : '') + ' onclick="' + fn + '(\'' + v + '\')">' + t + '</button>').join('') + '</div>';
+  html += '<section class="ms-sec" id="msSecTren">' +
+    '<div class="ms-sec-h"><h3>Tren Pasokan<small>Realisasi vs DO, MT</small></h3>' +
+      '<span id="msTrendSeg">' + seg(msState.trend, 'msSetTrend', [['month','Bulanan'],['year','Tahunan'],['cum','Kumulatif']]) + '</span></div>' +
+    '<div class="ms-card"><div class="ms-chart"><canvas id="msTrendChart"></canvas></div>' +
+    '<div class="ms-yearstrip">' + MS_YEARS.map((y, yi) => {
+      let r = 0, d = 0, sr = 0, sd = 0;
+      for (let mi = 0; mi < 12; mi++){ const k = yi * 12 + mi; r += a.mReal[k]; d += a.mDo[k]; if (a.mDo[k] > 0){ sr += a.mReal[k]; sd += a.mDo[k]; } }
+      return '<div><span>' + y + '</span><b>' + fmtInt(r) + ' MT</b><em>DO ' + fmtInt(d) + ' · SR ' + (sd > 0 ? '<span style="color:' + _msPctColor(sr / sd * 100) + ';font-weight:800">' + _msFmtPct(sr / sd * 100, 0) + '</span>' : '—') + '</em></div>';
+    }).join('') + '</div></div>' +
+  '</section>';
+
+  // ---- Per PLTU ----
+  html += '<section class="ms-sec" id="msSecPltu">' +
+    '<div class="ms-sec-h"><h3>Sebaran per PLTU<small>' + M.pltuRows.length + ' PLTU · klik baris untuk fokus</small></h3></div>' +
+    '<div class="ms-two" style="margin-top:0">' +
+      '<div class="ms-card"><div class="ms-card-t">Volume Kontrak vs Realisasi</div><div class="ms-chart" id="msPltuChartBox"><canvas id="msPltuChart"></canvas></div></div>' +
+      '<div class="ms-card"><div class="ms-card-t">Realisasi per Jenis Biomassa</div><div class="ms-chart sm"><canvas id="msJenisChart"></canvas></div></div>' +
+    '</div>' +
+    '<div class="ms-tbl-wrap" id="msPltuTbl" style="margin-top:var(--gutter)"></div>' +
+  '</section>';
+
+  // ---- Kontrak ----
+  html += '<section class="ms-sec" id="msSecKontrak">' +
+    '<div class="ms-sec-h"><h3>Daftar Kontrak<small>' + a.n + ' kontrak · klik baris untuk detail bulanan</small></h3></div>' +
+    '<div class="ms-tbl-wrap" id="msCtTbl"></div>' +
+    '<div class="ms-gantt" id="msGantt"></div>' +
+  '</section>';
+
+  // ---- Perbandingan ----
+  html += '<section class="ms-sec" id="msSecPeer">' +
+    '<div class="ms-sec-h"><h3>Perbandingan dengan Mitra Lain<small>seluruh kontrak, tanpa lingkup PLTU/jenis</small></h3>' +
+      '<span id="msPeerSeg"></span></div>' +
+    '<div id="msPeerBody"></div>' +
+  '</section>';
+
+  // ---- Metodologi ----
+  html += '<section class="ms-sec" id="msSecMetode">' +
+    '<div class="ms-sec-h"><h3>Metodologi & Sumber Data</h3></div>' +
+    '<div class="ms-card"><dl class="ms-method">' +
+      '<dt>Sumber</dt><dd>Daftar Kontrak (volume, periode, realisasi bulanan 2023–2026, status terminasi) dan DO bulanan (otomatis + koreksi admin) — sama dengan tab Daftar Kontrak. Realisasi di sini adalah realisasi <i>kontrak</i>, bukan realisasi produksi di tab Realisasi. Filter global di header tidak diterapkan.</dd>' +
+      '<dt>Supply Reliability (bobot ' + MS_W.sr + ')</dt><dd>Σ realisasi ÷ Σ DO pada bulan yang ada DO-nya. Mengukur seberapa banyak yang dipesan benar-benar dikirim.</dd>' +
+      '<dt>Serapan vs Jadwal (bobot ' + MS_W.pace + ')</dt><dd>Σ realisasi ÷ volume yang semestinya sudah terkirim bila pengiriman merata per bulan sepanjang periode kontrak, dihitung sejak Jan 2023 sampai bulan data terakhir (' + _msYMLabel(M.lastYM, true) + '). Kontrak terminasi tidak ikut.</dd>' +
+      '<dt>Konsistensi (bobot ' + MS_W.cons + ')</dt><dd>Porsi bulan kontrak berjalan yang punya realisasi &gt; 0.</dd>' +
+      '<dt>Keberlanjutan (bobot ' + MS_W.keep + ')</dt><dd>100% − porsi kontrak yang diterminasi (baris dicoret di Excel sumber).</dd>' +
+      '<dt>Skor & grade</dt><dd>Rata-rata tertimbang komponen yang tersedia (tiap komponen dijepit 0–100%); komponen yang tidak bisa dihitung dikeluarkan dan bobotnya dinormalkan. A ≥ 85, B ≥ 70, C ≥ 50, D &lt; 50. <b>Indikatif</b> — alat bantu membaca data, bukan penilaian resmi kinerja vendor.</dd>' +
+    '</dl></div>' +
+  '</section>';
+
+  wrap.innerHTML = html;
+  _msRenderTrend(M);
+  _msRenderPltu(M);
+  _msRenderJenis(M);
+  _msRenderContracts(M);
+  _msRenderGantt(M);
+  _msRenderPeers(M);
+  _msBindScrollSpy();
+  if (view) view.scrollTop = keepScroll ? st : 0;
+}
+
+function _msCompRows(a){
+  const row = (l, sub, v, w) => {
+    const has = v !== null && v !== undefined;
+    const pct = has ? Math.max(0, Math.min(100, v)) : 0;
+    return '<div class="ms-comp"><div class="ms-comp-l">' + l + '<span>' + sub + ' · bobot ' + w + '</span></div>' +
+      '<div class="ms-bar"><i style="width:' + pct.toFixed(1) + '%;background:' + _msPctColor(has ? v : null) + '"></i></div>' +
+      '<div class="ms-comp-v' + (has ? '' : ' na') + '" style="' + (has ? 'color:' + _msPctColor(v) : '') + '">' + (has ? v.toFixed(0) + '%' : 'n/a') + '</div></div>';
+  };
+  return row('Supply Reliability', 'Real ÷ DO', a.sr, MS_W.sr) +
+         row('Serapan vs Jadwal', 'Real ÷ prorata', a.pace, MS_W.pace) +
+         row('Konsistensi', 'Bulan ada kiriman', a.cons, MS_W.cons) +
+         row('Keberlanjutan', 'Tanpa terminasi', a.keep, MS_W.keep);
+}
+
+// ---------- Chart ----------
+function _msDestroy(k){
+  if (mitraCharts[k]){ try { mitraCharts[k].destroy(); } catch(e){} delete mitraCharts[k]; }
+}
+function _msPal(){
+  return {
+    blue: _msCss('--accent', '#0F496E'), gold: _msCss('--accent-2-ink', '#8A6100'), yellow: _msCss('--accent-2', '#FFC72C'),
+    cyan: _msCss('--accent-cyan', '#00A0E0'), grid: _msCss('--grid', '#E2E5E8'), dim: _msCss('--text-dim', '#5A6470'),
+    grey: _msCss('--panel-3', '#E4E7EA'), line: _msCss('--border-bright', '#98A0A9'), text: _msCss('--text', '#1A2430')
+  };
+}
+function _msBaseOpts(P, extra){
+  const f = { family:"'Plus Jakarta Sans',sans-serif", size:10 };
+  const o = {
+    responsive:true, maintainAspectRatio:false, animation:{ duration:400 },
+    interaction:{ mode:'index', intersect:false },
+    plugins:{ legend:{ position:'bottom', labels:{ font:f, color:P.dim, boxWidth:10, boxHeight:10 } },
+              tooltip:{ titleFont:f, bodyFont:f, footerFont:f } },
+    scales:{
+      x:{ ticks:{ font:f, color:P.dim, maxRotation:0, autoSkipPadding:8 }, grid:{ display:false } },
+      y:{ beginAtZero:true, ticks:{ font:f, color:P.dim, callback:v => fmt(v) }, grid:{ color:P.grid } }
+    }
+  };
+  return Object.assign(o, extra || {});
+}
+function _msTrendCfg(M, mode, P){
+  const a = M.ag;
+  // Rentang: dari bulan pertama yang ada DO/realisasi (atau awal kontrak) sampai
+  // bulan data terakhir — 48 batang kosong di depan hanya membuang tempat.
+  let k0 = MS_NM - 1;
+  for (let k = 0; k < MS_NM; k++) if (a.mReal[k] > 0 || a.mDo[k] > 0){ k0 = k; break; }
+  M.stats.forEach(s => { if (s.a !== null){ const k = Math.max(0, s.a - MS_YM0); if (k < k0) k0 = k; } });
+  const k1 = Math.max(k0, Math.min(MS_NM - 1, M.lastDataYM - MS_YM0));
+  const fmtT = { callbacks:{ label: c => c.dataset.label + ': ' + fmtInt(c.parsed.y) + ' MT' } };
+  if (mode === 'year'){
+    const r = MS_YEARS.map((y, yi) => a.mReal.slice(yi * 12, yi * 12 + 12).reduce((s, v) => s + v, 0));
+    const d = MS_YEARS.map((y, yi) => a.mDo.slice(yi * 12, yi * 12 + 12).reduce((s, v) => s + v, 0));
+    const o = _msBaseOpts(P);
+    o.plugins.tooltip.callbacks = { label: fmtT.callbacks.label,
+      footer: items => { const i = items[0].dataIndex; return d[i] > 0 ? 'Real ÷ DO: ' + (r[i] / d[i] * 100).toFixed(0) + '%' : ''; } };
+    return { type:'bar', data:{ labels: MS_YEARS.slice(), datasets:[
+      { label:'Realisasi', data:r, backgroundColor:P.blue, borderRadius:0, maxBarThickness:48 },
+      { label:'DO', data:d, backgroundColor:P.yellow, borderRadius:0, maxBarThickness:48 } ] }, options:o };
+  }
+  const labels = [], r = [], d = [];
+  let cr = 0, cd = 0;
+  for (let k = k0; k <= k1; k++){
+    labels.push(_msYMLabel(MS_YM0 + k));
+    if (mode === 'cum'){ cr += a.mReal[k]; cd += a.mDo[k]; r.push(cr); d.push(cd); }
+    else { r.push(a.mReal[k]); d.push(a.mDo[k]); }
+  }
+  const o = _msBaseOpts(P);
+  o.plugins.tooltip.callbacks = { label: fmtT.callbacks.label,
+    footer: items => { const i = items[0].dataIndex; return d[i] > 0 ? 'Real ÷ DO: ' + (r[i] / d[i] * 100).toFixed(0) + '%' : (r[i] > 0 ? 'DO kosong' : ''); } };
+  if (mode === 'cum'){
+    return { type:'line', data:{ labels, datasets:[
+      { label:'Realisasi kumulatif', data:r, borderColor:P.blue, backgroundColor:'rgba(15,73,110,.10)', fill:true, pointRadius:0, borderWidth:2, tension:.2 },
+      { label:'DO kumulatif', data:d, borderColor:P.gold, borderDash:[5,4], pointRadius:0, borderWidth:2, tension:.2, fill:false } ] }, options:o };
+  }
+  return { type:'bar', data:{ labels, datasets:[
+    { type:'line', label:'DO', data:d, borderColor:P.gold, backgroundColor:P.gold, pointRadius:0, pointHoverRadius:4, borderWidth:2, tension:.25, order:0 },
+    { label:'Realisasi', data:r, backgroundColor:P.blue, borderRadius:0, maxBarThickness:22, order:1 } ] }, options:o };
+}
+function _msRenderTrend(M){
+  if (!M) return;
+  const seg = document.querySelector('#msTrendSeg .ms-seg');
+  if (seg) seg.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', ['month','year','cum'][i] === msState.trend));
+  const cv = document.getElementById('msTrendChart');
+  _msDestroy('trend');
+  if (!cv || typeof Chart === 'undefined') return;
+  mitraCharts.trend = new Chart(cv, _msTrendCfg(M, msState.trend, _msPal()));
+}
+function _msPltuCfg(M, P, limit){
+  const rows = M.pltuRows.slice().sort((x, y) => (y.ag.vol + y.ag.real) - (x.ag.vol + x.ag.real)).slice(0, limit || 999);
+  const o = _msBaseOpts(P, { indexAxis:'y' });
+  o.scales = {
+    x:{ beginAtZero:true, ticks:{ font:o.scales.x.ticks.font, color:P.dim, callback:v => fmt(v) }, grid:{ color:P.grid } },
+    y:{ ticks:{ font:o.scales.x.ticks.font, color:P.text, autoSkip:false }, grid:{ display:false } }
+  };
+  o.interaction = { mode:'index', intersect:false, axis:'y' };
+  o.plugins.tooltip.callbacks = {
+    label: c => c.dataset.label + ': ' + fmtInt(c.parsed.x) + ' MT',
+    footer: items => { const r = rows[items[0].dataIndex]; return r ? 'Serapan ' + _msFmtPct(r.ag.serapan, 0) + ' · SR ' + _msFmtPct(r.ag.sr, 0) : ''; }
+  };
+  return { rows, cfg:{ type:'bar', data:{ labels: rows.map(r => r.label.length > 22 ? r.label.slice(0, 21) + '…' : r.label), datasets:[
+    { label:'Volume kontrak', data: rows.map(r => r.ag.vol), backgroundColor:P.grey, borderColor:P.line, borderWidth:1, borderRadius:0, barPercentage:.9, categoryPercentage:.8 },
+    { label:'Realisasi', data: rows.map(r => r.ag.real), backgroundColor:P.blue, borderRadius:0, barPercentage:.9, categoryPercentage:.8 } ] }, options:o } };
+}
+function _msRenderPltu(M){
+  if (!M) return;
+  const box = document.getElementById('msPltuChartBox');
+  const cv = document.getElementById('msPltuChart');
+  _msDestroy('pltu');
+  if (cv && box && typeof Chart !== 'undefined'){
+    const built = _msPltuCfg(M, _msPal());
+    box.style.height = Math.max(240, built.rows.length * 34 + 60) + 'px';
+    built.cfg.options.onClick = (ev, els) => { if (els && els.length){ const r = built.rows[els[0].index]; if (r) msSetScope('pltu', r.names.length === 1 ? r.names[0] : r.names.join('||')); } };
+    built.cfg.options.onHover = (ev, els) => { ev.native && ev.native.target && (ev.native.target.style.cursor = els && els.length ? 'pointer' : 'default'); };
+    mitraCharts.pltu = new Chart(cv, built.cfg);
+  }
+  // Tabel.
+  const el = document.getElementById('msPltuTbl');
+  if (!el) return;
+  const s = msState.plSort;
+  const val = (r, k) => k === 'label' ? r.label.toLowerCase() : k === 'n' ? r.n : k === 'vol' ? r.ag.vol : k === 'real' ? r.ag.real
+    : k === 'serap' ? (r.ag.serapan === null ? -1 : r.ag.serapan) : k === 'sr' ? (r.ag.sr === null ? -1 : r.ag.sr)
+    : k === 'last' ? (r.ag.lastSup === null ? -1 : r.ag.lastSup) : k === 'score' ? (r.ag.score === null ? -1 : r.ag.score) : 0;
+  const rows = M.pltuRows.slice().sort((x, y) => { const p = val(x, s.k), q = val(y, s.k); return (p < q ? -1 : p > q ? 1 : 0) * s.d; });
+  const th = (k, t, num) => '<th class="' + (num ? 'num ' : '') + (s.k === k ? 'sorted' : '') + '" onclick="msSort(\'pl\',\'' + k + '\')">' + t + '<span class="ar">' + (s.k === k ? (s.d > 0 ? '▲' : '▼') : '↕') + '</span></th>';
+  let h = '<table class="ms-tbl"><thead><tr>' + th('label', 'PLTU') + '<th>Genco</th><th>Jenis</th>' + th('n', 'Kontrak', 1) + th('vol', 'Volume (MT)', 1) +
+    th('real', 'Realisasi (MT)', 1) + th('serap', 'Serapan', 1) + th('sr', 'SR', 1) + th('last', 'Kiriman terakhir', 1) + th('score', 'Skor', 1) + '</tr></thead><tbody>';
+  rows.forEach(r => {
+    const v = r.names.length === 1 ? r.names[0] : r.names.join('||');
+    const gr = _msGrade(r.ag.score);
+    h += '<tr data-v="' + escapeHtml(v) + '" onclick="msSetScope(\'pltu\', this.dataset.v)" title="Fokuskan ringkasan ke PLTU ini">' +
+      '<td>' + escapeHtml(r.label) + '</td><td>' + escapeHtml(r.genco) + '</td><td class="wrap">' + escapeHtml(r.jenis.join(', ')) + '</td>' +
+      '<td class="num">' + r.n + '</td><td class="num">' + fmtInt(r.ag.vol) + '</td><td class="num">' + fmtInt(r.ag.real) + '</td>' +
+      '<td class="num ms-pct" style="color:' + _msPctColor(r.ag.serapan) + '">' + _msFmtPct(r.ag.serapan, 0) + '</td>' +
+      '<td class="num ms-pct" style="color:' + _msPctColor(r.ag.sr) + '">' + _msFmtPct(r.ag.sr, 0) + '</td>' +
+      '<td class="num">' + (r.ag.lastSup === null ? '—' : _msYMLabel(MS_YM0 + r.ag.lastSup, true)) + '</td>' +
+      '<td class="num ms-pct" style="color:' + (gr ? gr.c : 'var(--text-dim)') + '">' + (gr ? gr.g + ' · ' + r.ag.score.toFixed(0) : '—') + '</td></tr>';
+  });
+  el.innerHTML = h + '</tbody></table>';
+}
+function _msJenisCfg(M, P){
+  const rows = M.jenisRows.filter(r => r.ag.real > 0 || r.ag.vol > 0);
+  const useReal = rows.some(r => r.ag.real > 0);
+  const cols = [P.blue, P.yellow, P.cyan, '#10b981', '#8b5cf6', '#f59e0b', '#64748b', '#ef4444'];
+  const o = { responsive:true, maintainAspectRatio:false, animation:{ duration:400 }, cutout:'58%',
+    plugins:{ legend:{ position:'right', labels:{ font:{ family:"'Plus Jakarta Sans',sans-serif", size:10 }, color:P.text, boxWidth:10, boxHeight:10 } },
+      tooltip:{ callbacks:{ label: c => { const tot = c.dataset.data.reduce((s, v) => s + v, 0); return c.label + ': ' + fmtInt(c.parsed) + ' MT (' + (tot ? (c.parsed / tot * 100).toFixed(0) : 0) + '%)'; } } } } };
+  return { useReal, cfg:{ type:'doughnut', data:{ labels: rows.map(r => r.j), datasets:[{ data: rows.map(r => useReal ? r.ag.real : r.ag.vol),
+    backgroundColor: rows.map((r, i) => cols[i % cols.length]), borderColor:'#fff', borderWidth:2 }] }, options:o } };
+}
+function _msRenderJenis(M){
+  const cv = document.getElementById('msJenisChart');
+  _msDestroy('jenis');
+  if (!cv || !M || typeof Chart === 'undefined') return;
+  const built = _msJenisCfg(M, _msPal());
+  if (!built.useReal){
+    const t = cv.closest('.ms-card') && cv.closest('.ms-card').querySelector('.ms-card-t');
+    if (t) t.textContent = 'Volume Kontrak per Jenis (belum ada realisasi)';
+  }
+  if (window.matchMedia && window.matchMedia('(max-width:768px)').matches) built.cfg.options.plugins.legend.position = 'bottom';
+  mitraCharts.jenis = new Chart(cv, built.cfg);
+}
+
+function _msStatusBadge(st){
+  const m = { act:['act','Aktif'], exp:['exp','Selesai'], ter:['ter','Terminasi'], fut:['fut','Belum mulai'] }[st] || ['exp', st];
+  return '<span class="ms-st ' + m[0] + '">' + m[1] + '</span>';
+}
+function _msRenderContracts(M){
+  const el = document.getElementById('msCtTbl');
+  if (!el || !M) return;
+  const s = msState.ctSort;
+  const serap = x => x.vol > 0 ? x.totReal / x.vol * 100 : null;
+  const sr = x => x.srDo > 0 ? x.srReal / x.srDo * 100 : null;
+  const harga = x => { try { const hg = typeof getKontrakHarga === 'function' ? getKontrakHarga(x.c) : null; return hg && hg.h ? hg.h : null; } catch(e){ return null; } };
+  const val = (x, k) => k === 'kontrak' ? (x.c.kontrak || '') : k === 'pltu' ? (x.c.pltu || '') : k === 'jenis' ? (x.c.jenis || '')
+    : k === 'awal' ? (x.c.awal || '') : k === 'status' ? x.status : k === 'vol' ? x.vol : k === 'real' ? x.totReal
+    : k === 'serap' ? (serap(x) === null ? -1 : serap(x)) : k === 'sr' ? (sr(x) === null ? -1 : sr(x)) : k === 'harga' ? (harga(x) || -1) : 0;
+  const rows = M.stats.slice().sort((x, y) => { const p = val(x, s.k), q = val(y, s.k); return (p < q ? -1 : p > q ? 1 : 0) * s.d; });
+  const th = (k, t, num) => '<th class="' + (num ? 'num ' : '') + (s.k === k ? 'sorted' : '') + '" onclick="msSort(\'ct\',\'' + k + '\')">' + t + '<span class="ar">' + (s.k === k ? (s.d > 0 ? '▲' : '▼') : '↕') + '</span></th>';
+  let h = '<table class="ms-tbl"><thead><tr>' + th('kontrak', 'No. Kontrak') + th('pltu', 'PLTU') + th('jenis', 'Jenis') + th('awal', 'Periode') +
+    th('status', 'Status') + th('vol', 'Volume (MT)', 1) + th('real', 'Realisasi (MT)', 1) + th('serap', 'Serapan', 1) + th('sr', 'SR', 1) +
+    th('harga', 'Harga (Rp/ton)', 1) + '</tr></thead><tbody>';
+  rows.forEach((x, i) => {
+    const p = serap(x), q = sr(x), hg = harga(x);
+    h += '<tr data-i="' + M.stats.indexOf(x) + '" onclick="msOpenContract(+this.dataset.i)" title="Buka detail bulanan DO & realisasi">' +
+      '<td>' + (x.c.kontrak ? escapeHtml(x.c.kontrak) : '—') + '</td><td>' + escapeHtml(x.c.pltu || '') + '</td><td>' + escapeHtml((x.c.jenis || '').trim() || '—') + '</td>' +
+      '<td>' + fmtKontrakDate(x.c.awal) + ' → ' + fmtKontrakDate(x.c.akhir) + '</td><td>' + _msStatusBadge(x.status) + '</td>' +
+      '<td class="num">' + fmtInt(x.vol) + '</td><td class="num">' + fmtInt(x.totReal) + '</td>' +
+      '<td class="num ms-pct" style="color:' + _msPctColor(p) + '">' + _msFmtPct(p, 0) + '</td>' +
+      '<td class="num ms-pct" style="color:' + _msPctColor(q) + '">' + (x.hasDO ? _msFmtPct(q, 0) : '<span title="DO tidak tersedia">—</span>') + '</td>' +
+      '<td class="num">' + (hg ? fmtInt(hg) : '—') + '</td></tr>';
+  });
+  el.innerHTML = h + '</tbody></table>';
+}
+function msOpenContract(i){
+  const M = msState.model;
+  const x = M && M.stats[i];
+  if (!x) return;
+  try { openPemasokModal(x.c.pemasok, x.c.pltu, x.c.kontrak); } catch(e){ console.warn('[Mitra] buka detail gagal:', e); }
+}
+function _msRenderGantt(M){
+  const el = document.getElementById('msGantt');
+  if (!el || !M) return;
+  const withP = M.stats.filter(s => s.a !== null && s.b !== null && s.b >= s.a);
+  if (!withP.length){ el.style.display = 'none'; return; }
+  el.style.display = '';
+  const y0 = Math.floor(Math.min.apply(null, withP.map(s => s.a)) / 12);
+  const y1 = Math.floor(Math.max.apply(null, withP.map(s => s.b)) / 12) + 1;
+  const t0 = y0 * 12, span = (y1 - y0) * 12;
+  const pos = ym => ((ym - t0) / span * 100);
+  const col = { act:'#10b981', exp:_msCss('--border-bright', '#98A0A9'), ter:'#ef4444', fut:_msCss('--accent-cyan', '#00A0E0') };
+  let axis = '<div class="ms-gantt-axis">';
+  for (let y = y0; y <= y1; y++) axis += '<span style="left:' + pos(y * 12).toFixed(2) + '%">' + y + '</span>';
+  axis += '</div>';
+  const d = new Date(), nowYM = d.getFullYear() * 12 + d.getMonth() + (d.getDate() - 1) / 31;
+  const rows = withP.slice().sort((x, y) => x.a - y.a || (x.c.pltu || '').localeCompare(y.c.pltu || ''));
+  let body = '';
+  rows.forEach(s => {
+    const l = pos(s.a), w = Math.max(0.6, pos(s.b + 1) - l);
+    const p = s.vol > 0 ? Math.min(100, s.totReal / s.vol * 100) : 0;
+    const tip = (s.c.kontrak || 'Tanpa nomor') + ' · ' + (s.c.pltu || '') + ' · ' + (s.c.awal || '?') + ' s.d. ' + (s.c.akhir || '?') +
+      ' · serapan ' + (s.vol > 0 ? (s.totReal / s.vol * 100).toFixed(0) + '%' : '—');
+    body += '<div class="ms-gantt-row" onclick="msOpenContract(' + M.stats.indexOf(s) + ')" title="' + escapeHtml(tip) + '">' +
+      '<div class="ms-gantt-lbl">' + escapeHtml(s.c.pltu || '—') + ' <span>· ' + escapeHtml((s.c.jenis || '').trim() || '—') + '</span></div>' +
+      '<div class="ms-gantt-track"><div class="ms-gantt-bar" style="left:' + l.toFixed(2) + '%;width:' + w.toFixed(2) + '%;background:' + col[s.status] + '"><i style="width:' + p.toFixed(1) + '%"></i></div>' +
+      (nowYM >= t0 && nowYM <= t0 + span ? '<div class="ms-gantt-today" style="left:' + pos(nowYM).toFixed(2) + '%"></div>' : '') + '</div></div>';
+  });
+  el.innerHTML = '<div class="ms-card-t">Linimasa Kontrak <span style="font-weight:600;letter-spacing:0;text-transform:none">— bagian gelap = serapan; garis putus merah = hari ini</span></div>' + axis + body +
+    '<div class="ms-legend"><span><i style="background:#10b981"></i>Aktif</span><span><i style="background:' + col.exp + '"></i>Selesai</span><span><i style="background:#ef4444"></i>Terminasi</span><span><i style="background:' + col.fut + '"></i>Belum mulai</span></div>';
+}
+
+function _msPeerList(M, mode){
+  const scored = M.peers.filter(p => p.ag.score !== null);
+  if (mode === 'jenis' && M.mainJenis) return scored.filter(p => p.jenisSet.has(M.mainJenis));
+  return scored;
+}
+function _msPeerCfg(M, list, P){
+  const rows = list.slice().sort((x, y) => y.ag.score - x.ag.score);
+  let top = rows.slice(0, 12);
+  if (M.me && M.me.ag.score !== null && top.indexOf(M.me) < 0) top = top.slice(0, 11).concat([M.me]);
+  const o = _msBaseOpts(P, { indexAxis:'y' });
+  o.plugins.legend = { display:false };
+  o.scales = {
+    x:{ min:0, max:100, ticks:{ font:o.scales.x.ticks.font, color:P.dim }, grid:{ color:P.grid } },
+    y:{ ticks:{ font:o.scales.x.ticks.font, color:P.text, autoSkip:false }, grid:{ display:false } }
+  };
+  o.interaction = { mode:'nearest', intersect:true, axis:'y' };
+  o.plugins.tooltip.callbacks = {
+    title: items => top[items[0].dataIndex].m,
+    label: c => { const p = top[c.dataIndex]; return 'Skor ' + p.ag.score.toFixed(1) + ' · SR ' + _msFmtPct(p.ag.sr, 0) + ' · ' + p.n + ' kontrak'; }
+  };
+  return { top, cfg:{ type:'bar', data:{ labels: top.map(p => (rows.indexOf(p) + 1) + '. ' + (p.m.length > 28 ? p.m.slice(0, 27) + '…' : p.m)),
+    datasets:[{ data: top.map(p => p.ag.score), backgroundColor: top.map(p => p.m === M.m ? P.yellow : 'rgba(15,73,110,.55)'),
+      borderColor: top.map(p => p.m === M.m ? P.gold : 'transparent'), borderWidth: top.map(p => p.m === M.m ? 2 : 0), borderRadius:0, barPercentage:.8 }] }, options:o } };
+}
+function _msRenderPeers(M){
+  const seg = document.getElementById('msPeerSeg'), body = document.getElementById('msPeerBody');
+  if (!seg || !body || !M) return;
+  const mode = M.mainJenis ? msState.peer : 'all';
+  seg.innerHTML = M.mainJenis ? '<div class="ms-seg" role="group">' +
+    '<button type="button"' + (mode === 'jenis' ? ' class="on"' : '') + ' onclick="msSetPeer(\'jenis\')">Sejenis: ' + escapeHtml(M.mainJenis) + '</button>' +
+    '<button type="button"' + (mode === 'all' ? ' class="on"' : '') + ' onclick="msSetPeer(\'all\')">Semua mitra</button></div>' : '';
+  const list = _msPeerList(M, mode);
+  const ranked = list.slice().sort((x, y) => y.ag.score - x.ag.score);
+  const me = M.me && M.me.ag.score !== null ? M.me : null;
+  const rank = me ? ranked.indexOf(me) + 1 : 0;
+  const pctile = me && ranked.length > 1 ? (1 - (rank - 1) / (ranked.length - 1)) * 100 : null;
+  const med = ranked.length ? ranked[Math.floor(ranked.length / 2)].ag.score : null;
+  let h = '<div class="ms-rank">';
+  if (me && rank){
+    h += '<div class="ms-rank-big">#' + rank + ' <small>dari ' + ranked.length + '</small></div>' +
+      '<div class="ms-rank-txt">Skor keseluruhan <b>' + me.ag.score.toFixed(0) + '</b> (median kelompok ' + (med === null ? '—' : med.toFixed(0)) + '). ' +
+      (pctile === null ? '' : 'Lebih baik dari <b>' + pctile.toFixed(0) + '%</b> mitra ' + (mode === 'jenis' ? 'pemasok ' + escapeHtml(M.mainJenis) : 'lain') + '. ') +
+      'Dihitung atas seluruh kontrak mitra, jadi tidak berubah saat lingkup PLTU/jenis di atas diganti.</div>';
+  } else {
+    h += '<div class="ms-rank-txt">Mitra ini belum punya riwayat pasokan yang cukup untuk diberi skor, jadi belum bisa diperingkat.</div>';
+  }
+  h += '</div>';
+  h += '<div class="ms-two" style="margin-top:0"><div class="ms-card"><div class="ms-card-t">Skor Teratas' + (me ? ' · posisi mitra ini disorot' : '') + '</div><div class="ms-chart" id="msPeerChartBox"><canvas id="msPeerChart"></canvas></div></div>' +
+    '<div class="ms-tbl-wrap" style="max-height:460px;overflow-y:auto"><table class="ms-tbl"><thead><tr><th class="num">#</th><th>Mitra</th><th class="num">Kontrak</th><th class="num">Realisasi</th><th class="num">SR</th><th class="num">Skor</th></tr></thead><tbody>';
+  // Tabel: 5 di atas & 5 di bawah posisi mitra ini, atau 12 teratas.
+  let from = 0, to = Math.min(ranked.length, 12);
+  if (rank > 8){ from = Math.max(0, rank - 6); to = Math.min(ranked.length, rank + 5); }
+  for (let i = from; i < to; i++){
+    const p = ranked[i], gr = _msGrade(p.ag.score);
+    h += '<tr class="' + (p === me ? 'me' : '') + '" data-m="' + escapeHtml(p.m) + '" onclick="openMitraSummary(this.dataset.m)" title="Buka ringkasan mitra ini">' +
+      '<td class="num">' + (i + 1) + '</td><td class="wrap">' + escapeHtml(p.m) + '</td><td class="num">' + p.n + '</td><td class="num">' + fmtInt(p.ag.real) + '</td>' +
+      '<td class="num ms-pct" style="color:' + _msPctColor(p.ag.sr) + '">' + _msFmtPct(p.ag.sr, 0) + '</td>' +
+      '<td class="num ms-pct" style="color:' + gr.c + '">' + gr.g + ' · ' + p.ag.score.toFixed(0) + '</td></tr>';
+  }
+  h += '</tbody></table></div></div>';
+  body.innerHTML = h;
+  _msDestroy('peer');
+  const cv = document.getElementById('msPeerChart'), box = document.getElementById('msPeerChartBox');
+  if (!cv || typeof Chart === 'undefined' || !ranked.length) return;
+  const built = _msPeerCfg(M, list, _msPal());
+  box.style.height = Math.max(240, built.top.length * 30 + 40) + 'px';
+  built.cfg.options.onClick = (ev, els) => { if (els && els.length){ const p = built.top[els[0].index]; if (p && p.m !== M.m) openMitraSummary(p.m); } };
+  built.cfg.options.onHover = (ev, els) => { ev.native && ev.native.target && (ev.native.target.style.cursor = els && els.length ? 'pointer' : 'default'); };
+  mitraCharts.peer = new Chart(cv, built.cfg);
+}
+
+// Sorot menu bagian mengikuti posisi gulir.
+function _msBindScrollSpy(){
+  const view = document.getElementById('msView');
+  if (!view || view.dataset.spy) return;
+  view.dataset.spy = '1';
+  let raf = 0;
+  view.addEventListener('scroll', () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const nav = document.getElementById('msNav');
+      if (!nav) return;
+      const top = view.getBoundingClientRect().top + 80;
+      let cur = MS_SECTIONS[0][0];
+      for (const [id] of MS_SECTIONS){ const s = document.getElementById(id); if (s && s.getBoundingClientRect().top <= top) cur = id; }
+      // Sudah mentok bawah: bagian terakhir yang pendek tidak pernah mencapai garis atas.
+      if (view.scrollTop + view.clientHeight >= view.scrollHeight - 4) cur = MS_SECTIONS[MS_SECTIONS.length - 1][0];
+      nav.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.sec === cur));
+    });
+  }, { passive:true });
+}
+
+// ---------- Ekspor PDF ----------
+// Teks digambar sebagai vektor oleh jsPDF (tajam & bisa dicari), chart dirender
+// ulang di kanvas tersembunyi berukuran tetap supaya hasilnya sama di layar apa pun.
+// Harga kontrak SENGAJA tidak ikut: PDF adalah dokumen yang akan diteruskan,
+// sedangkan harga hanya boleh terlihat di dashboard (lihat V146, repo publik).
+function _msPdfTxt(s){
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/[→]/g, '->').replace(/[≥]/g, '>=').replace(/[≤]/g, '<=').replace(/[–—−]/g, '-')
+    .replace(/[“”]/g, '"').replace(/[‘’]/g, "'").replace(/…/g, '...').replace(/[•]/g, '-')
+    .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '');
+}
+function _msChartImage(cfg, w, h){
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;width:' + w + 'px;height:' + h + 'px;';
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  host.appendChild(cv);
+  document.body.appendChild(host);
+  cfg.options = Object.assign({}, cfg.options, { responsive:false, animation:false, devicePixelRatio:2 });
+  cfg.plugins = (cfg.plugins || []).concat([{ id:'msWhite', beforeDraw: ch => { const c = ch.ctx; c.save(); c.fillStyle = '#fff'; c.fillRect(0, 0, ch.width, ch.height); c.restore(); } }]);
+  let url = null, ch = null;
+  try { ch = new Chart(cv, cfg); url = ch.toBase64Image('image/png'); }
+  finally { if (ch) try { ch.destroy(); } catch(e){} host.remove(); }
+  return url;
+}
+function msExportPdf(){
+  const ns = window.jspdf || window.jsPDF;
+  const JsPDF = ns && (ns.jsPDF || ns);
+  if (!JsPDF){ showToast('Library PDF belum siap, coba lagi sebentar.', 'warn', 4000); return; }
+  const M = msState.model;
+  if (!M || !M.ag.n){ showToast('Tidak ada data untuk diekspor.', 'warn', 3500); return; }
+  const btn = document.getElementById('msPdfBtn');
+  if (btn) btn.disabled = true;
+  // Beri browser satu frame untuk menampilkan tombol nonaktif sebelum kerja berat.
+  setTimeout(() => {
+    try { _msBuildPdf(JsPDF, M); showToast('PDF ringkasan mitra diunduh.', 'ok', 3500); }
+    catch(e){ console.error('[Mitra] PDF gagal:', e); showToast('Gagal membuat PDF: ' + (e && e.message || e), 'warn', 6000); }
+    finally { if (btn) btn.disabled = false; }
+  }, 30);
+}
+function _msBuildPdf(JsPDF, M){
+  const doc = new JsPDF({ unit:'pt', format:'a4', orientation:'portrait', compress:true });
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+  const X = 40, CW = W - 80, BOT = H - 46;
+  const BLUE = [15, 73, 110], YEL = [255, 199, 44], INK = [26, 36, 48], DIM = [90, 100, 112], HAIR = [214, 218, 223], PAPER = [243, 245, 246];
+  const hex = c => { const m = /^#?([0-9a-f]{6})$/i.exec(c || ''); return m ? [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4), 16)] : DIM; };
+  const pctRGB = p => p === null || p === undefined ? DIM : hex(p > 100 ? '#8b5cf6' : p >= 70 ? '#10b981' : p >= 30 ? '#d97706' : '#ef4444');
+  const T = _msPdfTxt;
+  const a = M.ag, g = M.grade;
+  let y = 0;
+
+  const font = (sz, st, col) => { doc.setFont('helvetica', st || 'normal'); doc.setFontSize(sz); doc.setTextColor.apply(doc, col || INK); };
+  const newPage = () => {
+    doc.addPage();
+    doc.setFillColor.apply(doc, BLUE); doc.rect(0, 0, W, 22, 'F');
+    font(7.5, 'bold', [255, 255, 255]);
+    doc.text(T('RINGKASAN MITRA · ' + M.m.toUpperCase()), X, 14);
+    y = 44;
+  };
+  const ensure = hh => { if (y + hh > BOT) newPage(); };
+  const section = t => {
+    ensure(80);   // judul tidak boleh yatim di dasar halaman
+    y += 10;
+    doc.setDrawColor.apply(doc, BLUE); doc.setLineWidth(2.2); doc.line(X, y, X + CW, y);
+    font(11.5, 'bold', BLUE); doc.text(T(t), X, y + 16);
+    y += 33;
+  };
+  const para = (t, sz, col, st) => {
+    font(sz || 9, st || 'normal', col || INK);
+    const lines = doc.splitTextToSize(T(t), CW);
+    lines.forEach(l => { ensure(sz ? sz * 1.4 : 13); doc.text(l, X, y); y += (sz || 9) * 1.4; });
+  };
+
+  // ---- Halaman 1: kepala ----
+  doc.setFillColor.apply(doc, BLUE); doc.rect(0, 0, W, 118, 'F');
+  doc.setFillColor.apply(doc, YEL); doc.rect(0, 118, W, 4, 'F');
+  font(8, 'bold', [214, 227, 236]); doc.text(T('PT PLN ENERGI PRIMER INDONESIA · BIOENERGY DASHBOARD'), X, 30);
+  font(9, 'normal', [214, 227, 236]); doc.text(T('Ringkasan Kinerja Mitra Biomassa'), X, 48);
+  font(20, 'bold', [255, 255, 255]);
+  const nm = doc.splitTextToSize(T(M.m), CW - 120);
+  doc.text(nm.slice(0, 2), X, 74);
+  font(8.5, 'normal', [214, 227, 236]);
+  doc.text(T('Lingkup: ' + M.scopeDesc + '   |   Data s.d. ' + _msYMLabel(M.lastDataYM, true) + ' (dinilai s.d. ' + _msYMLabel(M.lastYM, true) + ')   |   Dibuat ' + new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' })), X, 104);
+  // Lencana grade.
+  const gx = W - X - 86, gy = 22;
+  doc.setFillColor(255, 255, 255); doc.roundedRect(gx, gy, 86, 78, 4, 4, 'F');
+  font(30, 'bold', g ? hex(g.c) : DIM); doc.text(g ? g.g : '-', gx + 43, gy + 40, { align:'center' });
+  font(8, 'bold', INK); doc.text(T(g ? g.t : 'Belum dinilai'), gx + 43, gy + 56, { align:'center' });
+  font(7.5, 'normal', DIM); doc.text(a.score === null ? 'skor n/a' : 'skor ' + a.score.toFixed(0) + ' / 100', gx + 43, gy + 68, { align:'center' });
+  y = 144;
+  para(M.lead, 9.5, INK);
+  y += 4;
+
+  // ---- KPI ----
+  const kp = [
+    ['KONTRAK', String(a.n), [a.act ? a.act + ' aktif' : '', a.exp_ ? a.exp_ + ' selesai' : '', a.ter ? a.ter + ' terminasi' : ''].filter(Boolean).join(', ') || '-', null],
+    ['VOLUME KONTRAK', fmtInt(a.vol) + ' MT', M.pltuRows.length + ' PLTU', null],
+    ['REALISASI 2023-2026', fmtInt(a.real) + ' MT', 'serapan ' + _msFmtPct(a.serapan), null],
+    ['KIRIMAN TERAKHIR', a.lastSup === null ? '-' : _msYMLabel(MS_YM0 + a.lastSup, true), a.firstSup === null ? '-' : 'pertama ' + _msYMLabel(MS_YM0 + a.firstSup, true), null],
+    ['SUPPLY RELIABILITY', _msFmtPct(a.sr), 'realisasi / DO', a.sr],
+    ['SERAPAN VS JADWAL', _msFmtPct(a.pace), 'realisasi / prorata', a.pace],
+    ['KONSISTENSI', _msFmtPct(a.cons, 0), a.supM + ' dari ' + a.actM + ' bulan', a.cons],
+    ['KEBERLANJUTAN', _msFmtPct(a.keep, 0), a.ter ? a.ter + ' terminasi' : 'tanpa terminasi', a.keep]
+  ];
+  const kw = CW / 4, kh = 50;
+  ensure(kh * 2 + 10);
+  kp.forEach((k, i) => {
+    const cx = X + (i % 4) * kw, cy = y + Math.floor(i / 4) * kh;
+    doc.setFillColor.apply(doc, PAPER); doc.rect(cx + 1, cy + 1, kw - 2, kh - 2, 'F');
+    font(6.5, 'bold', DIM); doc.text(T(k[0]), cx + 8, cy + 13);
+    font(13, 'bold', k[3] === null ? BLUE : pctRGB(k[3])); doc.text(T(k[1]), cx + 8, cy + 30);
+    font(7, 'normal', DIM); doc.text(doc.splitTextToSize(T(k[2]), kw - 14)[0] || '', cx + 8, cy + 42);
+  });
+  y += kh * 2 + 8;
+
+  // ---- Komponen skor + temuan ----
+  section('Komponen Skor (indikatif)');
+  const comps = [['Supply Reliability', a.sr, MS_W.sr], ['Serapan vs Jadwal', a.pace, MS_W.pace], ['Konsistensi', a.cons, MS_W.cons], ['Keberlanjutan', a.keep, MS_W.keep]];
+  comps.forEach(([l, v, w]) => {
+    ensure(16);
+    font(8.5, 'bold', INK); doc.text(T(l), X, y + 7);
+    font(7, 'normal', DIM); doc.text('bobot ' + w, X + 100, y + 7);
+    doc.setFillColor(228, 231, 234); doc.rect(X + 140, y, CW - 200, 8, 'F');
+    if (v !== null){ doc.setFillColor.apply(doc, pctRGB(v)); doc.rect(X + 140, y, (CW - 200) * Math.max(0, Math.min(100, v)) / 100, 8, 'F'); }
+    font(9, 'bold', v === null ? DIM : pctRGB(v)); doc.text(v === null ? 'n/a' : v.toFixed(0) + '%', X + CW, y + 7, { align:'right' });
+    y += 16;
+  });
+  y += 2;
+  font(7, 'normal', DIM);
+  doc.text(T('Skor = rata-rata tertimbang komponen tersedia (dijepit 0-100%). A >= 85, B >= 70, C >= 50, D < 50. Bukan penilaian resmi vendor.'), X, y + 4);
+  y += 14;
+
+  section('Temuan Utama');
+  M.insights.forEach(it => {
+    const txt = T(it.h.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"'));
+    font(8.5, 'normal', INK);
+    const lines = doc.splitTextToSize(txt, CW - 16);
+    ensure(lines.length * 11.5 + 4);
+    doc.setFillColor.apply(doc, hex({ good:'#10b981', warn:'#f59e0b', bad:'#ef4444', info:'#0A6E96' }[it.t]));
+    doc.rect(X, y - 6.5, 7, 7, 'F');
+    lines.forEach((l, i) => doc.text(l, X + 14, y + i * 11.5));
+    y += lines.length * 11.5 + 3;
+  });
+
+  // ---- Tren ----
+  const P = { blue:'#0F496E', gold:'#8A6100', yellow:'#FFC72C', cyan:'#00A0E0', grid:'#E2E5E8', dim:'#5A6470', grey:'#E4E7EA', line:'#98A0A9', text:'#1A2430' };
+  const addChart = (cfg, hPt) => {
+    const img = _msChartImage(cfg, Math.round(CW * 1.6), Math.round(hPt * 1.6));
+    if (!img) return;
+    ensure(hPt + 6);
+    doc.addImage(img, 'PNG', X, y, CW, hPt, undefined, 'FAST');
+    y += hPt + 8;
+  };
+  section('Tren Pasokan Bulanan - Realisasi vs DO (MT)');
+  addChart(_msTrendCfg(M, 'month', P), 190);
+  // Tabel per tahun.
+  const yrRows = MS_YEARS.map((yy, yi) => {
+    let r = 0, d = 0, sr = 0, sd = 0;
+    for (let mi = 0; mi < 12; mi++){ const k = yi * 12 + mi; r += a.mReal[k]; d += a.mDo[k]; if (a.mDo[k] > 0){ sr += a.mReal[k]; sd += a.mDo[k]; } }
+    return [yy, fmtInt(d), fmtInt(r), sd > 0 ? (sr / sd * 100).toFixed(0) + '%' : '-'];
+  });
+  _msPdfTable(doc, { X, CW, BOT, get y(){ return y; }, set y(v){ y = v; }, newPage, font, T },
+    [['Tahun', 90, 'l'], ['DO (MT)', 130, 'r'], ['Realisasi (MT)', 130, 'r'], ['SR', 80, 'r']], yrRows);
+
+  // ---- Per PLTU ----
+  section('Sebaran per PLTU');
+  const pb = _msPltuCfg(M, P, 14);
+  addChart(pb.cfg, Math.max(120, pb.rows.length * 20 + 40));
+  const pr = M.pltuRows.slice().sort((p, q) => q.ag.real - p.ag.real).map(r => {
+    const gr = _msGrade(r.ag.score);
+    return [r.label, r.genco, String(r.n), fmtInt(r.ag.vol), fmtInt(r.ag.real), _msFmtPct(r.ag.serapan, 0), _msFmtPct(r.ag.sr, 0),
+            r.ag.lastSup === null ? '-' : _msYMLabel(MS_YM0 + r.ag.lastSup, true), gr ? gr.g + ' ' + r.ag.score.toFixed(0) : '-'];
+  });
+  _msPdfTable(doc, { X, CW, BOT, get y(){ return y; }, set y(v){ y = v; }, newPage, font, T },
+    [['PLTU', 120, 'l'], ['Genco', 38, 'l'], ['Kontrak', 38, 'r'], ['Volume', 60, 'r'], ['Realisasi', 60, 'r'], ['Serapan', 44, 'r'], ['SR', 38, 'r'], ['Terakhir', 50, 'r'], ['Skor', 67, 'r']], pr);
+
+  // ---- Kontrak ----
+  section('Daftar Kontrak');
+  const st = { act:'Aktif', exp:'Selesai', ter:'Terminasi', fut:'Belum mulai' };
+  const d8 = iso => { if (!iso) return '-'; const p = iso.split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0].slice(2) : iso; };
+  const cr = M.stats.slice().sort((p, q) => (q.c.awal || '').localeCompare(p.c.awal || '')).map(s => [
+    s.c.kontrak || '-', s.c.pltu || '-', (s.c.jenis || '').trim() || '-', d8(s.c.awal) + ' - ' + d8(s.c.akhir), st[s.status] || s.status,
+    fmtInt(s.vol), fmtInt(s.totReal), s.vol > 0 ? (s.totReal / s.vol * 100).toFixed(0) + '%' : '-', s.srDo > 0 ? (s.srReal / s.srDo * 100).toFixed(0) + '%' : '-']);
+  _msPdfTable(doc, { X, CW, BOT, get y(){ return y; }, set y(v){ y = v; }, newPage, font, T },
+    [['No. Kontrak', 88, 'l'], ['PLTU', 70, 'l'], ['Jenis', 66, 'l'], ['Periode', 72, 'l'], ['Status', 44, 'l'], ['Volume', 48, 'r'], ['Realisasi', 48, 'r'], ['Serapan', 39, 'r'], ['SR', 40, 'r']], cr);
+
+  // ---- Perbandingan ----
+  const mode = M.mainJenis ? msState.peer : 'all';
+  const list = _msPeerList(M, mode);
+  const ranked = list.slice().sort((p, q) => q.ag.score - p.ag.score);
+  section('Perbandingan dengan Mitra ' + (mode === 'jenis' ? 'Pemasok ' + M.mainJenis : 'Lain'));
+  if (M.me && M.me.ag.score !== null && ranked.indexOf(M.me) >= 0){
+    const rk = ranked.indexOf(M.me) + 1;
+    para('Peringkat ' + rk + ' dari ' + ranked.length + ' mitra dengan skor ' + M.me.ag.score.toFixed(0) +
+         (ranked.length > 1 ? ' - lebih baik dari ' + ((1 - (rk - 1) / (ranked.length - 1)) * 100).toFixed(0) + '% mitra dalam kelompok ini.' : '.') +
+         ' Dihitung atas seluruh kontrak mitra.', 9, INK);
+    y += 2;
+    const pc = _msPeerCfg(M, list, P);
+    addChart(pc.cfg, Math.max(120, pc.top.length * 18 + 30));
+  } else {
+    para('Mitra ini belum punya riwayat pasokan yang cukup untuk diperingkat.', 9, DIM);
+  }
+
+  // ---- Metodologi ----
+  section('Metodologi');
+  [
+    'Sumber: Daftar Kontrak (volume, periode, realisasi bulanan 2023-2026, status terminasi) dan DO bulanan (otomatis + koreksi admin). Realisasi = realisasi kontrak, bukan realisasi produksi.',
+    'Supply Reliability (bobot ' + MS_W.sr + '): jumlah realisasi / jumlah DO pada bulan yang ada DO-nya.',
+    'Serapan vs Jadwal (bobot ' + MS_W.pace + '): realisasi / volume prorata linear per bulan sepanjang periode kontrak, dihitung sejak Jan 2023 s.d. bulan data terakhir. Kontrak terminasi tidak ikut.',
+    'Konsistensi (bobot ' + MS_W.cons + '): porsi bulan kontrak berjalan yang ada realisasinya.',
+    'Keberlanjutan (bobot ' + MS_W.keep + '): 100% dikurangi porsi kontrak terminasi.',
+    'Skor bersifat indikatif untuk membantu membaca data, bukan penilaian resmi kinerja vendor. Harga kontrak tidak dicantumkan di dokumen ini.'
+  ].forEach(t => { para('- ' + t, 8, DIM); y += 1; });
+
+  // ---- Kaki halaman ----
+  const n = doc.getNumberOfPages();
+  for (let i = 1; i <= n; i++){
+    doc.setPage(i);
+    doc.setDrawColor.apply(doc, HAIR); doc.setLineWidth(0.6); doc.line(X, H - 30, X + CW, H - 30);
+    font(7, 'normal', DIM);
+    doc.text(T('Bioenergy Dashboard · PT PLN Energi Primer Indonesia · ' + M.m), X, H - 18);
+    doc.text('Halaman ' + i + ' / ' + n, X + CW, H - 18, { align:'right' });
+  }
+  const safe = M.m.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'Mitra';
+  const d = new Date();
+  doc.save('Ringkasan_Mitra_' + safe + '_' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '.pdf');
+}
+// Tabel sederhana dengan kepala berulang di tiap halaman. `cols`: [judul, lebar, 'l'|'r'].
+// Lebar diskalakan agar jumlahnya pas selebar konten.
+function _msPdfTable(doc, ctx, cols, rows){
+  const tot = cols.reduce((s, c) => s + c[1], 0);
+  const ws = cols.map(c => c[1] * ctx.CW / tot);
+  const RH = 13, HH = 15;
+  const head = () => {
+    doc.setFillColor(228, 231, 234); doc.rect(ctx.X, ctx.y, ctx.CW, HH, 'F');
+    ctx.font(6.8, 'bold', [90, 100, 112]);
+    let x = ctx.X;
+    cols.forEach((c, i) => { doc.text(ctx.T(c[0].toUpperCase()), c[2] === 'r' ? x + ws[i] - 4 : x + 4, ctx.y + 10, c[2] === 'r' ? { align:'right' } : undefined); x += ws[i]; });
+    ctx.y += HH;
+  };
+  // Minimal beberapa baris pertama ikut di halaman yang sama dengan kepalanya.
+  if (ctx.y + HH + RH * Math.min(rows.length, 4) > ctx.BOT) ctx.newPage();
+  head();
+  rows.forEach((r, ri) => {
+    if (ctx.y + RH > ctx.BOT){ ctx.newPage(); head(); }
+    if (ri % 2 === 1){ doc.setFillColor(246, 247, 248); doc.rect(ctx.X, ctx.y, ctx.CW, RH, 'F'); }
+    ctx.font(7.3, 'normal', [26, 36, 48]);
+    let x = ctx.X;
+    r.forEach((v, i) => {
+      let s = ctx.T(v);
+      // Potong teks yang lebih lebar dari kolomnya.
+      const maxW = ws[i] - 8;
+      if (doc.getTextWidth(s) > maxW){ while (s.length > 1 && doc.getTextWidth(s + '...') > maxW) s = s.slice(0, -1); s += '...'; }
+      doc.text(s, cols[i][2] === 'r' ? x + ws[i] - 4 : x + 4, ctx.y + 9, cols[i][2] === 'r' ? { align:'right' } : undefined);
+      x += ws[i];
+    });
+    doc.setDrawColor(214, 218, 223); doc.setLineWidth(0.4); doc.line(ctx.X, ctx.y + RH, ctx.X + ctx.CW, ctx.y + RH);
+    ctx.y += RH;
+  });
+  ctx.y += 8;
+}
 
 </script>
 </body>
