@@ -9543,7 +9543,7 @@ body.gf-on .gf-bar{
 .ms-seg button:first-child{border-left:none}
 .ms-seg button.on{background:var(--accent);color:#fff}
 
-.ms-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border)}
+.ms-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border)}
 .ms-kpi{background:var(--panel);padding:14px 16px;min-width:0}
 .ms-kpi-l{font-size:var(--fs-note);letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--text-dim);font-weight:700}
 .ms-kpi-v{font-size:var(--fs-fig);font-weight:800;color:var(--text-bright);letter-spacing:var(--ls-fig);margin-top:6px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -9553,14 +9553,6 @@ body.gf-on .gf-bar{
 .ms-two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:var(--gutter);margin-top:var(--gutter)}
 .ms-card{background:var(--panel);border:1px solid var(--border);padding:16px 18px;min-width:0}
 .ms-card-t{font-size:var(--fs-note);letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--text-dim);font-weight:800;margin-bottom:12px}
-.ms-comp{display:grid;grid-template-columns:130px 1fr 52px;gap:10px;align-items:center;padding:7px 0;border-bottom:var(--hairline)}
-.ms-comp:last-of-type{border-bottom:none}
-.ms-comp-l{font-size:var(--fs-body);font-weight:700;color:var(--text)}
-.ms-comp-l span{display:block;font-size:var(--fs-note);font-weight:600;color:var(--text-dim);margin-top:1px}
-.ms-bar{height:8px;background:var(--panel-3);position:relative;overflow:hidden}
-.ms-bar i{position:absolute;left:0;top:0;bottom:0;display:block;transition:width var(--dur-slow) var(--ease-out)}
-.ms-comp-v{font-size:var(--fs-lead);font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
-.ms-comp-v.na{color:var(--text-dim);font-weight:600;font-size:var(--fs-data)}
 .ms-ins{list-style:none;margin:0;padding:0}
 .ms-ins li{display:grid;grid-template-columns:18px 1fr;gap:8px;padding:7px 0;border-bottom:var(--hairline);font-size:var(--fs-body);line-height:var(--lh-body);color:var(--text)}
 .ms-ins li:last-child{border-bottom:none}
@@ -9590,6 +9582,9 @@ body.gf-on .gf-bar{
 .ms-tbl tbody tr:hover td{background:var(--accent-soft)}
 .ms-tbl tr.me td{background:rgba(255,199,44,.18);font-weight:800}
 .ms-tbl td.wrap{white-space:normal;min-width:160px}
+/* V156: tabel peringkat memuat SEMUA mitra — digulir di dalam kotak, header tetap terlihat. */
+.ms-peer-tbl{max-height:460px;overflow-y:auto;overscroll-behavior:contain}
+.ms-peer-tbl thead th{position:sticky;top:0;z-index:1}
 .ms-st{display:inline-block;padding:1px 6px;font-size:var(--fs-note);font-weight:800;letter-spacing:.06em;text-transform:uppercase;border:1px solid}
 .ms-st.act{color:#047857;border-color:#10b981;background:rgba(16,185,129,.1)}
 .ms-st.exp{color:var(--text-dim);border-color:var(--border-bright)}
@@ -9614,10 +9609,6 @@ body.gf-on .gf-bar{
 .ms-rank-big{font-size:var(--fs-display);font-weight:800;color:var(--text-bright);line-height:1}
 .ms-rank-big small{font-size:var(--fs-lead);color:var(--text-dim);font-weight:600}
 .ms-rank-txt{font-size:var(--fs-body);color:var(--text);line-height:var(--lh-body);max-width:560px}
-.ms-method{font-size:var(--fs-body);line-height:var(--lh-body);color:var(--text);margin:0}
-.ms-method dt{font-weight:800;color:var(--text-bright);margin-top:10px}
-.ms-method dt:first-child{margin-top:0}
-.ms-method dd{margin:2px 0 0}
 .ms-empty{padding:40px 20px;text-align:center;color:var(--text-dim);font-size:var(--fs-lead)}
 
 @media (max-width:900px){
@@ -9627,6 +9618,7 @@ body.gf-on .gf-bar{
   .ms-grade{border-left:none;border-top:var(--hairline);padding:16px 0 0;min-width:0}
   .ms-two{grid-template-columns:minmax(0,1fr)}
   .ms-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ms-kpis > :last-child:nth-child(odd){grid-column:1 / -1}
 }
 @media (max-width:768px){
   .view[data-view="mitra"]{height:calc(100vh - 52px)!important;height:calc(100dvh - 52px)!important}
@@ -9639,7 +9631,6 @@ body.gf-on .gf-bar{
   .ms-nav{top:-12px}
   .ms-kpi-v{font-size:var(--fs-head)}
   .ms-yearstrip{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .ms-comp{grid-template-columns:100px 1fr 44px}
   .ms-gantt-axis{display:none}
   .ms-gantt-row{grid-template-columns:1fr;gap:0;padding:4px 0}
   .ms-chart{height:240px}
@@ -18190,7 +18181,7 @@ function buildKontrakMitraOptions(){
   if (state.kontrakFilters.pltu !== 'all') scoped = scoped.filter(c => _kontrakPltuPass(state.kontrakFilters.pltu, c.pltu));
   const mitras = Array.from(new Set(scoped.map(c => c.pemasok).filter(Boolean))).sort();
   const dl = document.getElementById('kontrak-mitra-list');
-  if (dl) dl.innerHTML = mitras.map(m => '<option value="' + escapeHtml(m) + '"></option>').join('');
+  if (dl) dl.innerHTML = mitras.map(m => { const l = mitraAcLabel(m); return '<option value="' + escapeHtml(m) + '"' + (l ? ' label="' + escapeHtml(l) + '"' : '') + '></option>'; }).join('');
   // Reflect current filter value (treat 'all'/empty as no filter)
   const cur = state.kontrakFilters.mitra;
   inp.value = (cur && cur !== 'all') ? cur : '';
@@ -18354,7 +18345,7 @@ function filteredContracts(){
     if (f.regional && f.regional !== 'all' && contractProvince(c) !== f.regional) return false;
     if (f.genco !== 'all' && c.genco !== f.genco) return false;
     if (f.pltu !== 'all' && !_kontrakPltuPass(f.pltu, c.pltu)) return false;
-    if (f.mitra && f.mitra !== 'all' && !(c.pemasok || '').toLowerCase().includes(f.mitra.toLowerCase())) return false;
+    if (f.mitra && f.mitra !== 'all' && !mitraQueryMatch(c.pemasok, f.mitra)) return false; // V156: + singkatan
     if (f.jenis !== 'all' && c.jenis !== f.jenis) return false;
     return true;
   });
@@ -30109,7 +30100,11 @@ const QOL_AC_STOP  = new Set(['dan','atau','and','or','of','the','&']);
 // sisipan seperti BEST sebenarnya sudah tertangkap _qolAcFlex; entri di sini
 // menjaminnya tetap dikenali dengan peringkat tertinggi.
 const QOL_AC_ALIAS = new Map([
-  ['pt bakti energi sejahtera', ['best']]
+  ['pt bakti energi sejahtera', ['best']],
+  // V156: satu grup perusahaan, ditulis dengan tiga ejaan di Daftar Kontrak.
+  ['pt pln energi primer indonesia investasi', ['pei']],
+  ['pt energi biomasa indonesia', ['pei']],
+  ['pt energi biomasa indonesia/pei', ['pei']]
 ]);
 // Mengembalikan { list, words } atau null. `list` = singkatan baku (huruf depan
 // + alias), `words` = daftar kata per varian untuk pencocokan fleksibel.
@@ -30154,6 +30149,37 @@ function _qolAcLevel(ac, t){
 function _qolAcHit(ac, t){ return _qolAcLevel(ac, t) > 0; }
 function _qolFacetHit(f, t){
   return f.kw.includes(t) || _qolAcHit(f.ac, t);
+}
+
+// V156: pencocokan nama mitra untuk kotak teks di luar palet (filter Daftar
+// Kontrak, "Ganti mitra" di Ringkasan Mitra) — aturan singkatan SAMA dengan
+// Ctrl+K. Tiap kata kueri cocok bila jadi potongan nama ATAU singkatannya
+// ("pei", "sdbn", "best"); awalan singkatan baru dihitung dari 3 huruf.
+const _mitraAcMemo = new Map();
+function _mitraAc(name){
+  if (!_mitraAcMemo.has(name)) _mitraAcMemo.set(name, _qolAcronyms(name));
+  return _mitraAcMemo.get(name);
+}
+function mitraQueryLevel(name, q){
+  const n = String(name || '').toLowerCase(), t = String(q || '').toLowerCase().trim();
+  if (!t) return 1;
+  if (n.includes(t)) return n === t ? 4 : 1;
+  const ac = _mitraAc(name);
+  let best = 4;
+  for (const tk of t.split(/\s+/)){
+    if (n.includes(tk)) continue;
+    const lv = _qolAcLevel(ac, tk);
+    if (lv < 2 && !(lv === 1 && tk.length >= 3)) return 0;
+    best = Math.min(best, lv);
+  }
+  return best;
+}
+function mitraQueryMatch(name, q){ return mitraQueryLevel(name, q) > 0; }
+// Label <option> datalist: singkatan baku dalam huruf besar, supaya saran
+// browser menampilkannya (dan, di Chrome/Edge, ikut tersaring olehnya).
+function mitraAcLabel(name){
+  const ac = _mitraAc(name);
+  return ac ? ac.list.map(a => a.toUpperCase()).join(' · ') : '';
 }
 
 // V148: adakah pemetaan bagian→kata yang saling berbeda, dengan tiap bagian
@@ -31086,22 +31112,25 @@ const MS_YEARS = ['2023','2024','2025','2026'];
 const MS_MON = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 const MS_YM0 = 2023 * 12;             // Jan 2023 — indeks bulan 0
 const MS_NM = 48;                      // Jan 2023 … Des 2026
-// Bobot skor indikatif. Komponen yang tidak bisa dihitung (mis. mitra tanpa DO)
-// dikeluarkan dan bobot sisanya dinormalkan ulang — lihat _msAggregate.
-const MS_W = { sr:40, pace:30, cons:20, keep:10 };
-// Penimbang volume (keputusan user 2026-09-24): persentase dari volume kecil lebih
-// mudah dicapai, jadi SR dan Serapan vs Jadwal yang MASUK SKOR ditarik ke patokan
-// `p` sebesar `k` MT volume bayangan:
-//   tertimbang = (realisasi + k × p) ÷ (volume + k)
-// 10.000 MT @75% → 66,7%; 500 MT @80% → 52,7% — volume besar menang walau
-// persentasenya sedikit lebih rendah. Patokan SENGAJA 50%, bukan rata-rata
-// kelompok: patokan yang lebih tinggi dari keduanya justru mengangkat kontrak kecil.
-// Volume = volume DO (untuk SR) dan volume prorata (untuk serapan) — bukti yang
-// benar-benar mendasari persentasenya. Angka mentah tetap ditampilkan di KPI.
-const MS_SHRINK = { p:0.5, k:5000 };
+// V-MITRA (keputusan user 2026-09-25): skor MURNI realisasi terhadap DO (SR
+// tertimbang volume). Konsistensi, Serapan vs Jadwal, dan Keberlanjutan dibuang —
+// dua yang pertama berasumsi pengiriman merata sepanjang periode kontrak, padahal
+// kontrak bisa selesai lebih awal karena volumenya sudah terpenuhi.
+// Penimbang volume (keputusan user 2026-09-25, menggantikan tarikan ke 50%):
+// volume DO kecil hanya MEMBATASI kenaikan di atas ambang B (`p`), tidak menyeret
+// skor ke bawah. Mitra yang realisasinya penuh sesuai DO tetap minimal B walau
+// volumenya kecil; untuk A butuh bukti volume.
+//   SR ≤ p  → skor = SR
+//   SR > p  → skor = p + (SR − p) × DO ÷ (DO + k)
+// DO 1.772 MT @100% → 77,9 (B); DO 10.000 MT @75% → 73,3; DO 500 MT @80% → 70,9;
+// A (≥ 85) @100% butuh DO ≥ k. SR di bawah p tidak diangkat.
+// SR dijepit 100% dulu: kelebihan kirim tidak menambah nilai. Angka mentah tetap di KPI.
+const MS_SHRINK = { p:70, k:5000 };
 function _msShrink(num, den){
   if (!(den > 0)) return null;
-  return (Math.min(num, den) + MS_SHRINK.k * MS_SHRINK.p) / (den + MS_SHRINK.k) * 100;
+  const sr = Math.min(num, den) / den * 100;
+  if (sr <= MS_SHRINK.p) return sr;
+  return MS_SHRINK.p + (sr - MS_SHRINK.p) * den / (den + MS_SHRINK.k);
 }
 const MS_GRADES = [
   { min:85, g:'A', t:'Sangat baik',     c:'#10b981' },
@@ -31135,8 +31164,8 @@ function _msCss(name, fb){
 }
 
 // Bulan data terakhir: bulan TERBARU yang punya realisasi > 0 di kontrak mana pun.
-// Konsistensi & kecepatan serapan hanya dihitung sampai bulan ini — bulan berjalan
-// yang belum dilaporkan tidak boleh dihitung sebagai "tidak mengirim".
+// Grafik & tren dihitung sampai bulan ini — bulan berjalan yang belum dilaporkan
+// tidak boleh terbaca sebagai "tidak mengirim".
 function _msLastDataYM(){
   const cs = (DATA && DATA.contracts) || [];
   let last = null;
@@ -31187,34 +31216,18 @@ function _msContractStats(c, lastYM, today){
     : !c.akhir ? 'exp'
     : c.akhir < today ? 'exp'
     : (c.awal && c.awal > today) ? 'fut' : 'act';
-  // Konsistensi & kecepatan serapan: hanya kontrak yang tidak diterminasi dan
-  // periodenya lengkap. Kontrak terminasi sudah dihukum lewat komponen
-  // Keberlanjutan; tanggal terminasinya tidak tercatat, jadi menghitung bulan
-  // "tanpa kiriman" sesudahnya akan menghukumnya dua kali.
   const a = _msYM(c.awal), b = _msYM(c.akhir);
-  let actM = 0, supM = 0, expected = null, realEval = 0;
-  for (let k = 0; k <= Math.min(MS_NM - 1, lastYM - MS_YM0); k++) realEval += real[k];
-  if (!c.terminated && a !== null && b !== null && b >= a){
-    const s = Math.max(a, MS_YM0), e = Math.min(b, lastYM, MS_YM0 + MS_NM - 1);
-    for (let ym = s; ym <= e; ym++){ actM++; if (real[ym - MS_YM0] > 0) supM++; }
-    // Volume yang "semestinya" sudah terkirim: prorata linear per bulan atas
-    // periode kontrak, dihitung dari Jan 2023 (awal data realisasi) sampai bulan
-    // data terakhir. Kontrak yang mulai sebelum 2023 hanya dinilai bagian 2023+.
-    if (vol > 0) expected = vol * Math.max(0, e - s + 1) / (b - a + 1);
-  }
   return { c, vol, real, dov, hasDO: !!DO, totReal, totDo, srReal, srDo, doAnom,
-           lastSup, firstSup, status, actM, supM, expected, realEval, a, b };
+           lastSup, firstSup, status, a, b };
 }
 
 function _msAggregate(stats){
-  const o = { n: stats.length, vol:0, real:0, doTot:0, srR:0, srD:0, actM:0, supM:0, exp:0, expReal:0,
+  const o = { n: stats.length, vol:0, real:0, doTot:0, srR:0, srD:0,
               ter:0, act:0, exp_:0, fut:0, withDO:0, anom:0, lastSup:null, firstSup:null,
               mReal:new Array(MS_NM).fill(0), mDo:new Array(MS_NM).fill(0) };
   stats.forEach(s => {
     o.vol += s.vol; o.real += s.totReal; o.doTot += s.totDo;
-    o.srR += s.srReal; o.srD += s.srDo; o.actM += s.actM; o.supM += s.supM;
-    // Pembilang & penyebut dipotong di bulan yang SAMA (bulan evaluasi).
-    if (s.expected !== null){ o.exp += s.expected; o.expReal += s.realEval; }
+    o.srR += s.srReal; o.srD += s.srDo;
     if (s.status === 'ter') o.ter++; else if (s.status === 'act') o.act++;
     else if (s.status === 'fut') o.fut++; else o.exp_++;
     if (s.hasDO) o.withDO++;
@@ -31224,26 +31237,10 @@ function _msAggregate(stats){
     for (let k = 0; k < MS_NM; k++){ o.mReal[k] += s.real[k]; o.mDo[k] += s.dov[k]; }
   });
   o.sr      = o.srD > 0 ? o.srR / o.srD * 100 : null;
-  o.pace    = o.exp > 0 ? o.expReal / o.exp * 100 : null;
-  o.cons    = o.actM > 0 ? o.supM / o.actM * 100 : null;
-  o.keep    = o.n > 0 ? (1 - o.ter / o.n) * 100 : null;
   o.serapan = o.vol > 0 ? o.real / o.vol * 100 : null;
-  // Pembilang dijepit ke penyebut (Math.min di _msShrink): kelebihan kirim tidak
-  // boleh menutupi kekurangan bukti volume.
   o.srAdj   = _msShrink(o.srR, o.srD);
-  o.paceAdj = _msShrink(o.expReal, o.exp);
-  let wSum = 0, sc = 0;
-  const comps = { sr:o.srAdj, pace:o.paceAdj, cons:o.cons, keep:o.keep };
-  for (const k in MS_W){
-    const v = comps[k];
-    if (v === null) continue;
-    wSum += MS_W[k];
-    sc += MS_W[k] * Math.min(100, Math.max(0, v));
-  }
-  // Keberlanjutan saja bukan riwayat kinerja — tanpa satu pun dari SR/serapan/
-  // konsistensi (mis. semua kontraknya baru mulai bulan depan), skor tidak diberikan.
-  o.score = (o.sr !== null || o.pace !== null || o.cons !== null) && wSum > 0 ? sc / wSum : null;
-  o.wUsed = wSum;
+  // Skor = SR tertimbang volume, dijepit 0–100. Tanpa DO → tanpa skor.
+  o.score = o.srAdj === null ? null : Math.min(100, Math.max(0, o.srAdj));
   return o;
 }
 
@@ -31275,8 +31272,9 @@ function _msPeers(lastYM, today){
   });
   const list = [];
   by.forEach((arr, m) => {
-    const ag = _msAggregate(arr.map(c => _msContractStats(c, lastYM, today)));
-    list.push({ m, n: arr.length, ag, jenis: _msMainJenis(arr),
+    const stats = arr.map(c => _msContractStats(c, lastYM, today));
+    const ag = _msAggregate(stats);
+    list.push({ m, n: arr.length, ag, stats, jenis: _msMainJenis(arr),
                 jenisSet: new Set(arr.map(c => (c.jenis || '').trim()).filter(Boolean)),
                 pltu: new Set(arr.map(c => c.pltu)).size });
   });
@@ -31366,16 +31364,6 @@ function _msInsights(M){
   } else {
     out.push({ t:'info', h:'Belum ada data DO untuk kontrak mitra ini — keandalan pengiriman tidak bisa dinilai.' });
   }
-  if (a.pace !== null){
-    if (a.pace >= 90) out.push({ t:'good', h:'Serapan <b>sesuai jadwal kontrak</b> (' + _msFmtPct(a.pace, 0) + ' dari volume yang semestinya sudah terkirim).' });
-    else if (a.pace >= 60) out.push({ t:'warn', h:'Serapan <b>agak tertinggal</b> dari jadwal: ' + _msFmtPct(a.pace, 0) + ' dari volume prorata.' });
-    else out.push({ t:'bad', h:'Serapan <b>tertinggal jauh</b> dari jadwal: baru ' + _msFmtPct(a.pace, 0) + ' dari volume yang semestinya sudah terkirim.' });
-  }
-  if (a.cons !== null){
-    const miss = a.actM - a.supM;
-    if (a.cons >= 85) out.push({ t:'good', h:'<b>Konsisten</b>: ada kiriman di ' + a.supM + ' dari ' + a.actM + ' bulan kontrak berjalan.' });
-    else out.push({ t: a.cons >= 60 ? 'warn' : 'bad', h:'<b>' + miss + ' bulan tanpa kiriman</b> dari ' + a.actM + ' bulan kontrak berjalan (' + _msFmtPct(a.cons, 0) + ' bulan aktif).' });
-  }
   if (a.ter > 0) out.push({ t:'bad', h:'<b>' + a.ter + ' kontrak diterminasi</b> dari ' + a.n + ' kontrak.' });
   // Tren 6 bulan terakhir vs 6 bulan sebelumnya.
   const L = M.lastYM - MS_YM0;
@@ -31457,7 +31445,15 @@ function msSetScope(kind, v){
   renderMitraSummary(true);
 }
 function msSetTrend(mode){ msState.trend = mode; _msRenderTrend(msState.model); }
+// V156: msState.peer = 'jenis' (jenis utama mitra, bawaan) | 'all' | 'j:<jenis>'.
 function msSetPeer(mode){ msState.peer = mode; _msRenderPeers(msState.model); }
+// Jenis pembanding yang aktif, atau null = semua mitra.
+function _msPeerJenis(M){
+  const p = msState.peer || 'jenis';
+  if (p === 'all') return null;
+  if (p.startsWith('j:')) return p.slice(2) || null;
+  return M.mainJenis || null;
+}
 function msSort(tbl, k){
   const s = tbl === 'ct' ? msState.ctSort : msState.plSort;
   if (s.k === k) s.d = -s.d; else { s.k = k; s.d = (k === 'pltu' || k === 'jenis' || k === 'kontrak' || k === 'label') ? 1 : -1; }
@@ -31470,15 +31466,27 @@ function msGoSection(id){
   el.scrollIntoView({ block:'start', behavior: still ? 'auto' : 'smooth' });
 }
 function msSwitchMitra(v){
-  const m = String(v || '').trim();
-  if (!m || m === msState.mitra) return;
-  if (_msMitraContracts(m).length) openMitraSummary(m);
+  const q = String(v || '').trim();
+  if (!q) return;
+  let m = q;
+  // V156: bukan nama persis → cari lewat potongan nama/singkatan ("pei").
+  // Singkatan persis didahulukan, lalu mitra dengan kontrak terbanyak.
+  if (!_msMitraContracts(m).length){
+    const n = new Map();
+    ((DATA && DATA.contracts) || []).forEach(c => { const p = (c && c.pemasok || '').trim(); if (p) n.set(p, (n.get(p) || 0) + 1); });
+    const hits = Array.from(n.keys()).map(p => ({ p, lv: mitraQueryLevel(p, q) })).filter(x => x.lv > 0)
+      .sort((x, y) => y.lv - x.lv || n.get(y.p) - n.get(x.p) || x.p.localeCompare(y.p));
+    if (!hits.length){ if (typeof showToast === 'function') showToast('Mitra "' + q + '" tidak ditemukan'); return; }
+    m = hits[0].p;
+  }
+  if (m === msState.mitra) return;
+  openMitraSummary(m);
 }
 
 // ---------- Render ----------
 const MS_SECTIONS = [
   ['msSecRingkasan', 'Ringkasan'], ['msSecTren', 'Tren Pasokan'], ['msSecPltu', 'Per PLTU'],
-  ['msSecKontrak', 'Kontrak'], ['msSecPeer', 'Perbandingan'], ['msSecMetode', 'Metodologi']
+  ['msSecKontrak', 'Kontrak'], ['msSecPeer', 'Perbandingan']
 ];
 const MS_IC = {
   back:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 3L5 8l5 5"/></svg>',
@@ -31530,7 +31538,7 @@ function renderMitraSummary(keepScroll){
       '<span class="ms-top-sp"></span>' +
       '<div class="ms-switch"><input type="text" id="msMitraInput" list="msMitraList" placeholder="Ganti mitra…" autocomplete="off" aria-label="Ganti mitra" ' +
         'onchange="msSwitchMitra(this.value)" onkeydown="if(event.key===\'Enter\')msSwitchMitra(this.value)">' +
-        '<datalist id="msMitraList">' + mitraList.map(x => '<option value="' + e(x) + '">').join('') + '</datalist></div>' +
+        '<datalist id="msMitraList">' + mitraList.map(x => { const l = mitraAcLabel(x); return '<option value="' + e(x) + '"' + (l ? ' label="' + e(l) + '"' : '') + '>'; }).join('') + '</datalist></div>' +
       '<button class="ms-btn" onclick="msOpenInKontrak()" title="Buka kontrak mitra ini di tab Daftar Kontrak">' + MS_IC.list + ' Daftar Kontrak</button>' +
       '<button class="ms-btn primary" id="msPdfBtn" onclick="msExportPdf()" title="Unduh laporan mitra ini sebagai PDF">' + MS_IC.pdf + ' Unduh PDF</button>' +
     '</div>' +
@@ -31547,19 +31555,17 @@ function renderMitraSummary(keepScroll){
       '</div>' +
       '<div class="ms-grade"' + (a.score === null ? '' : calcAttr({
           title: 'Skor Kinerja Mitra (indikatif)',
-          formula: 'Rata-rata tertimbang komponen yang tersedia, tiap komponen dijepit 0–100',
+          formula: 'SR ≤ ' + MS_SHRINK.p + '% → skor = SR; di atas itu: ' + MS_SHRINK.p + ' + (SR − ' + MS_SHRINK.p + ') × DO ÷ (DO + ' + fmtInt(MS_SHRINK.k) + ')',
           steps: [
-            ['SR tertimbang volume × ' + MS_W.sr, _msFmtPct(a.srAdj)],
-            ['Serapan tertimbang volume × ' + MS_W.pace, _msFmtPct(a.paceAdj)],
-            ['Konsistensi × ' + MS_W.cons, _msFmtPct(a.cons)],
-            ['Keberlanjutan × ' + MS_W.keep, _msFmtPct(a.keep)],
-            ['÷ bobot terpakai', String(a.wUsed)]
+            ['Realisasi di bulan ber-DO', fmtInt(a.srR) + ' MT'],
+            ['DO', fmtInt(a.srD) + ' MT'],
+            ['SR mentah', _msFmtPct(a.sr)]
           ],
           result: ['Skor', a.score.toFixed(1) + ' → ' + g.g],
           note: 'A ≥ 85 · B ≥ 70 · C ≥ 50 · D < 50. Indikatif — bukan penilaian resmi vendor.'
         })) + '>' + ring +
         '<div class="ms-grade-txt"><b>' + (g ? g.t : 'Belum bisa dinilai') + '</b>' +
-          '<span>' + (g ? 'Skor indikatif dari keandalan pengiriman, serapan, konsistensi, dan keberlanjutan kontrak.' : 'Belum ada riwayat pasokan pada lingkup ini.') + '</span></div>' +
+          '<span>' + (g ? 'Skor indikatif dari realisasi terhadap DO.' : 'Belum ada data DO pada lingkup ini.') + '</span></div>' +
       '</div>' +
     '</div>' +
     '<nav class="ms-nav" id="msNav" aria-label="Bagian ringkasan mitra">' +
@@ -31597,25 +31603,11 @@ function renderMitraSummary(keepScroll){
         title:'Supply Reliability (SR)', formula:'Σ realisasi ÷ Σ DO, hanya bulan yang ada DO-nya',
         steps:[['Realisasi di bulan ber-DO', fmtInt(a.srR) + ' MT'], ['÷ DO', fmtInt(a.srD) + ' MT']],
         result:['SR', _msFmtPct(a.sr)],
-        note:'Bulan dengan realisasi tetapi DO kosong tidak ikut. Yang masuk skor adalah SR tertimbang volume = (realisasi + ' + fmtInt(MS_SHRINK.k * MS_SHRINK.p) + ') ÷ (DO + ' + fmtInt(MS_SHRINK.k) + ') = ' + _msFmtPct(a.srAdj) + ' — persentase dari volume DO kecil ditarik ke 50%.' }) +
-      kpi('Serapan vs Jadwal', '<span style="color:' + _msPctColor(a.pace) + '">' + _msFmtPct(a.pace) + '</span>', (a.paceAdj === null ? '' : 'Tertimbang volume ' + _msFmtPct(a.paceAdj) + ' · ') + 'prorata s.d. ' + _msYMLabel(M.lastYM), a.pace === null ? null : {
-        title:'Serapan vs Jadwal', formula:'Σ realisasi ÷ Σ (volume × bulan berjalan ÷ lama kontrak)',
-        steps:[['Realisasi (kontrak non-terminasi)', fmtInt(a.expReal) + ' MT'], ['÷ volume prorata', fmtInt(a.exp) + ' MT']],
-        result:['Serapan vs jadwal', _msFmtPct(a.pace)],
-        note:'Bulan berjalan dihitung dari Jan 2023 (awal data realisasi) sampai bulan penuh terakhir. Asumsi pengiriman merata per bulan. Yang masuk skor: versi tertimbang volume = ' + _msFmtPct(a.paceAdj) + '.' }) +
-      kpi('Konsistensi', '<span style="color:' + _msPctColor(a.cons) + '">' + _msFmtPct(a.cons, 0) + '</span>', a.supM + ' dari ' + a.actM + ' bulan ada kiriman', a.cons === null ? null : {
-        title:'Konsistensi Pasokan', formula:'Bulan-kontrak dengan realisasi > 0 ÷ bulan-kontrak berjalan',
-        steps:[['Bulan ada kiriman', String(a.supM)], ['÷ bulan kontrak berjalan', String(a.actM)]],
-        result:['Konsistensi', _msFmtPct(a.cons)],
-        note:'Dihitung per kontrak lalu dijumlahkan; kontrak terminasi tidak ikut.' }) +
-      kpi('Keberlanjutan', '<span style="color:' + _msPctColor(a.keep) + '">' + _msFmtPct(a.keep, 0) + '</span>', a.ter ? a.ter + ' kontrak diterminasi' : 'Tidak ada terminasi') +
+        note:'Bulan dengan realisasi tetapi DO kosong tidak ikut. Yang masuk skor adalah SR tertimbang volume = ' + _msFmtPct(a.srAdj) + ': SR (maks. 100%) di atas ' + MS_SHRINK.p + '% dikalikan DO ÷ (DO + ' + fmtInt(MS_SHRINK.k) + ' MT), jadi volume DO kecil membatasi kenaikan ke A tanpa menurunkan skor di bawah ' + MS_SHRINK.p + '.' }) +
     '</div>' +
-    '<div class="ms-two">' +
-      '<div class="ms-card"><div class="ms-card-t">Komponen Skor</div>' + _msCompRows(a) + '</div>' +
-      '<div class="ms-card"><div class="ms-card-t">Temuan Utama</div><ul class="ms-ins">' +
-        M.insights.map(x => '<li><span class="ms-ins-ic ' + x.t + '" aria-hidden="true">' + ({ good:'✓', warn:'!', bad:'×', info:'i' })[x.t] + '</span><span>' + x.h + '</span></li>').join('') +
-      '</ul></div>' +
-    '</div>' +
+    '<div class="ms-card" style="margin-top:var(--gutter)"><div class="ms-card-t">Temuan Utama</div><ul class="ms-ins">' +
+      M.insights.map(x => '<li><span class="ms-ins-ic ' + x.t + '" aria-hidden="true">' + ({ good:'✓', warn:'!', bad:'×', info:'i' })[x.t] + '</span><span>' + x.h + '</span></li>').join('') +
+    '</ul></div>' +
   '</section>';
 
   // ---- Tren ----
@@ -31650,23 +31642,9 @@ function renderMitraSummary(keepScroll){
 
   // ---- Perbandingan ----
   html += '<section class="ms-sec" id="msSecPeer">' +
-    '<div class="ms-sec-h"><h3>Perbandingan dengan Mitra Lain<small>seluruh kontrak, tanpa lingkup PLTU/jenis</small></h3>' +
+    '<div class="ms-sec-h"><h3>Perbandingan dengan Mitra Lain<small>semua PLTU, tidak ikut lingkup di atas</small></h3>' +
       '<span id="msPeerSeg"></span></div>' +
     '<div id="msPeerBody"></div>' +
-  '</section>';
-
-  // ---- Metodologi ----
-  html += '<section class="ms-sec" id="msSecMetode">' +
-    '<div class="ms-sec-h"><h3>Metodologi & Sumber Data</h3></div>' +
-    '<div class="ms-card"><dl class="ms-method">' +
-      '<dt>Sumber</dt><dd>Daftar Kontrak (volume, periode, realisasi bulanan 2023–2026, status terminasi) dan DO bulanan (otomatis + koreksi admin) — sama dengan tab Daftar Kontrak. Realisasi di sini adalah realisasi <i>kontrak</i>, bukan realisasi produksi di tab Realisasi. Filter global di header tidak diterapkan.</dd>' +
-      '<dt>Supply Reliability (bobot ' + MS_W.sr + ')</dt><dd>Σ realisasi ÷ Σ DO pada bulan yang ada DO-nya. Mengukur seberapa banyak yang dipesan benar-benar dikirim.</dd>' +
-      '<dt>Penimbang volume</dt><dd>Persentase dari volume kecil lebih mudah dicapai. Karena itu SR dan Serapan vs Jadwal yang masuk skor ditarik ke patokan 50% sebesar ' + fmtInt(MS_SHRINK.k) + ' MT volume bayangan: <b>(realisasi + ' + fmtInt(MS_SHRINK.k * MS_SHRINK.p) + ') ÷ (volume + ' + fmtInt(MS_SHRINK.k) + ')</b>. Contoh: DO 10.000 MT dengan SR 75% → 66,7%, sedangkan DO 500 MT dengan SR 80% → 52,7%. Makin besar volumenya, makin dekat ke persentase aslinya. Kelebihan kirim (&gt;100%) tidak menambah nilai. Angka mentah tetap ditampilkan di kartu KPI.</dd>' +
-      '<dt>Serapan vs Jadwal (bobot ' + MS_W.pace + ')</dt><dd>Σ realisasi ÷ volume yang semestinya sudah terkirim bila pengiriman merata per bulan sepanjang periode kontrak, dihitung sejak Jan 2023 sampai bulan data terakhir (' + _msYMLabel(M.lastYM, true) + '). Kontrak terminasi tidak ikut.</dd>' +
-      '<dt>Konsistensi (bobot ' + MS_W.cons + ')</dt><dd>Porsi bulan kontrak berjalan yang punya realisasi &gt; 0.</dd>' +
-      '<dt>Keberlanjutan (bobot ' + MS_W.keep + ')</dt><dd>100% − porsi kontrak yang diterminasi (baris dicoret di Excel sumber).</dd>' +
-      '<dt>Skor & grade</dt><dd>Rata-rata tertimbang komponen yang tersedia (tiap komponen dijepit 0–100%); komponen yang tidak bisa dihitung dikeluarkan dan bobotnya dinormalkan. A ≥ 85, B ≥ 70, C ≥ 50, D &lt; 50. <b>Indikatif</b> — alat bantu membaca data, bukan penilaian resmi kinerja vendor.</dd>' +
-    '</dl></div>' +
   '</section>';
 
   wrap.innerHTML = html;
@@ -31678,20 +31656,6 @@ function renderMitraSummary(keepScroll){
   _msRenderPeers(M);
   _msBindScrollSpy();
   if (view) view.scrollTop = keepScroll ? st : 0;
-}
-
-function _msCompRows(a){
-  const row = (l, sub, v, w) => {
-    const has = v !== null && v !== undefined;
-    const pct = has ? Math.max(0, Math.min(100, v)) : 0;
-    return '<div class="ms-comp"><div class="ms-comp-l">' + l + '<span>' + sub + ' · bobot ' + w + '</span></div>' +
-      '<div class="ms-bar"><i style="width:' + pct.toFixed(1) + '%;background:' + _msPctColor(has ? v : null) + '"></i></div>' +
-      '<div class="ms-comp-v' + (has ? '' : ' na') + '" style="' + (has ? 'color:' + _msPctColor(v) : '') + '">' + (has ? v.toFixed(0) + '%' : 'n/a') + '</div></div>';
-  };
-  return row('Supply Reliability', 'Real ÷ DO, tertimbang vol.', a.srAdj, MS_W.sr) +
-         row('Serapan vs Jadwal', 'Real ÷ prorata, tertimbang vol.', a.paceAdj, MS_W.pace) +
-         row('Konsistensi', 'Bulan ada kiriman', a.cons, MS_W.cons) +
-         row('Keberlanjutan', 'Tanpa terminasi', a.keep, MS_W.keep);
 }
 
 // ---------- Chart ----------
@@ -31909,15 +31873,34 @@ function _msRenderGantt(M){
     '<div class="ms-legend"><span><i style="background:#10b981"></i>Aktif</span><span><i style="background:' + col.exp + '"></i>Selesai</span><span><i style="background:#ef4444"></i>Terminasi</span><span><i style="background:' + col.fut + '"></i>Belum mulai</span></div>';
 }
 
-function _msPeerList(M, mode){
-  const scored = M.peers.filter(p => p.ag.score !== null);
-  if (mode === 'jenis' && M.mainJenis) return scored.filter(p => p.jenisSet.has(M.mainJenis));
-  return scored;
+// V156: kelompok pembanding. Semua mitra → skor atas seluruh kontrak. Satu jenis
+// → skor SETIAP mitra (termasuk mitra ini) dihitung ulang HANYA dari kontrak
+// jenis itu; kontrak jenis lain tidak ikut sama sekali. Hasil { list, me }
+// disimpan di model supaya layar & PDF memakai angka yang sama.
+function _msPeerGroup(M, j){
+  if (j === undefined) j = _msPeerJenis(M);
+  const key = j || '';
+  M._peerGrp = M._peerGrp || new Map();
+  if (M._peerGrp.has(key)) return M._peerGrp.get(key);
+  let list;
+  if (!j) list = M.peers.filter(p => p.ag.score !== null);
+  else {
+    list = [];
+    M.peers.forEach(p => {
+      if (!p.jenisSet.has(j)) return;
+      const st = p.stats.filter(s => (s.c.jenis || '').trim() === j);
+      const ag = _msAggregate(st);
+      if (ag.score !== null) list.push({ m: p.m, n: st.length, ag });
+    });
+  }
+  const g = { list, me: list.find(p => p.m === M.m) || null };
+  M._peerGrp.set(key, g);
+  return g;
 }
-function _msPeerCfg(M, list, P){
+function _msPeerCfg(M, list, P, me){
   const rows = list.slice().sort((x, y) => y.ag.score - x.ag.score);
   let top = rows.slice(0, 12);
-  if (M.me && M.me.ag.score !== null && top.indexOf(M.me) < 0) top = top.slice(0, 11).concat([M.me]);
+  if (me && top.indexOf(me) < 0) top = top.slice(0, 11).concat([me]);
   const o = _msBaseOpts(P, { indexAxis:'y' });
   o.plugins.legend = { display:false };
   o.scales = {
@@ -31936,32 +31919,45 @@ function _msPeerCfg(M, list, P){
 function _msRenderPeers(M){
   const seg = document.getElementById('msPeerSeg'), body = document.getElementById('msPeerBody');
   if (!seg || !body || !M) return;
-  const mode = M.mainJenis ? msState.peer : 'all';
-  seg.innerHTML = M.mainJenis ? '<div class="ms-seg" role="group">' +
-    '<button type="button"' + (mode === 'jenis' ? ' class="on"' : '') + ' onclick="msSetPeer(\'jenis\')">Sejenis: ' + escapeHtml(M.mainJenis) + '</button>' +
-    '<button type="button"' + (mode === 'all' ? ' class="on"' : '') + ' onclick="msSetPeer(\'all\')">Semua mitra</button></div>' : '';
-  const list = _msPeerList(M, mode);
+  // V156: pilihan pembanding = semua mitra + SETIAP jenis yang dipasok mitra ini
+  // (urut volume) — bukan hanya jenis utamanya. Jenis yang tidak dipasok mitra
+  // ini sengaja tidak ditawarkan (keputusan user).
+  const pj = _msPeerJenis(M);
+  // Jenis milik mitra ini (seluruh kontraknya, bukan lingkup di atas) yang punya
+  // minimal satu mitra berskor untuk jenis itu.
+  const own = Array.from((M.me && M.me.jenisSet) || []).map(j => ({ j, n: _msPeerGroup(M, j).list.length })).filter(x => x.n > 0)
+    .sort((x, y) => (M.jenisRows.findIndex(r => r.j === x.j) + 1 || 999) - (M.jenisRows.findIndex(r => r.j === y.j) + 1 || 999) || x.j.localeCompare(y.j));
+  const opt = x => '<option value="j:' + escapeHtml(x.j) + '"' + (x.j === pj ? ' selected' : '') + '>' + escapeHtml(x.j) + ' (' + x.n + ' mitra)</option>';
+  seg.innerHTML = '<div class="ms-scope" style="padding:0"><div><label for="msPeerSel">Bandingkan dengan</label>' +
+    '<select id="msPeerSel" onchange="msSetPeer(this.value)">' +
+      '<option value="all"' + (pj === null ? ' selected' : '') + '>Semua mitra (' + M.peers.filter(p => p.ag.score !== null).length + ')</option>' +
+      own.map(opt).join('') +
+    '</select></div></div>';
+  const grp = _msPeerGroup(M, pj);
+  const list = grp.list;
   const ranked = list.slice().sort((x, y) => y.ag.score - x.ag.score);
-  const me = M.me && M.me.ag.score !== null ? M.me : null;
+  const me = grp.me;
   const rank = me ? ranked.indexOf(me) + 1 : 0;
+  const grpTxt = pj ? 'pemasok ' + escapeHtml(pj) : 'lain';
   const pctile = me && ranked.length > 1 ? (1 - (rank - 1) / (ranked.length - 1)) * 100 : null;
   const med = ranked.length ? ranked[Math.floor(ranked.length / 2)].ag.score : null;
   let h = '<div class="ms-rank">';
   if (me && rank){
     h += '<div class="ms-rank-big">#' + rank + ' <small>dari ' + ranked.length + '</small></div>' +
-      '<div class="ms-rank-txt">Skor keseluruhan <b>' + me.ag.score.toFixed(0) + '</b> (median kelompok ' + (med === null ? '—' : med.toFixed(0)) + '). ' +
-      (pctile === null ? '' : 'Lebih baik dari <b>' + pctile.toFixed(0) + '%</b> mitra ' + (mode === 'jenis' ? 'pemasok ' + escapeHtml(M.mainJenis) : 'lain') + '. ') +
-      'Dihitung atas seluruh kontrak mitra, jadi tidak berubah saat lingkup PLTU/jenis di atas diganti.</div>';
+      '<div class="ms-rank-txt">Skor ' + (pj ? escapeHtml(pj) : 'keseluruhan') + ' <b>' + me.ag.score.toFixed(0) + '</b> (median kelompok ' + (med === null ? '—' : med.toFixed(0)) + '). ' +
+      (pctile === null ? '' : 'Lebih baik dari <b>' + pctile.toFixed(0) + '%</b> mitra ' + grpTxt + '. ') +
+      (pj ? 'Dihitung hanya dari kontrak ' + escapeHtml(pj) + ' tiap mitra (semua PLTU); kontrak jenis lain tidak ikut.'
+          : 'Dihitung atas seluruh kontrak mitra, jadi tidak berubah saat lingkup PLTU/jenis di atas diganti.') + '</div>';
   } else {
-    h += '<div class="ms-rank-txt">Mitra ini belum punya riwayat pasokan yang cukup untuk diberi skor, jadi belum bisa diperingkat.</div>';
+    h += '<div class="ms-rank-txt">' + (pj ? 'Mitra ini belum punya data DO untuk ' + escapeHtml(pj) + ', jadi belum bisa diperingkat di jenis ini.'
+      : 'Mitra ini belum punya riwayat pasokan yang cukup untuk diberi skor, jadi belum bisa diperingkat.') + '</div>';
   }
   h += '</div>';
   h += '<div class="ms-two" style="margin-top:0"><div class="ms-card"><div class="ms-card-t">Skor Teratas' + (me ? ' · posisi mitra ini disorot' : '') + '</div><div class="ms-chart" id="msPeerChartBox"><canvas id="msPeerChart"></canvas></div></div>' +
-    '<div class="ms-tbl-wrap" style="max-height:460px;overflow-y:auto"><table class="ms-tbl"><thead><tr><th class="num">#</th><th>Mitra</th><th class="num">Kontrak</th><th class="num">DO (MT)</th><th class="num">SR</th><th class="num">Skor</th></tr></thead><tbody>';
-  // Tabel: 5 di atas & 5 di bawah posisi mitra ini, atau 12 teratas.
-  let from = 0, to = Math.min(ranked.length, 12);
-  if (rank > 8){ from = Math.max(0, rank - 6); to = Math.min(ranked.length, rank + 5); }
-  for (let i = from; i < to; i++){
+    '<div class="ms-tbl-wrap ms-peer-tbl" id="msPeerTbl"><table class="ms-tbl"><thead><tr><th class="num">#</th><th>Mitra</th><th class="num">Kontrak</th><th class="num">DO (MT)</th><th class="num">SR</th><th class="num">Skor</th></tr></thead><tbody>';
+  // V156: SEMUA mitra dalam kelompok; kotak tabel bisa digulir dan langsung
+  // diposisikan ke baris mitra ini (lihat bawah).
+  for (let i = 0; i < ranked.length; i++){
     const p = ranked[i], gr = _msGrade(p.ag.score);
     h += '<tr class="' + (p === me ? 'me' : '') + '" data-m="' + escapeHtml(p.m) + '" onclick="openMitraSummary(this.dataset.m)" title="Buka ringkasan mitra ini">' +
       '<td class="num">' + (i + 1) + '</td><td class="wrap">' + escapeHtml(p.m) + '</td><td class="num">' + p.n + '</td><td class="num">' + fmtInt(p.ag.srD) + '</td>' +
@@ -31970,10 +31966,15 @@ function _msRenderPeers(M){
   }
   h += '</tbody></table></div></div>';
   body.innerHTML = h;
+  const tw = document.getElementById('msPeerTbl'), meRow = tw && tw.querySelector('tr.me');
+  if (tw && meRow){
+    const off = meRow.getBoundingClientRect().top - tw.getBoundingClientRect().top + tw.scrollTop;
+    tw.scrollTop = Math.max(0, off - (tw.clientHeight - meRow.offsetHeight) / 2);
+  }
   _msDestroy('peer');
   const cv = document.getElementById('msPeerChart'), box = document.getElementById('msPeerChartBox');
   if (!cv || typeof Chart === 'undefined' || !ranked.length) return;
-  const built = _msPeerCfg(M, list, _msPal());
+  const built = _msPeerCfg(M, list, _msPal(), me);
   box.style.height = Math.max(240, built.top.length * 30 + 40) + 'px';
   built.cfg.options.onClick = (ev, els) => { if (els && els.length){ const p = built.top[els[0].index]; if (p && p.m !== M.m) openMitraSummary(p.m); } };
   built.cfg.options.onHover = (ev, els) => { ev.native && ev.native.target && (ev.native.target.style.cursor = els && els.length ? 'pointer' : 'default'); };
@@ -32101,37 +32102,20 @@ function _msBuildPdf(JsPDF, M){
     ['VOLUME KONTRAK', fmtInt(a.vol) + ' MT', M.pltuRows.length + ' PLTU', null],
     ['REALISASI 2023-2026', fmtInt(a.real) + ' MT', 'serapan ' + _msFmtPct(a.serapan), null],
     ['KIRIMAN TERAKHIR', a.lastSup === null ? '-' : _msYMLabel(MS_YM0 + a.lastSup, true), a.firstSup === null ? '-' : 'pertama ' + _msYMLabel(MS_YM0 + a.firstSup, true), null],
-    ['SUPPLY RELIABILITY', _msFmtPct(a.sr), 'realisasi / DO', a.sr],
-    ['SERAPAN VS JADWAL', _msFmtPct(a.pace), 'realisasi / prorata', a.pace],
-    ['KONSISTENSI', _msFmtPct(a.cons, 0), a.supM + ' dari ' + a.actM + ' bulan', a.cons],
-    ['KEBERLANJUTAN', _msFmtPct(a.keep, 0), a.ter ? a.ter + ' terminasi' : 'tanpa terminasi', a.keep]
+    ['SUPPLY RELIABILITY', _msFmtPct(a.sr), 'realisasi / DO', a.sr]
   ];
-  const kw = CW / 4, kh = 50;
+  const kw = CW / 3, kh = 50;
   ensure(kh * 2 + 10);
   kp.forEach((k, i) => {
-    const cx = X + (i % 4) * kw, cy = y + Math.floor(i / 4) * kh;
+    const cx = X + (i % 3) * kw, cy = y + Math.floor(i / 3) * kh;
     doc.setFillColor.apply(doc, PAPER); doc.rect(cx + 1, cy + 1, kw - 2, kh - 2, 'F');
     font(6.5, 'bold', DIM); doc.text(T(k[0]), cx + 8, cy + 13);
     font(13, 'bold', k[3] === null ? BLUE : pctRGB(k[3])); doc.text(T(k[1]), cx + 8, cy + 30);
     font(7, 'normal', DIM); doc.text(doc.splitTextToSize(T(k[2]), kw - 14)[0] || '', cx + 8, cy + 42);
   });
-  y += kh * 2 + 8;
-
-  // ---- Komponen skor + temuan ----
-  section('Komponen Skor (indikatif)');
-  const comps = [['SR tertimbang vol.', a.srAdj, MS_W.sr], ['Serapan tertimbang vol.', a.paceAdj, MS_W.pace], ['Konsistensi', a.cons, MS_W.cons], ['Keberlanjutan', a.keep, MS_W.keep]];
-  comps.forEach(([l, v, w]) => {
-    ensure(16);
-    font(8.5, 'bold', INK); doc.text(T(l), X, y + 7);
-    font(7, 'normal', DIM); doc.text('bobot ' + w, X + 100, y + 7);
-    doc.setFillColor(228, 231, 234); doc.rect(X + 140, y, CW - 200, 8, 'F');
-    if (v !== null){ doc.setFillColor.apply(doc, pctRGB(v)); doc.rect(X + 140, y, (CW - 200) * Math.max(0, Math.min(100, v)) / 100, 8, 'F'); }
-    font(9, 'bold', v === null ? DIM : pctRGB(v)); doc.text(v === null ? 'n/a' : v.toFixed(0) + '%', X + CW, y + 7, { align:'right' });
-    y += 16;
-  });
-  y += 2;
+  y += kh * 2 + 2;
   font(7, 'normal', DIM);
-  doc.text(T('Skor = rata-rata tertimbang komponen tersedia (dijepit 0-100%). A >= 85, B >= 70, C >= 50, D < 50. Bukan penilaian resmi vendor.'), X, y + 4);
+  doc.text(T('Skor = SR (maks. 100%); bagian di atas ' + MS_SHRINK.p + '% dikali DO / (DO + ' + fmtInt(MS_SHRINK.k) + '). A >= 85, B >= 70, C >= 50, D < 50. Indikatif, bukan penilaian resmi vendor.'), X, y + 4);
   y += 14;
 
   section('Temuan Utama');
@@ -32189,33 +32173,22 @@ function _msBuildPdf(JsPDF, M){
     [['No. Kontrak', 88, 'l'], ['PLTU', 70, 'l'], ['Jenis', 66, 'l'], ['Periode', 72, 'l'], ['Status', 44, 'l'], ['Volume', 48, 'r'], ['Realisasi', 48, 'r'], ['Serapan', 39, 'r'], ['SR', 40, 'r']], cr);
 
   // ---- Perbandingan ----
-  const mode = M.mainJenis ? msState.peer : 'all';
-  const list = _msPeerList(M, mode);
+  const pjj = _msPeerJenis(M);
+  const pg = _msPeerGroup(M, pjj);
+  const list = pg.list;
   const ranked = list.slice().sort((p, q) => q.ag.score - p.ag.score);
-  section('Perbandingan dengan Mitra ' + (mode === 'jenis' ? 'Pemasok ' + M.mainJenis : 'Lain'));
-  if (M.me && M.me.ag.score !== null && ranked.indexOf(M.me) >= 0){
-    const rk = ranked.indexOf(M.me) + 1;
-    para('Peringkat ' + rk + ' dari ' + ranked.length + ' mitra dengan skor ' + M.me.ag.score.toFixed(0) +
+  section('Perbandingan dengan Mitra ' + (pjj ? 'Pemasok ' + pjj : 'Lain'));
+  if (pg.me){
+    const rk = ranked.indexOf(pg.me) + 1;
+    para('Peringkat ' + rk + ' dari ' + ranked.length + ' mitra dengan skor ' + pg.me.ag.score.toFixed(0) +
          (ranked.length > 1 ? ' - lebih baik dari ' + ((1 - (rk - 1) / (ranked.length - 1)) * 100).toFixed(0) + '% mitra dalam kelompok ini.' : '.') +
-         ' Dihitung atas seluruh kontrak mitra.', 9, INK);
+         (pjj ? ' Dihitung hanya dari kontrak ' + pjj + ' tiap mitra.' : ' Dihitung atas seluruh kontrak mitra.'), 9, INK);
     y += 2;
-    const pc = _msPeerCfg(M, list, P);
+    const pc = _msPeerCfg(M, list, P, pg.me);
     addChart(pc.cfg, Math.max(120, pc.top.length * 18 + 30));
   } else {
     para('Mitra ini belum punya riwayat pasokan yang cukup untuk diperingkat.', 9, DIM);
   }
-
-  // ---- Metodologi ----
-  section('Metodologi');
-  [
-    'Sumber: Daftar Kontrak (volume, periode, realisasi bulanan 2023-2026, status terminasi) dan DO bulanan (otomatis + koreksi admin). Realisasi = realisasi kontrak, bukan realisasi produksi.',
-    'Supply Reliability (bobot ' + MS_W.sr + '): jumlah realisasi / jumlah DO pada bulan yang ada DO-nya.',
-    'Penimbang volume: SR dan serapan yang masuk skor = (realisasi + ' + fmtInt(MS_SHRINK.k * MS_SHRINK.p) + ') / (volume + ' + fmtInt(MS_SHRINK.k) + '), sehingga persentase dari volume kecil ditarik ke 50%. Contoh: DO 10.000 MT @75% = 66,7%; DO 500 MT @80% = 52,7%.',
-    'Serapan vs Jadwal (bobot ' + MS_W.pace + '): realisasi / volume prorata linear per bulan sepanjang periode kontrak, dihitung sejak Jan 2023 s.d. bulan data terakhir. Kontrak terminasi tidak ikut.',
-    'Konsistensi (bobot ' + MS_W.cons + '): porsi bulan kontrak berjalan yang ada realisasinya.',
-    'Keberlanjutan (bobot ' + MS_W.keep + '): 100% dikurangi porsi kontrak terminasi.',
-    'Skor bersifat indikatif untuk membantu membaca data, bukan penilaian resmi kinerja vendor. Harga kontrak tidak dicantumkan di dokumen ini.'
-  ].forEach(t => { para('- ' + t, 8, DIM); y += 1; });
 
   // ---- Kaki halaman ----
   const n = doc.getNumberOfPages();
