@@ -12,8 +12,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import * as XLSX from "npm:xlsx@0.18.5";
 
+// V160: new share since 2026-09-25 -- "PIP, UIK" (PIP + UIW + UIK) and "PNP/<BULAN TAHUN>".
 const DEFAULT_SHARE_URL =
-  "https://plnbatubaracoid-my.sharepoint.com/:f:/g/personal/ardan_saputro_plnepi_co_id/IgAkn9cA3bnpSLBva8YQYA-oAWrh0TMlCKPEV2GsYR9M3tY?e=6Fnebf";
+  "https://plnbatubaracoid-my.sharepoint.com/:f:/g/personal/ardan_saputro_plnepi_co_id/IgCZhjL7rk8sSq2x5GsqsrfbAXhUpUF0cvn1YHULTJhe2dA?e=U2bbLl";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
@@ -259,6 +260,7 @@ Deno.serve(async (req: Request) => {
     await beat(false);
 
     const origin = new URL(SHARE_URL).origin;
+    log.push(`Share: ${SHARE_URL.split("?")[0]}`);
 
     const cookie = await redeemShare(SHARE_URL, log);
     log.push(`Share redeemed · cookies: ${cookie ? cookie.split(";").length : 0}`);
@@ -276,8 +278,8 @@ Deno.serve(async (req: Request) => {
     // V140: PNP moved its workbooks into per-period subfolders on 2026-09-21
     // ("PNP/AGUSTUS 2026", "PNP/JUNI 2026", "PNP/BULANAN"), so walk one level deeper.
     // Each file carries the period of the nearest folder named "<BULAN> <TAHUN>";
-    // per PLTU the newest period wins, so a plant missing from the latest folder
-    // falls back to its newest earlier file instead of disappearing.
+    // a plant missing from the latest folder falls back to an earlier file instead
+    // of disappearing. V160: which file wins is decided by lastModifiedDateTime.
     type SrcFile = { name: string; url: string; modified: string; period: number; path: string };
     const files: SrcFile[] = [];
     const walk = async (id: string, path: string, period: number, depth: number) => {
@@ -325,8 +327,9 @@ Deno.serve(async (req: Request) => {
     }
     const picked: (SrcFile & { code: string })[] = [];
     for (const [code, fs] of groups) {
-      // V140: newest folder period first, then lastModifiedDateTime, then name.
-      fs.sort((a, b) => b.period - a.period || b.modified.localeCompare(a.modified) || b.name.localeCompare(a.name));
+      // V160: newest lastModifiedDateTime first (as requested 2026-09-25), then folder
+      // period, then name. Was period-first in V140.
+      fs.sort((a, b) => b.modified.localeCompare(a.modified) || b.period - a.period || b.name.localeCompare(a.name));
       picked.push({ ...fs[0], code });
       if (fs.length > 1) {
         duplicates.push(`${code} -> ${fs[0].path}/${fs[0].name} (ignored: ${fs.slice(1).map((x) => `${x.path}/${x.name}`).join(" | ")})`);

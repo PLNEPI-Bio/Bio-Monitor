@@ -57,22 +57,22 @@ Dipakai oleh tooltip Map Cofiring sebagai baris **"Kontrak 2026"**, dan menjadi 
 
 ## Sumber data
 
-Folder share anonim berisi dua subfolder:
+Folder share anonim (link baru sejak 2026-09-25, V160) berisi dua subfolder:
 
 | Subfolder | Isi | Konvensi nama |
 | :--- | :--- | :--- |
-| `PIP` | 28 workbook (PIP + UIW + 2 UIK) | `Profil Pasokan PLTU <Nama PLTU> per <Bulan> <Tahun>.xlsx` (sejak 2026-09-11); skema lama `Profil_Pasokan_<Nama PLTU>_<GENCO>_2026.xlsx` masih dikenali |
+| `PIP, UIK` | 28 workbook (PIP + UIW + UIK) | `Profil Pasokan PLTU <Nama PLTU> per <Bulan> <Tahun>.xlsx` (sejak 2026-09-11); skema lama `Profil_Pasokan_<Nama PLTU>_<GENCO>_2026.xlsx` masih dikenali |
 | `PNP` | subfolder per periode (sejak 2026-09-21): `AGUSTUS 2026/`, `JUNI 2026/`, `BULANAN/` | `<NAMA PLTU>.xlsx` / `<NAMA_PLTU>.xlsx` |
 
 Fungsi menelusuri satu tingkat subfolder (V140). Tiap file diberi **periode** dari nama
 folder terdekat berbentuk `<BULAN> <TAHUN>` (Indonesia/Inggris); folder tanpa periode
 (`PNP`, `BULANAN`) bernilai 0.
 
-Bila satu PLTU punya lebih dari satu file, urutan pemilihan: **periode folder terbaru**,
-lalu `lastModifiedDateTime` terbaru, lalu nama. Jadi PNP memakai folder bulan terbaru,
-dan PLTU yang belum ada di folder itu jatuh ke file periode sebelumnya (dicatat di log
-sebagai `older period`). File yang kalah dicatat sebagai `duplicate:`. Folder bulan baru
-(mis. `SEPTEMBER 2026/`) otomatis menang tanpa redeploy.
+Bila satu PLTU punya lebih dari satu file, urutan pemilihan (V160): **`lastModifiedDateTime`
+terbaru**, lalu periode folder terbaru, lalu nama. PLTU yang belum ada di folder bulan
+terbaru jatuh ke file periode sebelumnya (dicatat di log sebagai `older period`). File
+yang kalah dicatat sebagai `duplicate:`. Catatan: karena tanggal modifikasi menang, file
+lama yang disunting ulang akan mengalahkan file folder bulan yang lebih baru.
 
 Di tiap workbook, sheet **"Profil Pasokan"** memuat empat baris total di kolom B:
 
