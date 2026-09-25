@@ -9577,6 +9577,25 @@ body.gf-on .gf-bar{
 .ms-tbl th{background:var(--panel-3);color:var(--text-dim);text-align:left;font-weight:800;letter-spacing:var(--ls-caps-tight);text-transform:uppercase;font-size:var(--fs-note);padding:8px 10px;white-space:nowrap;cursor:pointer;user-select:none}
 .ms-tbl th.num,.ms-tbl td.num{text-align:right}
 .ms-tbl th:hover{color:var(--text-bright)}
+/* V157: kolom Harga terkunci password (Daftar Kontrak & Ringkasan Mitra) */
+th.harga-locked{cursor:pointer}
+.harga-lock-btn{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:1px 7px;border:1px solid var(--border);border-radius:999px;background:var(--panel-2);color:var(--text-dim);font-size:10px;font-weight:700;letter-spacing:0;text-transform:none;vertical-align:middle;cursor:pointer}
+.harga-lock-btn svg{width:11px;height:11px;flex:none}
+th.harga-locked:hover .harga-lock-btn,.harga-lock-btn:hover{color:var(--accent);border-color:var(--accent)}
+th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.harga-mask{color:var(--text-dim);opacity:.55;letter-spacing:2px}
+.harga-pw-overlay{position:fixed;inset:0;z-index:100001;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(8,20,30,.55)}
+.harga-pw-overlay.open{display:flex}
+.harga-pw-box{width:100%;max-width:340px;padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--panel);box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.harga-pw-title{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--text-bright)}
+.harga-pw-title svg{width:16px;height:16px;color:var(--accent)}
+.harga-pw-sub{margin:6px 0 12px;font-size:var(--fs-note);color:var(--text-dim)}
+.harga-pw-box input{width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--border-bright);border-radius:8px;background:var(--panel-2);color:var(--text-bright);font:inherit}
+.harga-pw-box input:focus{outline:2px solid var(--accent);outline-offset:0}
+.harga-pw-err{min-height:18px;margin-top:6px;font-size:var(--fs-note);color:var(--danger)}
+.harga-pw-act{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.harga-pw-act button{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel-2);color:var(--text-bright);font:inherit;font-weight:700;cursor:pointer}
+.harga-pw-act .harga-pw-ok{background:var(--accent);border-color:var(--accent);color:#fff}
 .ms-tbl th .ar{opacity:.35;margin-left:3px}
 .ms-tbl th.sorted .ar{opacity:1;color:var(--text-bright)}
 .ms-tbl td{padding:8px 10px;border-top:var(--hairline);color:var(--text);white-space:nowrap}
@@ -20207,6 +20226,74 @@ function getKontrakHarga(c){
 }
 window.getKontrakHarga = getKontrakHarga;
 
+// V157: kolom Harga (Daftar Kontrak & Ringkasan Mitra) tersembunyi sampai dibuka
+// dengan password lewat tombol di header kolom. Hanya PENUTUP TAMPILAN: repo
+// publik dan tabel `kontrak_harga` tetap terbaca lewat anon key, jadi ini bukan
+// pengaman data. Sumber hanya menyimpan hash SHA-256, bukan password-nya.
+// Status terbuka berlaku per tab browser (sessionStorage).
+const HARGA_PW_HASH = 'febe6c0f46fcc5bce87cde3b4f2f0774db5b57f0b2bb728b523687f7d8970004';
+const HARGA_SESSION_FLAG = 'bio_harga_unlocked';
+const HARGA_LOCK_SVG = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>';
+let _hargaUnlocked = false;
+try { _hargaUnlocked = sessionStorage.getItem(HARGA_SESSION_FLAG) === '1'; } catch(e){}
+function _hargaRerender(){
+  try { renderKontrakTable(); } catch(e){}
+  try { if (typeof msState !== 'undefined' && msState.model) _msRenderContracts(msState.model); } catch(e){}
+}
+function lockHarga(e){
+  if (e){ e.stopPropagation(); e.preventDefault(); }
+  _hargaUnlocked = false;
+  try { sessionStorage.removeItem(HARGA_SESSION_FLAG); } catch(err){}
+  // Sort menurut harga tak bermakna lagi saat terkunci — kembali ke urutan asal.
+  if (kontrakTableSort.col === 'harga') kontrakTableSort = { col: null, dir: 'desc' };
+  try { if (msState.ctSort.k === 'harga'){ msState.ctSort.k = 'awal'; msState.ctSort.d = -1; } } catch(err){}
+  _hargaRerender();
+}
+function unlockHarga(e){
+  if (e){ e.stopPropagation(); e.preventDefault(); }
+  if (_hargaUnlocked) return;
+  let ov = document.getElementById('hargaPwOverlay');
+  if (!ov){
+    ov = document.createElement('div');
+    ov.id = 'hargaPwOverlay';
+    ov.className = 'harga-pw-overlay';
+    ov.innerHTML = '<form class="harga-pw-box" role="dialog" aria-modal="true" aria-labelledby="hargaPwTitle">' +
+      '<div class="harga-pw-title" id="hargaPwTitle">' + HARGA_LOCK_SVG + ' Tampilkan kolom Harga</div>' +
+      '<div class="harga-pw-sub">Masukkan password untuk melihat harga kontrak.</div>' +
+      '<input type="password" id="hargaPwInput" autocomplete="off" placeholder="Password" aria-label="Password harga">' +
+      '<div class="harga-pw-err" id="hargaPwErr" role="alert"></div>' +
+      '<div class="harga-pw-act"><button type="button" class="harga-pw-cancel">Batal</button>' +
+      '<button type="submit" class="harga-pw-ok">Buka</button></div></form>';
+    document.body.appendChild(ov);
+    const close = () => ov.classList.remove('open');
+    ov.addEventListener('click', ev => { if (ev.target === ov) close(); });
+    ov.addEventListener('keydown', ev => { if (ev.key === 'Escape') close(); });
+    ov.querySelector('.harga-pw-cancel').addEventListener('click', close);
+    ov.querySelector('form').addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const inp = document.getElementById('hargaPwInput'), err = document.getElementById('hargaPwErr');
+      if (!inp.value){ err.textContent = 'Masukkan password.'; return; }
+      if (!(window.crypto && crypto.subtle)){ err.textContent = 'Browser tidak didukung.'; return; }
+      try {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(inp.value));
+        const h = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        if (h !== HARGA_PW_HASH){ err.textContent = 'Password salah.'; inp.select(); return; }
+      } catch(x){ err.textContent = 'Terjadi kesalahan. Coba lagi.'; return; }
+      _hargaUnlocked = true;
+      try { sessionStorage.setItem(HARGA_SESSION_FLAG, '1'); } catch(x){}
+      inp.value = '';
+      close();
+      _hargaRerender();
+    });
+  }
+  document.getElementById('hargaPwInput').value = '';
+  document.getElementById('hargaPwErr').textContent = '';
+  ov.classList.add('open');
+  setTimeout(() => { const i = document.getElementById('hargaPwInput'); if (i) i.focus(); }, 30);
+}
+window.lockHarga = lockHarga;
+window.unlockHarga = unlockHarga;
+
 // =====================================================
 // V110 — SORTIR TABEL "DAFTAR KONTRAK"
 // Mengikuti pola yang sudah dipakai tabel popup (setKontrakBreakdownSort):
@@ -20250,7 +20337,8 @@ function _kontrakSortKey(c, col, realCols){
     case 'akhir':     return c.akhir || '';
     case 'vol':       return c.vol_mt || 0;
     // V143: kontrak tanpa harga diberi -1 agar selalu di ujung bawah saat menurun.
-    case 'harga':     { const hg = getKontrakHarga(c); return hg ? hg.h : -1; }
+    // V157: saat terkunci semua bernilai sama — urutan tidak boleh membocorkan harga.
+    case 'harga':     { if (!_hargaUnlocked) return 0; const hg = getKontrakHarga(c); return hg ? hg.h : -1; }
     // V113: keduanya angka, jadi klik pertama mengurutkan MENURUN — mitra
     // dengan laju kirim terbesar/kewajiban bulanan terberat muncul di atas.
     case 'avgreal':   return _kontrakAvgReal(c);
@@ -20363,7 +20451,14 @@ function renderKontrakTable(){
   header += kth('pemasok', 'Mitra · No. Kontrak');
   header += kth('jenis', 'Jenis');
   header += kth('akhir', 'Periode');
-  header += kth('harga', 'Harga <span class="kt-unit">Rp/ton</span>', 'kt-num');
+  // V157: terkunci → header jadi tombol buka (tidak bisa disortir).
+  if (_hargaUnlocked){
+    header += kth('harga', 'Harga <span class="kt-unit">Rp/ton</span><span class="harga-lock-btn" role="button" tabindex="0" aria-label="Sembunyikan harga lagi" onclick="lockHarga(event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \')lockHarga(event)" title="Sembunyikan harga lagi">' + HARGA_LOCK_SVG + '</span>', 'kt-num');
+  } else {
+    header += '<th class="kt-num harga-locked" tabindex="0" role="columnheader" onclick="unlockHarga(event)"' +
+      ' onkeydown="if(event.key===\'Enter\'||event.key===\' \')unlockHarga(event)"' +
+      ' title="Harga tersembunyi — klik dan masukkan password untuk menampilkan">Harga <span class="harga-lock-btn">' + HARGA_LOCK_SVG + ' Tampilkan</span></th>';
+  }
   header += kth('vol', 'Kontrak', 'kt-num kt-sep');
   header += kth('sisa', 'Sisa', 'kt-num');
   header += kth('pct', 'Progres');
@@ -20411,8 +20506,10 @@ function renderKontrakTable(){
     // penilaian — dan tidak mengikuti filter periode seperti kolom Progres.
     row += '<td class="kt-periode">' + _kontrakPeriodeCell(c) + '</td>';
     // V143 — Harga satuan exc PPN dari workbook Data Kontrak Aktif 2025-2026
-    const hg = getKontrakHarga(c);
-    if (hg){
+    const hg = _hargaUnlocked ? getKontrakHarga(c) : null;
+    if (!_hargaUnlocked){
+      row += '<td class="num kt-na harga-mask" title="Harga tersembunyi">•••</td>';
+    } else if (hg){
       const steps = [];
       if (hg.hm != null) steps.push(['Harga molekul', 'Rp ' + fmtInt(hg.hm) + '/ton']);
       if (hg.ht != null) steps.push(['+ Harga transport', 'Rp ' + fmtInt(hg.ht) + '/ton']);
@@ -20561,12 +20658,13 @@ function renderKontrakTable(){
   footer += '<td colspan="4" class="kt-total-label">Total · ' + fmtInt(contracts.length) + ' kontrak</td>';
   // V143: rata-rata harga tertimbang volume, hanya dari kontrak yang harganya ketemu.
   let hgSum = 0, hgVol = 0, hgN = 0;
-  for (const c of contracts){
+  if (_hargaUnlocked) for (const c of contracts){
     const hg = getKontrakHarga(c), v = c.vol_mt || 0;
     if (hg && v > 0){ hgSum += hg.h * v; hgVol += v; hgN++; }
   }
   const hgAvg = hgVol > 0 ? hgSum / hgVol : 0;
-  footer += '<td class="num"' + (hgAvg ? calcAttr({
+  if (!_hargaUnlocked) footer += '<td class="num kt-na harga-mask">•••</td>';
+  else footer += '<td class="num"' + (hgAvg ? calcAttr({
     title: 'Rata-rata Harga (tertimbang volume)',
     formula: 'Σ (harga × volume kontrak) ÷ Σ volume kontrak',
     steps: [
@@ -31837,7 +31935,8 @@ function _msRenderContracts(M){
   const s = msState.ctSort;
   const serap = x => x.vol > 0 ? x.totReal / x.vol * 100 : null;
   const sr = x => x.srDo > 0 ? x.srReal / x.srDo * 100 : null;
-  const harga = x => { try { const hg = typeof getKontrakHarga === 'function' ? getKontrakHarga(x.c) : null; return hg && hg.h ? hg.h : null; } catch(e){ return null; } };
+  // V157: harga hanya dibaca bila kolom sudah dibuka dengan password.
+  const harga = x => { if (!_hargaUnlocked) return null; try { const hg = typeof getKontrakHarga === 'function' ? getKontrakHarga(x.c) : null; return hg && hg.h ? hg.h : null; } catch(e){ return null; } };
   const val = (x, k) => k === 'kontrak' ? (x.c.kontrak || '') : k === 'pltu' ? (x.c.pltu || '') : k === 'jenis' ? (x.c.jenis || '')
     : k === 'awal' ? (x.c.awal || '') : k === 'status' ? x.status : k === 'vol' ? x.vol : k === 'real' ? x.totReal
     : k === 'serap' ? (serap(x) === null ? -1 : serap(x)) : k === 'sr' ? (sr(x) === null ? -1 : sr(x)) : k === 'harga' ? (harga(x) || -1) : 0;
@@ -31845,7 +31944,11 @@ function _msRenderContracts(M){
   const th = (k, t, num) => '<th class="' + (num ? 'num ' : '') + (s.k === k ? 'sorted' : '') + '" onclick="msSort(\'ct\',\'' + k + '\')">' + t + '<span class="ar">' + (s.k === k ? (s.d > 0 ? '▲' : '▼') : '↕') + '</span></th>';
   let h = '<table class="ms-tbl"><thead><tr>' + th('kontrak', 'No. Kontrak') + th('pltu', 'PLTU') + th('jenis', 'Jenis') + th('awal', 'Periode') +
     th('status', 'Status') + th('vol', 'Volume (MT)', 1) + th('real', 'Realisasi (MT)', 1) + th('serap', 'Serapan', 1) + th('sr', 'SR', 1) +
-    th('harga', 'Harga (Rp/ton)', 1) + '</tr></thead><tbody>';
+    (_hargaUnlocked
+      ? th('harga', 'Harga (Rp/ton)<span class="harga-lock-btn" role="button" tabindex="0" aria-label="Sembunyikan harga lagi" onclick="lockHarga(event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \')lockHarga(event)" title="Sembunyikan harga lagi">' + HARGA_LOCK_SVG + '</span>', 1)
+      : '<th class="num harga-locked" tabindex="0" role="columnheader" onclick="unlockHarga(event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \')unlockHarga(event)"' +
+        ' title="Harga tersembunyi — klik dan masukkan password untuk menampilkan">Harga <span class="harga-lock-btn">' + HARGA_LOCK_SVG + ' Tampilkan</span></th>') +
+    '</tr></thead><tbody>';
   rows.forEach((x, i) => {
     const p = serap(x), q = sr(x), hg = harga(x);
     h += '<tr data-i="' + M.stats.indexOf(x) + '" onclick="msOpenContract(+this.dataset.i)" title="Buka detail bulanan DO & realisasi">' +
@@ -31854,7 +31957,7 @@ function _msRenderContracts(M){
       '<td class="num">' + fmtInt(x.vol) + '</td><td class="num">' + fmtInt(x.totReal) + '</td>' +
       '<td class="num ms-pct" style="color:' + _msPctColor(p) + '">' + _msFmtPct(p, 0) + '</td>' +
       '<td class="num ms-pct" style="color:' + _msPctColor(q) + '">' + (x.hasDO ? _msFmtPct(q, 0) : '<span title="DO tidak tersedia">—</span>') + '</td>' +
-      '<td class="num">' + (hg ? fmtInt(hg) : '—') + '</td></tr>';
+      '<td class="num">' + (!_hargaUnlocked ? '<span class="harga-mask" title="Harga tersembunyi">•••</span>' : hg ? fmtInt(hg) : '—') + '</td></tr>';
   });
   el.innerHTML = h + '</tbody></table>';
 }
