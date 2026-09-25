@@ -9488,7 +9488,7 @@ body.gf-on .gf-bar{
      Ctrl+K dan tombol "Ringkasan mitra" di modal detail kontrak. Pola yang sama
      dengan view `calendar`. -->
 <style>
-.view[data-view="mitra"] .ms-view{display:block;height:100%;overflow-y:auto;overflow-x:hidden;padding:20px 24px 48px;background:var(--bg);box-sizing:border-box}
+.view[data-view="mitra"] .ms-view,.view[data-view="mitrarank"] .ms-view{display:block;height:100%;overflow-y:auto;overflow-x:hidden;padding:20px 24px 48px;background:var(--bg);box-sizing:border-box}
 .ms-hero > div{min-width:0}
 .ms-wrap{max-width:1240px;margin:0 auto}
 .ms-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
@@ -9642,8 +9642,8 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
   .ms-kpis > :last-child:nth-child(odd){grid-column:1 / -1}
 }
 @media (max-width:768px){
-  .view[data-view="mitra"]{height:calc(100vh - 52px)!important;height:calc(100dvh - 52px)!important}
-  .view[data-view="mitra"] .ms-view{padding:12px 12px calc(76px + env(safe-area-inset-bottom,0))}
+  .view[data-view="mitra"],.view[data-view="mitrarank"]{height:calc(100vh - 52px)!important;height:calc(100dvh - 52px)!important}
+  .view[data-view="mitra"] .ms-view,.view[data-view="mitrarank"] .ms-view{padding:12px 12px calc(76px + env(safe-area-inset-bottom,0))}
   .ms-name{font-size:20px}
   .ms-hero{padding:14px}
   .ms-switch{flex:1 1 100%}
@@ -9656,7 +9656,53 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
   .ms-gantt-row{grid-template-columns:1fr;gap:0;padding:4px 0}
   .ms-chart{height:240px}
 }
+/* V158: Ranking Mitra — memakai kerangka .ms-* Ringkasan Mitra */
+.mr-hero{grid-template-columns:1fr}
+.mr-yearbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:14px}
+.mr-lbl{font-size:var(--fs-note);letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--text-dim);font-weight:700}
+.mr-yearbar .ms-seg button{padding:7px 14px;font-size:var(--fs-body)}
+.mr-chk{padding-bottom:8px}
+.mr-chk label{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:var(--fs-body);font-weight:500;letter-spacing:0;text-transform:none;color:var(--text);cursor:pointer}
+.mr-gchip{font-weight:800;margin-right:10px;font-size:var(--fs-sub)}
+.mr-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gutter)}
+.mr-pod{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:14px 16px;background:var(--panel);border:1px solid var(--border);border-top:3px solid var(--border-bright);cursor:pointer;font:inherit;color:var(--text);min-width:0}
+.mr-pod:hover{border-color:var(--accent)}
+.mr-pod1{border-top-color:#FFC72C}
+.mr-pod2{border-top-color:#98A0A9}
+.mr-pod3{border-top-color:#B07A45}
+.mr-pod-rank{font-size:var(--fs-note);font-weight:800;letter-spacing:var(--ls-caps);color:var(--text-dim)}
+.mr-pod-name{font-weight:800;color:var(--text-bright);font-size:var(--fs-lead);line-height:1.25;overflow-wrap:anywhere}
+.mr-pod-val{font-size:var(--fs-fig);font-weight:800;color:var(--accent);letter-spacing:var(--ls-fig);line-height:1.1}
+.mr-pod-sub{font-size:var(--fs-data);color:var(--text-dim)}
+.mr-jenis{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--gutter)}
+.mr-jcard{padding:12px 14px}
+.mr-jhead{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:0 0 8px;margin-bottom:6px;border:none;border-bottom:var(--hairline);background:none;font:inherit;text-align:left;cursor:pointer;color:var(--text-bright)}
+.mr-jhead:hover b{color:var(--accent);text-decoration:underline}
+.mr-jhead span{font-size:var(--fs-data);color:var(--text-dim)}
+.mr-jcard ol{list-style:none;margin:0;padding:0}
+.mr-jcard li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:5px 0;font-size:var(--fs-body);cursor:pointer}
+.mr-jcard li:hover .mr-jname{color:var(--accent)}
+.mr-jrank{font-weight:800;color:var(--text-dim)}
+.mr-jname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.mr-jval{font-weight:800;color:var(--text-bright);white-space:nowrap}
+.mr-jnone{font-size:var(--fs-data);color:var(--text-dim)}
+.mr-search input{min-height:var(--ctl-h-sm);min-width:220px;padding:0 10px;border:1px solid var(--border);border-radius:var(--ctl-radius);background:var(--panel);color:var(--text);font:500 var(--fs-body) 'Plus Jakarta Sans',sans-serif}
+.mr-more{font-size:var(--fs-note);color:var(--text-dim);font-weight:700}
+.mr-tbl th.sorted{color:var(--accent)}
+@media (max-width:768px){
+  .mr-podium{grid-template-columns:minmax(0,1fr)}
+  .mr-search{flex:1 1 100%}
+  .mr-search input{width:100%;min-width:0;box-sizing:border-box}
+  .mr-yearbar .ms-seg button{padding:6px 9px}
+}
 </style>
+<!-- V158: RANKING MITRA — halaman tersembunyi seperti `mitra`; pintu masuk Ctrl+K
+     "Ranking Mitra" dan tombol di Ringkasan Mitra. -->
+<div class="view" data-view="mitrarank">
+  <div class="ms-view" id="mrView">
+    <div class="ms-wrap" id="mrWrap"><div class="ms-empty">Memuat ranking mitra…</div></div>
+  </div>
+</div>
 <div class="view" data-view="mitra">
   <div class="ms-view" id="msView">
     <div class="ms-wrap" id="msWrap"><div class="ms-empty">Pilih mitra lewat pencarian (Ctrl+K).</div></div>
@@ -30058,6 +30104,9 @@ function qolBuildCmdkIndex(){
   });
   // Dua tujuan yang tidak punya tombol di bilah tab.
   items.push({ kind:'tab', tab:'calendar', label:'KALENDER TIM', kw: QOL_TAB_KW.calendar, digit:'' });
+  // V158: halaman Ranking Mitra (tanpa tombol di bilah tab).
+  items.push({ kind:'action', id:'mitrarank', label:'Ranking Mitra', sub:'Peringkat seluruh mitra per tahun & jenis',
+               kw:'ranking rank peringkat klasemen leaderboard juara terbaik top mitra pemasok supplier vendor skor' });
   // Update Data hanya ditawarkan kepada yang memang punya aksesnya — menampilkannya
   // ke semua orang hanya menghasilkan prompt nama lalu penolakan.
   let canUpd = false;
@@ -30542,6 +30591,7 @@ function qolRunCmdk(i){
   if (it.id === 'kbdhelp') openKbdHelp();
   else if (it.id === 'top') qolScrollActiveToTop();
   else if (it.id === 'copy') qolCopy(location.href);
+  else if (it.id === 'mitrarank') openMitraRanking();
 }
 
 // Lompat ke satu PLTU di Map Cofiring.
@@ -31258,7 +31308,14 @@ const MS_GRADES = [
   { min:50, g:'C', t:'Cukup',           c:'#f59e0b' },
   { min:0,  g:'D', t:'Perlu perhatian', c:'#ef4444' }
 ];
-const msState = { mitra:'', pltu:'all', jenis:'all', prevTab:'map', trend:'month', peer:'jenis',
+// V158: lingkup tahun ('all' | '2023'…'2026'). Bila dipilih, SEMUA angka (KPI,
+// skor, per PLTU/jenis, kontrak, pembanding) hanya memakai bulan di tahun itu:
+// realisasi & DO di luar jendela dinolkan di _msContractStats.
+function _msWin(year){
+  const yi = MS_YEARS.indexOf(String(year));
+  return yi < 0 ? null : { y: MS_YEARS[yi], k0: yi * 12, k1: yi * 12 + 11 };
+}
+const msState = { mitra:'', pltu:'all', jenis:'all', year:'all', prevTab:'map', trend:'month', peer:'jenis',
                   ctSort:{ k:'awal', d:-1 }, plSort:{ k:'real', d:-1 }, model:null };
 const mitraCharts = {};
 
@@ -31313,7 +31370,7 @@ function _msEvalYM(lastData){
 }
 
 // Statistik satu kontrak. Indeks bulan k = 0 (Jan 2023) … 47 (Des 2026).
-function _msContractStats(c, lastYM, today){
+function _msContractStats(c, lastYM, today, win){
   const vol = +c.vol_mt || 0;
   const R = c.realisasi || {};
   const DO = getContractDO(c);
@@ -31325,6 +31382,7 @@ function _msContractStats(c, lastYM, today){
       dov[yi * 12 + mi] = +da[mi] || 0;
     }
   }
+  if (win) for (let k = 0; k < MS_NM; k++) if (k < win.k0 || k > win.k1){ real[k] = 0; dov[k] = 0; }
   let totReal = 0, totDo = 0, srReal = 0, srDo = 0, doAnom = 0, lastSup = null, firstSup = null;
   for (let k = 0; k < MS_NM; k++){
     totReal += real[k]; totDo += dov[k];
@@ -31337,8 +31395,13 @@ function _msContractStats(c, lastYM, today){
     : c.akhir < today ? 'exp'
     : (c.awal && c.awal > today) ? 'fut' : 'act';
   const a = _msYM(c.awal), b = _msYM(c.akhir);
+  // V158: relevan untuk jendela tahun bila ada realisasi/DO di dalamnya, atau
+  // periode kontraknya beririsan dengan tahun itu (kontrak aktif tanpa kiriman
+  // tetap harus terlihat).
+  const inWin = !win || totReal > 0 || totDo > 0 ||
+    (a !== null && b !== null && a <= MS_YM0 + win.k1 && b >= MS_YM0 + win.k0);
   return { c, vol, real, dov, hasDO: !!DO, totReal, totDo, srReal, srDo, doAnom,
-           lastSup, firstSup, status, a, b };
+           lastSup, firstSup, status, a, b, inWin };
 }
 
 function _msAggregate(stats){
@@ -31382,7 +31445,7 @@ function _msMainJenis(contracts){
 
 // Semua mitra, dihitung atas SELURUH kontraknya (tanpa lingkup PLTU/jenis) —
 // perbandingan harus apel dengan apel.
-function _msPeers(lastYM, today){
+function _msPeers(lastYM, today, win){
   const by = new Map();
   ((DATA && DATA.contracts) || []).forEach(c => {
     const m = (c && c.pemasok || '').trim();
@@ -31392,11 +31455,12 @@ function _msPeers(lastYM, today){
   });
   const list = [];
   by.forEach((arr, m) => {
-    const stats = arr.map(c => _msContractStats(c, lastYM, today));
+    const stats = arr.map(c => _msContractStats(c, lastYM, today, win)).filter(s => s.inWin);
+    if (!stats.length) return;
     const ag = _msAggregate(stats);
     list.push({ m, n: arr.length, ag, stats, jenis: _msMainJenis(arr),
-                jenisSet: new Set(arr.map(c => (c.jenis || '').trim()).filter(Boolean)),
-                pltu: new Set(arr.map(c => c.pltu)).size });
+                jenisSet: new Set(stats.map(s => (s.c.jenis || '').trim()).filter(Boolean)),
+                pltu: new Set(stats.map(s => s.c.pltu)).size });
   });
   return list;
 }
@@ -31410,7 +31474,8 @@ function _msBuildModel(){
   const lastYM = _msEvalYM(lastDataYM);
   const all = _msMitraContracts(m);
   const scoped = all.filter(_msScopePass);
-  const stats = scoped.map(c => _msContractStats(c, lastYM, today));
+  const win = _msWin(msState.year);
+  const stats = scoped.map(c => _msContractStats(c, lastYM, today, win)).filter(s => s.inWin);
   const ag = _msAggregate(stats);
   const grade = _msGrade(ag.score);
 
@@ -31441,11 +31506,11 @@ function _msBuildModel(){
     .sort((a, b) => b.ag.real - a.ag.real || b.ag.vol - a.ag.vol);
 
   // Pembanding.
-  const peers = _msPeers(lastYM, today);
+  const peers = _msPeers(lastYM, today, win);
   const mainJenis = _msMainJenis(all);
   const me = peers.find(p => p.m === m);
 
-  const model = { m, today, lastYM, lastDataYM, all, scoped, stats, ag, grade, pltuRows, jenisRows, peers, me, mainJenis,
+  const model = { m, today, lastYM, lastDataYM, win, all, scoped, stats, ag, grade, pltuRows, jenisRows, peers, me, mainJenis,
                   gencos: Array.from(new Set(all.map(c => c.genco).filter(Boolean))).sort(),
                   scopeDesc: _msScopeDesc() };
   model.insights = _msInsights(model);
@@ -31457,7 +31522,8 @@ function _msScopeDesc(){
   const parts = [];
   if (msState.pltu !== 'all') parts.push('PLTU ' + msState.pltu.split('||').join(' / '));
   if (msState.jenis !== 'all') parts.push(msState.jenis);
-  return parts.length ? parts.join(' · ') : 'Semua PLTU & jenis';
+  if (msState.year !== 'all') parts.push('Tahun ' + msState.year);
+  return parts.length ? parts.join(' · ') : 'Semua PLTU, jenis & tahun';
 }
 
 function _msLead(M){
@@ -31468,7 +31534,7 @@ function _msLead(M){
   let t = M.m + ' memasok ' + (jen.length ? jen.join(', ') + (M.jenisRows.length > 3 ? ' dan lainnya' : '') : 'biomassa') +
           ' ke ' + M.pltuRows.length + ' PLTU lewat ' + a.n + ' kontrak' + (firstYear ? ' sejak ' + firstYear : '') + '. ';
   if (a.sr !== null) t += 'Dari ' + fmtInt(a.srD) + ' MT yang dipesan lewat DO, ' + _msFmtPct(a.sr, 0) + ' benar-benar terkirim. ';
-  if (a.serapan !== null) t += 'Realisasi total ' + fmtInt(a.real) + ' MT, setara ' + _msFmtPct(a.serapan, 0) + ' volume kontrak.';
+  if (a.serapan !== null) t += (M.win ? 'Realisasi tahun ' + M.win.y + ' ' : 'Realisasi total ') + fmtInt(a.real) + ' MT, setara ' + _msFmtPct(a.serapan, 0) + ' volume kontrak' + (M.win ? ' seumur' : '') + '.';
   return t;
 }
 
@@ -31485,9 +31551,10 @@ function _msInsights(M){
     out.push({ t:'info', h:'Belum ada data DO untuk kontrak mitra ini — keandalan pengiriman tidak bisa dinilai.' });
   }
   if (a.ter > 0) out.push({ t:'bad', h:'<b>' + a.ter + ' kontrak diterminasi</b> dari ' + a.n + ' kontrak.' });
-  // Tren 6 bulan terakhir vs 6 bulan sebelumnya.
+  // Tren 6 bulan terakhir vs 6 bulan sebelumnya. V158: dilewati bila lingkup
+  // satu tahun — bulan di luar tahun itu sudah dinolkan, perbandingannya palsu.
   const L = M.lastYM - MS_YM0;
-  if (L >= 11){
+  if (L >= 11 && !M.win){
     let r6 = 0, p6 = 0;
     for (let k = L - 5; k <= L; k++) r6 += a.mReal[k] || 0;
     for (let k = L - 11; k <= L - 6; k++) p6 += a.mReal[k] || 0;
@@ -31499,7 +31566,7 @@ function _msInsights(M){
       out.push({ t:'good', h:'Mulai aktif mengirim dalam 6 bulan terakhir (' + fmtInt(r6) + ' MT).' });
     }
   }
-  if (a.lastSup !== null && M.lastYM - (MS_YM0 + a.lastSup) >= 3 && a.act > 0){
+  if (!M.win && a.lastSup !== null && M.lastYM - (MS_YM0 + a.lastSup) >= 3 && a.act > 0){
     out.push({ t:'warn', h:'Kiriman terakhir tercatat <b>' + _msYMLabel(MS_YM0 + a.lastSup, true) + '</b>, padahal masih ada ' + a.act + ' kontrak aktif.' });
   }
   const withSr = M.pltuRows.filter(r => r.ag.sr !== null);
@@ -31538,6 +31605,8 @@ function openMitraSummary(mitra, opts){
   msState.mitra = mitra;
   msState.pltu  = (opts && opts.pltu)  || 'all';
   msState.jenis = (opts && opts.jenis) || 'all';
+  // V158: pindah mitra dari dalam halaman ini mempertahankan tahun yang dipilih.
+  msState.year  = (opts && opts.year) || (state.tab === 'mitra' ? msState.year : 'all');
   msState.peer  = 'jenis';
   const bd = document.getElementById('pemasokModalBackdrop');
   if (bd && bd.classList.contains('open')){ try { closePemasokModal(); } catch(e){} }
@@ -31562,6 +31631,7 @@ function msOpenInKontrak(){
 function msSetScope(kind, v){
   if (kind === 'pltu') msState.pltu = v || 'all';
   else if (kind === 'jenis') msState.jenis = v || 'all';
+  else if (kind === 'year') msState.year = v || 'all';
   renderMitraSummary(true);
 }
 function msSetTrend(mode){ msState.trend = mode; _msRenderTrend(msState.model); }
@@ -31611,7 +31681,8 @@ const MS_SECTIONS = [
 const MS_IC = {
   back:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 3L5 8l5 5"/></svg>',
   pdf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
-  list:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3.5h12M2 8h12M2 12.5h12M5.5 3.5v9"/></svg>'
+  list:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3.5h12M2 8h12M2 12.5h12M5.5 3.5v9"/></svg>',
+  rank:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 14.5h12M3.5 14.5V9h3v5.5M6.5 14.5V5h3v9.5M9.5 14.5V7.5h3v7"/></svg>'
 };
 
 function renderMitraSummary(keepScroll){
@@ -31637,7 +31708,10 @@ function renderMitraSummary(keepScroll){
   jNames.forEach(n => { jOpts += '<option value="' + e(n) + '"' + (n === msState.jenis ? ' selected' : '') + '>' + e(n.trim()) + '</option>'; });
 
   const mitraList = Array.from(new Set(((DATA && DATA.contracts) || []).map(c => (c.pemasok || '').trim()).filter(Boolean))).sort();
-  const scoped = msState.pltu !== 'all' || msState.jenis !== 'all';
+  const scoped = msState.pltu !== 'all' || msState.jenis !== 'all' || msState.year !== 'all';
+  const yOpts = '<option value="all">Semua tahun (2023–2026)</option>' +
+    MS_YEARS.map(y => '<option value="' + y + '"' + (y === msState.year ? ' selected' : '') + '>' + y + '</option>').join('');
+  const realLbl = M.win ? M.win.y : '2023–2026';
 
   // Cincin skor.
   const R = 42, C = 2 * Math.PI * R;
@@ -31659,6 +31733,7 @@ function renderMitraSummary(keepScroll){
       '<div class="ms-switch"><input type="text" id="msMitraInput" list="msMitraList" placeholder="Ganti mitra…" autocomplete="off" aria-label="Ganti mitra" ' +
         'onchange="msSwitchMitra(this.value)" onkeydown="if(event.key===\'Enter\')msSwitchMitra(this.value)">' +
         '<datalist id="msMitraList">' + mitraList.map(x => { const l = mitraAcLabel(x); return '<option value="' + e(x) + '"' + (l ? ' label="' + e(l) + '"' : '') + '>'; }).join('') + '</datalist></div>' +
+      '<button class="ms-btn" onclick="openMitraRanking({ year: msState.year })" title="Peringkat seluruh mitra">' + MS_IC.rank + ' Ranking Mitra</button>' +
       '<button class="ms-btn" onclick="msOpenInKontrak()" title="Buka kontrak mitra ini di tab Daftar Kontrak">' + MS_IC.list + ' Daftar Kontrak</button>' +
       '<button class="ms-btn primary" id="msPdfBtn" onclick="msExportPdf()" title="Unduh laporan mitra ini sebagai PDF">' + MS_IC.pdf + ' Unduh PDF</button>' +
     '</div>' +
@@ -31685,7 +31760,7 @@ function renderMitraSummary(keepScroll){
           note: 'A ≥ 85 · B ≥ 70 · C ≥ 50 · D < 50. Indikatif — bukan penilaian resmi vendor.'
         })) + '>' + ring +
         '<div class="ms-grade-txt"><b>' + (g ? g.t : 'Belum bisa dinilai') + '</b>' +
-          '<span>' + (g ? 'Skor indikatif dari realisasi terhadap DO.' : 'Belum ada data DO pada lingkup ini.') + '</span></div>' +
+          '<span>' + (g ? 'Skor indikatif dari realisasi terhadap DO' + (M.win ? ' tahun ' + M.win.y : '') + '.' : 'Belum ada data DO pada lingkup ini.') + '</span></div>' +
       '</div>' +
     '</div>' +
     '<nav class="ms-nav" id="msNav" aria-label="Bagian ringkasan mitra">' +
@@ -31694,8 +31769,9 @@ function renderMitraSummary(keepScroll){
     '<div class="ms-scope">' +
       '<div><label for="msPltuSel">PLTU</label><select id="msPltuSel" onchange="msSetScope(\'pltu\', this.value)">' + pOpts + '</select></div>' +
       '<div><label for="msJenisSel">Jenis biomassa</label><select id="msJenisSel" onchange="msSetScope(\'jenis\', this.value)">' + jOpts + '</select></div>' +
+      '<div><label for="msYearSel">Tahun</label><select id="msYearSel" onchange="msSetScope(\'year\', this.value)">' + yOpts + '</select></div>' +
       '<div class="ms-scope-note">Menampilkan <b>' + a.n + '</b> dari ' + M.all.length + ' kontrak' +
-        (scoped ? ' · <a onclick="msState.pltu=\'all\';msState.jenis=\'all\';renderMitraSummary(true)">tampilkan semua</a>' : '') + '</div>' +
+        (scoped ? ' · <a onclick="msState.pltu=\'all\';msState.jenis=\'all\';msState.year=\'all\';renderMitraSummary(true)">tampilkan semua</a>' : '') + '</div>' +
     '</div>';
 
   if (!a.n){
@@ -31713,11 +31789,11 @@ function renderMitraSummary(keepScroll){
     '<div class="ms-kpis">' +
       kpi('Kontrak', a.n, statusTxt) +
       kpi('Volume Kontrak', fmtInt(a.vol) + '<small>MT</small>', 'Seumur kontrak, ' + M.pltuRows.length + ' PLTU') +
-      kpi('Realisasi 2023–2026', fmtInt(a.real) + '<small>MT</small>', 'Serapan ' + _msFmtPct(a.serapan) + ' dari volume', a.vol > 0 ? {
-        title:'Serapan Kontrak', formula:'Realisasi total ÷ Volume kontrak × 100',
-        steps:[['Realisasi 2023–2026', fmtInt(a.real) + ' MT'], ['÷ Volume kontrak', fmtInt(a.vol) + ' MT']],
+      kpi('Realisasi ' + realLbl, fmtInt(a.real) + '<small>MT</small>', 'Serapan ' + _msFmtPct(a.serapan) + ' dari volume' + (M.win ? ' seumur' : ''), a.vol > 0 ? {
+        title:'Serapan Kontrak', formula:'Realisasi ' + realLbl + ' ÷ Volume kontrak × 100',
+        steps:[['Realisasi ' + realLbl, fmtInt(a.real) + ' MT'], ['÷ Volume kontrak', fmtInt(a.vol) + ' MT']],
         result:['Serapan', _msFmtPct(a.serapan)],
-        note:'Terhadap volume SEUMUR kontrak — kontrak yang masih berjalan wajar belum 100%.' } : null) +
+        note:'Terhadap volume SEUMUR kontrak — kontrak yang masih berjalan wajar belum 100%.' + (M.win ? ' Realisasi hanya tahun ' + M.win.y + ', jadi serapan ini porsi tahun itu saja.' : '') } : null) +
       kpi('Kiriman Terakhir', a.lastSup === null ? '—' : _msYMLabel(MS_YM0 + a.lastSup, true), a.firstSup === null ? 'Belum ada realisasi' : 'Pertama ' + _msYMLabel(MS_YM0 + a.firstSup, true)) +
       kpi('Supply Reliability', '<span style="color:' + _msPctColor(a.sr) + '">' + _msFmtPct(a.sr) + '</span>', (a.srAdj === null ? '' : 'Tertimbang volume ' + _msFmtPct(a.srAdj) + ' · ') + a.withDO + '/' + a.n + ' kontrak ber-DO', a.sr === null ? null : {
         title:'Supply Reliability (SR)', formula:'Σ realisasi ÷ Σ DO, hanya bulan yang ada DO-nya',
@@ -31739,7 +31815,7 @@ function renderMitraSummary(keepScroll){
     '<div class="ms-yearstrip">' + MS_YEARS.map((y, yi) => {
       let r = 0, d = 0, sr = 0, sd = 0;
       for (let mi = 0; mi < 12; mi++){ const k = yi * 12 + mi; r += a.mReal[k]; d += a.mDo[k]; if (a.mDo[k] > 0){ sr += a.mReal[k]; sd += a.mDo[k]; } }
-      return '<div><span>' + y + '</span><b>' + fmtInt(r) + ' MT</b><em>DO ' + fmtInt(d) + ' · SR ' + (sd > 0 ? '<span style="color:' + _msPctColor(sr / sd * 100) + ';font-weight:800">' + _msFmtPct(sr / sd * 100, 0) + '</span>' : '—') + '</em></div>';
+      return '<div' + (M.win && M.win.y !== y ? ' style="opacity:.35"' : '') + '><span>' + y + '</span><b>' + fmtInt(r) + ' MT</b><em>DO ' + fmtInt(d) + ' · SR ' + (sd > 0 ? '<span style="color:' + _msPctColor(sr / sd * 100) + ';font-weight:800">' + _msFmtPct(sr / sd * 100, 0) + '</span>' : '—') + '</em></div>';
     }).join('') + '</div></div>' +
   '</section>';
 
@@ -31762,7 +31838,7 @@ function renderMitraSummary(keepScroll){
 
   // ---- Perbandingan ----
   html += '<section class="ms-sec" id="msSecPeer">' +
-    '<div class="ms-sec-h"><h3>Perbandingan dengan Mitra Lain<small>semua PLTU, tidak ikut lingkup di atas</small></h3>' +
+    '<div class="ms-sec-h"><h3>Perbandingan dengan Mitra Lain<small>semua PLTU & jenis' + (M.win ? ', tahun ' + M.win.y : '') + ' — pilihan PLTU/jenis di atas tidak ikut</small></h3>' +
       '<span id="msPeerSeg"></span></div>' +
     '<div id="msPeerBody"></div>' +
   '</section>';
@@ -31810,7 +31886,9 @@ function _msTrendCfg(M, mode, P){
   let k0 = MS_NM - 1;
   for (let k = 0; k < MS_NM; k++) if (a.mReal[k] > 0 || a.mDo[k] > 0){ k0 = k; break; }
   M.stats.forEach(s => { if (s.a !== null){ const k = Math.max(0, s.a - MS_YM0); if (k < k0) k0 = k; } });
-  const k1 = Math.max(k0, Math.min(MS_NM - 1, M.lastDataYM - MS_YM0));
+  let k1 = Math.max(k0, Math.min(MS_NM - 1, M.lastDataYM - MS_YM0));
+  // V158: lingkup satu tahun → sumbu bulanan hanya tahun itu.
+  if (M.win){ k0 = M.win.k0; k1 = Math.max(k0, Math.min(M.win.k1, M.lastDataYM - MS_YM0)); }
   const fmtT = { callbacks:{ label: c => c.dataset.label + ': ' + fmtInt(c.parsed.y) + ' MT' } };
   if (mode === 'year'){
     const r = MS_YEARS.map((y, yi) => a.mReal.slice(yi * 12, yi * 12 + 12).reduce((s, v) => s + v, 0));
@@ -32225,7 +32303,7 @@ function _msBuildPdf(JsPDF, M){
   const kp = [
     ['KONTRAK', String(a.n), [a.act ? a.act + ' aktif' : '', a.exp_ ? a.exp_ + ' selesai' : '', a.ter ? a.ter + ' terminasi' : ''].filter(Boolean).join(', ') || '-', null],
     ['VOLUME KONTRAK', fmtInt(a.vol) + ' MT', M.pltuRows.length + ' PLTU', null],
-    ['REALISASI 2023-2026', fmtInt(a.real) + ' MT', 'serapan ' + _msFmtPct(a.serapan), null],
+    ['REALISASI ' + (M.win ? M.win.y : '2023-2026'), fmtInt(a.real) + ' MT', 'serapan ' + _msFmtPct(a.serapan), null],
     ['KIRIMAN TERAKHIR', a.lastSup === null ? '-' : _msYMLabel(MS_YM0 + a.lastSup, true), a.firstSup === null ? '-' : 'pertama ' + _msYMLabel(MS_YM0 + a.firstSup, true), null],
     ['SUPPLY RELIABILITY', _msFmtPct(a.sr), 'realisasi / DO', a.sr]
   ];
@@ -32362,6 +32440,378 @@ function _msPdfTable(doc, ctx, cols, rows){
   });
   ctx.y += 8;
 }
+
+// =====================================================================
+// V158: RANKING MITRA
+// =====================================================================
+// Peringkat seluruh mitra. Pintu masuk: Ctrl+K "Ranking Mitra" dan tombol di
+// Ringkasan Mitra. Mesin hitungnya SAMA dengan Ringkasan Mitra
+// (_msContractStats / _msAggregate / _msWin), jadi skor seorang mitra di sini =
+// skornya di halaman profil untuk lingkup yang sama (semua PLTU; tahun & jenis
+// sesuai pilihan). Harga kontrak sengaja tidak ditampilkan.
+// Peringkat dihitung SEBELUM kotak cari diterapkan — mencari nama tidak
+// mengubah nomor urut mitra.
+const MR_METRICS = [
+  { k:'score',   t:'Skor kinerja',        d:'Skor SR tertimbang volume (0–100), sama dengan skor di Ringkasan Mitra.' },
+  { k:'real',    t:'Realisasi',           d:'Total realisasi pada lingkup (MT).' },
+  { k:'sr',      t:'Supply Reliability',  d:'Σ realisasi ÷ Σ DO, hanya bulan yang ada DO-nya (tanpa penimbang volume).' },
+  { k:'do',      t:'Volume DO',           d:'Σ DO pada bulan ber-DO (MT) — ukuran seberapa banyak mitra dipercaya memasok.' },
+  { k:'serapan', t:'Serapan kontrak',     d:'Realisasi ÷ volume kontrak seumur.' },
+  { k:'vol',     t:'Volume kontrak',      d:'Σ volume kontrak (MT).' },
+  { k:'n',       t:'Jumlah kontrak',      d:'Banyaknya kontrak pada lingkup.' }
+];
+const MR_MIN_DO = [0, 1000, 5000, 10000, 50000];
+const mrState = { year:'all', jenis:'all', genco:'all', metric:'score', minDo:0, active:false, q:'', prevTab:'map', model:null };
+const mrCharts = {};
+
+function _mrMetric(k){ return MR_METRICS.find(x => x.k === k) || MR_METRICS[0]; }
+function _mrVal(r, k){
+  const a = r.ag;
+  switch (k){
+    case 'score':   return a.score;
+    case 'real':    return a.real;
+    case 'sr':      return a.sr;
+    case 'do':      return a.srD > 0 ? a.srD : null;
+    case 'serapan': return a.serapan;
+    case 'vol':     return a.vol;
+    case 'n':       return r.n;
+  }
+  return null;
+}
+function _mrFmt(k, v){
+  if (v === null || v === undefined || !isFinite(v)) return '—';
+  if (k === 'score') return v.toFixed(1);
+  if (k === 'sr' || k === 'serapan') return _msFmtPct(v, 1);
+  if (k === 'n') return String(v);
+  return fmtInt(v) + ' MT';
+}
+function _mrScopeDesc(){
+  return [mrState.year === 'all' ? 'Semua tahun (2023–2026)' : 'Tahun ' + mrState.year,
+          mrState.jenis === 'all' ? 'semua jenis' : mrState.jenis,
+          mrState.genco === 'all' ? 'semua Genco' : 'Genco ' + mrState.genco].join(' · ');
+}
+
+// Satu baris per mitra untuk lingkup tahun/jenis/Genco. Tanpa filter tampilan
+// (min DO, aktif, cari) — itu diterapkan di _mrRanked.
+function _mrBuild(){
+  const today = todayISO();
+  const lastDataYM = _msLastDataYM();
+  const lastYM = _msEvalYM(lastDataYM);
+  const win = _msWin(mrState.year);
+  const by = new Map();
+  ((DATA && DATA.contracts) || []).forEach(c => {
+    const m = (c && c.pemasok || '').trim();
+    if (!m) return;
+    if (mrState.jenis !== 'all' && (c.jenis || '').trim() !== mrState.jenis) return;
+    if (mrState.genco !== 'all' && (c.genco || '') !== mrState.genco) return;
+    if (!by.has(m)) by.set(m, []);
+    by.get(m).push(c);
+  });
+  const rows = [];
+  by.forEach((arr, m) => {
+    const stats = arr.map(c => _msContractStats(c, lastYM, today, win)).filter(s => s.inWin);
+    if (!stats.length) return;
+    const cs = stats.map(s => s.c);
+    rows.push({ m, n: stats.length, ag: _msAggregate(stats), stats,
+                jenis: _msMainJenis(cs), jenisN: new Set(cs.map(c => (c.jenis || '').trim()).filter(Boolean)).size,
+                pltu: new Set(cs.map(c => c.pltu)).size,
+                gencos: Array.from(new Set(cs.map(c => c.genco).filter(Boolean))).sort() });
+  });
+  return { rows, win, lastDataYM, lastYM, today };
+}
+
+// Urut + beri nomor peringkat menurut metrik aktif. Baris tanpa nilai metrik
+// (mis. skor tanpa DO) ditaruh di bawah tanpa nomor.
+function _mrRanked(M, metric){
+  const k = metric || mrState.metric;
+  const pass = r => (!mrState.minDo || r.ag.srD >= mrState.minDo) && (!mrState.active || r.ag.act > 0);
+  const pool = M.rows.filter(pass);
+  const withV = pool.filter(r => { const v = _mrVal(r, k); return v !== null && isFinite(v); })
+    .sort((x, y) => _mrVal(y, k) - _mrVal(x, k) || y.ag.real - x.ag.real || x.m.localeCompare(y.m));
+  const noV = pool.filter(r => withV.indexOf(r) < 0).sort((x, y) => y.ag.real - x.ag.real || x.m.localeCompare(y.m));
+  withV.forEach((r, i) => { r.rank = i + 1; });
+  noV.forEach(r => { r.rank = null; });
+  return { list: withV.concat(noV), ranked: withV, unranked: noV };
+}
+
+// ---------- Masuk / keluar ----------
+function openMitraRanking(opts){
+  const from = state.tab;
+  if (from !== 'mitrarank'){
+    // Dari profil mitra: "kembali" menuju tab asal profil itu, bukan bolak-balik
+    // antara dua halaman ini.
+    if (from === 'mitra') mrState.prevTab = (msState.prevTab && msState.prevTab !== 'mitrarank') ? msState.prevTab : mrState.prevTab;
+    else mrState.prevTab = from || 'map';
+  }
+  if (opts){
+    if (opts.year)  mrState.year  = opts.year;
+    if (opts.jenis) mrState.jenis = opts.jenis;
+  }
+  if (DATA && !(DATA.contracts || []).length){ showToast('Data kontrak belum termuat.', 'warn', 3000); return; }
+  switchTab('mitrarank');
+  setTimeout(() => {
+    renderMitraRanking();
+    const v = document.getElementById('mrView');
+    if (v) v.scrollTop = 0;
+  }, 30);
+}
+function mrGoBack(){
+  const t = mrState.prevTab && mrState.prevTab !== 'mitrarank' && mrState.prevTab !== 'mitra' ? mrState.prevTab : 'map';
+  switchTab(t);
+}
+function mrSet(kind, v){
+  if (kind === 'year') mrState.year = v || 'all';
+  else if (kind === 'jenis') mrState.jenis = v || 'all';
+  else if (kind === 'genco') mrState.genco = v || 'all';
+  else if (kind === 'metric') mrState.metric = v || 'score';
+  else if (kind === 'minDo') mrState.minDo = +v || 0;
+  else if (kind === 'active') mrState.active = !!v;
+  renderMitraRanking(true);
+}
+function mrReset(){
+  Object.assign(mrState, { year:'all', jenis:'all', genco:'all', metric:'score', minDo:0, active:false, q:'' });
+  renderMitraRanking(true);
+}
+function mrSearch(v){ mrState.q = String(v || ''); _mrRenderTable(); }
+function mrOpenMitra(m){
+  openMitraSummary(m, { year: mrState.year !== 'all' ? mrState.year : undefined,
+                        jenis: mrState.jenis !== 'all' ? mrState.jenis : undefined });
+}
+
+// ---------- Render ----------
+function renderMitraRanking(keepScroll){
+  const wrap = document.getElementById('mrWrap');
+  if (!wrap) return;
+  const view = document.getElementById('mrView');
+  const st = view ? view.scrollTop : 0;
+  let M;
+  try { M = _mrBuild(); }
+  catch(err){ console.error('[Ranking] model gagal:', err); wrap.innerHTML = '<div class="ms-empty">Gagal menyusun ranking mitra.</div>'; return; }
+  mrState.model = M;
+  const e = escapeHtml;
+  const cs = (DATA && DATA.contracts) || [];
+  const jNames = Array.from(new Set(cs.map(c => (c.jenis || '').trim()).filter(Boolean))).sort();
+  const gNames = Array.from(new Set(cs.map(c => c.genco).filter(Boolean))).sort();
+  const met = _mrMetric(mrState.metric);
+  const R = _mrRanked(M);
+  const seg = (cur, fn, opts) => '<div class="ms-seg" role="group">' + opts.map(([v, t]) =>
+    '<button type="button"' + (v === cur ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + ' onclick="' + fn + '(\'' + v + '\')">' + t + '</button>').join('') + '</div>';
+  const sel = (id, lbl, kind, cur, opts) => '<div><label for="' + id + '">' + lbl + '</label><select id="' + id + '" onchange="mrSet(\'' + kind + '\', this.value)">' +
+    opts.map(([v, t]) => '<option value="' + e(String(v)) + '"' + (String(v) === String(cur) ? ' selected' : '') + '>' + e(t) + '</option>').join('') + '</select></div>';
+  const filtered = mrState.year !== 'all' || mrState.jenis !== 'all' || mrState.genco !== 'all' || mrState.minDo || mrState.active || mrState.metric !== 'score';
+
+  let html = '' +
+    '<div class="ms-top">' +
+      '<button class="ms-back" onclick="mrGoBack()" title="Kembali ke tab sebelumnya">' + MS_IC.back + ' Kembali</button>' +
+      '<span class="ms-crumb">Ranking Mitra</span>' +
+      '<span class="ms-top-sp"></span>' +
+      '<button class="ms-btn primary" onclick="mrExportExcel()" title="Unduh tabel peringkat ini sebagai Excel">' + MS_IC.pdf + ' Unduh Excel</button>' +
+    '</div>' +
+    '<div class="ms-hero mr-hero"><div>' +
+      '<div class="ms-kicker">Peringkat Mitra Biomassa · ' + e(_mrScopeDesc()) + '</div>' +
+      '<div class="ms-name">Ranking Mitra</div>' +
+      '<div class="ms-hero-lead">Diurutkan menurut <b>' + e(met.t) + '</b>. ' + e(met.d) +
+        ' Realisasi = realisasi kontrak (Daftar Kontrak), data s.d. ' + _msYMLabel(M.lastDataYM, true) + '.</div>' +
+    '</div></div>' +
+    '<div class="mr-yearbar"><span class="mr-lbl">Periode</span>' +
+      seg(mrState.year, 'mrSetYear', [['all', 'Semua tahun']].concat(MS_YEARS.map(y => [y, y]))) + '</div>' +
+    '<div class="ms-scope">' +
+      sel('mrJenisSel', 'Jenis biomassa', 'jenis', mrState.jenis, [['all', 'Semua jenis (' + jNames.length + ')']].concat(jNames.map(j => [j, j]))) +
+      sel('mrGencoSel', 'Genco', 'genco', mrState.genco, [['all', 'Semua Genco']].concat(gNames.map(g => [g, g]))) +
+      sel('mrMetricSel', 'Urutkan menurut', 'metric', mrState.metric, MR_METRICS.map(x => [x.k, x.t])) +
+      sel('mrMinDoSel', 'Minimum volume DO', 'minDo', mrState.minDo, MR_MIN_DO.map(v => [v, v ? '≥ ' + fmtInt(v) + ' MT' : 'Tanpa batas'])) +
+      '<div class="mr-chk"><label><input type="checkbox" id="mrActiveChk"' + (mrState.active ? ' checked' : '') + ' onchange="mrSet(\'active\', this.checked)"> Hanya mitra dengan kontrak aktif</label></div>' +
+      '<div class="ms-scope-note">' + R.ranked.length + ' mitra diperingkat' + (R.unranked.length ? ' · ' + R.unranked.length + ' tanpa nilai' : '') +
+        (filtered ? ' · <a onclick="mrReset()">atur ulang</a>' : '') + '</div>' +
+    '</div>';
+
+  if (!R.list.length){
+    wrap.innerHTML = html + '<div class="ms-empty">Tidak ada mitra untuk lingkup ini.</div>';
+    return;
+  }
+
+  // ---- KPI ----
+  const pool = R.list;
+  let tReal = 0, tSrR = 0, tSrD = 0;
+  pool.forEach(r => { tReal += r.ag.real; tSrR += r.ag.srR; tSrD += r.ag.srD; });
+  const scored = pool.filter(r => r.ag.score !== null).map(r => r.ag.score).sort((x, y) => x - y);
+  const med = scored.length ? (scored.length % 2 ? scored[(scored.length - 1) / 2] : (scored[scored.length / 2 - 1] + scored[scored.length / 2]) / 2) : null;
+  const gc = { A:0, B:0, C:0, D:0 };
+  pool.forEach(r => { const g = _msGrade(r.ag.score); if (g) gc[g.g]++; });
+  const top5 = R.ranked.slice(0, 5).reduce((s, r) => s + r.ag.real, 0);
+  const kpi = (l, v, s) => '<div class="ms-kpi"><div class="ms-kpi-l">' + l + '</div><div class="ms-kpi-v">' + v + '</div><div class="ms-kpi-s">' + s + '</div></div>';
+  html += '<section class="ms-sec" style="margin-top:16px"><div class="ms-kpis">' +
+    kpi('Mitra', pool.length, R.ranked.length + ' diperingkat menurut ' + e(met.t.toLowerCase())) +
+    kpi('Total Realisasi', fmtInt(tReal) + '<small>MT</small>', mrState.metric === 'real' && tReal > 0 ? '5 teratas = ' + _msFmtPct(top5 / tReal * 100, 0) + ' dari total' : 'Seluruh mitra pada lingkup') +
+    kpi('SR Agregat', '<span style="color:' + _msPctColor(tSrD > 0 ? tSrR / tSrD * 100 : null) + '">' + _msFmtPct(tSrD > 0 ? tSrR / tSrD * 100 : null) + '</span>', 'Σ realisasi ÷ Σ DO semua mitra') +
+    kpi('Median Skor', med === null ? '—' : med.toFixed(0), scored.length + ' mitra punya skor') +
+    kpi('Sebaran Nilai', MS_GRADES.map(g => '<span class="mr-gchip" style="color:' + g.c + '" title="' + g.t + '">' + g.g + ' ' + gc[g.g] + '</span>').join(''), 'A ≥ 85 · B ≥ 70 · C ≥ 50 · D < 50') +
+  '</div></section>';
+
+  // ---- Podium + chart ----
+  const pod = R.ranked.slice(0, 3);
+  html += '<section class="ms-sec"><div class="ms-sec-h"><h3>Teratas<small>' + e(met.t) + ' · ' + e(_mrScopeDesc()) + '</small></h3></div>' +
+    '<div class="mr-podium">' + pod.map((r, i) => {
+      const g = _msGrade(r.ag.score);
+      return '<button type="button" class="mr-pod mr-pod' + (i + 1) + '" data-m="' + e(r.m) + '" onclick="mrOpenMitra(this.dataset.m)" title="Buka ringkasan mitra ini">' +
+        '<span class="mr-pod-rank">#' + (i + 1) + '</span>' +
+        '<span class="mr-pod-name">' + e(r.m) + '</span>' +
+        '<span class="mr-pod-val">' + _mrFmt(mrState.metric, _mrVal(r, mrState.metric)) + '</span>' +
+        '<span class="mr-pod-sub">' + (g ? '<b style="color:' + g.c + '">' + g.g + '</b> skor ' + r.ag.score.toFixed(0) + ' · ' : '') + fmtInt(r.ag.real) + ' MT · ' + r.n + ' kontrak</span>' +
+      '</button>';
+    }).join('') + '</div>' +
+    '<div class="ms-card" style="margin-top:var(--gutter)"><div class="ms-card-t">15 Teratas · ' + e(met.t) + '</div><div class="ms-chart" id="mrChartBox"><canvas id="mrChart"></canvas></div></div>' +
+  '</section>';
+
+  // ---- Juara per jenis ----
+  if (mrState.jenis === 'all'){
+    html += '<section class="ms-sec"><div class="ms-sec-h"><h3>Juara per Jenis Biomassa<small>3 teratas tiap jenis menurut ' + e(met.t.toLowerCase()) + ' · klik judul untuk ranking penuh jenis itu</small></h3></div>' +
+      '<div class="mr-jenis" id="mrJenisGrid"></div></section>';
+  }
+
+  // ---- Tabel ----
+  html += '<section class="ms-sec"><div class="ms-sec-h"><h3>Tabel Peringkat<small>klik judul kolom untuk mengurutkan menurut kolom itu · klik baris untuk ringkasan mitra</small></h3>' +
+    '<div class="mr-search"><input type="search" id="mrSearch" placeholder="Cari mitra…" autocomplete="off" aria-label="Cari mitra" value="' + e(mrState.q) + '" oninput="mrSearch(this.value)"></div></div>' +
+    '<div class="ms-tbl-wrap" id="mrTbl"></div></section>';
+
+  wrap.innerHTML = html;
+  _mrRenderChart(R);
+  _mrRenderJenis(M);
+  _mrRenderTable();
+  if (view) view.scrollTop = keepScroll ? st : 0;
+}
+function mrSetYear(y){ mrSet('year', y); }
+
+function _mrRenderTable(){
+  const el = document.getElementById('mrTbl');
+  const M = mrState.model;
+  if (!el || !M) return;
+  const e = escapeHtml, k = mrState.metric;
+  const R = _mrRanked(M);
+  const q = mrState.q.trim();
+  const rows = q ? R.list.filter(r => mitraQueryMatch(r.m, q)) : R.list;
+  let tReal = 0;
+  R.list.forEach(r => { tReal += r.ag.real; });
+  const th = (key, t, num) => {
+    const on = key === k;
+    return key ? '<th class="' + (num ? 'num ' : '') + (on ? 'sorted' : '') + '" onclick="mrSet(\'metric\',\'' + key + '\')" title="Urutkan menurut ' + e(_mrMetric(key).t) + '">' + t +
+      '<span class="ar">' + (on ? '▼' : '↕') + '</span></th>'
+      : '<th class="' + (num ? 'num' : '') + '" style="cursor:default">' + t + '</th>';
+  };
+  let h = '<table class="ms-tbl mr-tbl"><thead><tr>' + th(null, '#', 1) + th(null, 'Mitra') + th(null, 'Jenis utama') + th(null, 'Genco') +
+    th(null, 'PLTU', 1) + th('n', 'Kontrak', 1) + th('vol', 'Volume (MT)', 1) + th('real', 'Realisasi (MT)', 1) + th(null, 'Porsi', 1) +
+    th('do', 'DO (MT)', 1) + th('sr', 'SR', 1) + th('serapan', 'Serapan', 1) + th('score', 'Skor', 1) + '</tr></thead><tbody>';
+  if (!rows.length) h += '<tr><td colspan="13" style="text-align:center;color:var(--text-dim);cursor:default">Tidak ada mitra yang cocok dengan "' + e(q) + '".</td></tr>';
+  rows.forEach(r => {
+    const a = r.ag, g = _msGrade(a.score);
+    h += '<tr data-m="' + e(r.m) + '" onclick="mrOpenMitra(this.dataset.m)" title="Buka ringkasan mitra ini">' +
+      '<td class="num"><b>' + (r.rank ? r.rank : '—') + '</b></td>' +
+      '<td class="wrap">' + e(r.m) + '</td>' +
+      '<td>' + e(r.jenis || '—') + (r.jenisN > 1 ? ' <span class="mr-more">+' + (r.jenisN - 1) + '</span>' : '') + '</td>' +
+      '<td>' + r.gencos.map(x => '<span class="ms-pill g-' + e(x) + '">' + e(x) + '</span>').join(' ') + '</td>' +
+      '<td class="num">' + r.pltu + '</td><td class="num">' + r.n + '</td>' +
+      '<td class="num">' + fmtInt(a.vol) + '</td><td class="num">' + fmtInt(a.real) + '</td>' +
+      '<td class="num">' + (tReal > 0 ? _msFmtPct(a.real / tReal * 100, 1) : '—') + '</td>' +
+      '<td class="num">' + (a.srD > 0 ? fmtInt(a.srD) : '—') + '</td>' +
+      '<td class="num ms-pct" style="color:' + _msPctColor(a.sr) + '">' + _msFmtPct(a.sr, 0) + '</td>' +
+      '<td class="num">' + _msFmtPct(a.serapan, 0) + '</td>' +
+      '<td class="num ms-pct"' + (g ? ' style="color:' + g.c + '"' : '') + '>' + (g ? g.g + ' · ' + a.score.toFixed(0) : '—') + '</td></tr>';
+  });
+  el.innerHTML = h + '</tbody></table>';
+}
+
+function _mrRenderChart(R){
+  if (mrCharts.main){ try { mrCharts.main.destroy(); } catch(err){} delete mrCharts.main; }
+  const cv = document.getElementById('mrChart'), box = document.getElementById('mrChartBox');
+  if (!cv || typeof Chart === 'undefined' || !R.ranked.length) return;
+  const k = mrState.metric, P = _msPal();
+  const top = R.ranked.slice(0, 15);
+  box.style.height = Math.max(220, top.length * 28 + 40) + 'px';
+  const o = _msBaseOpts(P, { indexAxis:'y' });
+  o.plugins.legend = { display:false };
+  const isPct = k === 'sr' || k === 'serapan' || k === 'score';
+  o.scales = {
+    x:{ min:0, max: k === 'score' ? 100 : undefined, ticks:{ font:o.scales.x.ticks.font, color:P.dim, callback: v => isPct ? v + (k === 'score' ? '' : '%') : fmt(v) }, grid:{ color:P.grid } },
+    y:{ ticks:{ font:o.scales.x.ticks.font, color:P.text, autoSkip:false }, grid:{ display:false } }
+  };
+  o.interaction = { mode:'nearest', intersect:true, axis:'y' };
+  o.plugins.tooltip.callbacks = {
+    title: items => top[items[0].dataIndex].m,
+    label: c => { const r = top[c.dataIndex]; return _mrMetric(k).t + ': ' + _mrFmt(k, _mrVal(r, k)); },
+    footer: items => { const r = top[items[0].dataIndex]; return 'Realisasi ' + fmtInt(r.ag.real) + ' MT · SR ' + _msFmtPct(r.ag.sr, 0) + ' · ' + r.n + ' kontrak'; }
+  };
+  o.onClick = (ev, els) => { if (els && els.length){ const r = top[els[0].index]; if (r) mrOpenMitra(r.m); } };
+  o.onHover = (ev, els) => { ev.native && ev.native.target && (ev.native.target.style.cursor = els && els.length ? 'pointer' : 'default'); };
+  mrCharts.main = new Chart(cv, { type:'bar', data:{
+    labels: top.map(r => r.rank + '. ' + (r.m.length > 30 ? r.m.slice(0, 29) + '…' : r.m)),
+    datasets:[{ data: top.map(r => _mrVal(r, k)),
+      backgroundColor: top.map((r, i) => i < 3 ? P.yellow : 'rgba(15,73,110,.55)'),
+      borderColor: top.map((r, i) => i < 3 ? P.gold : 'transparent'), borderWidth: top.map((r, i) => i < 3 ? 1.5 : 0),
+      borderRadius:0, barPercentage:.8 }] }, options:o });
+}
+
+// Kartu per jenis: 3 teratas menurut metrik aktif, dihitung HANYA dari kontrak
+// jenis itu tiap mitra (sama seperti pembanding per jenis di Ringkasan Mitra).
+function _mrRenderJenis(M){
+  const el = document.getElementById('mrJenisGrid');
+  if (!el) return;
+  const e = escapeHtml, k = mrState.metric;
+  const by = new Map();
+  M.rows.forEach(r => {
+    const perJ = new Map();
+    r.stats.forEach(s => { const j = (s.c.jenis || '').trim(); if (!j) return; if (!perJ.has(j)) perJ.set(j, []); perJ.get(j).push(s); });
+    perJ.forEach((st, j) => {
+      if (!by.has(j)) by.set(j, []);
+      by.get(j).push({ m: r.m, n: st.length, ag: _msAggregate(st) });
+    });
+  });
+  const cards = [];
+  by.forEach((list, j) => {
+    const R = _mrRanked({ rows: list }, k);
+    const tot = list.reduce((s, x) => s + x.ag.real, 0);
+    cards.push({ j, R, tot, n: list.length });
+  });
+  cards.sort((x, y) => y.tot - x.tot || x.j.localeCompare(y.j));
+  el.innerHTML = cards.map(cd =>
+    '<div class="ms-card mr-jcard">' +
+      '<button type="button" class="mr-jhead" data-j="' + e(cd.j) + '" onclick="mrSet(\'jenis\', this.dataset.j)" title="Ranking penuh untuk ' + e(cd.j) + '">' +
+        '<b>' + e(cd.j) + '</b><span>' + cd.n + ' mitra · ' + fmtInt(cd.tot) + ' MT</span></button>' +
+      (cd.R.ranked.length ? '<ol>' + cd.R.ranked.slice(0, 3).map(r =>
+        '<li data-m="' + e(r.m) + '" onclick="mrOpenMitra(this.dataset.m)" title="Buka ringkasan mitra ini"><span class="mr-jrank">' + r.rank + '</span>' +
+        '<span class="mr-jname">' + e(r.m) + '</span><span class="mr-jval">' + _mrFmt(k, _mrVal(r, k)) + '</span></li>').join('') + '</ol>'
+        : '<div class="mr-jnone">Belum ada nilai ' + e(_mrMetric(k).t.toLowerCase()) + '.</div>') +
+    '</div>').join('');
+}
+
+function mrExportExcel(){
+  const M = mrState.model;
+  if (!M) return;
+  if (typeof XLSX === 'undefined'){ alert('Modul Excel belum termuat, coba lagi sebentar.'); return; }
+  const R = _mrRanked(M);
+  let tReal = 0;
+  R.list.forEach(r => { tReal += r.ag.real; });
+  const r1 = x => x === null || x === undefined || !isFinite(x) ? '' : Math.round(x * 10) / 10;
+  const aoa = [
+    ['Ranking Mitra — ' + _mrScopeDesc()],
+    ['Diurutkan menurut: ' + _mrMetric(mrState.metric).t + (mrState.minDo ? ' · min. DO ' + mrState.minDo + ' MT' : '') + (mrState.active ? ' · hanya kontrak aktif' : '') +
+      ' · data s.d. ' + _msYMLabel(M.lastDataYM, true)],
+    [],
+    ['Peringkat', 'Mitra', 'Jenis utama', 'Genco', 'PLTU', 'Kontrak', 'Volume kontrak (MT)', 'Realisasi (MT)', 'Porsi realisasi (%)', 'DO (MT)', 'SR (%)', 'Serapan (%)', 'Skor', 'Nilai']
+  ];
+  R.list.forEach(r => {
+    const a = r.ag, g = _msGrade(a.score);
+    aoa.push([r.rank || '', r.m, r.jenis || '', r.gencos.join(', '), r.pltu, r.n, Math.round(a.vol), Math.round(a.real),
+      tReal > 0 ? r1(a.real / tReal * 100) : '', a.srD > 0 ? Math.round(a.srD) : '', r1(a.sr), r1(a.serapan), r1(a.score), g ? g.g : '']);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [8, 44, 22, 12, 6, 8, 16, 14, 14, 12, 8, 10, 8, 6].map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ranking Mitra');
+  const tag = [mrState.year === 'all' ? '2023-2026' : mrState.year, mrState.jenis === 'all' ? '' : mrState.jenis, mrState.genco === 'all' ? '' : mrState.genco]
+    .filter(Boolean).join('_').replace(/[^\w-]+/g, '-');
+  XLSX.writeFile(wb, 'Ranking_Mitra_' + tag + '.xlsx');
+}
+window.openMitraRanking = openMitraRanking;
 
 </script>
 </body>
