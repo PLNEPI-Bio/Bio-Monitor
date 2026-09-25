@@ -31852,6 +31852,7 @@ function renderMitraSummary(keepScroll){
   _msRenderPeers(M);
   _msBindScrollSpy();
   if (view) view.scrollTop = keepScroll ? st : 0;
+  if (typeof _navSync === 'function') _navSync();   // V159
 }
 
 // ---------- Chart ----------
@@ -32679,6 +32680,7 @@ function renderMitraRanking(keepScroll){
   _mrRenderJenis(M);
   _mrRenderTable();
   if (view) view.scrollTop = keepScroll ? st : 0;
+  if (typeof _navSync === 'function') _navSync();   // V159
 }
 function mrSetYear(y){ mrSet('year', y); }
 
@@ -32812,6 +32814,101 @@ function mrExportExcel(){
   XLSX.writeFile(wb, 'Ranking_Mitra_' + tag + '.xlsx');
 }
 window.openMitraRanking = openMitraRanking;
+
+// =====================================================================
+// V159: TOMBOL BACK BROWSER = KEMBALI KE TAMPILAN SEBELUMNYA
+// =====================================================================
+// Setiap perpindahan tab / mitra / halaman Ranking dicatat sebagai entri
+// history (URL TIDAK berubah — hanya history.state). Back browser, gestur
+// geser, tombol mouse samping, dan Alt+← memulihkan tampilan sebelumnya,
+// termasuk mitra & lingkupnya. Di tampilan pertama, back ditahan: entri
+// "root" di bawahnya langsung didorong kembali, jadi pengguna tetap di sini.
+//
+// Kenapa baru "dipersenjatai" saat interaksi pertama: Chrome melompati entri
+// history yang dibuat tanpa aktivasi pengguna ("history manipulation
+// intervention"). Entri yang dibuat saat boot akan dilewati dan back tetap
+// keluar situs. Sebelum itu, perpindahan tab otomatis (mis. pulihkan tab
+// terakhir) hanya MEMPERBARUI entri yang ada.
+// Batas yang disengaja browser: halaman tidak bisa memblokir back 100% (mis.
+// back beruntun sangat cepat sebelum entri pengganti terbentuk).
+const navState = { armed:false, restoring:false };
+function _navEntry(){
+  const tab = (state && state.tab) || 'map';
+  const e = { bm:1, tab };
+  if (tab === 'mitra') e.ms = { m: msState.mitra, pltu: msState.pltu, jenis: msState.jenis, year: msState.year, prevTab: msState.prevTab };
+  if (tab === 'mitrarank') e.mr = { year: mrState.year, jenis: mrState.jenis, genco: mrState.genco, metric: mrState.metric,
+                                    minDo: mrState.minDo, active: mrState.active, prevTab: mrState.prevTab };
+  return e;
+}
+function _navKey(e){ return e ? e.tab + (e.ms ? '|' + e.ms.m : '') : ''; }
+function _navReplace(extra){
+  try { history.replaceState(Object.assign(_navEntry(), extra || {}), '', location.href); } catch(err){}
+}
+// Dipanggil sesudah render Ringkasan/Ranking: simpan lingkup terbaru (tahun,
+// filter) ke entri yang sedang aktif, supaya kembali ke sini memulihkannya.
+function _navSync(){
+  if (navState.restoring) return;
+  const cur = history.state;
+  if (cur && cur.bm && !cur.root && _navKey(cur) === _navKey(_navEntry())) _navReplace();
+}
+function _navArm(){
+  if (navState.armed) return;
+  navState.armed = true;
+  try {
+    history.replaceState(Object.assign(_navEntry(), { root:true }), '', location.href);
+    history.pushState(_navEntry(), '', location.href);
+  } catch(err){}
+}
+['pointerdown', 'keydown', 'touchstart'].forEach(t => window.addEventListener(t, _navArm, { capture:true, once:true, passive:true }));
+
+(function(){
+  const prevSwitch = window.switchTab;
+  window.switchTab = function(tab){
+    const before = _navKey(history.state && history.state.bm ? history.state : null);
+    const out = prevSwitch.apply(this, arguments);
+    if (navState.restoring || !state || state.tab !== tab) return out;
+    const now = _navEntry();
+    if (_navKey(now) === before) return out;
+    try {
+      if (navState.armed) history.pushState(now, '', location.href);
+      else _navReplace();
+    } catch(err){}
+    return out;
+  };
+})();
+
+window.addEventListener('popstate', ev => {
+  const st = ev.state;
+  if (!st || !st.bm) return;
+  // Lapisan yang sedang terbuka ditutup dulu — back tidak boleh meninggalkan
+  // palet/modal melayang di atas tab lain.
+  try { closeCmdk(); } catch(err){}
+  try { closeKbdHelp(); } catch(err){}
+  try { mobCloseMore(); } catch(err){}
+  try { const bd = document.getElementById('pemasokModalBackdrop'); if (bd && bd.classList.contains('open')) closePemasokModal(); } catch(err){}
+  if (st.root){
+    // Sudah di tampilan pertama: tetap di dashboard.
+    try { history.pushState(_navEntry(), '', location.href); } catch(err){}
+    try { showToast('Sudah di tampilan pertama dashboard.', 'info', 2500); } catch(err){}
+    return;
+  }
+  navState.restoring = true;
+  try {
+    if (st.tab === 'mitra' && st.ms && st.ms.m){
+      Object.assign(msState, { mitra: st.ms.m, pltu: st.ms.pltu || 'all', jenis: st.ms.jenis || 'all', year: st.ms.year || 'all' });
+      if (st.ms.prevTab) msState.prevTab = st.ms.prevTab;
+      switchTab('mitra');
+      setTimeout(() => { navState.restoring = true; try { renderMitraSummary(); } finally { navState.restoring = false; } }, 30);
+    } else if (st.tab === 'mitrarank'){
+      if (st.mr) Object.assign(mrState, st.mr, { q:'' });
+      switchTab('mitrarank');
+      setTimeout(() => { navState.restoring = true; try { renderMitraRanking(); } finally { navState.restoring = false; } }, 30);
+    } else if (st.tab){
+      switchTab(st.tab);
+    }
+  } catch(err){ console.warn('[Nav] pulihkan tampilan gagal:', err); }
+  finally { navState.restoring = false; }
+});
 
 </script>
 </body>
