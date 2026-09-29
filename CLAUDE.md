@@ -17,6 +17,8 @@ supabase/functions/do-auto-refresh/index.ts   ← Deno cron: SharePoint DO → t
 supabase/functions/prod-auto-refresh/index.ts ← Deno cron: data produksi
 supabase/functions/kontrak-auto-refresh/index.ts ← Deno cron: 48 workbook "Profil Pasokan"
                                                    per PLTU → dashboard_data.kontrak_pasokan_2026
+supabase/functions/checkpoint-pasokan/index.ts ← on-demand: 1 tab Google Sheet rakor per panggilan
+                                                   → cache checkpoint_pasokan (halaman Checkpoint, V161)
 docs/agent-teams.md                           ← referensi agent teams
 ```
 
@@ -53,7 +55,10 @@ supabase-js 2.45.4, xlsx 0.18.5, xlsx-js-style 1.2.0, jsPDF 2.5.1. Font Plus Jak
 - Chart.js: instance di registry `realCharts.*`, `paretoCharts.*`, `insightsCharts.*`,
   `trendChart`, `kontrakJenisPieChart`. **Selalu `.destroy()` sebelum `new Chart()` di canvas sama.**
 - Supabase: `dashboard_data`, `upload_log`, `bottleneck_entries`, `laporan_arsip`,
-  `usulan_base`/`usulan_tahap`, `do_data`, `kontrak_pasokan`, `app_control`.
+  `usulan_base`/`usulan_tahap`, `do_data`, `kontrak_pasokan`, `app_control`,
+  `checkpoint_source` (ID sheet rakor — service role saja), `checkpoint_pasokan` (cache).
+  Isian Checkpoint (V164, sub-tab Laporan) tersimpan di `laporan_arsip.model.checkpoint`;
+  tabel `checkpoint_arsip` sudah tidak dipakai.
 - **`dashboard_data.data` (~900 KB) ditulis ulang UTUH oleh `prod-auto-refresh` tiap 20
   menit.** Jangan menaruh data yang ditulis proses lain di dalamnya — dua penulis
   baca-ubah-tulis akan saling menimpa dan field bisa lenyap (terjadi 2026-07-29). Data
