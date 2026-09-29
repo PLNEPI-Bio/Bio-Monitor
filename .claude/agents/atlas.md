@@ -1,5 +1,5 @@
 ---
-name: data-backend-dev
+name: atlas
 description: Logic data & backend — parsing upload Excel (dashboard_data, pareto eval, template laporan), skema & query Supabase, versioning/revert lewat upload_log, dan Deno edge function SharePoint DO di supabase/functions/. Panggil untuk perubahan alur data, bukan tampilan.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
@@ -75,4 +75,4 @@ Tidak ada test suite. Yang harus kamu lakukan sebelum melapor selesai:
 
 ## Batas wewenang
 
-Perubahan pada **rumus perhitungan** (target, realisasi, gap, achievement ratio, pareto loss) → serahkan ke `data-qc-validator` sebelum merge. Perubahan pada **auth atau alur timpa data (upload/revert)** → wajib lewat `code-reviewer`.
+Perubahan pada **rumus perhitungan** (target, realisasi, gap, achievement ratio, pareto loss) → serahkan ke `gauss` sebelum merge. Perubahan pada **auth atau alur timpa data (upload/revert)** → wajib lewat `sherlock`.

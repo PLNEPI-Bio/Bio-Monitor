@@ -69,38 +69,45 @@ Lima subagent di [.claude/agents/](.claude/agents/):
 
 | Agent | Model | Akses | Kapan dipanggil |
 | :--- | :--- | :--- | :--- |
-| **explorer** | haiku | read-only | Sebelum agent lain menyentuh apa pun — cari nomor baris fungsi, canvas id, tabel, blok CSS |
-| **frontend-dev** | sonnet | tulis | Peta, chart, modal, filter, tabel, layout responsif |
-| **data-backend-dev** | sonnet | tulis | Parser Excel, skema & query Supabase, versioning/revert, edge function SharePoint DO |
-| **data-qc-validator** | sonnet | read-only | Setiap perubahan yang menyentuh angka: target, realisasi, gap, achievement ratio, pareto loss, pembobotan |
-| **code-reviewer** | **opus** | read-only | Sebelum commit. **Wajib** untuk perubahan auth/login dan upload/revert data |
+| **marco** | haiku | read-only | Sebelum agent lain menyentuh apa pun — cari nomor baris fungsi, canvas id, tabel, blok CSS |
+| **leo** | sonnet | tulis | Peta, chart, modal, filter, tabel, layout responsif |
+| **atlas** | sonnet | tulis | Parser Excel, skema & query Supabase, versioning/revert, edge function SharePoint DO |
+| **gauss** | sonnet | read-only | Setiap perubahan yang menyentuh angka: target, realisasi, gap, achievement ratio, pareto loss, pembobotan |
+| **sherlock** | **opus** | read-only | Sebelum commit. **Wajib** untuk perubahan auth/login dan upload/revert data |
 
-Model bukan seragam karena taruhannya tidak seragam. `explorer` cuma grep-and-report → haiku. Penulis
-dapat sonnet. `code-reviewer` dapat opus karena **repo ini tidak punya test/linter/type checker** —
+Asal nama: **marco** = Marco Polo, penjelajah · **leo** = Leonardo da Vinci, pelukis ·
+**atlas** = titan yang memikul dunia (fondasi data) · **gauss** = Carl F. Gauss, ahli hitung ·
+**sherlock** = Sherlock Holmes, detektif pencari kesalahan sebelum commit.
+
+**Dipanggil dengan nama.** Bila user menyebut nama agent ("Marco, cari ...", "minta Sherlock
+review"), itu permintaan eksplisit untuk menjalankan agent tersebut lewat Agent tool.
+
+Model bukan seragam karena taruhannya tidak seragam. `marco` cuma grep-and-report → haiku. Penulis
+dapat sonnet. `sherlock` dapat opus karena **repo ini tidak punya test/linter/type checker** —
 review manual adalah gate terakhir, dan kesalahan yang lolos di sini tidak punya jaring kedua.
 
 **Eskalasi per-pemanggilan.** Parameter `model` pada Agent tool menang atas frontmatter. Naikkan
-`data-backend-dev` ke opus untuk tiga area blast-radius tinggi: penulisan `dashboard_data`, alur
+`atlas` ke opus untuk tiga area blast-radius tinggi: penulisan `dashboard_data`, alur
 upload/revert, dan edge function cron di `supabase/functions/`. Default tetap sonnet.
 
 ### Urutan kerja yang disarankan
 
 ```
-explorer  →  frontend-dev / data-backend-dev  →  [data-qc-validator]  →  code-reviewer  →  commit
-                                                  ↑ bila menyentuh perhitungan
+marco  →  leo / atlas  →  [gauss]  →  sherlock  →  commit
+                           ↑ bila menyentuh perhitungan
 ```
 
-1. **explorer** dulu, selalu. Dapatkan lokasi persis sebelum ada yang mengedit — ini yang
+1. **marco** dulu, selalu. Dapatkan lokasi persis sebelum ada yang mengedit — ini yang
    mencegah agent lain membaca file 1,6 MB dan kehabisan context.
-2. **frontend-dev** atau **data-backend-dev** mengerjakan perubahan sesuai lapisannya.
-3. **data-qc-validator** bila perubahan menyentuh rumus perhitungan. Read-only: ia melaporkan,
+2. **leo** atau **atlas** mengerjakan perubahan sesuai lapisannya.
+3. **gauss** bila perubahan menyentuh rumus perhitungan. Read-only: ia melaporkan,
    tidak memperbaiki. Temuan metodologi yang ambigu dikembalikan sebagai **isu terbuka untuk
    didiskusikan** — bukan diputuskan sendiri oleh agent.
-4. **code-reviewer** sebelum commit. Untuk perubahan auth/login atau timpa data (upload/revert),
+4. **sherlock** sebelum commit. Untuk perubahan auth/login atau timpa data (upload/revert),
    ia memberi peringatan eksplisit dan meminta review manual tambahan.
 
 Untuk perubahan sepele satu baris, urutan penuh ini berlebihan — kerjakan langsung, tetap lewat
-code-reviewer bila menyentuh area sensitif.
+sherlock bila menyentuh area sensitif.
 
 ## Verifikasi
 

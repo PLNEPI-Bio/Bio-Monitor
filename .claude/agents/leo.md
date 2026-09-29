@@ -1,5 +1,5 @@
 ---
-name: frontend-dev
+name: leo
 description: Membangun & memelihara UI di index.html — peta Leaflet, chart Chart.js (Realisasi/Pareto/Bottleneck), modal, filter, tabel, layout responsif mobile. Panggil untuk perubahan tampilan, interaksi, atau penambahan panel/tab baru.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
@@ -87,4 +87,4 @@ Minimal: pastikan `old_string` yang kamu ganti memang unik, hitung ulang keseimb
 
 ## Batas wewenang
 
-Kalau perubahanmu menyentuh **rumus perhitungan** (target, realisasi, gap, achievement ratio, pareto loss) — hentikan dan serahkan ke `data-qc-validator` lebih dulu. Kalau menyentuh **auth/login atau proses upload/revert data** — wajib lewat `code-reviewer` sebelum commit.
+Kalau perubahanmu menyentuh **rumus perhitungan** (target, realisasi, gap, achievement ratio, pareto loss) — hentikan dan serahkan ke `gauss` lebih dulu. Kalau menyentuh **auth/login atau proses upload/revert data** — wajib lewat `sherlock` sebelum commit.

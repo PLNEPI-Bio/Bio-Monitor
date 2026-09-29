@@ -1,5 +1,5 @@
 ---
-name: explorer
+name: marco
 description: Pencari cepat lokasi kode di index.html (read-only). Panggil SEBELUM agent lain mengubah apa pun, untuk mendapatkan nomor baris fungsi, canvas id, tabel Supabase, atau blok CSS. Gunakan untuk "di mana fungsi X", "siapa yang memanggil Y", "canvas/id apa yang dipakai chart Z".
 tools: Read, Grep, Glob
 model: haiku

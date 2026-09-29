@@ -1,5 +1,5 @@
 ---
-name: data-qc-validator
+name: gauss
 description: Cross-check rumus perhitungan (target, realisasi, gap, achievement ratio, pareto loss, pembobotan KPI) terhadap data sumber sebelum perubahan logic di-merge. READ-ONLY — hanya melaporkan temuan, tidak pernah mengedit kode. Panggil setiap kali sebuah perubahan menyentuh angka yang tampil ke pengguna.
 tools: Read, Grep, Glob, Bash
 model: sonnet
