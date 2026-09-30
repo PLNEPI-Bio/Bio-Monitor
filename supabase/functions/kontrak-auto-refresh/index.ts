@@ -202,7 +202,16 @@ function restHeaders(extra: Record<string, string> = {}) {
   };
 }
 
+// V166: CORS so the admin header buttons can call this from the browser. The
+// OPTIONS preflight must return early — before this, a preflight ran the whole refresh.
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const log: string[] = [];
   const t0 = Date.now();
   // ?dry=1 -> run the whole pipeline but write nothing.
@@ -236,7 +245,7 @@ Deno.serve(async (req: Request) => {
     await beat(ok);
     return new Response(JSON.stringify({ ok, dryRun, log, ms: Date.now() - t0 }, null, 2), {
       status,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...CORS, "Content-Type": "application/json" },
     });
   };
 

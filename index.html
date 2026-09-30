@@ -581,6 +581,26 @@ html,body{
 .topbar-pause-btn.paused .pause-icon-play{display:inline !important}
 .topbar-pause-btn.busy{opacity:.45;pointer-events:none}
 
+/* V166: tombol refresh manual edge function (admin only) — satu pil kecil, tiga segmen */
+.topbar-refresh-group{
+  display:flex;align-items:stretch;flex-shrink:0;
+  border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;
+}
+.topbar-refresh-btn{
+  background:transparent;border:0;color:var(--text-dim);
+  padding:4px 7px;display:flex;align-items:center;gap:4px;cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;font-weight:600;
+  letter-spacing:.3px;white-space:nowrap;
+  transition:background-color var(--dur-fast) var(--ease-in-out),color var(--dur-fast) var(--ease-in-out);
+}
+.topbar-refresh-btn + .topbar-refresh-btn{border-left:1px solid var(--border)}
+.topbar-refresh-btn:hover{background:var(--panel-3);color:var(--accent)}
+.topbar-refresh-btn:disabled{opacity:.45;cursor:progress}
+.topbar-refresh-btn.running svg{animation:spin 1s linear infinite}
+.topbar-refresh-btn.ok{color:var(--status-ok)}
+.topbar-refresh-btn.fail{color:#ef4444}
+@media (max-width:768px){ .topbar-refresh-group{display:none !important} }
+
 /* DO SharePoint link-health warning (admin-only) */
 .do-link-warning{
   background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.55);color:var(--status-crit-ink);
@@ -7720,6 +7740,18 @@ body.gf-on .gf-bar{
       <svg class="pause-icon-play" viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style="display:none"><path d="M4 2.5v11a1 1 0 0 0 1.5.87l9-5.5a1 1 0 0 0 0-1.74l-9-5.5A1 1 0 0 0 4 2.5z"/></svg>
       <span class="pause-label" id="pauseLabel">Auto-refresh: ON</span>
     </button>
+    <!-- V166: pemicu manual edge function refresh — only visible to "Maulana - Admin" -->
+    <div class="topbar-refresh-group" id="topbarRefreshGroup" style="display:none" role="group" aria-label="Jalankan refresh manual">
+      <button type="button" class="topbar-refresh-btn" data-fn="do" onclick="runManualRefresh('do')" title="Jalankan do-auto-refresh sekarang (DO SharePoint → do_data)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="11" height="11" aria-hidden="true"><path d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1M13.5 2v3h-3"/></svg>DO
+      </button>
+      <button type="button" class="topbar-refresh-btn" data-fn="prod" onclick="runManualRefresh('prod')" title="Jalankan prod-auto-refresh sekarang (Monitoring Produksi → dashboard_data)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="11" height="11" aria-hidden="true"><path d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1M13.5 2v3h-3"/></svg>Prod
+      </button>
+      <button type="button" class="topbar-refresh-btn" data-fn="kontrak" onclick="runManualRefresh('kontrak')" title="Jalankan kontrak-auto-refresh (dry-run dulu, lalu konfirmasi)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="11" height="11" aria-hidden="true"><path d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1M13.5 2v3h-3"/></svg>Kontrak
+      </button>
+    </div>
     <!-- V47: Update Data moved from tab bar to header as icon-only -->
     <button class="topbar-update-btn" id="topbarUpdateBtn" onclick="switchTab('update')" title="Update Data">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M8 2v8M5 5l3-3 3 3M2 12v2h12v-2"/></svg>
@@ -9758,7 +9790,18 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
 .ck-bad{color:#ef4444}
 .ck-editing{font-size:var(--fs-data);color:var(--text);background:var(--accent-soft);border-left:3px solid var(--accent);padding:6px 10px;margin-bottom:10px}
 .ck-editing a{color:var(--accent);cursor:pointer;text-decoration:underline}
-.ck-plant{background:var(--panel);border:1px solid var(--border);padding:14px 16px;margin-bottom:16px;min-width:0}
+.ck-plant{--ck-bg:var(--panel);background:var(--ck-bg);border:1px solid var(--border);padding:14px 16px;margin-bottom:16px;min-width:0;
+  transition:background-color var(--dur-fast) var(--ease-in-out),border-color var(--dur-fast) var(--ease-in-out)}
+/* V167: kartu PLTU yang ditandai selesai checkpoint — hijau status (aman), tint tipis
+   supaya angka tetap terbaca; --ck-bg ikut dipakai kolom mitra yang sticky. */
+.ck-plant.done{--ck-bg:color-mix(in srgb,var(--status-ok) 7%,var(--panel));border-color:color-mix(in srgb,var(--status-ok) 45%,var(--border));box-shadow:inset 3px 0 0 var(--status-ok)}
+.ck-plant.done .ck-ph h3::after{content:' ✓';color:var(--status-ok-ink)}
+.ck-done-btn{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:var(--fs-note);font-weight:700;padding:2px 10px;border-radius:999px;
+  border:1px solid var(--border);background:transparent;color:var(--text-dim);cursor:pointer;white-space:nowrap}
+.ck-done-btn:hover{border-color:var(--status-ok);color:var(--status-ok-ink)}
+.ck-done-btn.on{background:var(--status-ok);border-color:var(--status-ok);color:#fff}
+.ck-done-btn.on:hover{filter:brightness(.95);color:#fff}
+.ck-done-n{color:var(--status-ok-ink);font-weight:700}
 .ck-ph{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .ck-ph h3{margin:0;font-size:var(--fs-sub);font-weight:800;color:var(--text-bright)}
 .ck-sub{display:block;font-size:var(--fs-data);color:var(--text-dim);margin-top:2px}
@@ -9776,7 +9819,7 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
 .ck-tbl{border-collapse:separate;border-spacing:0;font-size:var(--fs-data);width:max-content;min-width:100%}
 .ck-tbl th,.ck-tbl td{padding:4px 6px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .ck-tbl thead th{background:var(--panel-2);color:var(--text-dim);font-weight:700}
-.ck-tbl .ck-m{position:sticky;left:0;z-index:1;background:var(--panel);text-align:left;min-width:180px;max-width:260px;white-space:normal;border-right:1px solid var(--border)}
+.ck-tbl .ck-m{position:sticky;left:0;z-index:1;background:var(--ck-bg,var(--panel));text-align:left;min-width:180px;max-width:260px;white-space:normal;border-right:1px solid var(--border)}
 .ck-tbl thead .ck-m,.ck-tbl tfoot .ck-m{background:var(--panel-2)}
 .ck-mn{font-weight:700;color:var(--text)}
 .ck-raw{font-size:var(--fs-note);color:var(--text-dim)}
@@ -21254,6 +21297,7 @@ function renderLoginUI(){
   }
   // Refresh the admin-only auto-refresh pause control whenever identity changes.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();
+  if (typeof renderRefreshBtns === 'function') renderRefreshBtns(); // V166
   // The DO link-health warning is also admin-gated → re-evaluate on identity change.
   if (typeof renderDoLinkWarning === 'function') renderDoLinkWarning();
 }
@@ -21345,6 +21389,102 @@ async function toggleAutoRefreshPause(){
   }
 }
 window.toggleAutoRefreshPause = toggleAutoRefreshPause;
+
+// V166: pemicu manual tiga edge function refresh dari header (admin-only, sama
+// gerbangnya dengan switch pause). Kontrak SELALU lewat ?dry=1 dulu — live run
+// langsung pernah menulis 20 dari 48 PLTU (2026-09-11) — lalu minta konfirmasi.
+const MANUAL_REFRESH_FN = {
+  do:      { slug: 'do-auto-refresh',      label: 'DO' },
+  prod:    { slug: 'prod-auto-refresh',    label: 'Produksi' },
+  kontrak: { slug: 'kontrak-auto-refresh', label: 'Kontrak' },
+};
+const _manualRefreshBusy = {};
+
+function renderRefreshBtns(){
+  const g = document.getElementById('topbarRefreshGroup');
+  if (g) g.style.display = canControlAutoRefresh() ? 'flex' : 'none';
+}
+
+async function _callRefreshFn(slug, dry){
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 170000);
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/' + slug + (dry ? '?dry=1' : ''), {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'apikey': SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+      signal: ctl.signal,
+    });
+    let body = null;
+    try { body = await res.json(); } catch(e){}
+    if (!body) body = { ok: false, log: ['HTTP ' + res.status + ' ' + res.statusText] };
+    if (!res.ok) body.ok = false;
+    return body;
+  } catch(e){
+    return { ok: false, log: [e && e.name === 'AbortError' ? 'Timeout (>170 dtk) — cek refresh_heartbeat.' : String(e)] };
+  } finally { clearTimeout(timer); }
+}
+
+function _refreshLogTail(r, n){
+  const log = (r && Array.isArray(r.log)) ? r.log : [];
+  return log.slice(-n).join('\n');
+}
+
+async function runManualRefresh(key){
+  if (!canControlAutoRefresh()) return;
+  const cfg = MANUAL_REFRESH_FN[key];
+  if (!cfg || _manualRefreshBusy[key]) return;
+  const btn = document.querySelector('.topbar-refresh-btn[data-fn="' + key + '"]');
+  const setState = (cls) => {
+    if (!btn) return;
+    btn.classList.remove('running', 'ok', 'fail');
+    if (cls) btn.classList.add(cls);
+    btn.disabled = cls === 'running';
+  };
+  _manualRefreshBusy[key] = true;
+  setState('running');
+  let result = null;
+  try {
+    if (key === 'kontrak'){
+      showToast('Kontrak: dry-run berjalan (tidak menulis apa pun)…', 'info', 4000);
+      const dry = await _callRefreshFn(cfg.slug, true);
+      if (!dry.ok){
+        setState('fail');
+        alert('Dry-run kontrak GAGAL — live run dibatalkan.\n\n' + _refreshLogTail(dry, 10));
+        return;
+      }
+      if (!confirm('Dry-run kontrak OK. Ringkasan:\n\n' + _refreshLogTail(dry, 8) +
+                   '\n\nJalankan refresh kontrak SUNGGUHAN sekarang?')){
+        setState(null);
+        return;
+      }
+    }
+    showToast(cfg.label + ': refresh berjalan…', 'info', 3000);
+    result = await _callRefreshFn(cfg.slug, false);
+    console.log('[ManualRefresh] ' + cfg.slug, result);
+    if (result.ok){
+      setState('ok');
+      showToast(cfg.label + ': ' + (_refreshLogTail(result, 1) || 'selesai'), 'ok', 6000);
+      if (key === 'do' && typeof fetchDoData === 'function') await fetchDoData();
+      if (key === 'prod' && typeof syncDashboardIfStale === 'function') await syncDashboardIfStale();
+      if (key === 'kontrak' && typeof fetchKontrakPasokan === 'function') await fetchKontrakPasokan();
+    } else {
+      setState('fail');
+      alert(cfg.label + ': refresh GAGAL.\n\n' + _refreshLogTail(result, 10));
+    }
+  } finally {
+    _manualRefreshBusy[key] = false;
+    if (btn){
+      btn.disabled = false;
+      setTimeout(() => btn.classList.remove('ok', 'fail'), 8000);
+    }
+  }
+}
+window.runManualRefresh = runManualRefresh;
 
 // =====================================================
 // Delivery Order (DO) — server store, manual editing, link-health warning.
@@ -28454,6 +28594,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   // Reflect admin-only pause control on first paint.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();
+  if (typeof renderRefreshBtns === 'function') renderRefreshBtns(); // V166
   // Pre-load the usulan base rows (no longer embedded in the HTML) so the Update
   // Data status count is correct and the Usulan tab paints instantly when opened.
   if (typeof fetchUsulanBaseFromServer === 'function'){
@@ -32997,7 +33138,7 @@ const CK_SUMS = ['plan', 'confirm', 'ready', 'real'];
 const ckState = {
   wilayah: '', year: 0, month: 0, date: '', metric: 'real',
   data: {},    // code -> { status:'cache'|'ok'|'none'|'err', loading, row, fetched_at, src, sheet, err }
-  edits: {},   // code -> { rows: { key: { days, catatan, name } }, manual: [...], kendala }
+  edits: {},   // code -> { rows: { key: { days, catatan, name } }, manual: [...], kendala, done (V167) }
   gen: 0, pending: 0, total: 0,
   dirty: false,
   editLabel: null   // label laporan Library yang sedang diedit lewat Checkpoint
@@ -33336,7 +33477,7 @@ function _ckInputHtml(){
   if (!plants.length) return h + '<div class="ms-empty">Data PLTU dashboard belum termuat — tunggu sebentar lalu pilih wilayah lagi.</div>';
   // Daftar nama untuk kolom "Tambah mitra" — satu datalist untuk semua PLTU.
   h += '<datalist id="ckMitraList">' + _ckMitraIndex().list.map(o => o.name).sort().map(n => '<option value="' + e(n) + '">').join('') + '</datalist>';
-  h += '<div id="ckPlants">' + plants.map(p => '<section class="ck-plant" id="ckP-' + _ckId(p.code) + '">' + _ckPlantHtml(p) + '</section>').join('') + '</div>';
+  h += '<div id="ckPlants">' + plants.map(p => '<section class="ck-plant' + (_ckEd(p.code).done ? ' done' : '') + '" id="ckP-' + _ckId(p.code) + '">' + _ckPlantHtml(p) + '</section>').join('') + '</div>';
   h += '<div class="ck-save">' +
     '<div class="ck-save-k ck-hint">Realisasi saat ini = Σ Real sheet · Prognosa = hasil Checkpoint · DO = data dashboard · Kendala per PLTU → kendala laporan · mitra → halaman Lampiran. Semua masih bisa diubah di form laporan.</div>' +
     '<button class="ms-btn primary" onclick="ckBuildLaporan()">🖼️ Buat Laporan dari Checkpoint</button>' +
@@ -33355,6 +33496,12 @@ function _ckStatusText(){
     if (d.status === 'none') none++;
   });
   let s = last ? 'Data sheet diperbarui ' + _ckTime(last) : '';
+  // V167: progres tanda "Selesai" per PLTU.
+  const pl = _laporanRegionPlants(ckState.wilayah);
+  if (pl.length){
+    const nDone = pl.filter(p => ckState.edits[p.code] && ckState.edits[p.code].done).length;
+    s += (s ? ' · ' : '') + '<span class="ck-done-n">' + nDone + '/' + pl.length + ' PLTU selesai</span>';
+  }
   if (none) s += ' · ' + none + ' PLTU belum punya blok bulan ini di sheet';
   if (err) s += ' · <b class="ck-bad">' + err + ' PLTU gagal ditarik</b>';
   return s;
@@ -33377,6 +33524,7 @@ function _ckRenderPlant(code, focusNew){
   let selS = null;
   try { selS = f && typeof a.selectionStart === 'number' ? a.selectionStart : null; } catch(e){}
   sec.innerHTML = _ckPlantHtml(p);
+  sec.classList.toggle('done', !!_ckEd(code).done);   // V167
   if (focusNew){
     const ins = sec.querySelectorAll('[data-ck="m-name"]');
     if (ins.length) ins[ins.length - 1].focus();
@@ -33400,7 +33548,11 @@ function _ckPlantHtml(p){
   let h = '<div class="ck-ph"><div><h3>' + e(p.name) + '</h3><span class="ck-sub">' +
       e([p.code, p.genco, p.regional].filter(Boolean).join(' · ')) +
       (d.sheet ? ' · sheet ' + e(srcLbl) + ' “' + e(d.sheet) + '”' + (b && b.row ? ', header baris ' + b.row : '') : '') +
-    '</span></div><div class="ck-ph-r">' + st + '</div></div>';
+    '</span></div><div class="ck-ph-r">' + st +
+    // V167: tanda selesai checkpoint per PLTU — hanya penanda kerja, tidak mengubah angka.
+    '<button type="button" class="ck-done-btn' + (ed.done ? ' on' : '') + '" data-ck="done" data-code="' + e(code) + '" aria-pressed="' + (ed.done ? 'true' : 'false') + '"' +
+    ' title="' + (ed.done ? 'Klik untuk membatalkan tanda selesai' : 'Tandai checkpoint PLTU ini sudah selesai') + '">' + (ed.done ? '✓ Selesai' : 'Selesai') + '</button>' +
+    '</div></div>';
   if (warns.length){
     h += '<details class="ck-warn"><summary>⚠ ' + warns.length + ' catatan pembacaan sheet</summary><ul>' +
       warns.map(w => '<li>' + e(w) + '</li>').join('') + '</ul></details>';
@@ -33598,6 +33750,12 @@ function _ckBind(){
                                 plan: '', confirm: '', ready: '', real: '', days: {}, catatan: '' });
       ckState.dirty = true;
       _ckRenderPlant(code, true);
+    } else if (act === 'done'){   // V167
+      const ed = _ckEd(code);
+      ed.done = !ed.done;
+      ckState.dirty = true;
+      _ckRenderPlant(code);
+      _ckSyncStatus();
     } else if (act === 'del'){
       const ed = _ckEd(code);
       ed.manual = ed.manual.filter(x => x.id !== t.dataset.mid);
@@ -34151,7 +34309,7 @@ function _ckBuildModel(){
     out.plants[p.code] = {
       name: p.name, sheet: d.sheet || null, src: d.src || null, fetched_at: d.fetched_at || null, nd: C.nd,
       rows, manual: (ed.manual || []).map(m => Object.assign({}, m, { days: cleanDays(m.days), prognosa: C.prog['m:' + m.id] })),
-      kendala: ed.kendala || '', prognosa: C.T.prognosa
+      kendala: ed.kendala || '', prognosa: C.T.prognosa, done: !!ed.done   // V167
     };
   });
   return out;
@@ -34166,7 +34324,7 @@ function _ckEditsFromModel(m){
       rows[r.key] = { days: strDays(r.days), catatan: r.catatan || '', name: r.name };
     });
     const manual = (p.manual || []).map(x => { const o = Object.assign({}, x, { days: strDays(x.days) }); delete o.prognosa; return o; });
-    out[code] = { rows, manual, kendala: p.kendala || '' };
+    out[code] = { rows, manual, kendala: p.kendala || '', done: !!p.done };
   });
   return out;
 }
