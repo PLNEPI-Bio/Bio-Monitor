@@ -9856,6 +9856,90 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
 .ck-selbar{position:fixed;right:20px;bottom:20px;z-index:60;display:none;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--border);box-shadow:0 4px 14px rgba(0,0,0,.18);padding:6px 12px;font-size:var(--fs-data);color:var(--text-dim);font-variant-numeric:tabular-nums}
 .ck-selbar b{color:var(--text-bright)}
 @media (max-width:768px){.ck-selbar{bottom:calc(84px + env(safe-area-inset-bottom,0));right:12px;left:12px;justify-content:center;flex-wrap:wrap}}
+/* V168: tabel isian vertikal — baris = tanggal, kolom = mitra. Pembungkus menggulung
+   dua arah supaya kepala mitra (sticky) tetap terlihat sampai tanggal 31. */
+.ck-tbl-wrap.ck-vw{overflow:auto;max-height:min(70vh,900px);
+  /* V170: lebar mengikuti jumlah kolom mitra (tanpa area kosong di kanan), dan konteks
+     tumpukan sendiri supaya sel sticky tidak menembus bilah simpan (.ck-save). */
+  width:fit-content;max-width:100%;isolation:isolate}
+.ck-tbl.ck-v{min-width:0}
+.ck-tbl.ck-v thead th{position:sticky;top:0;z-index:4;vertical-align:bottom}
+.ck-tbl.ck-v thead th.ck-m{z-index:5}
+.ck-tbl.ck-v .ck-m{min-width:72px;max-width:none;white-space:nowrap}
+.ck-tbl.ck-v th.ck-d{width:150px;min-width:130px;max-width:200px;white-space:normal}
+.ck-tbl.ck-v .ck-s{min-width:72px}
+.ck-tbl.ck-v th.ck-d .ck-raw{font-weight:500}
+.ck-tbl.ck-v td.ck-d{scroll-margin:72px 12px 12px 84px}
+.ck-tbl.ck-v td.ck-tdy{color:var(--accent);font-weight:800;box-shadow:inset 3px 0 0 var(--accent)}
+.ck-tbl.ck-v .ck-inp{width:100%;min-width:72px}
+.ck-tbl.ck-v .ck-note .ck-inp,.ck-tbl.ck-v th .ck-inp{min-width:100px}
+.ck-tbl.ck-v th .ck-inp{display:block;margin-top:2px}
+.ck-tbl.ck-v th .ck-x{text-align:right;line-height:1}
+.ck-tbl.ck-v thead th input{cursor:text}
+.ck-tbl.ck-v .ck-none{text-align:left}
+/* V169: rapikan tabel isian — gaya lembar kerja. Sel isian tanpa kotak (putih), angka
+   sheet yang terkunci abu-abu, isian pengguna berwarna aksen. Kolom Total menempel di
+   kanan dan baris Prognosa menempel di bawah supaya hasil selalu terlihat saat mengisi. */
+.ck-tbl.ck-v th,.ck-tbl.ck-v td{border-right:1px solid var(--border)}
+.ck-tbl.ck-v thead th{padding:8px;border-bottom:2px solid var(--border)}
+.ck-tbl.ck-v thead th.ck-m,.ck-tbl.ck-v thead th.ck-tot{z-index:7}
+.ck-jn{display:inline-block;margin-top:3px;padding:0 7px;border:1px solid var(--border);border-radius:999px;font-size:var(--fs-note);font-weight:600;color:var(--text-dim);white-space:nowrap}
+.ck-tbl.ck-v tbody td{height:30px;padding:0 8px}
+.ck-tbl.ck-v tbody td.ck-d{background-color:var(--panel-2);color:var(--text)}
+.ck-tbl.ck-v tbody td.ck-dcell{padding:0;background-color:var(--ctl-bg)}
+.ck-tbl.ck-v td.ck-today:not(.ck-cur){box-shadow:inset 0 1px 0 var(--accent),inset 0 -1px 0 var(--accent)}
+.ck-tbl.ck-v tbody td.ck-zero{color:var(--text-dim)}
+.ck-tbl.ck-v .ck-dinp{display:block;width:100%;min-width:0;height:30px;min-height:0;padding:0 8px;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;cursor:cell}
+.ck-tbl.ck-v .ck-dinp.ck-u{background:var(--accent-soft)!important;color:var(--accent);font-weight:700}
+.ck-tbl.ck-v td.ck-dcell:hover:not(.ck-cur){box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 45%,transparent)}
+.ck-tbl.ck-v td.ck-cur{box-shadow:inset 0 0 0 2px var(--accent)}
+.ck-tbl.ck-v td.ck-d{scroll-margin:76px 96px 52px 100px}
+.ck-tbl.ck-v tbody td.ck-m{z-index:4;color:var(--text-dim)}
+.ck-tbl.ck-v tbody td.ck-m b{display:inline-block;min-width:18px;text-align:right;color:var(--text-bright);font-weight:700}
+.ck-dow{margin-left:8px;font-size:var(--fs-note)}
+.ck-tbl.ck-v tr.ck-we td.ck-m{background:var(--panel-2)}
+.ck-tbl.ck-v tr.ck-we .ck-dow{font-weight:700}
+.ck-tbl.ck-v tbody tr:hover td.ck-m,.ck-tbl.ck-v tbody tr:hover td.ck-m b{color:var(--accent)}
+.ck-tbl.ck-v td.ck-tdy,.ck-tbl.ck-v td.ck-tdy b{color:var(--accent)}
+.ck-tbl.ck-v .ck-tot{position:sticky;right:0;z-index:4;background:var(--panel-2);border-left:2px solid var(--border);border-right:0}
+.ck-tbl.ck-v tfoot td{height:34px;border-bottom:1px solid var(--border)}
+.ck-tbl.ck-v tfoot tr:first-child td{border-top:2px solid var(--border)}
+.ck-tbl.ck-v tfoot tr.ck-prow td{position:sticky;bottom:0;z-index:6;border-top:2px solid var(--accent);border-bottom:0;font-size:var(--fs-body)}
+.ck-tbl.ck-v tfoot tr.ck-prow td.ck-m,.ck-tbl.ck-v tfoot tr.ck-prow td.ck-tot{z-index:7}
+/* V172: warna lembut untuk keterbacaan — semua campuran tipis di atas warna panel (tetap
+   pejal, karena sel sticky tidak boleh tembus pandang). Kepala & Total bernuansa aksen,
+   akhir pekan bernuansa hangat, garis tebal tiap akhir minggu, titik warna di baris Σ. */
+.ck-tbl-wrap.ck-vw{border-top:2px solid var(--accent)}
+.ck-tbl.ck-v thead th{background:color-mix(in srgb,var(--accent) 8%,var(--panel-2))}
+.ck-tbl.ck-v thead th.ck-m,.ck-tbl.ck-v thead th.ck-tot{font-size:var(--fs-note);letter-spacing:var(--ls-caps);text-transform:uppercase}
+.ck-tbl.ck-v thead .ck-mn{color:var(--text-bright)}
+/* V173: angka sheet (terkunci) putih seperti sel kosong; hanya isian pengguna yang berwarna tipis. */
+.ck-tbl.ck-v tbody td.ck-d{background-color:var(--ctl-bg)}
+.ck-tbl.ck-v .ck-dinp.ck-u{background:color-mix(in srgb,var(--accent) 8%,var(--ctl-bg))!important;color:var(--accent);font-weight:600}
+.ck-tbl.ck-v tr.ck-we td.ck-m{background:color-mix(in srgb,#f59e0b 9%,var(--panel))}
+.ck-tbl.ck-v tr.ck-we .ck-dow{color:color-mix(in srgb,#f59e0b 60%,var(--text))}
+.ck-tbl.ck-v tr.ck-sun td{border-bottom:2px solid color-mix(in srgb,var(--text-dim) 30%,var(--border))}
+.ck-tbl.ck-v td.ck-tdy{background:color-mix(in srgb,var(--accent) 12%,var(--panel))!important}
+.ck-tbl.ck-v .ck-tot{background:color-mix(in srgb,var(--accent) 6%,var(--panel-2))}
+.ck-tbl.ck-v thead th.ck-tot{background:color-mix(in srgb,var(--accent) 12%,var(--panel-2))}
+.ck-tbl.ck-v tfoot td.ck-m[data-sum]::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;background:var(--ck-dot,var(--text-dim))}
+.ck-tbl.ck-v tfoot tr[data-sum="plan"]{--ck-dot:#8b5cf6}
+.ck-tbl.ck-v tfoot tr[data-sum="confirm"]{--ck-dot:#f59e0b}
+.ck-tbl.ck-v tfoot tr[data-sum="ready"]{--ck-dot:#3b82f6}
+.ck-tbl.ck-v tfoot tr[data-sum="real"]{--ck-dot:#10b981}
+/* V174: baris Σ bernuansa warna titiknya (bukan abu-abu, supaya beda dari sel lain);
+   angka sheet tetap putih, isian pengguna biru tipis. */
+.ck-tbl.ck-v tfoot tr[data-sum] td{background:color-mix(in srgb,var(--ck-dot) 8%,var(--panel))}
+.ck-tbl.ck-v tfoot tr[data-sum] td.ck-tot{background:color-mix(in srgb,var(--ck-dot) 15%,var(--panel))}
+.ck-tbl.ck-v .ck-dinp.ck-u{background:color-mix(in srgb,#3b82f6 9%,var(--ctl-bg))!important;color:var(--text-bright);font-weight:600}
+.ck-legend .ck-lg.ck-lg-u{background:color-mix(in srgb,#3b82f6 9%,var(--ctl-bg));border-color:color-mix(in srgb,#3b82f6 40%,var(--border))}
+.ck-tbl.ck-v tfoot tr.ck-prow td{background:color-mix(in srgb,var(--accent) 13%,var(--panel));color:var(--accent)}
+.ck-legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin-top:6px;font-size:var(--fs-note);color:var(--text-dim)}
+.ck-lg{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border:1px solid var(--border);background:var(--ctl-bg)}
+.ck-lg.ck-lg-u{background:color-mix(in srgb,var(--accent) 8%,var(--ctl-bg));border-color:color-mix(in srgb,var(--accent) 45%,var(--border))}
+.ck-lg.ck-lg-l{background:var(--panel-2)}
+.ck-legend-k{margin-left:auto}
+@media (max-width:768px){.ck-legend-k{display:none}}
 .ck-tbl .ck-man{text-align:center;color:var(--text-dim);font-style:italic}
 .ck-tbl tfoot td{font-weight:800;color:var(--text-bright);background:var(--panel-2);border-bottom:none}
 .ck-tbl .ck-none{color:var(--text-dim);font-style:italic}
@@ -9867,6 +9951,9 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
 .ck-kendala{margin-top:10px}
 .ck-kendala label,.ck-save-k label{display:block;font-size:var(--fs-note);letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--text-dim);font-weight:700;margin-bottom:4px}
 .ck-save{position:sticky;bottom:0;z-index:3;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;background:var(--bg);border-top:1px solid var(--border);padding:12px 0 16px}
+/* V171: #real-view punya padding-bottom 20px, jadi bilah sticky berhenti 20px di atas tepi
+   area gulir dan isi kartu mengintip di celahnya. Offset negatif menurunkan bilah ke tepi. */
+@media (min-width:769px){.ck-save{bottom:-20px;padding-bottom:28px}}
 .ck-save-k{flex:1 1 260px}
 .ck-save-hint{font-size:var(--fs-data);color:var(--text-dim)}
 .ck-lib-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:12px 0}
@@ -33470,7 +33557,7 @@ function _ckInputHtml(){
   '<div class="ck-status" id="ckStatus">' + _ckStatusText() + '</div>' +
   (ckState.metric !== 'real' ? '<div class="ck-hint" style="margin:-4px 0 10px">Menampilkan angka ' + escapeHtml(ckState.metric) +
     ' dari sheet (baca saja). Isian harian untuk prognosa ada di mode <a style="color:var(--accent);cursor:pointer" onclick="ckSet(\'metric\', \'real\')">Real</a>.</div>'
-    : '<div class="ck-hint" style="margin:-4px 0 10px">Seperti Excel: klik-geser untuk memilih · Ctrl+C / Ctrl+V dari Excel atau Google Sheets · geser kotak kecil ■ di pojok seleksi untuk mengisi · Ctrl+D / Ctrl+R · Delete · Ctrl+Z / Ctrl+Y · Enter ↓ · Tab → · F2 atau klik ganda untuk mengedit isi sel.</div>');
+    : '<div class="ck-hint" style="margin:-4px 0 10px">Seperti Excel: klik-geser untuk memilih · Ctrl+C / Ctrl+V dari Excel atau Google Sheets · geser kotak kecil ■ di pojok seleksi untuk mengisi · Ctrl+D / Ctrl+R · Delete · Ctrl+Z / Ctrl+Y · Enter ↓ · Tab → · F2 atau klik ganda untuk mengedit isi sel · rumus: =1000/3, =SUM(100;250), =ROUND(500/7;1).</div>');
   if (ckState.editLabel) h += '<div class="ck-editing">✎ Mengedit laporan Library <b>' + e(ckState.editLabel) + '</b> lewat Checkpoint — "Buat Laporan" lalu <b>Perbarui</b> di Input Baru. · <a onclick="ckNew()">batal &amp; mulai baru</a></div>';
   if (!ckState.wilayah) return h + '<div class="ms-empty">Pilih wilayah untuk menarik data semua PLTU di wilayah itu.</div>';
   const plants = _laporanRegionPlants(ckState.wilayah);
@@ -33523,14 +33610,18 @@ function _ckRenderPlant(code, focusNew){
   const f = a && sec.contains(a) && a.dataset ? a.dataset.ckf : null;
   let selS = null;
   try { selS = f && typeof a.selectionStart === 'number' ? a.selectionStart : null; } catch(e){}
+  // V168: tabel vertikal menggulung di pembungkusnya sendiri — posisi gulir ikut dipulihkan.
+  const ow = sec.querySelector('.ck-tbl-wrap'), sT = ow ? ow.scrollTop : 0, sL = ow ? ow.scrollLeft : 0;
   sec.innerHTML = _ckPlantHtml(p);
+  const nw = sec.querySelector('.ck-tbl-wrap');
+  if (nw && (sT || sL)){ nw.scrollTop = sT; nw.scrollLeft = sL; }
   sec.classList.toggle('done', !!_ckEd(code).done);   // V167
   if (focusNew){
     const ins = sec.querySelectorAll('[data-ck="m-name"]');
     if (ins.length) ins[ins.length - 1].focus();
   } else if (f){
     const el = sec.querySelector('[data-ckf="' + CSS.escape(f) + '"]');
-    if (el){ el.focus(); try { if (selS !== null) el.setSelectionRange(selS, selS); } catch(e){} }
+    if (el){ el.focus({ preventScroll: true }); try { if (selS !== null) el.setSelectionRange(selS, selS); } catch(e){} }
   }
   if (ckGrid.sec === sec) _ckgPaint();
 }
@@ -33607,54 +33698,52 @@ function _ckCalc(code){
   Object.keys(T).forEach(k => { T[k] = Math.round(T[k] * 1000) / 1000; });
   return { nd, rows, prog, day, T, present };
 }
+// V168: tabel isian vertikal — baris = tanggal 1..akhir bulan, kolom = mitra.
+// Ringkasan (Σ Plan/Confirm/Ready/Real, Prognosa, Catatan) jadi baris kaki tabel.
 function _ckTableHtml(p, b, ed){
   const e = escapeHtml, code = p.code, met = ckState.metric, isReal = met === 'real';
   const d = ckState.data[code] || {};
   const C = _ckCalc(code), nd = C.nd, rows = C.rows;
   const ckDay = _ckCkDay();
   const dayCls = i => 'ck-d' + (i === ckDay ? ' ck-today' : '');
-  const ncol = nd + 9;
-  let h = '<div class="ck-tbl-wrap"><table class="ck-tbl"><thead><tr><th class="ck-m">Mitra</th><th class="ck-j">Jenis</th>';
-  for (let i = 1; i <= nd; i++) h += '<th class="' + dayCls(i) + '"' + (i === ckDay ? ' title="Tanggal checkpoint"' : '') + '>' + i + '</th>';
-  h += '<th class="ck-s">Σ Plan</th><th class="ck-s">Σ Confirm</th><th class="ck-s">Σ Ready</th><th class="ck-s">Σ Real</th>' +
-       '<th class="ck-s ck-prog" title="Real harian dari sheet + angka yang diisi di sel harian kosong">Prognosa</th><th class="ck-in ck-note">Catatan</th><th class="ck-x"></th></tr></thead><tbody>';
   const sheetTot = new Array(nd).fill(null);
   // Sel isian harian. type=text + inputmode: input number mengubah nilai saat roda
   // mouse digulir di atasnya, dan panah ↑↓ di sini dipakai untuk pindah baris.
   const dayInp = (attrs, ckf, val, ph) =>
     '<input type="text" inputmode="decimal" class="ck-inp ck-dinp' + (_ckHasU(val) ? ' ck-u' : '') + '" ' + attrs +
-    ' data-ckf="' + ckf + '" value="' + e(_ckHasU(val) ? String(val) : '') + '" placeholder="' + ph + '">';
+    ' data-ckf="' + ckf + '" value="' + e(!_ckHasU(val) ? '' : typeof val === 'number' ? _ckNumStr(val) : String(val)) + '" placeholder="' + ph + '">';
   const noteInp = (key, name, val) =>
     '<input type="text" class="ck-inp" data-ck="note" data-code="' + e(code) + '" data-key="' + e(key) + '" data-name="' + e(name) +
     '" data-ckf="note|' + e(code) + '|' + e(key) + '" value="' + e(val || '') + '" placeholder="—">';
   const progCell = key => '<td class="ck-s ck-prog" data-ckrow="' + e(key) + '">' + _ckFmt(C.prog[key]) + '</td>';
-  const rowDays = (key, name, sheetArr, userDays) => {
-    let x = '';
-    for (let i = 0; i < nd; i++){
-      const sv = sheetArr ? sheetArr[i] : null, u = (userDays || {})[i + 1];
-      if (isReal && _ckEditable(sv)){
-        x += '<td class="' + dayCls(i + 1) + ' ck-dcell">' +
+  // Satu sel harian: isian (hari kosong di mode Real) atau angka sheet yang terkunci.
+  const dayCell = (key, name, sheetArr, userDays, i) => {
+    const sv = sheetArr ? sheetArr[i] : null, u = (userDays || {})[i + 1];
+    if (isReal && _ckEditable(sv)){
+      return '<td class="' + dayCls(i + 1) + ' ck-dcell">' +
              dayInp('data-ck="day" data-code="' + e(code) + '" data-key="' + e(key) + '" data-name="' + e(name) + '" data-day="' + (i + 1) + '"',
                     'day|' + e(code) + '|' + e(key) + '|' + (i + 1), u, sv === 0 ? '0' : '') + '</td>';
-      } else {
-        x += '<td class="' + dayCls(i + 1) + (sv === 0 ? ' ck-zero' : '') + '" tabindex="-1" data-v="' + (sv === null || sv === undefined ? '' : sv) + '">' +
-             (sv === null || sv === undefined ? '' : _ckFmt(sv)) + '</td>';
-      }
     }
-    return x;
+    return '<td class="' + dayCls(i + 1) + (sv === 0 ? ' ck-zero' : '') + '" tabindex="-1" data-v="' + (sv === null || sv === undefined ? '' : sv) + '">' +
+           (sv === null || sv === undefined ? '' : _ckFmt(sv)) + '</td>';
   };
+  // Satu entri per kolom mitra: kepala, sel per hari, Σ, prognosa, catatan.
+  const cols = [];
   rows.forEach(r => {
     const v = ed.rows[r.key] || {};
     const arr = r.mt[met] || [];
     arr.forEach((x, i) => { if (i < nd && x !== null && x !== undefined) sheetTot[i] = (sheetTot[i] || 0) + x; });
     const moved = r.how !== 'persis' && r.raw && r.raw !== r.name;
-    h += '<tr' + (r.how === 'asli' ? ' class="ck-unm"' : '') + '><td class="ck-m"><div class="ck-mn" title="' +
-         e((r.raw ? 'Di sheet: ' + r.raw + ' (kolom ' + r.col + ')' : '') + (r.how === 'asli' ? ' — tidak cocok dengan nama di Daftar Kontrak' : '')) + '">' + e(r.name) + '</div>' +
-         (moved ? '<div class="ck-raw">di sheet: ' + e(r.raw) + '</div>' : '') + '</td>' +
-         '<td class="ck-j">' + e(r.jenis || '—') + '</td>' +
-         rowDays(r.key, r.name, isReal ? (r.mt.real || []) : arr, v.days);
-    CK_SUMS.forEach(k => { h += '<td class="ck-s">' + (r.mt[k] ? _ckFmt(_ckSum(r.mt[k])) : '—') + '</td>'; });
-    h += progCell(r.key) + '<td class="ck-in ck-note">' + noteInp(r.key, r.name, v.catatan) + '</td><td class="ck-x"></td></tr>';
+    const src = isReal ? (r.mt.real || []) : arr;
+    cols.push({
+      head: '<th class="ck-d' + (r.how === 'asli' ? ' ck-unm' : '') + '"><div class="ck-mn" title="' +
+            e((r.raw ? 'Di sheet: ' + r.raw + ' (kolom ' + r.col + ')' : '') + (r.how === 'asli' ? ' — tidak cocok dengan nama di Daftar Kontrak' : '')) + '">' + e(r.name) + '</div>' +
+            (moved ? '<div class="ck-raw">di sheet: ' + e(r.raw) + '</div>' : '') + '<span class="ck-jn">' + e(r.jenis || '—') + '</span></th>',
+      cell: i => dayCell(r.key, r.name, src, v.days, i),
+      sums: CK_SUMS.map(k => r.mt[k] ? _ckFmt(_ckSum(r.mt[k])) : '—'),
+      prog: progCell(r.key),
+      note: noteInp(r.key, r.name, v.catatan)
+    });
   });
   // Isian tersimpan untuk mitra yang kini tidak ada di blok sheet — jangan hilang diam-diam.
   if (!d.loading){
@@ -33662,9 +33751,13 @@ function _ckTableHtml(p, b, ed){
       const v = ed.rows[k];
       if (C.present.has(k) || (!_ckHasDays(v.days) && !v.catatan)) return;
       const nm = v.name || k.split('|')[0];
-      h += '<tr class="ck-gone"><td class="ck-m"><div class="ck-mn">' + e(nm) + '</div><div class="ck-raw">tidak ada lagi di sheet bulan ini</div></td><td class="ck-j">—</td>' +
-           rowDays(k, nm, null, v.days) + CK_SUMS.map(() => '<td class="ck-s">—</td>').join('') +
-           progCell(k) + '<td class="ck-in ck-note">' + noteInp(k, nm, v.catatan) + '</td><td class="ck-x"></td></tr>';
+      cols.push({
+        head: '<th class="ck-d ck-gone"><div class="ck-mn">' + e(nm) + '</div><div class="ck-raw">tidak ada lagi di sheet bulan ini</div></th>',
+        cell: i => dayCell(k, nm, null, v.days, i),
+        sums: CK_SUMS.map(() => '—'),
+        prog: progCell(k),
+        note: noteInp(k, nm, v.catatan)
+      });
     });
   }
   (ed.manual || []).forEach(mr => {
@@ -33672,30 +33765,51 @@ function _ckTableHtml(p, b, ed){
       '<input type="' + (type || 'number') + '"' + (type ? '' : ' step="any" inputmode="decimal"') + ' class="ck-inp ' + (cls || '') + '" data-ck="m-' + f +
       '" data-code="' + e(code) + '" data-mid="' + e(mr.id) + '" data-ckf="m|' + e(code) + '|' + e(mr.id) + '|' + f + '" value="' + e(mr[f] == null ? '' : String(mr[f])) +
       '" placeholder="' + ph + '"' + (f === 'name' ? ' list="ckMitraList"' : '') + '>';
-    let days = '';
-    for (let i = 0; i < nd; i++){
-      days += isReal
+    cols.push({
+      head: '<th class="ck-d ck-manual"><div class="ck-x"><button type="button" data-ck="del" data-code="' + e(code) + '" data-mid="' + e(mr.id) + '" title="Hapus mitra tambahan">✕</button></div>' +
+            a('name', 'ck-name', 'Nama mitra', 'text') + a('jenis', 'ck-jen', 'Jenis', 'text') + '</th>',
+      cell: i => isReal
         ? '<td class="' + dayCls(i + 1) + ' ck-dcell">' +
           dayInp('data-ck="m-day" data-code="' + e(code) + '" data-mid="' + e(mr.id) + '" data-day="' + (i + 1) + '"',
                  'mday|' + e(code) + '|' + e(mr.id) + '|' + (i + 1), (mr.days || {})[i + 1], '') + '</td>'
-        : '<td class="' + dayCls(i + 1) + '" tabindex="-1" data-v=""></td>';
-    }
-    h += '<tr class="ck-manual"><td class="ck-m">' + a('name', 'ck-name', 'Nama mitra', 'text') + '</td><td class="ck-j">' + a('jenis', 'ck-jen', 'Jenis', 'text') + '</td>' +
-         days + CK_SUMS.map(k => '<td class="ck-s">' + a(k, '', '0') + '</td>').join('') +
-         progCell('m:' + mr.id) + '<td class="ck-in ck-note">' + a('catatan', '', '—', 'text') + '</td>' +
-         '<td class="ck-x"><button type="button" data-ck="del" data-code="' + e(code) + '" data-mid="' + e(mr.id) + '" title="Hapus mitra tambahan">✕</button></td></tr>';
+        : '<td class="' + dayCls(i + 1) + '" tabindex="-1" data-v=""></td>',
+      sums: CK_SUMS.map(k => a(k, '', '0')),
+      prog: progCell('m:' + mr.id),
+      note: a('catatan', '', '—', 'text')
+    });
   });
-  if (!rows.length && !(ed.manual || []).length){
+  if (!cols.length){
     const msg = d.loading ? 'Menarik data dari sheet…' : d.status === 'none' ? 'Sheet PLTU ini belum punya blok untuk bulan ini.' :
                 d.status === 'err' ? 'Gagal menarik data: ' + (d.err || '') : b ? 'Tidak ada kolom mitra di blok bulan ini.' : 'Belum ada data.';
-    h += '<tr><td class="ck-m ck-none" colspan="' + ncol + '">' + e(msg) + '</td></tr>';
+    return '<div class="ck-tbl-wrap"><table class="ck-tbl ck-v"><tbody><tr><td class="ck-none">' + e(msg) + '</td></tr></tbody></table></div>';
   }
   // Total harian: mode Real = realisasi + isian (dasar prognosa); mode lain = angka sheet.
   const dayTot = isReal ? C.day : sheetTot;
-  h += '</tbody><tfoot><tr><td class="ck-m">Total</td><td class="ck-j"></td>';
-  for (let i = 0; i < nd; i++) h += '<td class="' + dayCls(i + 1) + '"' + (isReal ? ' data-ckday="' + i + '"' : '') + '>' + (dayTot[i] === null ? '' : _ckFmt(dayTot[i])) + '</td>';
-  CK_SUMS.forEach(k => { h += '<td class="ck-s" data-cksum="' + k + '">' + _ckFmt(C.T[k]) + '</td>'; });
-  h += '<td class="ck-s ck-prog" data-cksum="prognosa">' + _ckFmt(C.T.prognosa) + '</td><td class="ck-note"></td><td class="ck-x"></td></tr></tfoot></table></div>';
+  // V169: nama hari di kolom tanggal; akhir pekan diberi tanda supaya minggu terbaca.
+  const DOW = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  let h = '<div class="ck-tbl-wrap ck-vw"><table class="ck-tbl ck-v"><thead><tr><th class="ck-m">Tanggal</th>' +
+          cols.map(c => c.head).join('') + '<th class="ck-s ck-tot">Total</th></tr></thead><tbody>';
+  for (let i = 0; i < nd; i++){
+    const wd = new Date(ckState.year, ckState.month - 1, i + 1).getDay();
+    h += '<tr' + (wd === 0 ? ' class="ck-we ck-sun"' : wd === 6 ? ' class="ck-we"' : '') + '><td class="ck-m' + (i + 1 === ckDay ? ' ck-tdy" title="Tanggal checkpoint' : '') + '">' +
+         '<b>' + (i + 1) + '</b><span class="ck-dow">' + DOW[wd] + '</span></td>' +
+         cols.map(c => c.cell(i)).join('') +
+         '<td class="ck-s ck-tot"' + (isReal ? ' data-ckday="' + i + '"' : '') + '>' + (dayTot[i] === null ? '' : _ckFmt(dayTot[i])) + '</td></tr>';
+  }
+  h += '</tbody><tfoot>';
+  CK_SUMS.forEach((k, j) => {
+    h += '<tr data-sum="' + k + '"><td class="ck-m" data-sum="' + k + '">Σ ' + k.charAt(0).toUpperCase() + k.slice(1) + '</td>' + cols.map(c => '<td class="ck-s">' + c.sums[j] + '</td>').join('') +
+         '<td class="ck-s ck-tot" data-cksum="' + k + '">' + _ckFmt(C.T[k]) + '</td></tr>';
+  });
+  // Prognosa di baris terakhir: menempel di bawah area gulir, selalu terlihat saat mengisi.
+  h += '<tr><td class="ck-m">Catatan</td>' + cols.map(c => '<td class="ck-in ck-note">' + c.note + '</td>').join('') + '<td class="ck-tot"></td></tr>' +
+       '<tr class="ck-prow"><td class="ck-m ck-prog" title="Real harian dari sheet + angka yang diisi di sel harian kosong">Prognosa</td>' + cols.map(c => c.prog).join('') +
+       '<td class="ck-s ck-prog ck-tot" data-cksum="prognosa">' + _ckFmt(C.T.prognosa) + '</td></tr>' +
+       '</tfoot></table></div>';
+  h += '<div class="ck-legend">' + (isReal
+    ? '<span><i class="ck-lg"></i>Angka sheet (terkunci) · kosong = bisa diisi</span><span><i class="ck-lg ck-lg-u"></i>Isian Anda</span>' +
+      '<span class="ck-legend-k">Enter ↓ · Tab → · Ctrl+V tempel dari Excel · Ctrl+Z urung · geser kotak pojok untuk mengisi</span>'
+    : '<span>Tampilan ' + e(met) + ' hanya untuk dibaca — pindah ke Real untuk mengisi.</span>') + '</div>';
   return h;
 }
 function _ckTotals(code){ return _ckCalc(code).T; }
@@ -33770,16 +33884,18 @@ function _ckBind(){
 // dari/ke Excel & Google Sheets, fill handle (salin / lanjutkan deret), Ctrl+D/R,
 // Delete, undo/redo, navigasi Enter/Tab/panah, F2 = mode edit, bilah Σ seleksi.
 // Sel berisi angka sheet tetap terkunci: dilewati saat tempel/isi, tapi ikut
-// tersalin (nilainya di data-v). Grid = satu kartu PLTU; baris = mitra yang
-// punya sel harian, kolom = tanggal.
+// tersalin (nilainya di data-v). Grid = satu kartu PLTU; baris = tanggal,
+// kolom = mitra (V168: sebelumnya terbalik).
 const ckGrid = { sec: null, a: null, f: null, edit: false, drag: false, fill: null, undo: [], redo: [] };
 
 // Angka dari ketikan/tempelan. Sheet rakor memakai format Indonesia, jadi koma
 // = desimal ("12,5") dan titik berkelompok tiga = ribuan ("1.500"). Bila keduanya
 // ada, pemisah terakhir = desimal ("1,234.5" dari Excel berbahasa Inggris juga benar).
 function _ckParseNum(s){
+  if (typeof s === 'number') return isFinite(s) ? s : null;   // V175: angka tersimpan, bukan teks berformat
   let t = String(s == null ? '' : s).trim().replace(/[\s ]/g, '');
   if (!t) return null;
+  if (t.charAt(0) === '=') return _ckFormula(t);   // V175
   t = t.replace(/[^\d.,\-]/g, '');
   if (!/\d/.test(t)) return null;
   const lc = t.lastIndexOf(','), ld = t.lastIndexOf('.');
@@ -33789,21 +33905,140 @@ function _ckParseNum(s){
   const n = Number(t);
   return isFinite(n) ? n : null;
 }
-function _ckNumStr(n){ return String(Math.round(n * 1000) / 1000); }
+// V175: desimal ditulis dengan koma. Dengan titik, "333.333" terbaca balik sebagai
+// 333333 oleh _ckParseNum (titik + tiga digit = ribuan).
+function _ckNumStr(n){ return String(Math.round(n * 1000) / 1000).replace('.', ','); }
+
+// V175: rumus sederhana gaya Excel di sel isian — "=1000/3", "=SUM(100;250)*2".
+// Dihitung saat sel di-commit (Enter/Tab/pindah fokus) dan HASILNYA yang disimpan;
+// rumusnya sendiri tidak disimpan. Tanpa eval: parser turun-rekursif kecil.
+// Pemisah argumen ";" (Excel Indonesia) atau "," di dalam fungsi; di luar fungsi
+// koma = desimal. Tidak ada rujukan sel (A1) — tabel ini tidak punya alamat sel.
+const _ckRnd = (x, n, f) => { const p = Math.pow(10, Math.trunc(n || 0)); return f(x * p) / p; };
+const CK_FN = {
+  SUM: a => a.reduce((s, v) => s + v, 0),
+  AVERAGE: a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : NaN,
+  MIN: a => Math.min(...a),
+  MAX: a => Math.max(...a),
+  ABS: a => Math.abs(a[0]),
+  INT: a => Math.floor(a[0]),
+  SQRT: a => Math.sqrt(a[0]),
+  ROUND: a => _ckRnd(a[0], a[1], Math.round),
+  ROUNDUP: a => _ckRnd(a[0], a[1], x => x < 0 ? Math.floor(x) : Math.ceil(x)),
+  ROUNDDOWN: a => _ckRnd(a[0], a[1], Math.trunc)
+};
+// Hasil rumus (angka), atau null bila rumus tidak sah / hasilnya bukan angka berhingga.
+function _ckFormula(src){
+  const s = String(src == null ? '' : src).trim().replace(/^=/, '').replace(/\s+/g, '');
+  if (!s) return null;
+  const semi = s.indexOf(';') >= 0;
+  const tok = [], par = [];   // par: tumpukan kurung, true = kurung pembuka fungsi
+  let i = 0;
+  while (i < s.length){
+    const c = s.charAt(i), rest = s.slice(i);
+    let m;
+    if ((m = /^\d+(\.\d+)*/.exec(rest))){
+      let raw = m[0], dec = '';
+      i += raw.length;
+      const inFn = par.indexOf(true) >= 0;
+      const d = /^,(\d+)/.exec(s.slice(i));
+      if (d && (semi || !inFn)){ dec = d[1]; i += d[0].length; }
+      let n;
+      if (dec) n = Number(raw.replace(/\./g, '') + '.' + dec);
+      else if (/^\d{1,3}(\.\d{3})+$/.test(raw)) n = Number(raw.replace(/\./g, ''));   // "1.500" = seribu lima ratus
+      else if (raw.split('.').length > 2) return null;
+      else n = Number(raw);
+      if (s.charAt(i) === '%'){ n /= 100; i++; }
+      tok.push({ t: 'n', v: n });
+    } else if ((m = /^[A-Za-z]+/.exec(rest))){
+      const name = m[0].toUpperCase();
+      i += m[0].length;
+      if (!CK_FN[name] || s.charAt(i) !== '(') return null;
+      tok.push({ t: 'f', v: name });
+    } else if (c === '('){
+      par.push(tok.length > 0 && tok[tok.length - 1].t === 'f');
+      tok.push({ t: '(' }); i++;
+    } else if (c === ')'){
+      par.pop();
+      tok.push({ t: ')' }); i++;
+    } else if (c === ';' || c === ','){
+      tok.push({ t: ',' }); i++;
+    } else if ('+-*/^'.indexOf(c) >= 0){
+      tok.push({ t: c }); i++;
+    } else return null;
+  }
+  let p = 0;
+  const peek = () => tok[p] ? tok[p].t : null;
+  const need = t => { if (peek() !== t) throw new Error('rumus'); p++; };
+  const expr = () => {
+    let v = term();
+    while (peek() === '+' || peek() === '-'){ const o = tok[p++].t, r = term(); v = o === '+' ? v + r : v - r; }
+    return v;
+  };
+  const term = () => {
+    let v = unary();
+    while (peek() === '*' || peek() === '/'){ const o = tok[p++].t, r = unary(); v = o === '*' ? v * r : v / r; }
+    return v;
+  };
+  const unary = () => {
+    if (peek() === '-'){ p++; return -unary(); }
+    if (peek() === '+'){ p++; return unary(); }
+    const v = atom();
+    if (peek() === '^'){ p++; return Math.pow(v, unary()); }
+    return v;
+  };
+  const atom = () => {
+    const k = tok[p];
+    if (!k) throw new Error('rumus');
+    if (k.t === 'n'){ p++; return k.v; }
+    if (k.t === '('){ p++; const v = expr(); need(')'); return v; }
+    if (k.t === 'f'){
+      p++; need('(');
+      const args = [];
+      if (peek() !== ')'){ args.push(expr()); while (peek() === ','){ p++; args.push(expr()); } }
+      need(')');
+      if (!args.length) throw new Error('rumus');
+      return CK_FN[k.v](args);
+    }
+    throw new Error('rumus');
+  };
+  try {
+    const v = expr();
+    // Batas 1e15: di atas itu String() memakai notasi eksponen yang tak terbaca balik.
+    return p === tok.length && typeof v === 'number' && isFinite(v) && Math.abs(v) < 1e15 ? v : null;
+  } catch(e){ return null; }
+}
+// Sel yang berisi "=…" → ganti dengan hasilnya. Dipanggil saat sel di-commit.
+function _ckgResolveFormula(inp){
+  const v = inp.value.trim();
+  if (v.charAt(0) !== '=') return;
+  const r = _ckFormula(v);
+  if (r === null){
+    if (inp._ckBadF !== v) showToast('Rumus tidak dikenali: ' + v + ' — dihitung 0 sampai diperbaiki.', 'warn', 3500);
+    inp._ckBadF = v;
+    return;
+  }
+  inp.value = _ckNumStr(r);
+  _ckgSetState(_ckgDesc(inp), inp.value, inp.dataset.name);
+  inp.classList.toggle('ck-u', _ckHasU(inp.value));
+  _ckSyncTotals(inp.dataset.code);
+}
 
 // --- alamat sel ---
 function _ckgRows(sec){
-  return Array.from(sec.querySelectorAll('.ck-tbl tbody tr')).filter(tr => tr.cells.length > 2 && tr.cells[2].classList.contains('ck-d'));
+  return Array.from(sec.querySelectorAll('.ck-tbl tbody tr')).filter(tr => tr.cells.length > 1 && tr.cells[1].classList.contains('ck-d'));
 }
+// V168: tabel vertikal — alamat grid mengikuti tampilan: r = baris tanggal (0-based),
+// d = kolom mitra (1-based; sel 0 = tanggal). _ckgNd = jumlah kolom mitra.
 function _ckgNd(sec){ return sec.querySelectorAll('.ck-tbl thead th.ck-d').length; }
-function _ckgTd(tr, d){ return tr ? tr.cells[1 + d] : null; }
+function _ckgTd(tr, d){ return tr ? tr.cells[d] : null; }
 function _ckgPos(el){
   const td = el && el.closest ? el.closest('td') : null;
   const tr = td && td.parentElement, sec = td && td.closest('.ck-plant');
   if (!td || !sec || !td.classList.contains('ck-d') || !tr.closest('tbody')) return null;
   const r = _ckgRows(sec).indexOf(tr);
   if (r < 0) return null;
-  return { sec, r, d: Array.prototype.indexOf.call(tr.cells, td) - 1, td };
+  return { sec, r, d: Array.prototype.indexOf.call(tr.cells, td), td };
 }
 function _ckgRect(){
   const g = ckGrid;
@@ -33814,7 +34049,11 @@ function _ckgInp(td){ return td ? td.querySelector('.ck-dinp') : null; }
 function _ckgCellVal(td){
   const i = _ckgInp(td);
   if (i) return i.value;
-  return td && td.dataset.v !== undefined ? td.dataset.v : '';
+  // V175: angka sheet di data-v bertitik ("71.429") — tulis ulang dengan koma supaya
+  // tidak terbaca ribuan saat dijumlah, disalin, atau jadi sumber fill.
+  if (!td || td.dataset.v === undefined || td.dataset.v === '') return '';
+  const n = Number(td.dataset.v);
+  return isFinite(n) ? _ckNumStr(n) : td.dataset.v;
 }
 
 // --- tulis sel lewat deskriptor, supaya undo tetap jalan walau kartu dirender ulang ---
@@ -33881,6 +34120,7 @@ function _ckgWrite(pairs){   // pairs: [{inp, val}] → hanya sel yang berubah
 function _ckgCommitTyping(){
   const a = document.activeElement;
   if (!a || !a.classList || !a.classList.contains('ck-dinp')) return;
+  _ckgResolveFormula(a);   // V175
   const old = a._ckOld === undefined ? '' : a._ckOld;
   if (a.value === old) return;
   ckGrid.undo.push([{ desc: _ckgDesc(a), old, val: a.value }]);
@@ -34113,6 +34353,7 @@ function _ckGridBind(w){
   w.addEventListener('change', ev => {
     const t = ev.target;
     if (!t.classList || !t.classList.contains('ck-dinp')) return;
+    _ckgResolveFormula(t);   // V175
     const old = t._ckOld === undefined ? '' : t._ckOld;
     if (t.value !== old){
       ckGrid.undo.push([{ desc: _ckgDesc(t), old, val: t.value }]);
@@ -34131,13 +34372,13 @@ function _ckGridBind(w){
       ckGrid.drag = true;
       return;
     }
-    // Header tanggal → pilih satu kolom; nama mitra → satu baris.
+    // Header mitra → pilih satu kolom; sel tanggal → satu baris.
     const th = t.closest ? t.closest('.ck-tbl thead th.ck-d') : null;
-    if (th){
+    if (th && !t.closest('input,button')){
       const sec = th.closest('.ck-plant'), rows = _ckgRows(sec);
       if (!rows.length) return;
       ev.preventDefault();
-      const d = Array.prototype.indexOf.call(th.parentElement.cells, th) - 1;
+      const d = Array.prototype.indexOf.call(th.parentElement.cells, th);
       _ckgSelect(sec, { r: 0, d }, { r: rows.length - 1, d });
       return;
     }
@@ -34316,7 +34557,9 @@ function _ckBuildModel(){
 }
 function _ckEditsFromModel(m){
   const out = {};
-  const strDays = days => { const o = {}; Object.keys(days || {}).forEach(k => { o[k] = String(days[k]); }); return o; };
+  // V175: angka tersimpan ditulis dengan koma desimal — String(71.429) = "71.429" akan
+  // terbaca balik 71429 oleh _ckParseNum (titik + tiga digit = ribuan).
+  const strDays = days => { const o = {}; Object.keys(days || {}).forEach(k => { o[k] = typeof days[k] === 'number' ? _ckNumStr(days[k]) : String(days[k]); }); return o; };
   Object.keys((m && m.plants) || {}).forEach(code => {
     const p = m.plants[code], rows = {};
     (p.rows || []).forEach(r => {
