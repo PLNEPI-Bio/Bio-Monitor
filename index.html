@@ -597,8 +597,9 @@ html,body{
 .topbar-refresh-btn:hover{background:var(--panel-3);color:var(--accent)}
 .topbar-refresh-btn:disabled{opacity:.45;cursor:progress}
 .topbar-refresh-btn.running svg{animation:spin 1s linear infinite}
-.topbar-refresh-btn.ok{color:var(--status-ok)}
-.topbar-refresh-btn.fail{color:#ef4444}
+.topbar-refresh-btn.ok{color:var(--status-ok-ink)}
+.topbar-refresh-btn.warn{color:var(--status-warn-ink)}
+.topbar-refresh-btn.fail{color:var(--status-crit-ink)}
 @media (max-width:768px){ .topbar-refresh-group{display:none !important} }
 
 /* DO SharePoint link-health warning (admin-only) */
@@ -21477,8 +21478,9 @@ async function toggleAutoRefreshPause(){
 }
 window.toggleAutoRefreshPause = toggleAutoRefreshPause;
 
-// V166: pemicu manual tiga edge function refresh dari header (admin-only, sama
-// gerbangnya dengan switch pause). Kontrak SELALU lewat ?dry=1 dulu — live run
+// V166: pemicu manual tiga edge function refresh dari header (admin-only, gerbang
+// tampilan sama dengan switch pause — hanya di klien; switch pause sendiri hanya
+// dihormati prod-auto-refresh, tidak oleh DO/kontrak). Kontrak SELALU lewat ?dry=1 dulu — live run
 // langsung pernah menulis 20 dari 48 PLTU (2026-09-11) — lalu minta konfirmasi.
 const MANUAL_REFRESH_FN = {
   do:      { slug: 'do-auto-refresh',      label: 'DO' },
@@ -21486,6 +21488,12 @@ const MANUAL_REFRESH_FN = {
   kontrak: { slug: 'kontrak-auto-refresh', label: 'Kontrak' },
 };
 const _manualRefreshBusy = {};
+// V176: hasil "tidak pasti" (jaringan putus, 504 gateway ~150 dtk, 546 worker kehabisan
+// CPU) — respons buatan gateway tidak membawa CORS, jadi fetch hanya melihat
+// "Failed to fetch" sementara fungsi bisa masih menulis di server. Selama jeda ini
+// klik ulang minta konfirmasi supaya tidak memicu run kedua yang tumpang-tindih.
+const MANUAL_REFRESH_COOLDOWN_MS = 3 * 60 * 1000;
+const _manualRefreshUncertainUntil = {};
 
 function renderRefreshBtns(){
   const g = document.getElementById('topbarRefreshGroup');
@@ -21508,11 +21516,14 @@ async function _callRefreshFn(slug, dry){
     });
     let body = null;
     try { body = await res.json(); } catch(e){}
-    if (!body) body = { ok: false, log: ['HTTP ' + res.status + ' ' + res.statusText] };
+    // Tanpa body JSON + 5xx = jawaban gateway/runtime (504, 546), bukan putusan fungsi.
+    if (!body) body = { ok: false, uncertain: res.status >= 500, log: ['HTTP ' + res.status + ' ' + res.statusText] };
     if (!res.ok) body.ok = false;
     return body;
   } catch(e){
-    return { ok: false, log: [e && e.name === 'AbortError' ? 'Timeout (>170 dtk) — cek refresh_heartbeat.' : String(e)] };
+    // V176: TypeError "Failed to fetch" = respons tanpa CORS (biasanya 504/546) atau
+    // jaringan putus; AbortError = batas klien. Keduanya: hasil di server tidak diketahui.
+    return { ok: false, uncertain: true, log: [e && e.name === 'AbortError' ? 'Timeout klien (>170 dtk).' : String(e && e.message || e)] };
   } finally { clearTimeout(timer); }
 }
 
@@ -21520,15 +21531,48 @@ function _refreshLogTail(r, n){
   const log = (r && Array.isArray(r.log)) ? r.log : [];
   return log.slice(-n).join('\n');
 }
+const _REFRESH_UNCERTAIN_MSG = 'Status TIDAK PASTI — koneksi putus atau gateway memutus request (504/546). ' +
+  'Fungsi bisa saja masih berjalan dan menulis data di server. Cek tabel refresh_heartbeat sebelum mengulang.';
+
+// V176: ringkasan dry-run kontrak untuk dialog konfirmasi. Log dry-run berakhir dengan
+// satu baris per PLTU (urut abjad), jadi ekor log tidak berguna untuk memutuskan;
+// yang dibutuhkan jumlah PLTU vs yang tersimpan sekarang + daftar carried/failed.
+async function _kontrakDrySummary(dry){
+  const log = (dry && Array.isArray(dry.log)) ? dry.log : [];
+  const pick = re => log.map(l => String(l).trim()).filter(l => re.test(l));
+  const m = log.map(l => /^DRY RUN - no write performed\. (\d+) PLTU/.exec(l)).find(Boolean);
+  const total = m ? Number(m[1]) : null;
+  let stored = null;
+  try {
+    if (supabaseClient){
+      const { data } = await supabaseClient.from('kontrak_pasokan').select('n_pltu').eq('id', 1).single();
+      if (data && data.n_pltu != null) stored = Number(data.n_pltu);
+    }
+  } catch(e){}
+  const lines = [];
+  lines.push('Hasil dry-run: ' + (total === null ? '?' : total) + ' PLTU' +
+             (stored === null ? '' : '  ·  tersimpan sekarang: ' + stored + ' PLTU' +
+               (total !== null && total < stored ? '  ⚠ BERKURANG ' + (stored - total) : '')));
+  pick(/^Parsed \d+ plants/).forEach(l => lines.push(l));
+  pick(/^FORCE /).forEach(l => lines.push('⚠ ' + l));
+  pick(/^carried over/).forEach(l => lines.push('⚠ ' + l));
+  pick(/^failed:/).forEach(l => lines.push('⚠ ' + l));
+  pick(/^no "TOTAL REALISASI DO" row/).forEach(l => lines.push(l));
+  return lines.join('\n');
+}
 
 async function runManualRefresh(key){
   if (!canControlAutoRefresh()) return;
   const cfg = MANUAL_REFRESH_FN[key];
   if (!cfg || _manualRefreshBusy[key]) return;
+  const until = _manualRefreshUncertainUntil[key] || 0;
+  if (until > Date.now() && !confirm(cfg.label + ': run sebelumnya berstatus TIDAK PASTI dan mungkin masih berjalan di server ' +
+      '(jeda aman ' + Math.ceil((until - Date.now()) / 60000) + ' menit lagi).\n\n' +
+      'Cek refresh_heartbeat dulu. Tetap jalankan lagi sekarang?')) return;
   const btn = document.querySelector('.topbar-refresh-btn[data-fn="' + key + '"]');
   const setState = (cls) => {
     if (!btn) return;
-    btn.classList.remove('running', 'ok', 'fail');
+    btn.classList.remove('running', 'ok', 'warn', 'fail');
     if (cls) btn.classList.add(cls);
     btn.disabled = cls === 'running';
   };
@@ -21539,13 +21583,16 @@ async function runManualRefresh(key){
     if (key === 'kontrak'){
       showToast('Kontrak: dry-run berjalan (tidak menulis apa pun)…', 'info', 4000);
       const dry = await _callRefreshFn(cfg.slug, true);
+      console.log('[ManualRefresh] kontrak dry-run', dry);
       if (!dry.ok){
         setState('fail');
-        alert('Dry-run kontrak GAGAL — live run dibatalkan.\n\n' + _refreshLogTail(dry, 10));
+        alert('Dry-run kontrak GAGAL — live run dibatalkan.\n\n' +
+              (dry.uncertain ? 'Koneksi putus / gateway timeout. Dry-run tidak menulis apa pun; aman diulang.\n\n' : '') +
+              _refreshLogTail(dry, 10));
         return;
       }
-      if (!confirm('Dry-run kontrak OK. Ringkasan:\n\n' + _refreshLogTail(dry, 8) +
-                   '\n\nJalankan refresh kontrak SUNGGUHAN sekarang?')){
+      if (!confirm('Dry-run kontrak OK (belum ada yang ditulis).\n\n' + await _kontrakDrySummary(dry) +
+                   '\n\nRincian per PLTU ada di console (F12).\n\nJalankan refresh kontrak SUNGGUHAN sekarang?')){
         setState(null);
         return;
       }
@@ -21553,12 +21600,22 @@ async function runManualRefresh(key){
     showToast(cfg.label + ': refresh berjalan…', 'info', 3000);
     result = await _callRefreshFn(cfg.slug, false);
     console.log('[ManualRefresh] ' + cfg.slug, result);
-    if (result.ok){
+    const paused = result.ok && (result.log || []).some(l => /Auto-refresh is PAUSED/.test(l));
+    if (paused){
+      // V176: prod menghormati switch pause → ok:true tanpa refresh. Bukan sukses.
+      setState('warn');
+      showToast(cfg.label + ': dilewati — auto-refresh sedang di-PAUSE. Aktifkan dulu lewat tombol Auto-refresh.', 'warn', 7000);
+    } else if (result.ok){
+      _manualRefreshUncertainUntil[key] = 0;
       setState('ok');
       showToast(cfg.label + ': ' + (_refreshLogTail(result, 1) || 'selesai'), 'ok', 6000);
       if (key === 'do' && typeof fetchDoData === 'function') await fetchDoData();
       if (key === 'prod' && typeof syncDashboardIfStale === 'function') await syncDashboardIfStale();
       if (key === 'kontrak' && typeof fetchKontrakPasokan === 'function') await fetchKontrakPasokan();
+    } else if (result.uncertain){
+      _manualRefreshUncertainUntil[key] = Date.now() + MANUAL_REFRESH_COOLDOWN_MS;
+      setState('warn');
+      alert(cfg.label + ': ' + _REFRESH_UNCERTAIN_MSG + '\n\n' + _refreshLogTail(result, 3));
     } else {
       setState('fail');
       alert(cfg.label + ': refresh GAGAL.\n\n' + _refreshLogTail(result, 10));
@@ -21567,7 +21624,7 @@ async function runManualRefresh(key){
     _manualRefreshBusy[key] = false;
     if (btn){
       btn.disabled = false;
-      setTimeout(() => btn.classList.remove('ok', 'fail'), 8000);
+      setTimeout(() => btn.classList.remove('ok', 'warn', 'fail'), 8000);
     }
   }
 }
@@ -33868,7 +33925,13 @@ function _ckBind(){
       const ed = _ckEd(code);
       ed.done = !ed.done;
       ckState.dirty = true;
-      _ckRenderPlant(code);
+      // V176: ubah di tempat, bukan render ulang — fokus tombol & seleksi grid tetap.
+      const sec = document.getElementById('ckP-' + _ckId(code));
+      if (sec) sec.classList.toggle('done', ed.done);
+      t.classList.toggle('on', ed.done);
+      t.setAttribute('aria-pressed', ed.done ? 'true' : 'false');
+      t.textContent = ed.done ? '✓ Selesai' : 'Selesai';
+      t.title = ed.done ? 'Klik untuk membatalkan tanda selesai' : 'Tandai checkpoint PLTU ini sudah selesai';
       _ckSyncStatus();
     } else if (act === 'del'){
       const ed = _ckEd(code);
