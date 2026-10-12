@@ -4162,6 +4162,22 @@ html,body{
 .fas-vol-table td.podt-real{color:var(--accent)}
 .fas-vol-table td.dim{color:var(--text-dim);opacity:.4}
 .fas-vol-table td.man{text-decoration:underline dotted;text-underline-offset:3px;text-decoration-thickness:1px}
+/* V177: bulan berjalan dari Rekap Muat + breakdown harian */
+.fas-vol-table td.rm{font-style:italic;text-decoration:underline dashed;text-underline-offset:3px;text-decoration-thickness:1px}
+.fas-vol-table tr.fas-vol-rm-row{cursor:pointer}
+.fas-vol-table tr.fas-vol-rm-row:hover td{background:var(--panel-3)}
+.fas-vol-rm-caret{display:inline-block;margin-right:4px;transition:transform .15s}
+.fas-vol-rm-row.open .fas-vol-rm-caret{transform:rotate(90deg)}
+.fas-vol-table tr.fas-vol-rm-detail > td{
+  padding:4px 0 8px;text-transform:none;letter-spacing:0;font-size:10.5px;color:var(--text);text-align:left;background:var(--panel-3);
+}
+.fas-vol-rm-table{width:100%;border-collapse:collapse;font-size:10px}
+.fas-vol-rm-table th{padding:4px 6px;text-align:right;color:var(--text-dim);font-weight:600;font-size:8.5px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+.fas-vol-table .fas-vol-rm-table td{padding:3px 6px;font-size:10px;text-transform:none;letter-spacing:0;color:var(--text)}
+.fas-vol-table .fas-vol-rm-table td:first-child,.fas-vol-rm-table th:first-child{text-align:left;color:var(--text-dim)}
+.fas-vol-table .fas-vol-rm-table td.podt-real{color:var(--accent)}
+.fas-vol-table .fas-vol-rm-table tfoot td{font-weight:700;border-top:1px solid var(--border);background:none}
+.fas-vol-rm-src{font-size:9.5px;color:var(--text-dim);margin:5px 6px 0}
 .fas-vol-table tfoot td{font-weight:700;border-top:2px solid var(--accent);background:var(--panel-3)}
 .fas-vol-table input{
   width:72px;text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
@@ -26249,6 +26265,9 @@ function fasKontrakVolumeSectionsHTML(f){
   const volNote = auto
     ? 'Ditarik otomatis dari Daftar Kontrak (cocok Nomor Kontrak + PLTU). Nilai bergaris bawah = input manual yang menimpa bulan kosong. Klik “Edit Volume” untuk menambah.'
     : 'Belum ada kontrak cocok di Daftar Kontrak. Isi manual via “Edit Volume”, atau samakan Nomor Kontrak & PLTU Terpasok dengan Daftar Kontrak.';
+  const rmNote = FAS_RM_SITE[f.nama]
+    ? ' Bulan berjalan: Real bergaris putus = sementara dari sheet Rekap Muat sampai Kontrak Auto Refresh terisi; klik baris bulannya untuk rincian harian.'
+    : '';
   html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
   html += '<div class="fas-vol-head">';
   html += '<div class="pembangkit-detail-cell-label" style="margin:0;display:flex;align-items:center;gap:7px">Volume Terpasok ' + volBadge + '</div>';
@@ -26257,16 +26276,67 @@ function fasKontrakVolumeSectionsHTML(f){
   html += '</div>';
   // V70.1: tombol edit dipindah ke bawah head (di dalam view) agar tak terpotong.
   html += '<button class="fas-vol-edit-btn" id="fasVolEditBtn" style="width:100%;margin-top:10px">✎ Edit Volume</button>';
-  html += '<div class="fas-vol-note">' + volNote + '</div>';
+  html += '<div class="fas-vol-note">' + volNote + rmNote + '</div>';
   html += '<div id="fasVolDetailTableWrap">' + fasVolDetailTableHTML(f.nama, fasDetailVolYear) + '</div>';
   html += '</div></div>';
 
   return html;
 }
 
+// V177: Rekap Muat harian (sheet timbang) untuk bulan berjalan. Diambil lewat
+// edge function `rekap-muat` — ID sheet ada di tabel checkpoint_source, bukan
+// di sini (repo publik). Fungsi mengembalikan Σ per hari kolom N (Product),
+// O (Limbah), P (Netto = N + O), dalam ton.
+const FAS_RM_SITE = { 'Tasikmalaya': 'TSM' };
+const FAS_RM_FN_URL = SUPABASE_URL + '/functions/v1/rekap-muat';
+const FAS_RM_TTL = 10 * 60 * 1000;
+const fasRmCache = {};     // site -> { at, months, err, promise }
+let fasVolRmOpen = false;  // breakdown harian bulan berjalan terbuka?
+let fasVolCurNama = null;  // fasilitas yang tabel volumenya sedang tampil
+
+function _fasRmNow(){ const d = new Date(); return { y: String(d.getFullYear()), m: d.getMonth() }; }
+// Data Rekap Muat bulan berjalan untuk fasilitas+tahun ini, atau null.
+function fasRmMonth(nama, year){
+  const site = FAS_RM_SITE[nama];
+  const now = _fasRmNow();
+  if (!site || year !== now.y) return null;
+  const c = fasRmCache[site];
+  const key = now.y + '-' + String(now.m + 1).padStart(2, '0');
+  const mo = c && c.months && c.months[key];
+  return mo && mo.days && mo.days.length ? Object.assign({ i: now.m, at: c.at }, mo) : null;
+}
+function fasRmLoad(nama){
+  const site = FAS_RM_SITE[nama];
+  if (!site) return Promise.resolve(null);
+  const c = fasRmCache[site];
+  if (c && c.promise) return c.promise;
+  if (c && Date.now() - c.at < FAS_RM_TTL) return Promise.resolve(c);
+  const entry = fasRmCache[site] = Object.assign({}, c || {});
+  entry.promise = fetch(FAS_RM_FN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY },
+    body: JSON.stringify({ site })
+  }).then(async resp => {
+    const j = await resp.json().catch(() => ({}));
+    if (!resp.ok || !j.ok) throw new Error(j.error || ('HTTP ' + resp.status));
+    entry.months = j.months || {}; entry.err = null;
+  }).catch(e => {
+    entry.err = (e && e.message) || String(e); // data lama (bila ada) tetap dipakai
+  }).then(() => { entry.at = Date.now(); entry.promise = null; return entry; });
+  return entry.promise;
+}
+function _fasVolRerender(){
+  const wrap = document.getElementById('fasVolDetailTableWrap');
+  if (wrap && fasVolCurNama) wrap.innerHTML = fasVolDetailTableHTML(fasVolCurNama, fasDetailVolYear);
+}
+function fasVolToggleRm(){ fasVolRmOpen = !fasVolRmOpen; _fasVolRerender(); }
+window.fasVolToggleRm = fasVolToggleRm;
+
 // V70: Nilai efektif per bulan = gabungan otomatis (kontrak) + manual.
 // Manual (>0) MENIMPA nilai otomatis di bulan itu — dipakai mengisi bulan
 // yang realisasi otomatisnya masih kosong. src: 'manual' | 'auto' | 'none'.
+// V177: + 'sheet' — Real bulan berjalan dari Rekap Muat (Σ Netto) selama
+// otomatis & manual masih kosong; begitu Kontrak Auto Refresh terisi, ia menang.
 function fasVolEffective(nama, year){
   const auto = fasAutoVolume(nama);
   const aY = auto ? (auto.byYear[year] || {}) : {};
@@ -26280,35 +26350,63 @@ function fasVolEffective(nama, year){
     doArr[i]   = md > 0 ? md : ad;  doSrc[i]   = md > 0 ? 'manual' : (ad > 0 ? 'auto' : 'none');
     realArr[i] = mr > 0 ? mr : ar;  realSrc[i] = mr > 0 ? 'manual' : (ar > 0 ? 'auto' : 'none');
   }
-  return { doArr, realArr, doSrc, realSrc, hasAuto: !!auto };
+  const rm = fasRmMonth(nama, year);
+  if (rm && realSrc[rm.i] === 'none' && rm.total && rm.total.netto > 0){
+    realArr[rm.i] = rm.total.netto; realSrc[rm.i] = 'sheet';
+  }
+  return { doArr, realArr, doSrc, realSrc, hasAuto: !!auto, rm };
 }
 
 // Tabel volume (read-only) untuk panel detail. V70: sel manual ditandai.
 function fasVolDetailTableHTML(nama, year){
   const eff = fasVolEffective(nama, year);
-  const { doArr, realArr, doSrc, realSrc } = eff;
+  const { doArr, realArr, doSrc, realSrc, rm } = eff;
   const cell = (val, src, cls) => {
-    const man = src === 'manual';
-    const c = cls + (val ? '' : ' dim') + (man ? ' man' : '');
-    const tip = man ? ' title="Input manual"' : '';
+    const man = src === 'manual', sh = src === 'sheet';
+    const c = cls + (val ? '' : ' dim') + (man ? ' man' : '') + (sh ? ' rm' : '');
+    const tip = man ? ' title="Input manual"' : (sh ? ' title="Sementara dari Rekap Muat — menunggu Kontrak Auto Refresh"' : '');
     return '<td class="' + c + '"' + tip + '>' + (val ? fmtInt(val) : '—') + '</td>';
   };
+  const f2 = v => v ? v.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
   let doTot = 0, realTot = 0;
   let h = '<table class="fas-vol-table"><thead><tr><th>Bulan</th><th>DO</th><th>Real</th></tr></thead><tbody>';
   for (let i = 0; i < 12; i++){
     doTot += doArr[i] || 0; realTot += realArr[i] || 0;
-    h += '<tr><td>' + MONTHS[i] + '</td>' +
+    // V177: baris bulan berjalan bisa diklik → breakdown harian Rekap Muat.
+    const rmRow = rm && rm.i === i;
+    h += (rmRow
+      ? '<tr class="fas-vol-rm-row' + (fasVolRmOpen ? ' open' : '') + '" onclick="fasVolToggleRm()" title="Klik untuk breakdown harian (Rekap Muat)"><td><span class="fas-vol-rm-caret">▸</span>' + MONTHS[i] + '</td>'
+      : '<tr><td>' + MONTHS[i] + '</td>') +
       cell(doArr[i] || 0, doSrc[i], 'podt-do') +
       cell(realArr[i] || 0, realSrc[i], 'podt-real') + '</tr>';
+    if (rmRow && fasVolRmOpen){
+      const t = rm.total || {};
+      let d = '<table class="fas-vol-rm-table"><thead><tr><th>Tgl</th><th>Truk</th><th>Product</th><th>Limbah</th><th>Netto</th></tr></thead><tbody>';
+      rm.days.forEach(x => {
+        d += '<tr><td>' + x.d + ' ' + MONTHS[i] + '</td><td>' + x.truk + '</td><td>' + f2(x.product) + '</td><td>' + f2(x.limbah) + '</td><td class="podt-real">' + f2(x.netto) + '</td></tr>';
+      });
+      d += '</tbody><tfoot><tr><td>Total</td><td>' + (t.truk || 0) + '</td><td>' + f2(t.product) + '</td><td>' + f2(t.limbah) + '</td><td class="podt-real">' + f2(t.netto) + '</td></tr></tfoot></table>';
+      const upd = rm.at ? new Date(rm.at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+      d += '<div class="fas-vol-rm-src">Sumber: sheet Rekap Muat (ton) — Σ per tanggal kolom N/O/P' + (upd ? ' · dimuat ' + upd : '') +
+        (realSrc[i] !== 'sheet' ? ' · Real di atas memakai ' + (realSrc[i] === 'manual' ? 'input manual' : 'Kontrak Auto Refresh') : '') + '</div>';
+      h += '<tr class="fas-vol-rm-detail"><td colspan="3">' + d + '</td></tr>';
+    }
   }
   h += '</tbody><tfoot><tr><td>Total</td>' +
     '<td class="podt-do' + (doTot ? '' : ' dim') + '">' + (doTot ? fmtInt(doTot) : '—') + '</td>' +
     '<td class="podt-real' + (realTot ? '' : ' dim') + '">' + (realTot ? fmtInt(realTot) : '—') + '</td></tr></tfoot></table>';
+  const rmc = FAS_RM_SITE[nama] && year === _fasRmNow().y && fasRmCache[FAS_RM_SITE[nama]];
+  if (rmc && rmc.err) h += '<div class="fas-vol-rm-src">Rekap Muat gagal dimuat: ' + escapeHtml(rmc.err) + '</div>';
   return h;
 }
 
 // Pasang handler pada seksi (dipanggil setelah panel.innerHTML).
 function wireFasKontrakVolumeSections(f){
+  // V177: muat Rekap Muat (bila fasilitas punya sheet), lalu gambar ulang tabel.
+  fasVolCurNama = f.nama;
+  if (FAS_RM_SITE[f.nama]){
+    fasRmLoad(f.nama).then(() => { if (fasVolCurNama === f.nama) _fasVolRerender(); });
+  }
   const yearSel = document.getElementById('fasDetailVolYearSel');
   if (yearSel){
     yearSel.onchange = () => {
