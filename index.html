@@ -4449,12 +4449,31 @@ html,body{
     width:100%!important;max-width:100%!important;
     max-height:90vh!important;border-radius:16px 16px 0 0!important;
   }
+  /* V178: the head is a 3-item flex row (title + 2 buttons). The buttons are
+     flex-shrink:0, so on phones they refused to shrink and squeezed
+     .pemasok-modal-title-wrap down to a sliver — the mitra name wrapped one or
+     two characters per line. Wrapping the row lets the title claim a full-width
+     line and pushes both buttons to a second line instead. */
+  #pemasokModal .pemasok-modal-head{flex-wrap:wrap;padding:14px 16px;gap:8px 10px}
+  #pemasokModal .pemasok-modal-title-wrap{flex:1 1 100%}
+  .pemasok-modal-mitra-btn{margin-right:0!important;flex:1}
+  #pemasokModal .pemasok-modal-close{padding:8px 10px;font-size:10px}
   .pemasok-contract-head{grid-template-columns:repeat(2, 1fr)}
   .pemasok-modal-body{padding:14px}
   .pemasok-contract-info{grid-template-columns:1fr}
   .pemasok-contract-info dt{margin-top:4px}
-  .pemasok-monthly-table{font-size:9px}
+  .pemasok-monthly-table{font-size:10px}
   .pemasok-monthly-table th,.pemasok-monthly-table td{padding:4px 5px}
+  /* V178: freeze the Month column while the 16-column split table scrolls
+     horizontally — without it, swiping right loses the row label entirely. */
+  .pemasok-monthly-table-split th.pm-th-month,
+  .pemasok-monthly-table-split td.pm-td-month{
+    position:sticky;left:0;z-index:2;
+    background:var(--panel-2);
+    box-shadow:3px 0 6px -3px rgba(15,42,66,.3);
+  }
+  .pemasok-monthly-table-split th.pm-th-month{background:var(--panel-3);z-index:3}
+  .pemasok-monthly-table-split tfoot td.pm-td-month{background:var(--panel-3)}
 }
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border)}
@@ -10243,7 +10262,7 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
         <div class="pemasok-modal-meta" id="pemasokModalMeta"></div>
       </div>
       <!-- V-MITRA: pintu kedua ke Ringkasan Mitra (yang pertama palet Ctrl+K). -->
-      <button class="pemasok-modal-close" id="pemasokModalMitraBtn" style="margin-right:8px" title="Buka ringkasan kinerja historis mitra ini" onclick="openMitraSummary(window._pemasokOpenArgs &amp;&amp; window._pemasokOpenArgs[0])">Ringkasan mitra →</button>
+      <button class="pemasok-modal-close pemasok-modal-mitra-btn" id="pemasokModalMitraBtn" style="margin-right:8px" title="Buka ringkasan kinerja historis mitra ini" onclick="openMitraSummary(window._pemasokOpenArgs &amp;&amp; window._pemasokOpenArgs[0])">Ringkasan mitra →</button>
       <button class="pemasok-modal-close" id="pemasokModalClose" title="Close">× CLOSE</button>
     </div>
     <div class="pemasok-modal-body" id="pemasokModalBody"></div>
