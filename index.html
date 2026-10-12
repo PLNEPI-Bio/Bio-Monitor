@@ -26285,7 +26285,7 @@ function fasKontrakVolumeSectionsHTML(f){
     ? 'Ditarik otomatis dari Daftar Kontrak (cocok Nomor Kontrak + PLTU). Nilai bergaris bawah = input manual yang menimpa bulan kosong. Klik “Edit Volume” untuk menambah.'
     : 'Belum ada kontrak cocok di Daftar Kontrak. Isi manual via “Edit Volume”, atau samakan Nomor Kontrak & PLTU Terpasok dengan Daftar Kontrak.';
   const rmNote = FAS_RM_SITE[f.nama]
-    ? ' Bulan berjalan: Real bergaris putus = sementara dari sheet Rekap Muat sampai Kontrak Auto Refresh terisi; klik baris bulannya untuk rincian harian.'
+    ? ' Bulan berjalan: Real bergaris putus = sementara dari sheet ' + FAS_RM_SRC[FAS_RM_SITE[f.nama]] + ' sampai Kontrak Auto Refresh terisi; klik baris bulannya untuk rincian harian.'
     : '';
   html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
   html += '<div class="fas-vol-head">';
@@ -26306,7 +26306,11 @@ function fasKontrakVolumeSectionsHTML(f){
 // edge function `rekap-muat` — ID sheet ada di tabel checkpoint_source, bukan
 // di sini (repo publik). Fungsi mengembalikan Σ per hari kolom N (Product),
 // O (Limbah), P (Netto = N + O), dalam ton.
-const FAS_RM_SITE = { 'Tasikmalaya': 'TSM' };
+// V178: + Ciamis (sheet Tally Harian: J Kotor, L Tara, N Netto). Kolom rincian
+// mengikuti `fields` dari respons fungsi.
+const FAS_RM_SITE = { 'Tasikmalaya': 'TSM', 'Ciamis': 'CMS' };
+const FAS_RM_SRC = { TSM: 'Rekap Muat', CMS: 'Tally Harian' };
+const FAS_RM_COLS = { TSM: 'N/O/P', CMS: 'J/L/N' };
 const FAS_RM_FN_URL = SUPABASE_URL + '/functions/v1/rekap-muat';
 const FAS_RM_TTL = 10 * 60 * 1000;
 const fasRmCache = {};     // site -> { at, months, err, promise }
@@ -26322,7 +26326,7 @@ function fasRmMonth(nama, year){
   const c = fasRmCache[site];
   const key = now.y + '-' + String(now.m + 1).padStart(2, '0');
   const mo = c && c.months && c.months[key];
-  return mo && mo.days && mo.days.length ? Object.assign({ i: now.m, at: c.at }, mo) : null;
+  return mo && mo.days && mo.days.length ? Object.assign({ i: now.m, at: c.at, site, fields: c.fields || [] }, mo) : null;
 }
 function fasRmLoad(nama){
   const site = FAS_RM_SITE[nama];
@@ -26338,7 +26342,7 @@ function fasRmLoad(nama){
   }).then(async resp => {
     const j = await resp.json().catch(() => ({}));
     if (!resp.ok || !j.ok) throw new Error(j.error || ('HTTP ' + resp.status));
-    entry.months = j.months || {}; entry.err = null;
+    entry.months = j.months || {}; entry.fields = j.fields || []; entry.err = null;
   }).catch(e => {
     entry.err = (e && e.message) || String(e); // data lama (bila ada) tetap dipakai
   }).then(() => { entry.at = Date.now(); entry.promise = null; return entry; });
@@ -26383,7 +26387,7 @@ function fasVolDetailTableHTML(nama, year){
   const cell = (val, src, cls) => {
     const man = src === 'manual', sh = src === 'sheet';
     const c = cls + (val ? '' : ' dim') + (man ? ' man' : '') + (sh ? ' rm' : '');
-    const tip = man ? ' title="Input manual"' : (sh ? ' title="Sementara dari Rekap Muat — menunggu Kontrak Auto Refresh"' : '');
+    const tip = man ? ' title="Input manual"' : (sh ? ' title="Sementara dari sheet harian — menunggu Kontrak Auto Refresh"' : '');
     return '<td class="' + c + '"' + tip + '>' + (val ? fmtInt(val) : '—') + '</td>';
   };
   const f2 = v => v ? v.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
@@ -26394,19 +26398,21 @@ function fasVolDetailTableHTML(nama, year){
     // V177: baris bulan berjalan bisa diklik → breakdown harian Rekap Muat.
     const rmRow = rm && rm.i === i;
     h += (rmRow
-      ? '<tr class="fas-vol-rm-row' + (fasVolRmOpen ? ' open' : '') + '" onclick="fasVolToggleRm()" title="Klik untuk breakdown harian (Rekap Muat)"><td><span class="fas-vol-rm-caret">▸</span>' + MONTHS[i] + '</td>'
+      ? '<tr class="fas-vol-rm-row' + (fasVolRmOpen ? ' open' : '') + '" onclick="fasVolToggleRm()" title="Klik untuk breakdown harian"><td><span class="fas-vol-rm-caret">▸</span>' + MONTHS[i] + '</td>'
       : '<tr><td>' + MONTHS[i] + '</td>') +
       cell(doArr[i] || 0, doSrc[i], 'podt-do') +
       cell(realArr[i] || 0, realSrc[i], 'podt-real') + '</tr>';
     if (rmRow && fasVolRmOpen){
       const t = rm.total || {};
-      let d = '<table class="fas-vol-rm-table"><thead><tr><th>Tgl</th><th>Truk</th><th>Product</th><th>Limbah</th><th>Netto</th></tr></thead><tbody>';
+      const flds = rm.fields.length ? rm.fields : [{ key: 'netto', label: 'Netto' }];
+      const vals = x => flds.map(fl => '<td' + (fl.key === 'netto' ? ' class="podt-real"' : '') + '>' + f2(x[fl.key]) + '</td>').join('');
+      let d = '<table class="fas-vol-rm-table"><thead><tr><th>Tgl</th><th>Truk</th>' + flds.map(fl => '<th>' + escapeHtml(fl.label) + '</th>').join('') + '</tr></thead><tbody>';
       rm.days.forEach(x => {
-        d += '<tr><td>' + x.d + ' ' + MONTHS[i] + '</td><td>' + x.truk + '</td><td>' + f2(x.product) + '</td><td>' + f2(x.limbah) + '</td><td class="podt-real">' + f2(x.netto) + '</td></tr>';
+        d += '<tr><td>' + x.d + ' ' + MONTHS[i] + '</td><td>' + x.truk + '</td>' + vals(x) + '</tr>';
       });
-      d += '</tbody><tfoot><tr><td>Total</td><td>' + (t.truk || 0) + '</td><td>' + f2(t.product) + '</td><td>' + f2(t.limbah) + '</td><td class="podt-real">' + f2(t.netto) + '</td></tr></tfoot></table>';
+      d += '</tbody><tfoot><tr><td>Total</td><td>' + (t.truk || 0) + '</td>' + vals(t) + '</tr></tfoot></table>';
       const upd = rm.at ? new Date(rm.at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
-      d += '<div class="fas-vol-rm-src">Sumber: sheet Rekap Muat (ton) — Σ per tanggal kolom N/O/P' + (upd ? ' · dimuat ' + upd : '') +
+      d += '<div class="fas-vol-rm-src">Sumber: sheet ' + (FAS_RM_SRC[rm.site] || '') + ' (ton) — Σ per tanggal kolom ' + (FAS_RM_COLS[rm.site] || '') + (upd ? ' · dimuat ' + upd : '') +
         (realSrc[i] !== 'sheet' ? ' · Real di atas memakai ' + (realSrc[i] === 'manual' ? 'input manual' : 'Kontrak Auto Refresh') : '') + '</div>';
       h += '<tr class="fas-vol-rm-detail"><td colspan="3">' + d + '</td></tr>';
     }
@@ -26415,7 +26421,7 @@ function fasVolDetailTableHTML(nama, year){
     '<td class="podt-do' + (doTot ? '' : ' dim') + '">' + (doTot ? fmtInt(doTot) : '—') + '</td>' +
     '<td class="podt-real' + (realTot ? '' : ' dim') + '">' + (realTot ? fmtInt(realTot) : '—') + '</td></tr></tfoot></table>';
   const rmc = FAS_RM_SITE[nama] && year === _fasRmNow().y && fasRmCache[FAS_RM_SITE[nama]];
-  if (rmc && rmc.err) h += '<div class="fas-vol-rm-src">Rekap Muat gagal dimuat: ' + escapeHtml(rmc.err) + '</div>';
+  if (rmc && rmc.err) h += '<div class="fas-vol-rm-src">Data harian (' + FAS_RM_SRC[FAS_RM_SITE[nama]] + ') gagal dimuat: ' + escapeHtml(rmc.err) + '</div>';
   return h;
 }
 
