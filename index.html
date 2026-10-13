@@ -7739,16 +7739,7 @@ body.gf-on .gf-bar{
       <div class="brand-title">PT PLN Energi Primer Indonesia</div>
       <div class="brand-sub">Bioenergy Supply Monitoring · FY 2026</div>
     </div>
-    <!-- V49: Calendar button moved to left, next to brand -->
-    <button class="topbar-calendar-btn" id="topbarCalendarBtn" onclick="switchTab('calendar')" title="Kalender Tim">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" width="18" height="18">
-        <rect x="1" y="3" width="14" height="12" rx="1.5"/>
-        <path d="M1 7h14M5 1v4M11 1v4"/>
-        <circle cx="5" cy="10.5" r="1" fill="currentColor" stroke="none"/>
-        <circle cx="8" cy="10.5" r="1" fill="currentColor" stroke="none"/>
-        <circle cx="11" cy="10.5" r="1" fill="currentColor" stroke="none"/>
-      </svg>
-    </button>
+    <!-- V179: tombol kalender di sini dipindah menjadi tab "Kalender & Meeting". -->
   </div>
   <div class="topbar-right">
 
@@ -7862,6 +7853,10 @@ body.gf-on .gf-bar{
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 1h7l3 3v11H3zM10 1v3h3M6 8l1.5 1.5L9 8m-3 3h4"/></svg>
     LAPORAN
   </button>
+  <button class="tab" data-tab="calendar">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 7h13M5 1.5v3M11 1.5v3M5 10h2M5 12.2h4"/></svg>
+    KALENDER &amp; MEETING
+  </button>
 </nav>
 
 <!-- V118: Bar filter global. Muncul di SEMUA tab (peta termasuk) begitu ada chip
@@ -7929,6 +7924,10 @@ body.gf-on .gf-bar{
   <button class="mobile-more-item" data-mob-tab="laporan" onclick="mobNav('laporan')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12v12H2zM2 10l3-3 3 3 5-5"/></svg>
     Laporan
+  </button>
+  <button class="mobile-more-item" data-mob-tab="calendar" onclick="mobNav('calendar')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="3" width="13" height="11.5" rx="1.5"/><path d="M1.5 7h13M5 1.5v3M11 1.5v3"/></svg>
+    Kalender &amp; Meeting
   </button>
   <button class="mobile-more-item" data-mob-tab="berita" onclick="mobNav('berita')">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h10v10H2zM12 5h2v8a1 1 0 0 1-1 1H4M4 6h6M4 8h6M4 10h4"/></svg>
@@ -9563,12 +9562,122 @@ body.gf-on .gf-bar{
   </div>
 </div>
 
+<!-- V179: NOTULENSI per event kalender. Disimpan di tabel `calendar_notulensi`
+     (1 baris per event, FK cascade ke calendar_events), lampiran di bucket Storage
+     privat `notulensi`. Format cetak mengikuti template Notulen Rapat PLN EPI. -->
+<style>
+.nt-modal{max-width:880px}
+.nt-modal .fas-modal-head small{display:block;font-size:11px;font-weight:500;color:var(--text-dim);margin-top:2px}
+.nt-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px}
+.nt-grid .nt-span2{grid-column:span 2}
+.nt-grid .nt-span4{grid-column:1/-1}
+.nt-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.nt-field > span{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-dim)}
+.nt-field input,.nt-field textarea{width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font:500 12px 'Plus Jakarta Sans',sans-serif;color:var(--text-bright);resize:vertical}
+.nt-field input:focus,.nt-field textarea:focus,.nt-rte:focus{outline:none;border-color:var(--accent)}
+.nt-rte-wrap{border:1px solid var(--border);border-radius:8px;background:var(--panel-2);overflow:hidden}
+.nt-rte-wrap:focus-within{border-color:var(--accent)}
+.nt-rte-bar{display:flex;gap:2px;padding:4px;border-bottom:1px solid var(--border);background:var(--panel-3)}
+.nt-rte-bar button{min-width:30px;height:28px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--text);font:600 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer;padding:0 6px}
+.nt-rte-bar button:hover{background:var(--panel);border-color:var(--border)}
+.nt-rte-bar button.on{background:var(--accent);color:#fff}
+.nt-rte-bar .nt-sep{width:1px;background:var(--border);margin:3px 4px}
+.nt-rte-bar .nt-hint{margin-left:auto;align-self:center;font-size:10px;color:var(--text-dim);padding-right:4px}
+.nt-rte{min-height:140px;max-height:360px;overflow-y:auto;padding:10px 12px;font:500 12.5px/1.6 'Plus Jakarta Sans',sans-serif;color:var(--text-bright);border:none}
+.nt-rte:empty::before{content:attr(data-placeholder);color:var(--text-dim)}
+.nt-rte ul,.nt-rte ol{margin:4px 0;padding-left:22px}
+.nt-section-title{grid-column:1/-1;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:4px;margin-top:6px}
+.nt-tl-table{width:100%;border-collapse:collapse;font-size:12px}
+.nt-tl-table th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-dim);padding:4px 6px}
+.nt-tl-table td{padding:3px 4px;vertical-align:top}
+.nt-tl-table td:first-child{width:28px;text-align:center;color:var(--text-dim);padding-top:10px}
+.nt-tl-table input{width:100%;box-sizing:border-box;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font:500 12px 'Plus Jakarta Sans',sans-serif;color:var(--text-bright)}
+.nt-tl-del,.nt-att-del{background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:16px;line-height:1;padding:6px}
+.nt-mini-btn{align-self:flex-start;background:var(--panel-3);border:1px dashed var(--border-bright);border-radius:8px;color:var(--text);font:600 11px 'Plus Jakarta Sans',sans-serif;padding:7px 12px;cursor:pointer;margin-top:6px}
+.nt-mini-btn:hover{border-color:var(--accent);color:var(--accent)}
+.nt-att-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px}
+.nt-att{position:relative;border:1px solid var(--border);border-radius:8px;background:var(--panel-2);overflow:hidden;font-size:10px}
+.nt-att-thumb{height:84px;display:flex;align-items:center;justify-content:center;background:var(--panel-3);color:var(--text-dim);font-weight:800;font-size:13px;cursor:pointer}
+.nt-att-thumb img{width:100%;height:100%;object-fit:cover}
+.nt-att-name{padding:5px 22px 5px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.nt-att-new{position:absolute;top:4px;left:4px;background:var(--accent);color:#fff;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700}
+.nt-att .nt-att-del{position:absolute;right:0;bottom:0}
+.nt-modal .fas-modal-foot{align-items:center}
+.nt-modal .fas-modal-foot button{flex:0 0 auto;width:auto}
+.nt-foot-left{margin-right:auto;display:flex;gap:8px;align-items:center;flex:0 1 auto;min-width:0}
+.nt-status{font-size:11px;color:var(--text-dim)}
+.cal-event-nt{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--accent);cursor:pointer;font:600 10px 'Plus Jakarta Sans',sans-serif;padding:3px 8px}
+.cal-event-nt.has{background:var(--accent);border-color:var(--accent);color:#fff}
+.cal-event-nt:hover{opacity:.85}
+@media (max-width:720px){
+  .nt-grid{grid-template-columns:minmax(0,1fr)}
+  .nt-grid .nt-span2{grid-column:auto}
+  .nt-modal .fas-modal-foot{flex-wrap:wrap}
+  .nt-foot-left{width:100%}
+  .nt-modal .fas-modal-foot > .fas-cancel-btn,.nt-modal .fas-modal-foot > .fas-save-btn{flex:1 1 0}
+}
+</style>
+<div class="fas-modal-backdrop" id="ntModal" role="dialog" aria-modal="true" aria-labelledby="ntModalTitle">
+  <div class="fas-modal nt-modal">
+    <div class="fas-modal-head">
+      <div><span id="ntModalTitle">Notulensi Rapat</span><small id="ntModalSub"></small></div>
+      <button class="fas-modal-close" id="ntModalClose" title="Tutup (Esc)">×</button>
+    </div>
+    <div class="fas-modal-body">
+      <div class="nt-grid">
+        <label class="nt-field"><span>Tanggal</span><input type="date" id="ntTanggal"></label>
+        <label class="nt-field"><span>Waktu</span><input type="text" id="ntWaktu" placeholder="10.00-11.00" maxlength="40"></label>
+        <label class="nt-field"><span>Tempat</span><input type="text" id="ntTempat" placeholder="R. DirBio" maxlength="120"></label>
+        <label class="nt-field"><span>Notulis</span><input type="text" id="ntNotulis" maxlength="80"></label>
+        <label class="nt-field nt-span4"><span>Agenda</span><input type="text" id="ntAgenda" maxlength="200"></label>
+        <label class="nt-field nt-span4"><span>Daftar Hadir</span><textarea id="ntHadir" rows="2" maxlength="2000" placeholder="Satu nama/instansi per baris"></textarea></label>
+        <label class="nt-field nt-span4"><span>Latar Belakang</span><textarea id="ntLatar" rows="3" maxlength="4000"></textarea></label>
+        <div class="nt-field nt-span4"><span>Isi Notulensi</span>
+          <div class="nt-rte-wrap">
+            <div class="nt-rte-bar" data-for="ntIsi"></div>
+            <div class="nt-rte" id="ntIsi" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Isi notulensi" data-placeholder="Poin pembahasan rapat…"></div>
+          </div>
+        </div>
+        <div class="nt-field nt-span4"><span>Kesimpulan</span>
+          <div class="nt-rte-wrap">
+            <div class="nt-rte-bar" data-for="ntKesimpulan"></div>
+            <div class="nt-rte" id="ntKesimpulan" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Kesimpulan" data-placeholder="Kesimpulan dan pembahasan…"></div>
+          </div>
+        </div>
+        <div class="nt-section-title">Tindak Lanjut</div>
+        <div class="nt-field nt-span4">
+          <table class="nt-tl-table">
+            <thead><tr><th>No</th><th>Tindak Lanjut</th><th style="width:22%">PIC</th><th style="width:18%">Deadline</th><th style="width:28px"></th></tr></thead>
+            <tbody id="ntTlBody"></tbody>
+          </table>
+          <button type="button" class="nt-mini-btn" id="ntTlAdd">+ Tambah baris</button>
+        </div>
+        <div class="nt-section-title">Lampiran</div>
+        <div class="nt-field nt-span4">
+          <span style="text-transform:none;letter-spacing:0;font-weight:500">Foto (JPG/PNG/WEBP) atau PDF, maks. 10 MB per berkas. Foto tampil di halaman Dokumentasi saat dicetak.</span>
+          <input type="file" id="ntFileInput" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" multiple hidden>
+          <button type="button" class="nt-mini-btn" id="ntFileAdd">+ Tambah foto / PDF</button>
+          <div class="nt-att-list" id="ntAttList"></div>
+        </div>
+      </div>
+      <div class="fas-modal-err" id="ntErr"></div>
+    </div>
+    <div class="fas-modal-foot">
+      <div class="nt-foot-left">
+        <button class="fas-cancel-btn" id="ntPrintBtn" title="Cetak / simpan PDF dengan format Notulen Rapat">Cetak / PDF</button>
+        <span class="nt-status" id="ntStatus"></span>
+      </div>
+      <button class="fas-cancel-btn" id="ntCancelBtn">Tutup</button>
+      <button class="fas-save-btn" id="ntSaveBtn">Simpan</button>
+    </div>
+  </div>
+</div>
+
 <!-- ====== V-MITRA: RINGKASAN MITRA ======
      Halaman profil satu mitra/pemasok: kinerja historis 2023–2026, skor indikatif,
      sebaran per PLTU, daftar kontrak, dan perbandingan dengan mitra lain. SENGAJA
      tidak punya tombol di bilah tab (desktop maupun mobile) — pintu masuknya palet
-     Ctrl+K dan tombol "Ringkasan mitra" di modal detail kontrak. Pola yang sama
-     dengan view `calendar`. -->
+     Ctrl+K dan tombol "Ringkasan mitra" di modal detail kontrak. -->
 <style>
 .view[data-view="mitra"] .ms-view,.view[data-view="mitrarank"] .ms-view{display:block;height:100%;overflow-y:auto;overflow-x:hidden;padding:20px 24px 48px;background:var(--bg);box-sizing:border-box}
 .ms-hero > div{min-width:0}
@@ -18223,9 +18332,6 @@ function switchTab(tab){
   // V47: Update Data button moved to header — toggle its active state too
   const topbarUpdateBtn = document.getElementById('topbarUpdateBtn');
   if (topbarUpdateBtn) topbarUpdateBtn.classList.toggle('active', tab === 'update');
-  // V48: Calendar button active state
-  const topbarCalBtn = document.getElementById('topbarCalendarBtn');
-  if (topbarCalBtn) topbarCalBtn.classList.toggle('active', tab === 'calendar');
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === tab));
 
   // Laporan tab: wire upload handlers on first open (idempotent) + load archive.
@@ -26775,6 +26881,9 @@ async function calInsertEvent(evt){
 }
 
 async function calDeleteEvent(id){
+  // V179: kembalikan true hanya bila Supabase benar-benar menghapus (dipakai
+  // untuk memutuskan apakah lampiran notulensi aman dibuang).
+  let ok = !supabaseClient;
   // Delete from Supabase
   if (supabaseClient){
     try {
@@ -26783,11 +26892,13 @@ async function calDeleteEvent(id){
         .delete()
         .eq('id', id);
       if (error) console.error('[Calendar] Delete error:', error.message);
+      else ok = true;
     } catch(e){ console.error('[Calendar] Delete failed:', e); }
   }
   // Also update local state + localStorage
   calState.events = calState.events.filter(e => e.id !== id);
   try { localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calState.events)); } catch(e){}
+  return ok;
 }
 
 function calSubscribeRealtime(){
@@ -26796,7 +26907,7 @@ function calSubscribeRealtime(){
     .channel('calendar-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, (payload) => {
       // On any change, re-fetch all events and re-render
-      calFetchEvents().then(() => calRender());
+      Promise.all([calFetchEvents(), ntFetchIndex()]).then(() => calRender());
     })
     .subscribe();
 }
@@ -26809,6 +26920,10 @@ function calGenId(){
 function calDateStr(y, m, d){
   return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
 }
+// V179: warna dari tabel (bisa ditulis anon) masuk ke atribut style — hanya terima hex.
+function _calColor(c){
+  return /^#[0-9a-f]{3,8}$/i.test(String(c || '')) ? c : '#0F496E';
+}
 function calTodayStr(){
   const d = new Date();
   return calDateStr(d.getFullYear(), d.getMonth(), d.getDate());
@@ -26816,7 +26931,7 @@ function calTodayStr(){
 
 async function bootCalendar(){
   if (calState.init) return;
-  await calFetchEvents();
+  await Promise.all([calFetchEvents(), ntFetchIndex()]);
   calState.selectedDate = calTodayStr();
   calWireNav();
   calRender();
@@ -26930,7 +27045,7 @@ function calCellHtml(dayNum, dateStr, events, otherMonth, isToday, isSelected, i
   const maxShow = 3;
   for (let i = 0; i < Math.min(events.length, maxShow); i++){
     const e = events[i];
-    html += '<div class="cal-event-pill" style="background:' + (e.color || '#0F496E') + '">' + escapeHtml(e.title) + '</div>';
+    html += '<div class="cal-event-pill" style="background:' + _calColor(e.color) + '">' + escapeHtml(e.title) + '</div>';
   }
   if (events.length > maxShow){
     html += '<div class="cal-event-more">+' + (events.length - maxShow) + ' lagi</div>';
@@ -26967,22 +27082,35 @@ function calRenderSidebar(){
   } else {
     eventsEl.innerHTML = events.map(e => {
       let html = '<div class="cal-event-card">';
-      html += '<div class="cal-event-card-color" style="background:' + (e.color || '#0F496E') + '"></div>';
+      html += '<div class="cal-event-card-color" style="background:' + _calColor(e.color) + '"></div>';
       html += '<div class="cal-event-card-title">' + escapeHtml(e.title) + '</div>';
       if (e.time) html += '<div class="cal-event-card-time">' + escapeHtml(e.time) + '</div>';
       if (e.desc) html += '<div class="cal-event-card-desc">' + escapeHtml(e.desc) + '</div>';
       html += '<div class="cal-event-card-actions">';
-      html += '<button class="cal-event-del" data-id="' + e.id + '">Hapus</button>';
+      // V179: notulensi per event
+      const hasNt = !!ntState.index[e.id];
+      html += '<button class="cal-event-nt' + (hasNt ? ' has' : '') + '" data-id="' + escapeHtml(e.id) + '">' + (hasNt ? 'Lihat Notulensi' : '+ Notulensi') + '</button>';
+      html += '<button class="cal-event-del" data-id="' + escapeHtml(e.id) + '">Hapus</button>';
       html += '</div></div>';
       return html;
     }).join('');
 
+    eventsEl.querySelectorAll('.cal-event-nt').forEach(btn => {
+      btn.onclick = (ev) => { ev.stopPropagation(); ntOpen(btn.getAttribute('data-id')); };
+    });
     // Wire delete buttons
     eventsEl.querySelectorAll('.cal-event-del').forEach(btn => {
       btn.onclick = async (ev) => {
         ev.stopPropagation();
         const id = btn.getAttribute('data-id');
-        await calDeleteEvent(id);
+        // V179: baris notulensi ikut terhapus lewat FK cascade, tetapi berkas
+        // lampiran di Storage tidak. Cek baris SEGAR (indeks bisa basi), hapus
+        // event dulu, baru buang berkas kalau event benar-benar terhapus.
+        const nt = await ntGetAttachmentPaths(id);
+        if (nt.exists && !confirm('Event ini punya notulensi. Hapus event beserta notulensi dan lampirannya?')) return;
+        const ok = await calDeleteEvent(id);
+        if (ok && nt.paths.length) await ntRemoveFiles(nt.paths);
+        if (ok) delete ntState.index[id];
         calRender();
       };
     });
@@ -27029,6 +27157,506 @@ function calRenderSidebar(){
       cancelBtn.dataset.wired = '1';
     }
   }
+}
+
+// ============================================================
+// V179: NOTULENSI MEETING per event kalender
+// Tabel `calendar_notulensi` (event_id PK → calendar_events.id ON DELETE CASCADE,
+// data JSONB, updated_at, updated_by). Lampiran di bucket Storage privat
+// `notulensi` (maks 10 MB; jpg/png/webp/gif/pdf), path `<event_id>/<acak>_<nama>`.
+// Berkas baru baru diunggah saat Simpan; berkas yang dihapus baru dibuang dari
+// Storage setelah baris tersimpan — Batal tidak meninggalkan berkas yatim.
+// Isi & Kesimpulan adalah HTML dari contenteditable: SELALU lewat _ntSanitize
+// sebelum disimpan maupun ditampilkan (tabelnya bisa ditulis siapa pun ber-anon key).
+// ============================================================
+const NT_BUCKET = 'notulensi';
+const NT_MAX_BYTES = 10 * 1024 * 1024;
+const NT_TYPES = ['image/jpeg','image/png','image/webp','image/gif','application/pdf'];
+const NT_RTE_BTNS = [
+  { cmd:'bold',      html:'<b>B</b>', title:'Tebal (Ctrl+B)' },
+  { cmd:'italic',    html:'<i>I</i>', title:'Miring (Ctrl+I)' },
+  { cmd:'underline', html:'<u>U</u>', title:'Garis bawah (Ctrl+U)' },
+  null,
+  { cmd:'insertUnorderedList', html:'&bull;', title:'Daftar butir' },
+  { cmd:'insertOrderedList',   html:'1.',     title:'Daftar bernomor' },
+];
+const NT_HOTKEYS = { b:'bold', i:'italic', u:'underline' };
+
+const ntState = {
+  index: {},        // event_id → updated_at (event yang sudah punya notulensi)
+  eventId: null,
+  lampiran: [],     // tersimpan: [{path,name,type,size}]
+  pending: [],      // belum diunggah: [{file,name,type,size,url}]
+  removed: [],      // path tersimpan yang ditandai hapus
+  signed: {},       // path → signed URL
+  dirty: false,
+  loading: false,
+  saving: false,
+  wired: false,
+  seq: 0,           // token muat ntOpen
+  returnFocus: null,
+};
+
+async function ntFetchIndex(){
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient.from('calendar_notulensi').select('event_id,updated_at');
+    if (error){ console.warn('[Notulensi] index:', error.message); return; }
+    const idx = {};
+    (data || []).forEach(r => { idx[r.event_id] = r.updated_at || true; });
+    ntState.index = idx;
+  } catch(e){ console.warn('[Notulensi] index failed:', e); }
+}
+
+// Whitelist tag format; semua atribut dibuang, tag lain di-unwrap (teksnya tetap).
+const NT_ALLOWED_TAGS = { B:1, STRONG:1, I:1, EM:1, U:1, BR:1, P:1, DIV:1, UL:1, OL:1, LI:1 };
+const NT_DROP_TAGS = { SCRIPT:1, STYLE:1, IFRAME:1, OBJECT:1, EMBED:1, TEMPLATE:1, META:1, LINK:1, SVG:1, MATH:1, NOSCRIPT:1, TITLE:1, HEAD:1 };
+function _ntSanitize(html){
+  const tpl = document.createElement('template');
+  tpl.innerHTML = String(html || '');
+  const walk = (node) => {
+    Array.from(node.childNodes).forEach(ch => {
+      if (ch.nodeType === 3) return;
+      if (ch.nodeType !== 1){ ch.remove(); return; }
+      const tag = ch.tagName.toUpperCase();
+      if (NT_DROP_TAGS[tag]){ ch.remove(); return; }
+      walk(ch);
+      if (NT_ALLOWED_TAGS[tag]){
+        Array.from(ch.attributes).forEach(a => ch.removeAttribute(a.name));
+      } else {
+        while (ch.firstChild) node.insertBefore(ch.firstChild, ch);
+        ch.remove();
+      }
+    });
+  };
+  walk(tpl.content);
+  return tpl.innerHTML.trim();
+}
+// contenteditable kosong sering menyisakan <br> / <div><br></div>.
+function _ntRteValue(el){
+  const html = _ntSanitize(el.innerHTML);
+  return el.textContent.trim() ? html : '';
+}
+
+function _ntFmtTanggal(iso){
+  const p = String(iso || '').split('-');
+  if (p.length !== 3) return iso || '';
+  const m = parseInt(p[1], 10) - 1;
+  return parseInt(p[2], 10) + ' ' + (CAL_MONTHS_ID[m] || '').toUpperCase() + ' ' + p[0];
+}
+function _ntSafeName(name){
+  const s = String(name || 'berkas').normalize('NFKD').replace(/[^\w.\-]+/g, '_').replace(/_+/g, '_');
+  return s.slice(-80) || 'berkas';
+}
+
+function ntWire(){
+  if (ntState.wired) return;
+  const modal = document.getElementById('ntModal');
+  if (!modal) return;
+  ntState.wired = true;
+
+  modal.querySelectorAll('.nt-rte-bar').forEach(bar => {
+    const ed = document.getElementById(bar.dataset.for);
+    let h = '';
+    NT_RTE_BTNS.forEach(b => {
+      h += b ? '<button type="button" data-cmd="' + b.cmd + '" title="' + b.title + '" aria-label="' + b.title + '">' + b.html + '</button>'
+             : '<span class="nt-sep"></span>';
+    });
+    h += '<span class="nt-hint">Ctrl+B / I / U</span>';
+    bar.innerHTML = h;
+    bar.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('mousedown', e => e.preventDefault()); // jaga seleksi editor
+      btn.onclick = () => {
+        ed.focus();
+        document.execCommand(btn.dataset.cmd, false, null);
+        ntState.dirty = true;
+        ntSyncRteState();
+      };
+    });
+  });
+
+  modal.querySelectorAll('.nt-rte').forEach(ed => {
+    ed.addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+      const cmd = NT_HOTKEYS[e.key.toLowerCase()];
+      if (!cmd) return;
+      e.preventDefault();
+      document.execCommand(cmd, false, null);
+      ntState.dirty = true;
+      ntSyncRteState();
+    });
+    // Tempelan dari Word/web dibersihkan ke tag format dasar saja.
+    ed.addEventListener('paste', e => {
+      const cd = e.clipboardData;
+      if (!cd) return;
+      e.preventDefault();
+      const html = cd.getData('text/html');
+      if (html) document.execCommand('insertHTML', false, _ntSanitize(html));
+      else document.execCommand('insertText', false, cd.getData('text/plain'));
+      ntState.dirty = true;
+    });
+    ed.addEventListener('keyup', ntSyncRteState);
+    ed.addEventListener('mouseup', ntSyncRteState);
+  });
+  document.addEventListener('selectionchange', () => { if (modal.classList.contains('open')) ntSyncRteState(); });
+
+  modal.addEventListener('input', () => { if (!ntState.loading) ntState.dirty = true; });
+  modal.addEventListener('keydown', e => { if (e.key === 'Escape'){ e.stopPropagation(); ntClose(); } });
+  // Sengaja TIDAK menutup saat klik backdrop — notulensi panjang terlalu mahal untuk hilang karena salah klik.
+  document.getElementById('ntModalClose').onclick = ntClose;
+  document.getElementById('ntCancelBtn').onclick = ntClose;
+  document.getElementById('ntSaveBtn').onclick = ntSave;
+  document.getElementById('ntPrintBtn').onclick = ntPrint;
+  document.getElementById('ntTlAdd').onclick = () => { _ntAddTlRow({}); ntState.dirty = true; };
+
+  const fileInput = document.getElementById('ntFileInput');
+  document.getElementById('ntFileAdd').onclick = () => fileInput.click();
+  fileInput.onchange = () => {
+    const errs = [];
+    Array.from(fileInput.files || []).forEach(f => {
+      if (!NT_TYPES.includes(f.type)){ errs.push(f.name + ': tipe tidak didukung'); return; }
+      if (f.size > NT_MAX_BYTES){ errs.push(f.name + ': lebih dari 10 MB'); return; }
+      ntState.pending.push({ file: f, name: f.name, type: f.type, size: f.size, url: URL.createObjectURL(f) });
+      ntState.dirty = true;
+    });
+    fileInput.value = '';
+    document.getElementById('ntErr').textContent = errs.join(' · ');
+    _ntRenderAtt();
+  };
+}
+
+function ntSyncRteState(){
+  const sel = window.getSelection();
+  document.querySelectorAll('#ntModal .nt-rte-bar').forEach(bar => {
+    const ed = document.getElementById(bar.dataset.for);
+    const inside = sel && sel.rangeCount && ed.contains(sel.anchorNode);
+    bar.querySelectorAll('button[data-cmd]').forEach(btn => {
+      let on = false;
+      if (inside){ try { on = document.queryCommandState(btn.dataset.cmd); } catch(e){} }
+      btn.classList.toggle('on', !!on);
+    });
+  });
+}
+
+function _ntAddTlRow(r){
+  const tb = document.getElementById('ntTlBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td></td>' +
+    '<td><input type="text" data-k="tl" maxlength="500" value="' + escapeHtml(r.tl || '') + '"></td>' +
+    '<td><input type="text" data-k="pic" maxlength="120" value="' + escapeHtml(r.pic || '') + '"></td>' +
+    '<td><input type="text" data-k="deadline" maxlength="60" value="' + escapeHtml(r.deadline || '') + '"></td>' +
+    '<td><button type="button" class="nt-tl-del" title="Hapus baris" aria-label="Hapus baris">×</button></td>';
+  tr.querySelector('.nt-tl-del').onclick = () => { tr.remove(); _ntRenumberTl(); ntState.dirty = true; };
+  tb.appendChild(tr);
+  _ntRenumberTl();
+}
+function _ntRenumberTl(){
+  document.querySelectorAll('#ntTlBody tr').forEach((tr, i) => { tr.firstChild.textContent = i + 1; });
+}
+
+function _ntRenderAtt(){
+  const el = document.getElementById('ntAttList');
+  if (!el) return;
+  const items = [];
+  ntState.lampiran.forEach(a => { if (!ntState.removed.includes(a.path)) items.push({ kind:'saved', a, url: _ntUrl(a.path) }); });
+  ntState.pending.forEach((a, i) => items.push({ kind:'pending', a, i, url: a.url }));
+  if (!items.length){ el.innerHTML = '<div class="nt-status">Belum ada lampiran.</div>'; return; }
+  el.innerHTML = items.map((it, n) => {
+    const isImg = String(it.a.type || '').startsWith('image/');
+    const thumb = isImg && it.url ? '<img src="' + escapeHtml(it.url) + '" alt="">' : (isImg ? 'FOTO' : 'PDF');
+    return '<div class="nt-att">' +
+      (it.kind === 'pending' ? '<span class="nt-att-new">BARU</span>' : '') +
+      '<div class="nt-att-thumb" data-n="' + n + '" title="Buka">' + thumb + '</div>' +
+      '<div class="nt-att-name" title="' + escapeHtml(it.a.name) + '">' + escapeHtml(it.a.name) + '</div>' +
+      '<button type="button" class="nt-att-del" data-n="' + n + '" title="Hapus lampiran" aria-label="Hapus lampiran">×</button></div>';
+  }).join('');
+  el.querySelectorAll('.nt-att-thumb').forEach(t => {
+    t.onclick = () => { const it = items[+t.dataset.n]; if (it && it.url) window.open(it.url, '_blank', 'noopener'); };
+  });
+  el.querySelectorAll('.nt-att-del').forEach(b => {
+    b.onclick = () => {
+      const it = items[+b.dataset.n];
+      if (!it) return;
+      if (it.kind === 'saved') ntState.removed.push(it.a.path);
+      else { URL.revokeObjectURL(it.a.url); ntState.pending.splice(ntState.pending.indexOf(it.a), 1); }
+      ntState.dirty = true;
+      _ntRenderAtt();
+    };
+  });
+}
+
+// Signed URL berlaku 1 jam; cache dianggap basi setelah 50 menit.
+function _ntUrl(path){
+  const s = ntState.signed[path];
+  return s && s.exp > Date.now() ? s.url : '';
+}
+async function _ntSignPaths(paths){
+  const need = paths.filter(p => !_ntUrl(p));
+  if (!need.length || !supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient.storage.from(NT_BUCKET).createSignedUrls(need, 3600);
+    if (error){ console.warn('[Notulensi] sign:', error.message); return; }
+    const exp = Date.now() + 50 * 60 * 1000;
+    (data || []).forEach(r => { if (r.signedUrl && r.path) ntState.signed[r.path] = { url: r.signedUrl, exp }; });
+  } catch(e){ console.warn('[Notulensi] sign failed:', e); }
+}
+
+function _ntFill(d, evt){
+  const val = (id, v) => { document.getElementById(id).value = v || ''; };
+  val('ntTanggal', d.tanggal || evt.date);
+  val('ntWaktu', d.waktu || (evt.time ? evt.time.replace(':', '.') : ''));
+  val('ntTempat', d.tempat);
+  val('ntNotulis', d.notulis || (typeof getUserName === 'function' ? getUserName() : '') || '');
+  val('ntAgenda', d.agenda || evt.title);
+  val('ntHadir', d.daftarHadir);
+  val('ntLatar', d.latarBelakang);
+  document.getElementById('ntIsi').innerHTML = _ntSanitize(d.isi);
+  document.getElementById('ntKesimpulan').innerHTML = _ntSanitize(d.kesimpulan);
+  document.getElementById('ntTlBody').innerHTML = '';
+  const tl = Array.isArray(d.tindakLanjut) && d.tindakLanjut.length ? d.tindakLanjut : [{}];
+  tl.forEach(r => _ntAddTlRow(r || {}));
+  ntState.lampiran = (Array.isArray(d.lampiran) ? d.lampiran : [])
+    .filter(a => a && typeof a.path === 'string' && a.path.indexOf(evt.id + '/') === 0)
+    .map(a => ({ path: a.path, name: String(a.name || a.path), type: String(a.type || ''), size: +a.size || 0 }));
+}
+
+function _ntCollect(){
+  const v = id => (document.getElementById(id).value || '').trim();
+  const tindakLanjut = [];
+  document.querySelectorAll('#ntTlBody tr').forEach(tr => {
+    const r = {};
+    tr.querySelectorAll('input[data-k]').forEach(i => { r[i.dataset.k] = (i.value || '').trim(); });
+    if (r.tl || r.pic || r.deadline) tindakLanjut.push(r);
+  });
+  return {
+    tanggal: v('ntTanggal'), waktu: v('ntWaktu'), tempat: v('ntTempat'), notulis: v('ntNotulis'),
+    agenda: v('ntAgenda'), daftarHadir: v('ntHadir'), latarBelakang: v('ntLatar'),
+    isi: _ntRteValue(document.getElementById('ntIsi')),
+    kesimpulan: _ntRteValue(document.getElementById('ntKesimpulan')),
+    tindakLanjut,
+  };
+}
+
+function _ntResetFiles(){
+  ntState.pending.forEach(p => { try { URL.revokeObjectURL(p.url); } catch(e){} });
+  ntState.pending = [];
+  ntState.removed = [];
+}
+
+async function ntOpen(eventId){
+  const evt = calState.events.find(e => e.id === eventId);
+  const modal = document.getElementById('ntModal');
+  if (!evt || !modal) return;
+  ntWire();
+  _ntResetFiles();
+  const seq = ++ntState.seq; // token muat — buka/tutup/buka ulang event yang sama tetap aman
+  if (!modal.classList.contains('open')) ntState.returnFocus = document.activeElement;
+  ntState.eventId = eventId;
+  ntState.lampiran = [];
+  ntState.dirty = false;
+  ntState.loading = true;
+  document.getElementById('ntErr').textContent = '';
+  document.getElementById('ntStatus').textContent = 'Memuat…';
+  document.getElementById('ntModalTitle').textContent = 'Notulensi — ' + evt.title;
+  document.getElementById('ntModalSub').textContent = _ntFmtTanggal(evt.date) + (evt.time ? ' · ' + evt.time : '');
+  _ntFill({}, evt);
+  _ntRenderAtt();
+  const body = modal.querySelector('.fas-modal-body');
+  body.inert = true; body.style.opacity = '.55';
+  modal.classList.add('open');
+  document.getElementById('ntModalClose').focus(); // fokus masuk modal → Esc langsung bekerja
+
+  let d = {}, meta = null, loadErr = '';
+  if (!supabaseClient) loadErr = 'Supabase tidak tersedia — notulensi tidak bisa dimuat/disimpan.';
+  else {
+    try {
+      const { data, error } = await supabaseClient.from('calendar_notulensi')
+        .select('data,updated_at,updated_by').eq('event_id', eventId).maybeSingle();
+      if (error) loadErr = 'Gagal memuat notulensi: ' + error.message;
+      else if (data){ d = data.data || {}; meta = data; }
+    } catch(e){ loadErr = 'Gagal memuat notulensi: ' + (e.message || e); }
+  }
+  if (seq !== ntState.seq) return; // ditutup / dibuka ulang selagi memuat
+  _ntFill(d, evt);
+  await _ntSignPaths(ntState.lampiran.map(a => a.path));
+  if (seq !== ntState.seq) return;
+  _ntRenderAtt();
+  ntState.loading = false;
+  ntState.dirty = false;
+  body.inert = false; body.style.opacity = '';
+  document.getElementById('ntTempat').focus();
+  document.getElementById('ntErr').textContent = loadErr;
+  document.getElementById('ntSaveBtn').disabled = !!loadErr;
+  document.getElementById('ntStatus').textContent = meta && meta.updated_at
+    ? 'Terakhir disimpan ' + new Date(meta.updated_at).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' }) + (meta.updated_by ? ' oleh ' + meta.updated_by : '')
+    : (loadErr ? '' : 'Belum ada notulensi');
+}
+
+function ntClose(){
+  const modal = document.getElementById('ntModal');
+  if (!modal || !modal.classList.contains('open')) return;
+  if (ntState.saving) return;
+  if (ntState.dirty && !confirm('Perubahan notulensi belum disimpan. Tutup tanpa menyimpan?')) return;
+  _ntResetFiles();
+  ntState.seq++;
+  ntState.eventId = null;
+  ntState.loading = false;
+  modal.classList.remove('open');
+  const rf = ntState.returnFocus;
+  ntState.returnFocus = null;
+  if (rf && rf.isConnected && rf.focus) rf.focus();
+}
+
+async function ntSave(){
+  if (ntState.saving || ntState.loading || !ntState.eventId) return;
+  const errEl = document.getElementById('ntErr');
+  const statusEl = document.getElementById('ntStatus');
+  const saveBtn = document.getElementById('ntSaveBtn');
+  if (!supabaseClient){ errEl.textContent = 'Supabase tidak tersedia — notulensi tidak bisa disimpan.'; return; }
+  const eventId = ntState.eventId;
+  // Kunci form selama simpan, dan kerjakan hanya snapshot di bawah ini — supaya
+  // klik × / berkas baru / ketikan di tengah simpan tidak ikut terbuang atau
+  // menghapus berkas yang masih dirujuk baris yang baru tersimpan.
+  const body = document.querySelector('#ntModal .fas-modal-body');
+  body.inert = true;
+  const pending = ntState.pending.slice();
+  const removed = ntState.removed.slice();
+  const data = _ntCollect();
+  ntState.saving = true; saveBtn.disabled = true;
+  errEl.textContent = ''; statusEl.textContent = 'Menyimpan…';
+  const bucket = supabaseClient.storage.from(NT_BUCKET);
+  const uploaded = [];
+  try {
+    for (const p of pending){
+      statusEl.textContent = 'Mengunggah ' + p.name + '…';
+      const path = eventId + '/' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + '_' + _ntSafeName(p.name);
+      const { error } = await bucket.upload(path, p.file, { contentType: p.type, upsert: false });
+      if (error) throw new Error('Unggah ' + p.name + ' gagal: ' + error.message);
+      uploaded.push({ path, name: p.name, type: p.type, size: p.size });
+    }
+    data.lampiran = ntState.lampiran.filter(a => !removed.includes(a.path)).concat(uploaded);
+    const now = new Date().toISOString();
+    const { error } = await supabaseClient.from('calendar_notulensi').upsert({
+      event_id: eventId, data, updated_at: now,
+      updated_by: (typeof getUserName === 'function' ? getUserName() : '') || '',
+    });
+    if (error) throw new Error('Simpan gagal: ' + error.message);
+    // Baris sudah menunjuk ke daftar baru — baru sekarang aman membuang berkas lama.
+    await ntRemoveFiles(removed);
+    pending.forEach(p => { try { URL.revokeObjectURL(p.url); } catch(e){} });
+    ntState.pending = ntState.pending.filter(p => !pending.includes(p));
+    ntState.removed = ntState.removed.filter(p => !removed.includes(p));
+    ntState.lampiran = data.lampiran;
+    ntState.index[eventId] = now;
+    await _ntSignPaths(uploaded.map(a => a.path));
+    _ntRenderAtt();
+    ntState.dirty = false;
+    statusEl.textContent = 'Tersimpan ' + new Date(now).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+    if (typeof showToast === 'function') showToast('Notulensi tersimpan', 'ok');
+    calRenderSidebar();
+  } catch(e){
+    // Gulung balik unggahan sesi ini agar tidak ada berkas yatim.
+    if (uploaded.length){ try { await bucket.remove(uploaded.map(a => a.path)); } catch(_){} }
+    errEl.textContent = e.message || String(e);
+    statusEl.textContent = '';
+  } finally {
+    ntState.saving = false; saveBtn.disabled = false;
+    body.inert = false;
+  }
+}
+
+// Dipakai sebelum event dihapus: baris notulensi hilang lewat FK cascade,
+// berkas Storage harus dibuang manual (setelah delete event sukses).
+async function ntGetAttachmentPaths(eventId){
+  const res = { exists: !!ntState.index[eventId], paths: [] };
+  if (!supabaseClient) return res;
+  try {
+    const { data, error } = await supabaseClient.from('calendar_notulensi').select('data').eq('event_id', eventId).maybeSingle();
+    if (error) return res;
+    res.exists = !!data;
+    res.paths = ((data && data.data && data.data.lampiran) || []).map(a => a && a.path)
+      .filter(p => typeof p === 'string' && p.indexOf(eventId + '/') === 0);
+  } catch(e){ console.warn('[Notulensi] cek lampiran gagal:', e); }
+  return res;
+}
+async function ntRemoveFiles(paths){
+  if (!supabaseClient || !paths.length) return;
+  try {
+    const { error } = await supabaseClient.storage.from(NT_BUCKET).remove(paths);
+    if (error) console.warn('[Notulensi] hapus lampiran:', error.message);
+  } catch(e){ console.warn('[Notulensi] hapus lampiran gagal:', e); }
+}
+
+function _ntReadDataUrl(file){
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+}
+
+// Cetak dengan format "Notulen Rapat" PLN EPI (header tabel, kotak isi, Tindak
+// Lanjut, halaman Dokumentasi). Memakai isi form saat ini, termasuk yang belum disimpan.
+async function ntPrint(){
+  const w = window.open('', '_blank'); // harus sinkron dengan klik, sebelum await
+  if (!w){ document.getElementById('ntErr').textContent = 'Popup diblokir browser — izinkan popup untuk mencetak.'; return; }
+  w.document.write('<p style="font-family:sans-serif;padding:20px">Menyiapkan notulensi…</p>');
+  const d = _ntCollect();
+  const saved = ntState.lampiran.filter(a => !ntState.removed.includes(a.path));
+  await _ntSignPaths(saved.map(a => a.path));
+  const photos = [], pdfs = [];
+  saved.forEach(a => {
+    if (a.type.startsWith('image/')){ if (_ntUrl(a.path)) photos.push(_ntUrl(a.path)); }
+    else pdfs.push(a.name);
+  });
+  for (const p of ntState.pending){
+    if (p.type.startsWith('image/')){ try { photos.push(await _ntReadDataUrl(p.file)); } catch(e){} }
+    else pdfs.push(p.name + ' (belum disimpan)');
+  }
+  const esc = s => escapeHtml(String(s || ''));
+  const nl = s => esc(s).replace(/\n/g, '<br>');
+  const logoEl = document.querySelector('#brandLogo svg');
+  const logo = logoEl ? logoEl.outerHTML : '';
+  const tl = d.tindakLanjut.length ? d.tindakLanjut : [{}, {}, {}];
+  const tlRows = tl.map((r, i) => '<tr><td class="c">' + (i + 1) + '</td><td>' + nl(r.tl) + '</td><td>' + esc(r.pic) + '</td><td>' + esc(r.deadline) + '</td></tr>').join('');
+  const header = '<div class="logo"><div class="lg">' + logo + '</div><div><div class="l1">PLN</div><div class="l2">Energi Primer<br>Indonesia</div></div></div>';
+  let html = '<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Notulen Rapat - ' + esc(d.agenda) + ' - ' + esc(d.tanggal) + '</title><style>' +
+    '@page{size:A4;margin:12mm 14mm 14mm}' +
+    '*{box-sizing:border-box}body{margin:0;font-family:"Times New Roman",Times,serif;font-size:11pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.logo{display:flex;align-items:center;gap:8px;margin-bottom:12px}.logo .lg{width:40px;height:40px;flex:0 0 40px}.logo .lg svg{display:block}' +
+    '.logo .l1{font-family:Arial,sans-serif;font-weight:800;font-size:17pt;color:#1a8fd6;letter-spacing:2px;line-height:1}.logo .l2{font-family:Arial,sans-serif;font-size:11pt;color:#1a8fd6;line-height:1.1}' +
+    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:3px 7px;vertical-align:middle}' +
+    '.hd .title{font-size:15pt;font-weight:bold;text-align:center;width:58%}.hd .lbl{font-weight:bold;width:13%}.hd .v{font-weight:bold;text-align:right}' +
+    '.hd .agl{font-weight:bold;width:15%}.hd .ag{font-weight:bold}.hd .dh{font-weight:bold;font-size:10pt}' +
+    '.box{border:1px solid #000;margin-top:16px;padding:12px 16px;min-height:120px}' +
+    'h3{font-size:11pt;font-weight:bold;text-decoration:underline;margin:12px 0 6px}h3:first-child{margin-top:0}' +
+    '.rte{line-height:1.45;text-align:justify}.rte ul,.rte ol{margin:4px 0;padding-left:30px}.rte p{margin:4px 0}' +
+    '.tl th{text-align:left;padding:8px 10px}.tl td{padding:8px 10px;vertical-align:top;height:34px}.tl .c{width:7%}' +
+    '.doc{page-break-before:always;break-before:page}.doc h2{text-align:center;font-size:12pt;margin:6px 0 16px}' +
+    '.doc img{display:block;width:100%;max-height:118mm;object-fit:contain;margin:0 auto 4px;page-break-inside:avoid;break-inside:avoid}' +
+    '.pdfs{margin-top:10px;font-size:10pt}' +
+    '</style></head><body>' + header +
+    '<table class="hd">' +
+      '<tr><td class="title" colspan="2" rowspan="2">NOTULEN RAPAT</td><td class="lbl">Tanggal</td><td class="v">' + esc(_ntFmtTanggal(d.tanggal)) + '</td></tr>' +
+      '<tr><td class="lbl">Waktu</td><td class="v">' + esc(d.waktu) + '</td></tr>' +
+      '<tr><td class="agl" rowspan="2">Agenda</td><td class="ag" rowspan="2">' + esc(d.agenda) + '</td><td class="lbl">Tempat</td><td class="v">' + esc(d.tempat) + '</td></tr>' +
+      '<tr><td class="lbl">Notulis</td><td class="v">' + esc(d.notulis) + '</td></tr>' +
+      '<tr><td class="agl">Daftar Hadir</td><td class="dh" colspan="3">' + nl(d.daftarHadir) + '</td></tr>' +
+    '</table>' +
+    '<div class="box">' +
+      '<h3>Latar Belakang</h3>' + (d.latarBelakang ? '<div class="rte">' + nl(d.latarBelakang) + '</div>' : '') +
+      (d.isi ? '<div class="rte" style="margin-top:8px">' + _ntSanitize(d.isi) + '</div>' : '') +
+      '<h3>Kesimpulan dan Pembahasan</h3>' + (d.kesimpulan ? '<div class="rte">' + _ntSanitize(d.kesimpulan) + '</div>' : '') +
+      '<h3>Tindak Lanjut</h3>' +
+      '<table class="tl"><thead><tr><th class="c">No.</th><th>Tindak Lanjut</th><th style="width:22%">PIC</th><th style="width:20%">Deadline</th></tr></thead><tbody>' + tlRows + '</tbody></table>' +
+    '</div>';
+  if (photos.length || pdfs.length){
+    html += '<div class="doc">' + header + '<div class="box"><h2>DOKUMENTASI</h2>' +
+      photos.map(u => '<img src="' + esc(u) + '" alt="">').join('') +
+      (pdfs.length ? '<div class="pdfs"><b>Lampiran PDF:</b><ol>' + pdfs.map(n => '<li>' + esc(n) + '</li>').join('') + '</ol></div>' : '') +
+      '</div></div>';
+  }
+  html += '<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script></body></html>';
+  if (w.closed) return; // pengguna menutup jendela selagi menyiapkan
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
 }
 
 // ============================================================
@@ -30766,7 +31394,7 @@ const QOL_TAB_KW = {
   'usulan':       'usulan kontrak baru proposal tahap pengadaan',
   'berita':       'berita news artikel media kliping',
   'laporan':      'laporan infografis generator arsip pdf checkpoint',
-  'calendar':     'kalender calendar agenda jadwal rapat tim event',
+  'calendar':     'kalender calendar agenda jadwal rapat tim event meeting notulen notulensi risalah',
   'update':       'update data upload unggah excel admin revert versi'
 };
 const QOL_TAB_DIGIT = (() => {
@@ -30790,8 +31418,7 @@ function qolBuildCmdkIndex(){
     const label = (lblEl ? lblEl.textContent : btn.textContent).replace('▾','').trim();
     items.push({ kind:'tab', tab, label, kw: QOL_TAB_KW[tab] || '', digit: QOL_TAB_DIGIT[tab] || '' });
   });
-  // Dua tujuan yang tidak punya tombol di bilah tab.
-  items.push({ kind:'tab', tab:'calendar', label:'KALENDER TIM', kw: QOL_TAB_KW.calendar, digit:'' });
+  // V179: Kalender kini tab biasa — sudah terambil dari bilah tab di atas.
   // V158: halaman Ranking Mitra (tanpa tombol di bilah tab).
   items.push({ kind:'action', id:'mitrarank', label:'Ranking Mitra', sub:'Peringkat seluruh mitra per tahun & jenis',
                kw:'ranking rank peringkat klasemen leaderboard juara terbaik top mitra pemasok supplier vendor skor' });
@@ -31597,10 +32224,9 @@ function qolSyncMobNavA11y(){
   const activeTab = activeView ? activeView.dataset.view : null;
   // Tombol "More" menyala kalau — dan hanya kalau — panel yang aktif benar-benar
   // ADA di dalam lembar itu. Diturunkan dengan menanyainya langsung, bukan dengan
-  // menegasikan daftar tombol di bilah: ada tiga belas .view tetapi hanya sebelas
-  // yang punya tombol di mana pun. `calendar` dan `update` dibuka dari topbar dan
-  // tidak ada di bilah MAUPUN di lembar, jadi negasi menyalakan "More" untuk dua
-  // panel yang tidak pernah bisa ditemukan di dalamnya.
+  // menegasikan daftar tombol di bilah: tidak semua .view punya tombol di mana
+  // pun. `update` dibuka dari topbar dan tidak ada di bilah MAUPUN di lembar, jadi
+  // negasi menyalakan "More" untuk panel yang tidak pernah bisa ditemukan di dalamnya.
   const activeIsInMore = !!activeTab &&
     !!document.querySelector('#mobMoreMenu [data-mob-tab="' + activeTab + '"]');
 

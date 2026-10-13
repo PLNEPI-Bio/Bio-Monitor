@@ -3,3 +3,4 @@
 # already versioned here, and committing them bloats the repo permanently.
 # Use the git tags instead for history-based restore, e.g. pre-redesign-2026-08-03.
 backups/
+supabase/.temp/
