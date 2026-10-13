@@ -7449,7 +7449,7 @@ html,body{
   content:"";
   position:sticky;
   align-self:stretch;
-  flex:0 0 32px;
+  flex:0 0 44px;
   pointer-events:none;
   opacity:0;
   transition:opacity var(--dur-fast) var(--ease-in-out);
@@ -7457,11 +7457,24 @@ html,body{
      mengangkat ::before di atas tab pertama. */
   z-index:2;
 }
-/* Margin -34px = lebar pseudo (32) + satu gap (2). Menambah dua flex item ke
+/* Margin -46px (V181; dulu -34) = lebar pseudo (44) + satu gap (2). Menambah dua flex item ke
    `.tabs` juga menambah dua gap, jadi kompensasinya harus ikut menghitung gap;
    tanpa itu rail melebar 68px dan tab terakhir terdorong keluar. */
-.tabs::before{left:0;margin-right:-34px;background:linear-gradient(to right,var(--chrome-bg),transparent)}
-.tabs::after{right:0;margin-left:-34px;background:linear-gradient(to left,var(--chrome-bg),transparent)}
+/* V181: gradien penuh membuat tab yang terpotong tampil setengah pudar
+   ("VIEW PEMBANGKIT" dengan "O" samar). Kini 85% lebar pseudo PADAT warna band
+   (menutup potongan teks) + chevron sebagai penanda arah gulir; hanya ekor 15%
+   yang memudar. Scroll-snap di bawah membuat tab berhenti tepat di tepi tirai. */
+.tabs::before,
+.tabs::after{
+  display:flex;align-items:center;justify-content:center;
+  font:700 15px/1 'Plus Jakarta Sans',sans-serif;color:var(--text-dim);
+}
+/* left/right -12px = padding .tabs: tanpa itu tirai menempel di dalam padding
+   dan tab yang tergulir tetap mengintip di celah 12px di luarnya. */
+.tabs::before{content:"‹";left:-12px;margin-right:-46px;padding-right:8px;background:linear-gradient(to right,var(--chrome-bg) 85%,transparent)}
+.tabs::after{content:"›";right:-12px;margin-left:-46px;padding-left:8px;background:linear-gradient(to left,var(--chrome-bg) 85%,transparent)}
+.tabs{scroll-snap-type:x proximity;scroll-padding-inline:46px}
+.tab{scroll-snap-align:start}
 .tabs.qol-fade-l::before{opacity:1}
 .tabs.qol-fade-r::after{opacity:1}
 
