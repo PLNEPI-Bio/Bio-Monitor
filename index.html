@@ -20555,8 +20555,30 @@ function getKontrakHarga(c){
   if (!c) return null;
   if (_kontrakHargaCache.has(c)) return _kontrakHargaCache.get(c);
   let res = null;
+  const m = _kontrakMatchRows(c, _kontrakHargaIndex());
+  if (m){
+    const best = m.best;
+    const wAvg = (key) => {
+      let s = 0, w = 0;
+      for (const r of best){ if (r[key] == null) return null; const v = r.vol || 1; s += r[key] * v; w += v; }
+      return w > 0 ? s / w : null;
+    };
+    res = { h: wAvg('h'), hm: wAvg('hm'), ht: wAvg('ht'), rows: best, pltuOk: m.pltuOk, jenisOk: m.jenisOk,
+            mitraExact: m.mitraExact };
+    if (res.h == null) res = null;
+  }
+  _kontrakHargaCache.set(c, res);
+  return res;
+}
+window.getKontrakHarga = getKontrakHarga;
+
+// V180: inti pencocokan kontrak dashboard ↔ baris sumber luar (dipakai Harga
+// dan GCV). idx = { 'nomor|SPK': [{ no, y, mitra, pltu, jenis, ... }] }.
+// → null, atau { best:[baris], pltuOk, jenisOk, mitraExact }. Null juga bila
+// beberapa baris setara tapi beda PLTU/jenis (ambigu — lebih baik kosong).
+function _kontrakMatchRows(c, idx){
   const nk = _hargaNoKey(c.kontrak);
-  const cand = nk ? (_kontrakHargaIndex()[nk.k] || []) : [];
+  const cand = nk ? (idx[nk.k] || []) : [];
   const mc = _hargaCompact(c.pemasok);
   const mitraBebas = !!(nk && KONTRAK_HARGA_MITRA_BEDA[nk.k + '@' + nk.y]);
   const jenisBebas = !!(nk && KONTRAK_HARGA_JENIS_BEDA[nk.k + '@' + nk.y]);
@@ -20569,28 +20591,79 @@ function getKontrakHarga(c){
     if (sc > bestScore){ best = [r]; bestScore = sc; }
     else if (sc === bestScore) best.push(r);
   }
-  if (best.length){
-    const r0 = best[0];
-    const pltuOk = _hargaPltuSama(c.pltu, r0.pltu), jenisOk = jenisBebas || _hargaJenisSama(c.jenis, r0.jenis);
-    // Beberapa baris setara tapi untuk PLTU berbeda (mis. Sanggau & Sintang
-    // tanpa PLTU yang cocok) → ambigu, lebih baik kosong daripada salah.
-    const ambigu = best.some(r => _hargaCompact(r.pltu) !== _hargaCompact(r0.pltu) ||
-                                  _hargaCompact(r.jenis) !== _hargaCompact(r0.jenis));
-    if (!ambigu){
-      const wAvg = (key) => {
-        let s = 0, w = 0;
-        for (const r of best){ if (r[key] == null) return null; const v = r.vol || 1; s += r[key] * v; w += v; }
-        return w > 0 ? s / w : null;
-      };
-      res = { h: wAvg('h'), hm: wAvg('hm'), ht: wAvg('ht'), rows: best, pltuOk, jenisOk,
-              mitraExact: _hargaCompact(r0.mitra) === mc };
-      if (res.h == null) res = null;
+  if (!best.length) return null;
+  const r0 = best[0];
+  const pltuOk = _hargaPltuSama(c.pltu, r0.pltu), jenisOk = jenisBebas || _hargaJenisSama(c.jenis, r0.jenis);
+  // Beberapa baris setara tapi untuk PLTU berbeda (mis. Sanggau & Sintang
+  // tanpa PLTU yang cocok) → ambigu, lebih baik kosong daripada salah.
+  const ambigu = best.some(r => _hargaCompact(r.pltu) !== _hargaCompact(r0.pltu) ||
+                                _hargaCompact(r.jenis) !== _hargaCompact(r0.jenis));
+  if (ambigu) return null;
+  return { best, pltuOk, jenisOk, mitraExact: _hargaCompact(r0.mitra) === mc };
+}
+
+// =====================================================
+// V180 — KOLOM "GCV KONTRAK" DI TABEL DAFTAR KONTRAK
+//
+// Sumber: Google Sheet rekap kontrak biomassa, sheet Terkontrak 2026/2025/2024,
+// kolom "GCV" (kcal/kg). Edge function `kontrak-gcv-refresh` (cron harian)
+// menyalin HANYA nomor kontrak, mitra, PLTU, jenis, dan GCV ke tabel
+// `kontrak_gcv`. ID sheet tidak boleh ada di sini: repo publik dan sheet yang
+// sama memuat harga.
+//
+// Pencocokan sama dengan Harga (_kontrakMatchRows: nomor kontrak → mitra →
+// PLTU + jenis). Cadangan bila nomor tidak cocok sama sekali: baris tahun yang
+// sama dengan mitra, PLTU, dan jenis yang sama — menangkap nomor yang tertukar
+// antar-mitra (Lontar 1624–1626/2026) atau beda SPK/Pj (2836, 3668/2025).
+// Kontrak 2021–2023 tidak ada di sheet → sel kosong.
+// =====================================================
+let KONTRAK_GCV_SRC = [];   // [{ no, y, mitra, pltu, jenis, gcv }]
+let _kontrakGcvIdx = null;
+function _kontrakGcvIndex(){
+  if (_kontrakGcvIdx) return _kontrakGcvIdx;
+  const idx = {};
+  for (const r of KONTRAK_GCV_SRC){
+    const nk = _hargaNoKey(r.no);
+    if (!nk) continue;
+    (idx[nk.k] = idx[nk.k] || []).push(Object.assign({ y: nk.y }, r));
+  }
+  return (_kontrakGcvIdx = idx);
+}
+let _kontrakGcvCache = new WeakMap();
+// → null, atau { gcv, rows:[baris sheet], pltuOk, jenisOk, mitraExact, viaNomor }
+function getKontrakGcv(c){
+  if (!c) return null;
+  if (_kontrakGcvCache.has(c)) return _kontrakGcvCache.get(c);
+  let res = null;
+  const m = _kontrakMatchRows(c, _kontrakGcvIndex());
+  let rows = m ? m.best : null, viaNomor = true;
+  if (!rows){
+    const nk = _hargaNoKey(c.kontrak);
+    const mc = _hargaCompact(c.pemasok);
+    const nUrut = nk ? nk.k.split('|')[0] : '';
+    rows = nk && nk.y && mc ? KONTRAK_GCV_SRC.filter(r => {
+      const rk = _hargaNoKey(r.no);
+      return rk && rk.y === nk.y && rk.k.split('|')[0] === nUrut &&
+        _hargaDice(mc, _hargaCompact(r.mitra)) >= 0.9 &&
+        _hargaPltuSama(c.pltu, r.pltu) && _hargaJenisSama(c.jenis, r.jenis);
+    }) : [];
+    viaNomor = false;
+  }
+  if (rows && rows.length){
+    const vals = Array.from(new Set(rows.map(r => r.gcv)));
+    // Beberapa baris dengan GCV berbeda → tidak bisa dipilih, kosongkan.
+    if (vals.length === 1){
+      const r0 = rows[0];
+      res = { gcv: vals[0], rows,
+        pltuOk: m ? m.pltuOk : true, jenisOk: m ? m.jenisOk : true,
+        mitraExact: m ? m.mitraExact : _hargaCompact(r0.mitra) === _hargaCompact(c.pemasok),
+        viaNomor };
     }
   }
-  _kontrakHargaCache.set(c, res);
+  _kontrakGcvCache.set(c, res);
   return res;
 }
-window.getKontrakHarga = getKontrakHarga;
+window.getKontrakGcv = getKontrakGcv;
 
 // V157: kolom Harga (Daftar Kontrak & Ringkasan Mitra) tersembunyi sampai dibuka
 // dengan password lewat tombol di header kolom. Hanya PENUTUP TAMPILAN: repo
@@ -20702,6 +20775,8 @@ function _kontrakSortKey(c, col, realCols){
     case 'awal':      return c.awal || '';
     case 'akhir':     return c.akhir || '';
     case 'vol':       return c.vol_mt || 0;
+    // V180: kontrak tanpa GCV diberi -1 agar di ujung bawah saat menurun.
+    case 'gcv':       { const g = getKontrakGcv(c); return g ? g.gcv : -1; }
     // V143: kontrak tanpa harga diberi -1 agar selalu di ujung bawah saat menurun.
     // V157: saat terkunci semua bernilai sama — urutan tidak boleh membocorkan harga.
     case 'harga':     { if (!_hargaUnlocked) return 0; const hg = getKontrakHarga(c); return hg ? hg.h : -1; }
@@ -20807,7 +20882,7 @@ function renderKontrakTable(){
   // Genco digabung ke sel PLTU, No Kontrak ke sel Mitra, Awal/Akhir ke Periode
   // — baris jadi jauh lebih pendek tanpa ada data yang hilang.
   let header = '<thead><tr class="kt-group-row">';
-  header += '<th colspan="5" class="kt-grp">Kontrak</th>';
+  header += '<th colspan="6" class="kt-grp">Kontrak</th>';
   header += '<th colspan="3" class="kt-grp kt-grp-sep">Volume (MT)</th>';
   if (realCols.length) header += '<th colspan="' + realCols.length + '" class="kt-grp kt-grp-sep kt-grp-real">DO &amp; Realisasi (MT)</th>';
   header += '<th colspan="2" class="kt-grp kt-grp-sep">Laju (MT/bln)</th>';
@@ -20817,6 +20892,7 @@ function renderKontrakTable(){
   header += kth('pemasok', 'Mitra · No. Kontrak');
   header += kth('jenis', 'Jenis');
   header += kth('akhir', 'Periode');
+  header += kth('gcv', 'GCV', 'kt-num'); // V180: GCV kontrak, kcal/kg
   // V157: terkunci → header jadi tombol buka (tidak bisa disortir).
   if (_hargaUnlocked){
     header += kth('harga', 'Harga <span class="kt-unit">Rp/ton</span><span class="harga-lock-btn" role="button" tabindex="0" aria-label="Sembunyikan harga lagi" onclick="lockHarga(event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \')lockHarga(event)" title="Sembunyikan harga lagi">' + HARGA_LOCK_SVG + '</span>', 'kt-num');
@@ -20871,6 +20947,21 @@ function renderKontrakTable(){
     // kontrak). Sengaja netral/abu, bukan warna status: ini posisi waktu, bukan
     // penilaian — dan tidak mengikuti filter periode seperti kolom Progres.
     row += '<td class="kt-periode">' + _kontrakPeriodeCell(c) + '</td>';
+    // V180 — GCV kontrak dari Google Sheet rekap kontrak (tabel kontrak_gcv)
+    const gv = getKontrakGcv(c);
+    if (gv){
+      const r0 = gv.rows[0];
+      const notes = ['Sumber: Google Sheet rekap kontrak, sheet Terkontrak ' + r0.sheet + ', kolom GCV.'];
+      notes.push(gv.viaNomor
+        ? 'Cocok Nomor Kontrak ' + r0.no + '.'
+        : 'Nomor kontrak tidak cocok; dicocokkan lewat mitra + PLTU + jenis ke baris ' + r0.no + '.');
+      if (!gv.mitraExact) notes.push('Nama mitra di sheet: "' + r0.mitra + '".');
+      if (!gv.pltuOk) notes.push('PLTU di sheet: ' + r0.pltu + '.');
+      if (!gv.jenisOk) notes.push('Jenis di sheet: ' + (r0.jenis || '—') + '.');
+      row += '<td class="num" title="' + escapeHtml(notes.join(' ')) + '">' + fmtInt(gv.gcv) + '</td>';
+    } else {
+      row += '<td class="num kt-na" title="Tidak ditemukan di sheet Terkontrak 2024–2026">—</td>';
+    }
     // V143 — Harga satuan exc PPN dari workbook Data Kontrak Aktif 2025-2026
     const hg = _hargaUnlocked ? getKontrakHarga(c) : null;
     if (!_hargaUnlocked){
@@ -21022,6 +21113,15 @@ function renderKontrakTable(){
   let footer = '<tfoot><tr>';
   // V144: urutan kolom baru — PLTU, Mitra, Jenis, Periode | Harga | Vol, Sisa, Progres.
   footer += '<td colspan="4" class="kt-total-label">Total · ' + fmtInt(contracts.length) + ' kontrak</td>';
+  // V180: rata-rata GCV tertimbang volume, hanya dari kontrak yang GCV-nya ketemu.
+  let gvSum = 0, gvVol = 0, gvN = 0;
+  for (const c of contracts){
+    const g = getKontrakGcv(c), v = c.vol_mt || 0;
+    if (g && v > 0){ gvSum += g.gcv * v; gvVol += v; gvN++; }
+  }
+  footer += gvVol > 0
+    ? '<td class="num" title="Rata-rata GCV tertimbang volume kontrak, dari ' + fmtInt(gvN) + ' kontrak yang GCV-nya ditemukan">' + fmtInt(gvSum / gvVol) + '</td>'
+    : '<td class="num kt-na">—</td>';
   // V143: rata-rata harga tertimbang volume, hanya dari kontrak yang harganya ketemu.
   let hgSum = 0, hgVol = 0, hgN = 0;
   if (_hargaUnlocked) for (const c of contracts){
@@ -21752,6 +21852,28 @@ async function fetchKontrakHarga(){
       try { renderKontrakTable(); } catch(e){}
     }
   } catch(e){ console.warn('[Harga] fetch failed:', e); }
+}
+
+// V180: GCV kontrak dari tabel `kontrak_gcv` (lihat catatan V180 di dekat
+// getKontrakGcv). Pola sama dengan fetchKontrakHarga.
+async function fetchKontrakGcv(){
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('kontrak_gcv')
+      .select('tahun,no_kontrak,mitra,pltu,jenis,gcv')
+      .limit(5000);
+    if (error){ console.warn('[GCV] fetch error:', error.message); return; }
+    KONTRAK_GCV_SRC = (data || [])
+      .filter(r => r.no_kontrak && r.gcv != null && isFinite(Number(r.gcv)))
+      .map(r => ({ no: r.no_kontrak, mitra: r.mitra || '', pltu: r.pltu || '', jenis: r.jenis || '',
+                   gcv: Number(r.gcv), sheet: r.tahun }));
+    _kontrakGcvIdx = null;
+    _kontrakGcvCache = new WeakMap();
+    if (typeof renderKontrakTable === 'function' && document.querySelector('.view[data-view="kontrak"].active')){
+      try { renderKontrakTable(); } catch(e){}
+    }
+  } catch(e){ console.warn('[GCV] fetch failed:', e); }
 }
 
 // Persist a manual DO override for one contract signature. doMap = {year:[12]}.
@@ -23103,7 +23225,7 @@ function downloadKontrakExcel(){
     const wb = XLSX.utils.book_new();
 
     // ----- Sheet 1: Daftar Kontrak (summary) -----
-    const h1 = ['No','Genco','PLTU','Pemasok','Nomor Kontrak','Jenis','Awal Kontrak','Akhir Kontrak','Status',
+    const h1 = ['No','Genco','PLTU','Pemasok','Nomor Kontrak','Jenis','GCV Kontrak (kcal/kg)','Awal Kontrak','Akhir Kontrak','Status',
       'Vol Kontrak (MT)','Realisasi 2023 (MT)','Realisasi 2024 (MT)','Realisasi 2025 (MT)','Realisasi 2026 (MT)',
       'Total Realisasi (MT)','Sisa (MT)','Capaian %','Amandemen'];
     const aoa1 = [h1];
@@ -23118,17 +23240,18 @@ function downloadKontrakExcel(){
       tVol += vol; r.forEach((v, k) => tR[k] += v); tTotal += totalReal; tSisa += sisa;
       const amd = (c.amandemen && String(c.amandemen).trim())
         ? String(c.amandemen).replace(/[\r\n]+/g, '; ') : '';
+      const gv = getKontrakGcv(c); // V180
       aoa1.push([ i + 1, c.genco || '', c.pltu || '', c.pemasok || '', c.kontrak || '', c.jenis || '',
-        _fmtDateID(c.awal), _fmtDateID(c.akhir), isContractActive(c, today) ? 'Aktif' : 'Expired',
+        gv ? gv.gcv : '', _fmtDateID(c.awal), _fmtDateID(c.akhir), isContractActive(c, today) ? 'Aktif' : 'Expired',
         vol, r[0], r[1], r[2], r[3], totalReal, sisa, pct, amd ]);
     });
     const totalPct = tVol > 0 ? (tTotal / tVol) : 0;
-    aoa1.push(['', '', '', '', '', '', '', '', 'TOTAL', tVol, tR[0], tR[1], tR[2], tR[3], tTotal, tSisa, totalPct, '']);
+    aoa1.push(['', '', '', '', '', '', '', '', '', 'TOTAL', tVol, tR[0], tR[1], tR[2], tR[3], tTotal, tSisa, totalPct, '']);
     const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
-    ws1['!cols'] = [{wch:5},{wch:7},{wch:20},{wch:30},{wch:34},{wch:16},{wch:13},{wch:13},{wch:9},
+    ws1['!cols'] = [{wch:5},{wch:7},{wch:20},{wch:30},{wch:34},{wch:16},{wch:12},{wch:13},{wch:13},{wch:9},
       {wch:15},{wch:15},{wch:15},{wch:15},{wch:15},{wch:16},{wch:13},{wch:10},{wch:42}];
     _styleExcelSheet(ws1, {
-      centerCols: [1, 5, 8], numCols: [9,10,11,12,13,14,15], pctCols: [16],
+      centerCols: [1, 5, 9], numCols: [6,10,11,12,13,14,15,16], pctCols: [17],
       totalRowIndex: aoa1.length - 1, freezeCols: 3,
     });
     XLSX.utils.book_append_sheet(wb, ws1, 'Daftar Kontrak');
@@ -23794,6 +23917,7 @@ async function resyncLiveData(reason, full){
         (typeof fetchDoData === 'function') ? fetchDoData().catch(()=>{}) : null,
         (typeof fetchKontrakPasokan === 'function') ? fetchKontrakPasokan().catch(()=>{}) : null,
         (typeof fetchKontrakHarga === 'function') ? fetchKontrakHarga().catch(()=>{}) : null,
+        (typeof fetchKontrakGcv === 'function') ? fetchKontrakGcv().catch(()=>{}) : null,
         (_bnSyncInit && typeof fetchBottlenecksFromServer === 'function')
           ? fetchBottlenecksFromServer().catch(()=>{}) : null,
       ]);
@@ -28858,6 +28982,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof fetchKontrakPasokan === 'function') fetchKontrakPasokan();
     // V146: harga kontrak — tabel sendiri, dimuat sekali saat boot.
     if (typeof fetchKontrakHarga === 'function') fetchKontrakHarga();
+    // V180: GCV kontrak — tabel sendiri, dimuat sekali saat boot.
+    if (typeof fetchKontrakGcv === 'function') fetchKontrakGcv();
   }
   // Reflect admin-only pause control on first paint.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();
