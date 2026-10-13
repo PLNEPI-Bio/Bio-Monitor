@@ -9661,7 +9661,12 @@ body.gf-on .gf-bar{
         <label class="nt-field"><span>Notulis</span><input type="text" id="ntNotulis" maxlength="80"></label>
         <label class="nt-field nt-span4"><span>Agenda</span><input type="text" id="ntAgenda" maxlength="200"></label>
         <label class="nt-field nt-span4"><span>Daftar Hadir</span><textarea id="ntHadir" rows="2" maxlength="2000" placeholder="Satu nama/instansi per baris"></textarea></label>
-        <label class="nt-field nt-span4"><span>Latar Belakang</span><textarea id="ntLatar" rows="3" maxlength="4000"></textarea></label>
+        <div class="nt-field nt-span4"><span>Latar Belakang</span>
+          <div class="nt-rte-wrap">
+            <div class="nt-rte-bar" data-for="ntLatar"></div>
+            <div class="nt-rte" id="ntLatar" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Latar belakang" data-placeholder="Latar belakang rapat…" style="min-height:90px"></div>
+          </div>
+        </div>
         <div class="nt-field nt-span4"><span>Isi Notulensi</span>
           <div class="nt-rte-wrap">
             <div class="nt-rte-bar" data-for="ntIsi"></div>
@@ -27296,6 +27301,14 @@ function _ntRteValue(el){
   return el.textContent.trim() ? html : '';
 }
 
+// Latar Belakang semula textarea (teks polos); kini rich text. Nilai lama tanpa
+// tag diperlakukan sebagai teks: di-escape dan baris baru → <br>.
+function _ntLatarHtml(v){
+  const s = String(v || '');
+  if (!s) return '';
+  return /<\/?(b|strong|i|em|u|br|p|div|ul|ol|li)\b[^>]*>/i.test(s) ? _ntSanitize(s) : escapeHtml(s).replace(/\n/g, '<br>');
+}
+
 function _ntFmtTanggal(iso){
   const p = String(iso || '').split('-');
   if (p.length !== 3) return iso || '';
@@ -27467,7 +27480,7 @@ function _ntFill(d, evt){
   val('ntNotulis', d.notulis || (typeof getUserName === 'function' ? getUserName() : '') || '');
   val('ntAgenda', d.agenda || evt.title);
   val('ntHadir', d.daftarHadir);
-  val('ntLatar', d.latarBelakang);
+  document.getElementById('ntLatar').innerHTML = _ntLatarHtml(d.latarBelakang);
   document.getElementById('ntIsi').innerHTML = _ntSanitize(d.isi);
   document.getElementById('ntKesimpulan').innerHTML = _ntSanitize(d.kesimpulan);
   document.getElementById('ntTlBody').innerHTML = '';
@@ -27488,7 +27501,8 @@ function _ntCollect(){
   });
   return {
     tanggal: v('ntTanggal'), waktu: v('ntWaktu'), tempat: v('ntTempat'), notulis: v('ntNotulis'),
-    agenda: v('ntAgenda'), daftarHadir: v('ntHadir'), latarBelakang: v('ntLatar'),
+    agenda: v('ntAgenda'), daftarHadir: v('ntHadir'),
+    latarBelakang: _ntRteValue(document.getElementById('ntLatar')),
     isi: _ntRteValue(document.getElementById('ntIsi')),
     kesimpulan: _ntRteValue(document.getElementById('ntKesimpulan')),
     tindakLanjut,
@@ -27711,7 +27725,7 @@ function _ntDocHtml(d, photos, pdfs, autoPrint){
       '<tr><td class="agl">Daftar Hadir</td><td class="dh" colspan="3">' + nl(d.daftarHadir) + '</td></tr>' +
     '</table>' +
     '<div class="box">' +
-      '<h3>Latar Belakang</h3>' + (d.latarBelakang ? '<div class="rte">' + nl(d.latarBelakang) + '</div>' : '') +
+      '<h3>Latar Belakang</h3>' + (d.latarBelakang ? '<div class="rte">' + _ntLatarHtml(d.latarBelakang) + '</div>' : '') +
       (d.isi ? '<div class="rte" style="margin-top:8px">' + _ntSanitize(d.isi) + '</div>' : '') +
       '<h3>Kesimpulan dan Pembahasan</h3>' + (d.kesimpulan ? '<div class="rte">' + _ntSanitize(d.kesimpulan) + '</div>' : '') +
       '<h3>Tindak Lanjut</h3>' +
