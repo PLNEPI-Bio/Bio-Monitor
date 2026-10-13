@@ -9616,6 +9616,23 @@ body.gf-on .gf-bar{
 .nt-att-new{position:absolute;top:4px;left:4px;background:var(--accent);color:#fff;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700}
 .nt-att .nt-att-del{position:absolute;right:0;bottom:0}
 .nt-modal .fas-modal-foot{align-items:center}
+/* V182: pratinjau dokumen. Kertas tetap putih di tema gelap — ini pratinjau cetak. */
+.nt-view-paper-wrap{margin-top:14px;background:var(--panel-3);border:1px solid var(--border);border-radius:10px;padding:18px;display:flex;justify-content:center}
+/* Kertas selalu selebar A4 (794px) lalu diskalakan agar muat (_ntViewFit) — di
+   layar sempit tata letak tabel header tetap seperti hasil cetak, bukan terjepit. */
+.nt-view-paper-box{position:relative;overflow:hidden;flex:0 0 auto;box-shadow:0 2px 14px rgba(0,0,0,.18);background:#fff}
+.nt-view-paper{display:block;width:794px;border:none;background:#fff;transform-origin:0 0}
+/* Popup dibatasi setinggi layar dan hanya isinya yang menggulir. Dengan aturan
+   bawaan .pemasok-modal (padding 60px + isi 100vh-140px) totalnya melebihi layar:
+   gulir yang mentok di dasar isi diteruskan ke backdrop, popup ikut bergeser dan
+   header sticky meninggalkan celah kosong di atasnya. */
+#ntViewModal{padding:24px;align-items:center}
+#ntViewModal .pemasok-modal{max-height:calc(100vh - 48px)}
+#ntViewModal .pemasok-modal-body{flex:1 1 auto;min-height:0;max-height:none;overscroll-behavior:contain}
+@media (max-width:720px){#ntViewModal{padding:0;align-items:flex-end}}
+.nt-view-err{font-size:12px;color:var(--danger);margin-top:10px}
+.nt-view-err:empty{display:none}
+@media (max-width:768px){.nt-view-paper-wrap{padding:8px}}
 .nt-modal .fas-modal-foot button{flex:0 0 auto;width:auto}
 .nt-foot-left{margin-right:auto;display:flex;gap:8px;align-items:center;flex:0 1 auto;min-width:0}
 .nt-status{font-size:11px;color:var(--text-dim)}
@@ -9682,6 +9699,29 @@ body.gf-on .gf-bar{
       </div>
       <button class="fas-cancel-btn" id="ntCancelBtn">Tutup</button>
       <button class="fas-save-btn" id="ntSaveBtn">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- V182: "Lihat Notulensi" — pratinjau dokumen format Notulen Rapat (pola
+     popup "Lihat" di Laporan Checkpoint), dengan aksi Unduh PDF dan Edit. -->
+<div class="pemasok-modal-backdrop" id="ntViewModal" role="dialog" aria-modal="true" aria-labelledby="ntViewTitle">
+  <div class="pemasok-modal" style="max-width:920px">
+    <div class="pemasok-modal-head">
+      <div class="pemasok-modal-title-wrap">
+        <div class="pemasok-modal-eyebrow">Notulensi Rapat</div>
+        <div class="pemasok-modal-title" id="ntViewTitle">—</div>
+        <div class="pemasok-modal-meta" id="ntViewMeta"></div>
+      </div>
+      <button class="pemasok-modal-close" id="ntViewClose" onclick="ntViewClose()" title="Tutup">× TUTUP</button>
+    </div>
+    <div class="pemasok-modal-body">
+      <div class="laporan-modal-actions">
+        <button class="update-upload-btn" id="ntViewPdfBtn" onclick="ntViewPdf()" title="Buka dialog cetak — pilih &quot;Simpan sebagai PDF&quot;">⬇ Unduh PDF</button>
+        <button class="update-upload-btn laporan-modal-edit-btn" id="ntViewEditBtn" onclick="ntViewEdit()">✏️ Edit</button>
+      </div>
+      <div class="nt-view-err" id="ntViewErr"></div>
+      <div class="nt-view-paper-wrap" id="ntViewWrap"><div class="nt-view-paper-box" id="ntViewBox"><iframe class="nt-view-paper" id="ntViewFrame" title="Dokumen notulensi"></iframe></div></div>
     </div>
   </div>
 </div>
@@ -27109,7 +27149,12 @@ function calRenderSidebar(){
     }).join('');
 
     eventsEl.querySelectorAll('.cal-event-nt').forEach(btn => {
-      btn.onclick = (ev) => { ev.stopPropagation(); ntOpen(btn.getAttribute('data-id')); };
+      // V182: sudah ada notulensi → pratinjau dokumen; belum → langsung form.
+      btn.onclick = (ev) => {
+        ev.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        if (ntState.index[id]) ntViewOpen(id); else ntOpen(id);
+      };
     });
     // Wire delete buttons
     eventsEl.querySelectorAll('.cal-event-del').forEach(btn => {
@@ -27622,6 +27667,17 @@ async function ntPrint(){
     if (p.type.startsWith('image/')){ try { photos.push(await _ntReadDataUrl(p.file)); } catch(e){} }
     else pdfs.push(p.name + ' (belum disimpan)');
   }
+  const html = _ntDocHtml(d, photos, pdfs, true);
+  if (w.closed) return; // pengguna menutup jendela selagi menyiapkan
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
+// V182: dokumen format Notulen Rapat (dipakai cetak dari form dan pratinjau
+// "Lihat Notulensi"). photos = URL gambar, pdfs = nama lampiran non-gambar.
+// autoPrint → dialog cetak terbuka sendiri setelah gambar termuat.
+function _ntDocHtml(d, photos, pdfs, autoPrint){
   const esc = s => escapeHtml(String(s || ''));
   const nl = s => esc(s).replace(/\n/g, '<br>');
   const logoEl = document.querySelector('#brandLogo svg');
@@ -27644,6 +27700,8 @@ async function ntPrint(){
     '.doc{page-break-before:always;break-before:page}.doc h2{text-align:center;font-size:12pt;margin:6px 0 16px}' +
     '.doc img{display:block;width:100%;max-height:118mm;object-fit:contain;margin:0 auto 4px;page-break-inside:avoid;break-inside:avoid}' +
     '.pdfs{margin-top:10px;font-size:10pt}' +
+    // Di layar (pratinjau & jendela cetak) beri margin kertas dan pemisah halaman.
+    '@media screen{body{padding:12mm 14mm;background:#fff}.doc{margin-top:28px;padding-top:20px;border-top:1px dashed #999}}' +
     '</style></head><body>' + header +
     '<table class="hd">' +
       '<tr><td class="title" colspan="2" rowspan="2">NOTULEN RAPAT</td><td class="lbl">Tanggal</td><td class="v">' + esc(_ntFmtTanggal(d.tanggal)) + '</td></tr>' +
@@ -27665,12 +27723,150 @@ async function ntPrint(){
       (pdfs.length ? '<div class="pdfs"><b>Lampiran PDF:</b><ol>' + pdfs.map(n => '<li>' + esc(n) + '</li>').join('') + '</ol></div>' : '') +
       '</div></div>';
   }
-  html += '<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script></body></html>';
-  if (w.closed) return; // pengguna menutup jendela selagi menyiapkan
+  if (autoPrint) html += '<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>';
+  return html + '</body></html>';
+}
+
+// ---------- V182: Lihat Notulensi (pratinjau dokumen) ----------
+// Tombol "Lihat Notulensi" di kartu event kini membuka pratinjau dokumen, bukan
+// form. Edit dan Unduh PDF jadi aksi di popup ini (pola "Lihat" Laporan
+// Checkpoint). Event tanpa notulensi tetap langsung ke form ("+ Notulensi").
+const ntView = { eventId: null, seq: 0, html: '', returnFocus: null };
+
+function _ntViewKey(e){
+  if (e.key !== 'Escape') return;
+  const m = document.getElementById('ntViewModal');
+  if (m && m.classList.contains('open')){ e.stopPropagation(); ntViewClose(); }
+}
+
+// Kertas 794px diskalakan ke lebar wadah; kotak pembungkus mengambil ukuran
+// hasil skala (transform tidak mengubah ukuran tata letak iframe).
+// h = tinggi paksa (saat memuat); tanpa h, tinggi diambil dari dokumen.
+function _ntViewFit(h){
+  const wrap = document.getElementById('ntViewWrap'), box = document.getElementById('ntViewBox'),
+        frame = document.getElementById('ntViewFrame');
+  if (!wrap || !box || !frame) return;
+  const cs = getComputedStyle(wrap);
+  const avail = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const s = Math.min(1, Math.max(0.2, avail / 794));
+  let docH = typeof h === 'number' ? h : 420;
+  if (typeof h !== 'number'){
+    try { docH = Math.max(420, frame.contentDocument.documentElement.scrollHeight + 4); } catch(e){}
+  }
+  frame.style.height = docH + 'px';
+  frame.style.transform = s < 1 ? 'scale(' + s + ')' : '';
+  box.style.width = Math.floor(794 * s) + 'px';
+  box.style.height = Math.ceil(docH * s) + 'px';
+}
+
+async function ntViewOpen(eventId){
+  const evt = calState.events.find(e => e.id === eventId);
+  const modal = document.getElementById('ntViewModal');
+  if (!evt || !modal) return;
+  if (!modal.dataset.wired){
+    modal.dataset.wired = '1';
+    modal.addEventListener('click', ev => { if (ev.target === modal) ntViewClose(); });
+    modal.addEventListener('keydown', _ntViewKey);
+    window.addEventListener('resize', () => { if (modal.classList.contains('open')) _ntViewFit(); });
+  }
+  const seq = ++ntView.seq;
+  if (!modal.classList.contains('open')) ntView.returnFocus = document.activeElement;
+  ntView.eventId = eventId;
+  ntView.html = '';
+  const frame = document.getElementById('ntViewFrame');
+  const errEl = document.getElementById('ntViewErr');
+  const pdfBtn = document.getElementById('ntViewPdfBtn');
+  document.getElementById('ntViewTitle').textContent = evt.title || 'Notulensi';
+  document.getElementById('ntViewMeta').textContent = _ntFmtTanggal(evt.date) + (evt.time ? ' · ' + evt.time : '');
+  errEl.textContent = '';
+  pdfBtn.disabled = true;
+  frame.onload = null;
+  frame.srcdoc = '<p style="font-family:sans-serif;padding:24px;color:#666">Memuat notulensi…</p>';
+  modal.classList.add('open');
+  _ntViewFit(420);
+  document.getElementById('ntViewClose').focus();
+
+  let d = null, meta = null, err = '';
+  if (!supabaseClient) err = 'Supabase tidak tersedia — notulensi tidak bisa dimuat.';
+  else {
+    try {
+      const { data, error } = await supabaseClient.from('calendar_notulensi')
+        .select('data,updated_at,updated_by').eq('event_id', eventId).maybeSingle();
+      if (error) err = 'Gagal memuat notulensi: ' + error.message;
+      else if (data){ d = data.data || {}; meta = data; }
+      else err = 'Notulensi untuk event ini belum ada — klik Edit untuk mengisinya.';
+    } catch(e){ err = 'Gagal memuat notulensi: ' + (e.message || e); }
+  }
+  if (seq !== ntView.seq) return;
+  if (!d){
+    errEl.textContent = err;
+    frame.srcdoc = '<p style="font-family:sans-serif;padding:24px;color:#666">—</p>';
+    return;
+  }
+  // Isian kosong diisi dari event, sama seperti saat form dibuka (_ntFill).
+  const doc = Object.assign({}, d, {
+    tanggal: d.tanggal || evt.date,
+    waktu: d.waktu || (evt.time ? evt.time.replace(':', '.') : ''),
+    agenda: d.agenda || evt.title,
+    tindakLanjut: Array.isArray(d.tindakLanjut) ? d.tindakLanjut.filter(r => r && (r.tl || r.pic || r.deadline)) : [],
+  });
+  const lamp = (Array.isArray(d.lampiran) ? d.lampiran : [])
+    .filter(a => a && typeof a.path === 'string' && a.path.indexOf(evt.id + '/') === 0);
+  await _ntSignPaths(lamp.map(a => a.path));
+  if (seq !== ntView.seq) return;
+  const photos = [], pdfs = [];
+  lamp.forEach(a => {
+    if (String(a.type || '').startsWith('image/')){ if (_ntUrl(a.path)) photos.push(_ntUrl(a.path)); }
+    else pdfs.push(String(a.name || a.path));
+  });
+  ntView.html = _ntDocHtml(doc, photos, pdfs, false);
+  frame.onload = () => {
+    // Ukur ulang saat gambar lampiran selesai dimuat (tinggi dokumen bertambah).
+    _ntViewFit();
+    try { frame.contentDocument.querySelectorAll('img').forEach(i => i.addEventListener('load', _ntViewFit)); } catch(e){}
+  };
+  frame.srcdoc = ntView.html;
+  pdfBtn.disabled = false;
+  document.getElementById('ntViewMeta').textContent = _ntFmtTanggal(evt.date) + (evt.time ? ' · ' + evt.time : '') +
+    (meta && meta.updated_at ? ' · disimpan ' + new Date(meta.updated_at).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' }) +
+      (meta.updated_by ? ' oleh ' + meta.updated_by : '') : '');
+}
+window.ntViewOpen = ntViewOpen;
+
+function ntViewClose(){
+  const modal = document.getElementById('ntViewModal');
+  if (!modal || !modal.classList.contains('open')) return;
+  ntView.seq++;
+  ntView.eventId = null;
+  modal.classList.remove('open');
+  const rf = ntView.returnFocus;
+  ntView.returnFocus = null;
+  if (rf && rf.isConnected && rf.focus) rf.focus();
+}
+window.ntViewClose = ntViewClose;
+
+// Unduh PDF = dialog cetak browser atas dokumen yang sedang ditampilkan
+// (pilih "Simpan sebagai PDF"), sama seperti tombol Cetak / PDF di form.
+function ntViewPdf(){
+  if (!ntView.html) return;
+  const w = window.open('', '_blank');
+  if (!w){ document.getElementById('ntViewErr').textContent = 'Popup diblokir browser — izinkan popup untuk mengunduh PDF.'; return; }
   w.document.open();
-  w.document.write(html);
+  w.document.write(ntView.html.replace('</body></html>',
+    '<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script></body></html>'));
   w.document.close();
 }
+window.ntViewPdf = ntViewPdf;
+
+function ntViewEdit(){
+  const id = ntView.eventId;
+  if (!id) return;
+  // ntViewClose mengembalikan fokus ke tombol kartu event lebih dulu, jadi
+  // ntOpen mencatat tombol itu (bukan popup ini) sebagai tujuan fokus saat form ditutup.
+  ntViewClose();
+  ntOpen(id);
+}
+window.ntViewEdit = ntViewEdit;
 
 // ============================================================
 
