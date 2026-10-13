@@ -20633,7 +20633,11 @@ function _kontrakPeriodeCell(c){
 // Rp per ton. V146: disimpan di tabel Supabase `kontrak_harga` (satu baris per
 // baris Excel; ditulis hanya lewat SQL/service role, anon cuma SELECT) — BUKAN
 // ditanam di HTML (repo publik) dan BUKAN di dashboard_data (ditimpa utuh oleh
-// prod-auto-refresh tiap 20 menit). Setelah fetch, KONTRAK_HARGA_SRC berisi
+// prod-auto-refresh tiap 20 menit). V183: sumber diganti Google Sheet rekap
+// kontrak (sheet Terkontrak 2026/2025/2024, sama dengan GCV) lewat edge function
+// `kontrak-harga-refresh` → ganti per tahun (kolom `tahun`). Harga = Molekul +
+// Transport bila keduanya terisi, selain itu langsung Exc PPN (sheet 2024 hanya
+// punya Exc PPN). Setelah fetch, KONTRAK_HARGA_SRC berisi
 // baris: [no kontrak, mitra, PLTU, jenis, volume, harga molekul, harga
 // transport, harga satuan exc PPN]. null = kosong/"-" di Excel.
 //
@@ -20648,7 +20652,7 @@ function _kontrakPeriodeCell(c){
 //     (satu kontrak Pj bisa memasok beberapa PLTU/jenis dengan harga berbeda).
 // Bila setelah itu masih tersisa beberapa baris (kontrak yang sama dipecah
 // jadi beberapa pos harga), harga ditampilkan rata-rata tertimbang volume.
-// Kontrak 2021–2024 memang tidak ada di workbook ini → sel kosong.
+// Kontrak 2021–2023 memang tidak ada di sumber → sel kosong (V183: 2024 kini ada).
 // =====================================================
 // V146: diisi fetchKontrakHarga() dari tabel Supabase `kontrak_harga` — datanya
 // TIDAK boleh ditanam di sini: repo ini publik (GitHub Pages).
