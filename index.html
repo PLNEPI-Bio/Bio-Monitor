@@ -27886,16 +27886,27 @@ async function _ntMakeDocx(model){
     const out = [];
     const tpl = document.createElement('template');
     tpl.innerHTML = _ntSanitize(html);
+    // runs: [{ r: TextRun, br: bool }]. Paragraf HANYA dibuat bila ada isi —
+    // teks tempelan sering berbentuk <li><p>…</p></li>, dan flush kedua (milik
+    // <li>) dulu menghasilkan butir kosong di antara setiap butir (V186).
     let runs = [];
     const flush = (extra) => {
-      if (runs.length || extra) out.push(para(runs, Object.assign({ alignment: X.AlignmentType.JUSTIFIED, spacing: { after: 60, line: 300 } }, extra || {})));
+      if (runs.some(x => !x.br)){
+        while (runs.length && runs[runs.length - 1].br) runs.pop(); // <br> di ujung = baris kosong palsu
+        while (runs.length && runs[0].br) runs.shift();
+      } else if (runs.length){
+        runs = []; // blok yang isinya hanya <br> = baris kosong yang disengaja (Enter dua kali)
+        if (!extra) out.push(para([], { spacing: { after: 60, line: 300 } }));
+        return;
+      }
+      if (runs.length) out.push(para(runs.map(x => x.r), Object.assign({ alignment: X.AlignmentType.JUSTIFIED, spacing: { after: 60, line: 300 } }, extra || {})));
       runs = [];
     };
     const walk = (node, f, list) => {
       node.childNodes.forEach(ch => {
         if (ch.nodeType === 3){
           const t = ch.nodeValue.replace(/\s+/g, ' ');
-          if (t.trim() || runs.length) runs.push(run(t, { bold: f.b, italics: f.i, underline: f.u ? {} : undefined }));
+          if (t.trim() || runs.some(x => !x.br)) runs.push({ r: run(t, { bold: f.b, italics: f.i, underline: f.u ? {} : undefined }), br: false });
           return;
         }
         if (ch.nodeType !== 1) return;
@@ -27903,7 +27914,7 @@ async function _ntMakeDocx(model){
         if (tag === 'B' || tag === 'STRONG') walk(ch, Object.assign({}, f, { b: true }), list);
         else if (tag === 'I' || tag === 'EM') walk(ch, Object.assign({}, f, { i: true }), list);
         else if (tag === 'U') walk(ch, Object.assign({}, f, { u: true }), list);
-        else if (tag === 'BR') runs.push(run('', { break: 1 }));
+        else if (tag === 'BR') runs.push({ r: run('', { break: 1 }), br: true });
         else if (tag === 'UL' || tag === 'OL'){
           flush();
           const lv = list ? Math.min(list.level + 1, 2) : 0;
@@ -27966,7 +27977,7 @@ async function _ntMakeDocx(model){
   });
   const boxChildren = [heading('Latar Belakang')]
     .concat(d.latarBelakang ? htmlParas(_ntLatarHtml(d.latarBelakang)) : [])
-    .concat(d.isi ? [para([], { spacing: { after: 60 } })].concat(htmlParas(d.isi)) : [])
+    .concat(d.isi ? htmlParas(d.isi) : [])
     .concat([heading('Kesimpulan dan Pembahasan')])
     .concat(d.kesimpulan ? htmlParas(d.kesimpulan) : [])
     .concat([heading('Tindak Lanjut'), tlTable, para([])]);
