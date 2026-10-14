@@ -10143,6 +10143,20 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
 .ck-lg{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border:1px solid var(--border);background:var(--ctl-bg)}
 .ck-lg.ck-lg-u{background:color-mix(in srgb,var(--accent) 8%,var(--ctl-bg));border-color:color-mix(in srgb,var(--accent) 45%,var(--border))}
 .ck-lg.ck-lg-l{background:var(--panel-2)}
+/* V187: angka sheet bisa ditimpa (sheet sumber tidak berubah) — angka sheet tampil sebagai
+   placeholder berwarna teks biasa; sel yang ditimpa diberi segitiga sudut. Baris pada/sesudah
+   tanggal checkpoint = zona prognosa (garis biru di kolom tanggal). */
+.ck-tbl.ck-v .ck-dinp.ck-sv::placeholder{color:var(--text);opacity:1}
+.ck-tbl.ck-v td.ck-zero .ck-dinp.ck-sv::placeholder{color:var(--text-dim)}
+.ck-tbl.ck-v td.ck-ovr::after{content:'';position:absolute;top:0;right:0;border-style:solid;border-width:0 7px 7px 0;border-color:transparent #f59e0b transparent transparent;pointer-events:none}
+.ck-tbl.ck-v tr.ck-fut td.ck-m{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}
+.ck-tbl.ck-v tfoot tr.ck-rrow td{background:color-mix(in srgb,#10b981 10%,var(--panel));color:var(--text-bright);font-weight:700}
+.ck-legend .ck-lg.ck-lg-o{position:relative;overflow:hidden}
+.ck-legend .ck-lg.ck-lg-o::after{content:'';position:absolute;top:0;right:0;border-style:solid;border-width:0 6px 6px 0;border-color:transparent #f59e0b transparent transparent}
+.ck-legend .ck-lg.ck-lg-f{border:0;width:3px;background:color-mix(in srgb,var(--accent) 55%,transparent)}
+.ck-draft{font-size:var(--fs-data);color:var(--text);background:color-mix(in srgb,#10b981 10%,var(--panel));border-left:3px solid #10b981;padding:6px 10px;margin-bottom:10px}
+.ck-draft a{color:var(--accent);cursor:pointer;text-decoration:underline}
+.ck-draft-at{color:var(--text-dim)}
 .ck-legend-k{margin-left:auto}
 @media (max-width:768px){.ck-legend-k{display:none}}
 .ck-tbl .ck-man{text-align:center;color:var(--text-dim);font-style:italic}
@@ -15342,6 +15356,7 @@ async function saveLaporanArsip(){
   renderLaporanArsipFilters();
   renderLaporanArsip();
   setHint('✓ Tersimpan ke library.');
+  if (typeof _ckDraftAfterLibrarySave === 'function') _ckDraftAfterLibrarySave(model.checkpoint);   // V187
 }
 window.saveLaporanArsip = saveLaporanArsip;
 
@@ -15531,6 +15546,7 @@ async function updateLaporanArsip(){
   renderLaporanArsipFilters();
   renderLaporanArsip();
   setHint('✓ Laporan diperbarui di library.');
+  if (typeof _ckDraftAfterLibrarySave === 'function') _ckDraftAfterLibrarySave(model.checkpoint);   // V187
 }
 window.updateLaporanArsip = updateLaporanArsip;
 
@@ -15573,6 +15589,7 @@ async function saveLaporanAsNew(){
   // beralih mengedit salinan baru (bukan lagi laporan asli)
   _setLaporanEditMode(id, wilayah);
   setHint('✓ Salinan tersimpan sebagai laporan baru. Anda kini mengedit salinan tersebut.');
+  if (typeof _ckDraftAfterLibrarySave === 'function') _ckDraftAfterLibrarySave(model.checkpoint);   // V187
 }
 window.saveLaporanAsNew = saveLaporanAsNew;
 
@@ -34749,7 +34766,12 @@ const ckState = {
   edits: {},   // code -> { rows: { key: { days, catatan, name } }, manual: [...], kendala, done (V167) }
   gen: 0, pending: 0, total: 0,
   dirty: false,
-  editLabel: null   // label laporan Library yang sedang diedit lewat Checkpoint
+  editLabel: null,  // label laporan Library yang sedang diedit lewat Checkpoint
+  editId: null,     // V187: id laporan itu — draft otomatis mengingatnya
+  draftAt: 0,       // V187: waktu draft terakhir tersimpan di browser
+  draftRestored: 0, // V187: draft yang dipulihkan saat dibuka (untuk banner)
+  draftFrom: null,  // V187: label laporan Library asal draft yang dipulihkan
+  draftPending: false
 };
 
 // ---------- Masuk ----------
@@ -34763,6 +34785,19 @@ function ckOnShow(){
   if (!ckState.year) ckState.year = now.getFullYear();
   if (!ckState.month) ckState.month = now.getMonth() + 1;
   if (!ckState.date) ckState.date = _ckTodayIso();
+  // V187: buka pertama sesudah reload → lanjutkan draft terakhir (wilayah + bulannya).
+  if (!_ckDraftBooted){
+    _ckDraftBooted = true;
+    if (!ckState.wilayah){
+      let last = null;
+      try { last = JSON.parse(localStorage.getItem(CK_DRAFT_LAST) || 'null'); } catch(e){}
+      if (last && last.wilayah && LAPORAN_REGION_LABEL[last.wilayah] && _ckDraftRead(last.wilayah, last.year, last.month)){
+        Object.assign(ckState, { wilayah: last.wilayah, year: +last.year, month: +last.month });
+        _ckFixDate();
+        _ckDraftRestore();
+      }
+    }
+  }
   _ckBind();
   renderCheckpoint();
   if (ckState.wilayah) ckLoad(false);
@@ -34782,28 +34817,136 @@ function ckSet(k, v){
     const d = /^(\d{4})-(\d{2})-/.exec(v || '');
     // Tanggal di bulan lain = pindah bulan (lewat jalur di bawah).
     if (d && (+d[1] !== ckState.year || +d[2] !== ckState.month)){ k = 'ym'; }
-    else { _ckRenderAllPlants(); return; }
+    else {
+      // V187: tanggal checkpoint = batas realisasi/prognosa — ikut tersimpan di draft.
+      if (ckState.draftAt){ ckState.draftPending = true; _ckDraftSave(); }
+      _ckRenderAllPlants(); return;
+    }
   }
   if (k === 'metric'){ ckState.metric = v; renderCheckpoint(); return; }
   // Wilayah / bulan / tahun = checkpoint lain. Isian yang belum dijadikan laporan
-  // tidak boleh diam-diam pindah ke PLTU/bulan yang berbeda.
-  if (ckState.dirty && !confirm('Isian harian/kendala yang belum dijadikan laporan akan dikosongkan. Lanjut?')){ renderCheckpoint(); return; }
+  // tidak boleh diam-diam pindah ke PLTU/bulan yang berbeda. V187: isian lama
+  // tetap tersimpan sebagai draft wilayah+bulannya — konfirmasi hanya bila draft
+  // gagal ditulis (penyimpanan browser diblokir/penuh).
+  if (ckState.dirty && !_ckDraftSave() && !confirm('Isian harian/kendala yang belum dijadikan laporan akan dikosongkan (draft tidak bisa disimpan di browser ini). Lanjut?')){ renderCheckpoint(); return; }
   if (k === 'wilayah') ckState.wilayah = v;
   else if (k === 'month') ckState.month = +v;
   else if (k === 'year') ckState.year = +v;
   else if (k === 'ym'){ const d = /^(\d{4})-(\d{2})-/.exec(ckState.date); ckState.year = +d[1]; ckState.month = +d[2]; }
   _ckFixDate();
-  Object.assign(ckState, { data: {}, edits: {}, dirty: false });
+  Object.assign(ckState, { data: {}, edits: {}, dirty: false, draftAt: 0, draftRestored: 0, draftFrom: null, draftEditId: null, draftDate: null, draftPending: false });
+  ckGrid.undo = []; ckGrid.redo = [];
+  if (ckState.wilayah) _ckDraftRestore();
   renderCheckpoint();
   if (ckState.wilayah) ckLoad(false);
 }
 function ckNew(){
-  if (ckState.dirty && !confirm('Isian yang belum dijadikan laporan akan dikosongkan. Lanjut?')) return;
-  Object.assign(ckState, { edits: {}, dirty: false, editLabel: null });
+  if ((ckState.dirty || ckState.draftAt) && !confirm('Isian Checkpoint & draft otomatisnya akan dihapus (laporan yang belum disimpan ke Library tidak bisa dibuka lagi lewat Checkpoint). Lanjut?')) return;
+  if (ckState.wilayah) _ckDraftDrop(ckState.wilayah, ckState.year, ckState.month);
+  Object.assign(ckState, { edits: {}, dirty: false, editLabel: null, editId: null, draftAt: 0, draftRestored: 0, draftFrom: null, draftEditId: null, draftDate: null, draftPending: false });
+  ckGrid.undo = []; ckGrid.redo = [];
   laporanCkSource = null;
   if (typeof cancelLaporanEdit === 'function') cancelLaporanEdit();
   renderCheckpoint();
 }
+
+// ---------- V187: draft otomatis ----------
+// Isian Checkpoint (angka harian, ubahan angka sheet, catatan, kendala, mitra
+// tambahan, tanda selesai) disimpan otomatis di browser ini (localStorage), satu
+// draft per wilayah + bulan. Reload, tab tertutup, atau browser crash tidak
+// menghapus progres: membuka sub-tab lagi melanjutkan draft terakhir. Draft
+// dihapus saat "mulai baru" / "buang draft", atau saat laporan dari isian itu
+// disimpan ke Library tanpa ada isian baru sesudahnya. Hanya di browser ini —
+// bukan sinkron antar-perangkat.
+const CK_DRAFT_PFX = 'ck-draft-v1:';
+const CK_DRAFT_LAST = 'ck-draft-last-v1';
+let _ckDraftT = 0, _ckDraftBooted = false, _ckBuiltSnap = null;
+function _ckDraftKey(w, y, m){ return CK_DRAFT_PFX + w + '|' + y + '|' + m; }
+function _ckEdHas(ed){
+  if (!ed) return false;
+  return !!(ed.done || String(ed.kendala || '').trim() || (ed.manual || []).length ||
+    Object.keys(ed.rows || {}).some(k => _ckHasDays(ed.rows[k].days) || String(ed.rows[k].catatan || '').trim()));
+}
+// Semua perubahan isian lewat sini: tandai belum jadi laporan + jadwalkan simpan draft.
+function _ckMarkDirty(){
+  ckState.dirty = true;
+  ckState.draftPending = true;
+  clearTimeout(_ckDraftT);
+  _ckDraftT = setTimeout(_ckDraftSave, 700);
+}
+// true = draft aman di browser (atau tidak ada yang perlu disimpan).
+function _ckDraftSave(){
+  clearTimeout(_ckDraftT); _ckDraftT = 0;
+  if (!ckState.draftPending) return true;
+  if (!ckState.wilayah) return false;
+  const k = _ckDraftKey(ckState.wilayah, ckState.year, ckState.month);
+  try {
+    if (!Object.keys(ckState.edits).some(c => _ckEdHas(ckState.edits[c]))){
+      localStorage.removeItem(k);
+      ckState.draftAt = 0;
+    } else {
+      const now = Date.now();
+      // Draft dari edit laporan Library tetap terkait ke laporan itu walau sudah reload.
+      localStorage.setItem(k, JSON.stringify({ v: 1, savedAt: now, date: ckState.date, edits: ckState.edits,
+        editId: ckState.editId || ckState.draftEditId || null, editLabel: ckState.editLabel || ckState.draftFrom || null }));
+      localStorage.setItem(CK_DRAFT_LAST, JSON.stringify({ wilayah: ckState.wilayah, year: ckState.year, month: ckState.month }));
+      ckState.draftAt = now;
+    }
+    ckState.draftPending = false;
+    _ckSyncStatus();
+    return true;
+  } catch(e){
+    console.warn('[Checkpoint] simpan draft gagal:', e);
+    return false;
+  }
+}
+function _ckDraftRead(w, y, m){
+  try {
+    const d = JSON.parse(localStorage.getItem(_ckDraftKey(w, y, m)) || 'null');
+    return d && d.edits && typeof d.edits === 'object' ? d : null;
+  } catch(e){ return null; }
+}
+function _ckDraftDrop(w, y, m){
+  try { localStorage.removeItem(_ckDraftKey(w, y, m)); } catch(e){}
+  if (w === ckState.wilayah && +y === ckState.year && +m === ckState.month){
+    clearTimeout(_ckDraftT); _ckDraftT = 0;
+    Object.assign(ckState, { draftAt: 0, draftPending: false });
+  }
+}
+// Pulihkan draft wilayah+bulan aktif ke isian (dipanggil saat isian masih kosong).
+function _ckDraftRestore(){
+  const dr = _ckDraftRead(ckState.wilayah, ckState.year, ckState.month);
+  if (!dr) return false;
+  ckState.edits = dr.edits;
+  const pre = ckState.year + '-' + String(ckState.month).padStart(2, '0') + '-';
+  if (typeof dr.date === 'string' && dr.date.indexOf(pre) === 0) ckState.date = dr.date;
+  Object.assign(ckState, { dirty: true, draftPending: false, draftAt: dr.savedAt || 0, draftRestored: dr.savedAt || Date.now(),
+    draftFrom: dr.editLabel || null, draftEditId: dr.editId || null, draftDate: dr.date || null });
+  ckGrid.undo = []; ckGrid.redo = [];
+  return true;
+}
+function ckDraftDiscard(){
+  if (!confirm('Buang draft? Semua isian Checkpoint wilayah & bulan ini dikosongkan kembali ke angka sheet.')) return;
+  _ckDraftDrop(ckState.wilayah, ckState.year, ckState.month);
+  Object.assign(ckState, { edits: {}, dirty: false, draftRestored: 0, draftFrom: null, draftEditId: null, draftDate: null });
+  ckGrid.undo = []; ckGrid.redo = [];
+  renderCheckpoint();
+}
+// Dipanggil sesudah laporan tersimpan/diperbarui di Library. Draft dihapus hanya
+// bila laporan itu memuat isian Checkpoint terbaru (tidak ada isian sesudah "Buat Laporan").
+function _ckDraftAfterLibrarySave(c){
+  // Hanya snapshot yang dibuat dari isian saat ini (objek yang sama, bukan laporan
+  // lain dengan wilayah+bulan sama yang dibuka lewat Edit biasa).
+  if (!c || c !== _ckBuiltSnap || ckState.dirty || ckState.draftPending) return;
+  if (c.wilayah !== ckState.wilayah || +c.year !== ckState.year || +c.month !== ckState.month) return;
+  _ckDraftDrop(c.wilayah, c.year, c.month);
+  Object.assign(ckState, { draftRestored: 0, draftFrom: null });
+  _ckSyncStatus();
+}
+// Tab ditutup / reload / pindah aplikasi di HP → tulis draft yang masih tertunda sekarang.
+window.addEventListener('pagehide', () => { _ckDraftSave(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _ckDraftSave(); });
+window.ckDraftDiscard = ckDraftDiscard;
 
 // ---------- Utilitas ----------
 function _ckTodayIso(){
@@ -35049,10 +35192,11 @@ function renderCheckpoint(){
   const wrap = document.getElementById('ckWrap');
   if (!wrap) return;
   // Mode edit Laporan sudah berakhir (Batal edit / laporan dihapus) → banner ikut hilang.
-  if (ckState.editLabel && !laporanEditingId) ckState.editLabel = null;
+  if (ckState.editLabel && !laporanEditingId){ ckState.editLabel = null; ckState.editId = null; }   // V187: editId ikut
   wrap.innerHTML =
     '<div class="laporan-hint ck-intro">Angka Plan, Confirm, Ready, dan Real harian tiap mitra ditarik langsung dari sheet rakor tiap PLTU (PNP · PIP · UIW/UIK). ' +
-    'Di mode Real, isi sel harian yang masih kosong: prognosa = realisasi sheet + isian. Tulis kendala per PLTU, lalu ' +
+    'Di mode Real, semua sel harian bisa diisi — termasuk menimpa angka sheet (sheet sumbernya tidak berubah). Angka sebelum tanggal checkpoint = <b>realisasi</b>; tanggal checkpoint dan sesudahnya = <b>prognosa</b>. ' +
+    'Isian tersimpan otomatis sebagai draft di browser ini. Tulis kendala per PLTU, lalu ' +
     '<b>Buat Laporan dari Checkpoint</b> — hasilnya laporan infografis yang sama dengan Input Baru, siap diunduh atau disimpan ke Library.</div>' +
     _ckInputHtml();
 }
@@ -35079,6 +35223,11 @@ function _ckInputHtml(){
   (ckState.metric !== 'real' ? '<div class="ck-hint" style="margin:-4px 0 10px">Menampilkan angka ' + escapeHtml(ckState.metric) +
     ' dari sheet (baca saja). Isian harian untuk prognosa ada di mode <a style="color:var(--accent);cursor:pointer" onclick="ckSet(\'metric\', \'real\')">Real</a>.</div>'
     : '<div class="ck-hint" style="margin:-4px 0 10px">Seperti Excel: klik-geser untuk memilih · Ctrl+C / Ctrl+V dari Excel atau Google Sheets · geser kotak kecil ■ di pojok seleksi untuk mengisi · Ctrl+D / Ctrl+R · Delete · Ctrl+Z / Ctrl+Y · Enter ↓ · Tab → · F2 atau klik ganda untuk mengedit isi sel · rumus: =1000/3, =SUM(100;250), =ROUND(500/7;1).</div>');
+  // V187: draft otomatis yang dipulihkan sesudah reload / pindah wilayah.
+  if (ckState.draftRestored && ckState.wilayah) h += '<div class="ck-draft">↺ Draft isian tersimpan otomatis (' + e(_ckTime(ckState.draftRestored)) + ') dipulihkan' +
+    (ckState.draftDate ? ', dengan tanggal checkpoint ' + e(ckState.draftDate) + (ckState.draftDate !== _ckTodayIso() ? ' — ubah bila perlu' : '') : '') + '.' +
+    (ckState.draftFrom && !ckState.editLabel ? ' Draft ini dari edit laporan Library <b>' + e(ckState.draftFrom) + '</b> — untuk memperbarui laporan itu, buka lagi lewat “Edit via Checkpoint” (draft akan ditawarkan).' : '') +
+    ' · <a onclick="ckDraftDiscard()">buang draft</a></div>';
   if (ckState.editLabel) h += '<div class="ck-editing">✎ Mengedit laporan Library <b>' + e(ckState.editLabel) + '</b> lewat Checkpoint — "Buat Laporan" lalu <b>Perbarui</b> di Input Baru. · <a onclick="ckNew()">batal &amp; mulai baru</a></div>';
   if (!ckState.wilayah) return h + '<div class="ms-empty">Pilih wilayah untuk menarik data semua PLTU di wilayah itu.</div>';
   const plants = _laporanRegionPlants(ckState.wilayah);
@@ -35087,7 +35236,7 @@ function _ckInputHtml(){
   h += '<datalist id="ckMitraList">' + _ckMitraIndex().list.map(o => o.name).sort().map(n => '<option value="' + e(n) + '">').join('') + '</datalist>';
   h += '<div id="ckPlants">' + plants.map(p => '<section class="ck-plant' + (_ckEd(p.code).done ? ' done' : '') + '" id="ckP-' + _ckId(p.code) + '">' + _ckPlantHtml(p) + '</section>').join('') + '</div>';
   h += '<div class="ck-save">' +
-    '<div class="ck-save-k ck-hint">Realisasi saat ini = Σ Real sheet · Prognosa = hasil Checkpoint · DO = data dashboard · Kendala per PLTU → kendala laporan · mitra → halaman Lampiran. Semua masih bisa diubah di form laporan.</div>' +
+    '<div class="ck-save-k ck-hint">Realisasi saat ini = angka harian sebelum tanggal checkpoint (sheet, atau ubahan Anda) · Prognosa = total bulan (realisasi + angka mulai tanggal checkpoint) · DO = data dashboard · Kendala per PLTU → kendala laporan · mitra → halaman Lampiran. Semua masih bisa diubah di form laporan.</div>' +
     '<button class="ms-btn primary" onclick="ckBuildLaporan()">🖼️ Buat Laporan dari Checkpoint</button>' +
     '<span class="ck-save-hint" id="ckSaveHint"></span>' +
   '</div>';
@@ -35112,6 +35261,8 @@ function _ckStatusText(){
   }
   if (none) s += ' · ' + none + ' PLTU belum punya blok bulan ini di sheet';
   if (err) s += ' · <b class="ck-bad">' + err + ' PLTU gagal ditarik</b>';
+  // V187: penanda draft otomatis.
+  if (ckState.draftAt) s += ' · <span class="ck-draft-at" title="Isian tersimpan di browser ini — aman bila halaman ter-reload">💾 Draft tersimpan ' + _ckTime(ckState.draftAt) + '</span>';
   return s;
 }
 function _ckSyncStatus(){
@@ -35181,7 +35332,49 @@ function _ckPlantHtml(p){
 // di sel harian yang masih kosong (atau 0). Sel yang sudah berisi angka sheet
 // tetap terkunci — sheet adalah sumber realisasi, isian hanya melengkapi hari
 // yang belum terjadi / belum tercatat.
+// V187: sel berangka sheet juga bisa diisi — isian MENIMPA angka sheet untuk
+// laporan ini saja (sheet sumber tidak diubah); sel dikosongkan = kembali ke angka
+// sheet. _ckEditable kini hanya dipakai untuk membaca laporan Library lama (model v1).
 function _ckEditable(x){ return x === null || x === undefined || x === 0; }
+// V187: hari pertama zona prognosa (1..nd+1). Hari < nilai ini = realisasi, hari ≥
+// = prognosa. Patokannya tanggal checkpoint (default hari ini). Bulan yang sudah
+// lewat dengan checkpoint di hari terakhirnya = seluruh bulan realisasi.
+function _ckCutDay(nd){
+  const ckDay = _ckCkDay();
+  if (ckDay < 0) return 1;
+  const t = new Date(), ty = t.getFullYear(), tm = t.getMonth() + 1;
+  const ym = ckState.year * 12 + ckState.month, tym = ty * 12 + tm;
+  // Bulan mendatang belum punya realisasi; bulan berjalan paling jauh s.d. kemarin.
+  if (ym > tym) return 1;
+  if (ym === tym) return Math.min(ckDay, t.getDate());
+  if (ckDay >= nd) return nd + 1;
+  return ckDay;
+}
+// V187: angka Real sheet satu mitra di satu hari (null bila kosong / tidak ada).
+function _ckSheetDay(code, key, day){
+  const d = ckState.data[code];
+  if (!d || !d.row) return null;
+  const r = _ckRows(code, d.row).find(x => x.key === key);
+  const v = r && r.mt.real ? r.mt.real[day - 1] : null;
+  return v === undefined ? null : v;
+}
+// V187: tulis isian harian mitra sheet + catat angka sheet saat itu (`base`).
+// Isian yang dibuat ketika sel sheet masih kosong TIDAK boleh mengalahkan angka
+// sheet yang masuk belakangan (draft bisa bertahan berhari-hari) — lihat _ckStale.
+function _ckSetDay(code, key, day, val, name){
+  const ed = _ckEd(code);
+  const r = ed.rows[key] || (ed.rows[key] = {});
+  if (name) r.name = name;
+  (r.days || (r.days = {}))[day] = val;
+  const b = r.base || (r.base = {});
+  if (_ckHasU(val)) b[day] = _ckSheetDay(code, key, +day);
+  else delete b[day];
+}
+// Isian basi: diisi saat sheet kosong/0, kini sheet berangka → angka sheet yang dipakai.
+function _ckStale(row, day, sv){
+  const b = row && row.base ? row.base[day] : undefined;
+  return b !== undefined && _ckEditable(b) && !_ckEditable(sv);
+}
 function _ckHasU(u){ return u !== undefined && u !== null && String(u).trim() !== ''; }
 function _ckHasDays(days){ return !!days && Object.keys(days).some(k => _ckHasU(days[k])); }
 function _ckNd(b){ return b ? (b.days || _ckDaysIn(ckState.year, ckState.month)) : _ckDaysIn(ckState.year, ckState.month); }
@@ -35190,34 +35383,50 @@ function _ckNd(b){ return b ? (b.days || _ckDaysIn(ckState.year, ckState.month))
 function _ckCalc(code){
   const d = ckState.data[code] || {}, b = d.row, ed = _ckEd(code);
   const nd = _ckNd(b), rows = _ckRows(code, b);
-  const T = { plan: 0, confirm: 0, ready: 0, real: 0, prognosa: 0 }, prog = {}, day = new Array(nd).fill(null);
+  const cut = _ckCutDay(nd);
+  // V187: realisasi = Σ angka efektif (ubahan user, atau sheet) di hari < cut;
+  // prognosa = Σ seluruh bulan (realisasi + angka mulai tanggal checkpoint).
+  const T = { plan: 0, confirm: 0, ready: 0, real: 0, realisasi: 0, prognosa: 0 }, prog = {}, realz = {}, day = new Array(nd).fill(null);
   const add = (i, v) => { day[i] = (day[i] || 0) + v; };
+  const r3 = x => Math.round(x * 1000) / 1000;
   const present = new Set();
   rows.forEach(r => {
     present.add(r.key);
     CK_SUMS.forEach(k => { T[k] += _ckSum(r.mt[k]) || 0; });
-    const days = (ed.rows[r.key] || {}).days || {}, real = r.mt.real || [];
-    let s = 0;
+    const er = ed.rows[r.key] || {}, days = er.days || {}, real = r.mt.real || [];
+    let s = 0, sr = 0;
     for (let i = 0; i < nd; i++){
       const u = days[i + 1];
-      if (_ckHasU(u) && _ckEditable(real[i])){ const v = _ckVal(u); s += v; add(i, v); }
-      else if (real[i] !== null && real[i] !== undefined){ s += real[i]; add(i, real[i]); }
+      let v = null;
+      if (_ckHasU(u) && !_ckStale(er, i + 1, real[i])) v = _ckVal(u);
+      else if (real[i] !== null && real[i] !== undefined) v = real[i];
+      if (v === null) continue;
+      s += v; add(i, v);
+      if (i + 1 < cut) sr += v;
     }
-    prog[r.key] = Math.round(s * 1000) / 1000;
+    prog[r.key] = r3(s);
+    realz[r.key] = r3(sr);
   });
   const onlyDays = (days, key) => {
-    let s = 0;
-    for (let i = 0; i < nd; i++){ const u = (days || {})[i + 1]; if (_ckHasU(u)){ const v = _ckVal(u); s += v; add(i, v); } }
-    prog[key] = Math.round(s * 1000) / 1000;
+    let s = 0, sr = 0;
+    for (let i = 0; i < nd; i++){
+      const u = (days || {})[i + 1];
+      if (_ckHasU(u)){ const v = _ckVal(u); s += v; add(i, v); if (i + 1 < cut) sr += v; }
+    }
+    prog[key] = r3(s);
+    realz[key] = r3(sr);
   };
   Object.keys(ed.rows).forEach(k => { if (!present.has(k)) onlyDays(ed.rows[k].days, k); });
   (ed.manual || []).forEach(m => {
     CK_SUMS.forEach(k => { T[k] += _ckVal(m[k]); });
     onlyDays(m.days, 'm:' + m.id);
+    // Mitra tambahan tanpa angka harian: realisasi = isian Σ Real-nya (perilaku lama).
+    // Prognosa = total bulan, jadi tidak boleh lebih kecil dari realisasi itu.
+    if (!_ckHasDays(m.days)){ realz['m:' + m.id] = r3(_ckVal(m.real)); prog['m:' + m.id] = realz['m:' + m.id]; }
   });
-  Object.keys(prog).forEach(k => { T.prognosa += prog[k]; });
-  Object.keys(T).forEach(k => { T[k] = Math.round(T[k] * 1000) / 1000; });
-  return { nd, rows, prog, day, T, present };
+  Object.keys(prog).forEach(k => { T.prognosa += prog[k]; T.realisasi += realz[k] || 0; });
+  Object.keys(T).forEach(k => { T[k] = r3(T[k]); });
+  return { nd, rows, prog, realz, day, T, present, cut };
 }
 // V168: tabel isian vertikal — baris = tanggal 1..akhir bulan, kolom = mitra.
 // Ringkasan (Σ Plan/Confirm/Ready/Real, Prognosa, Catatan) jadi baris kaki tabel.
@@ -35225,25 +35434,34 @@ function _ckTableHtml(p, b, ed){
   const e = escapeHtml, code = p.code, met = ckState.metric, isReal = met === 'real';
   const d = ckState.data[code] || {};
   const C = _ckCalc(code), nd = C.nd, rows = C.rows;
-  const ckDay = _ckCkDay();
+  const ckDay = _ckCkDay(), cut = C.cut;
   const dayCls = i => 'ck-d' + (i === ckDay ? ' ck-today' : '');
   const sheetTot = new Array(nd).fill(null);
   // Sel isian harian. type=text + inputmode: input number mengubah nilai saat roda
   // mouse digulir di atasnya, dan panah ↑↓ di sini dipakai untuk pindah baris.
   const dayInp = (attrs, ckf, val, ph) =>
-    '<input type="text" inputmode="decimal" class="ck-inp ck-dinp' + (_ckHasU(val) ? ' ck-u' : '') + '" ' + attrs +
+    '<input type="text" inputmode="decimal" class="ck-inp ck-dinp' + (_ckHasU(val) ? ' ck-u' : '') + (ph ? ' ck-sv' : '') + '" ' + attrs +
     ' data-ckf="' + ckf + '" value="' + e(!_ckHasU(val) ? '' : typeof val === 'number' ? _ckNumStr(val) : String(val)) + '" placeholder="' + ph + '">';
   const noteInp = (key, name, val) =>
     '<input type="text" class="ck-inp" data-ck="note" data-code="' + e(code) + '" data-key="' + e(key) + '" data-name="' + e(name) +
     '" data-ckf="note|' + e(code) + '|' + e(key) + '" value="' + e(val || '') + '" placeholder="—">';
   const progCell = key => '<td class="ck-s ck-prog" data-ckrow="' + e(key) + '">' + _ckFmt(C.prog[key]) + '</td>';
-  // Satu sel harian: isian (hari kosong di mode Real) atau angka sheet yang terkunci.
+  const realzCell = key => '<td class="ck-s" data-ckreal="' + e(key) + '">' + _ckFmt(C.realz[key]) + '</td>';
+  // Satu sel harian. Mode Real: selalu isian (V187) — angka sheet tampil sebagai
+  // placeholder & di data-v; isian menimpanya untuk laporan ini saja.
   const dayCell = (key, name, sheetArr, userDays, i) => {
-    const sv = sheetArr ? sheetArr[i] : null, u = (userDays || {})[i + 1];
-    if (isReal && _ckEditable(sv)){
-      return '<td class="' + dayCls(i + 1) + ' ck-dcell">' +
+    const sv = sheetArr ? sheetArr[i] : null;
+    let u = (userDays || {})[i + 1];
+    // Isian lama yang kini kalah oleh angka sheet: tampil angka sheet + keterangan.
+    const stale = _ckHasU(u) && _ckStale(ed.rows[key], i + 1, sv);
+    const staleNote = stale ? ' — isian lama Anda (' + String(u) + ') diabaikan karena sheet kini terisi; ketik ulang untuk menimpa' : '';
+    if (stale) u = '';
+    if (isReal){
+      const has = sv !== null && sv !== undefined, ovr = has && _ckHasU(u);
+      return '<td class="' + dayCls(i + 1) + ' ck-dcell' + (sv === 0 ? ' ck-zero' : '') + (ovr ? ' ck-ovr' : '') + '"' +
+             (has ? ' data-v="' + sv + '" title="' + e('Angka sheet: ' + _ckFmt(sv) + (ovr ? ' — diubah untuk laporan ini (sheet tetap)' : '') + staleNote) + '"' : '') + '>' +
              dayInp('data-ck="day" data-code="' + e(code) + '" data-key="' + e(key) + '" data-name="' + e(name) + '" data-day="' + (i + 1) + '"',
-                    'day|' + e(code) + '|' + e(key) + '|' + (i + 1), u, sv === 0 ? '0' : '') + '</td>';
+                    'day|' + e(code) + '|' + e(key) + '|' + (i + 1), u, has ? _ckFmt(sv) : '') + '</td>';
     }
     return '<td class="' + dayCls(i + 1) + (sv === 0 ? ' ck-zero' : '') + '" tabindex="-1" data-v="' + (sv === null || sv === undefined ? '' : sv) + '">' +
            (sv === null || sv === undefined ? '' : _ckFmt(sv)) + '</td>';
@@ -35263,6 +35481,7 @@ function _ckTableHtml(p, b, ed){
       cell: i => dayCell(r.key, r.name, src, v.days, i),
       sums: CK_SUMS.map(k => r.mt[k] ? _ckFmt(_ckSum(r.mt[k])) : '—'),
       prog: progCell(r.key),
+      realz: realzCell(r.key),
       note: noteInp(r.key, r.name, v.catatan)
     });
   });
@@ -35277,6 +35496,7 @@ function _ckTableHtml(p, b, ed){
         cell: i => dayCell(k, nm, null, v.days, i),
         sums: CK_SUMS.map(() => '—'),
         prog: progCell(k),
+        realz: realzCell(k),
         note: noteInp(k, nm, v.catatan)
       });
     });
@@ -35296,6 +35516,7 @@ function _ckTableHtml(p, b, ed){
         : '<td class="' + dayCls(i + 1) + '" tabindex="-1" data-v=""></td>',
       sums: CK_SUMS.map(k => a(k, '', '0')),
       prog: progCell('m:' + mr.id),
+      realz: realzCell('m:' + mr.id),
       note: a('catatan', '', '—', 'text')
     });
   });
@@ -35312,7 +35533,9 @@ function _ckTableHtml(p, b, ed){
           cols.map(c => c.head).join('') + '<th class="ck-s ck-tot">Total</th></tr></thead><tbody>';
   for (let i = 0; i < nd; i++){
     const wd = new Date(ckState.year, ckState.month - 1, i + 1).getDay();
-    h += '<tr' + (wd === 0 ? ' class="ck-we ck-sun"' : wd === 6 ? ' class="ck-we"' : '') + '><td class="ck-m' + (i + 1 === ckDay ? ' ck-tdy" title="Tanggal checkpoint' : '') + '">' +
+    // V187: ck-fut = zona prognosa (tanggal checkpoint dan sesudahnya).
+    const trc = (wd === 0 ? 'ck-we ck-sun' : wd === 6 ? 'ck-we' : '') + (i + 1 >= cut ? ' ck-fut' : '');
+    h += '<tr' + (trc.trim() ? ' class="' + trc.trim() + '"' : '') + '><td class="ck-m' + (i + 1 === ckDay ? ' ck-tdy" title="Tanggal checkpoint' : '') + '">' +
          '<b>' + (i + 1) + '</b><span class="ck-dow">' + DOW[wd] + '</span></td>' +
          cols.map(c => c.cell(i)).join('') +
          '<td class="ck-s ck-tot"' + (isReal ? ' data-ckday="' + i + '"' : '') + '>' + (dayTot[i] === null ? '' : _ckFmt(dayTot[i])) + '</td></tr>';
@@ -35323,26 +35546,40 @@ function _ckTableHtml(p, b, ed){
          '<td class="ck-s ck-tot" data-cksum="' + k + '">' + _ckFmt(C.T[k]) + '</td></tr>';
   });
   // Prognosa di baris terakhir: menempel di bawah area gulir, selalu terlihat saat mengisi.
+  // V187: Realisasi = hari sebelum tanggal checkpoint; Prognosa = total bulan.
+  const cutLbl = cut > nd ? 'Realisasi (sebulan penuh)' : cut <= 1 ? 'Realisasi (belum ada)' : 'Realisasi s.d. tgl ' + (cut - 1);
   h += '<tr><td class="ck-m">Catatan</td>' + cols.map(c => '<td class="ck-in ck-note">' + c.note + '</td>').join('') + '<td class="ck-tot"></td></tr>' +
-       '<tr class="ck-prow"><td class="ck-m ck-prog" title="Real harian dari sheet + angka yang diisi di sel harian kosong">Prognosa</td>' + cols.map(c => c.prog).join('') +
+       '<tr class="ck-rrow"><td class="ck-m" title="Angka harian (sheet, atau ubahan Anda) sebelum tanggal checkpoint → Realisasi saat ini di laporan">' + cutLbl + '</td>' + cols.map(c => c.realz).join('') +
+       '<td class="ck-s ck-tot" data-cksum="realisasi">' + _ckFmt(C.T.realisasi) + '</td></tr>' +
+       '<tr class="ck-prow"><td class="ck-m ck-prog" title="Total bulan: realisasi + angka mulai tanggal checkpoint (sheet, atau isian/ubahan Anda)">Prognosa</td>' + cols.map(c => c.prog).join('') +
        '<td class="ck-s ck-prog ck-tot" data-cksum="prognosa">' + _ckFmt(C.T.prognosa) + '</td></tr>' +
        '</tfoot></table></div>';
   h += '<div class="ck-legend">' + (isReal
-    ? '<span><i class="ck-lg"></i>Angka sheet (terkunci) · kosong = bisa diisi</span><span><i class="ck-lg ck-lg-u"></i>Isian Anda</span>' +
+    ? '<span><i class="ck-lg"></i>Angka sheet · semua sel bisa diisi</span><span><i class="ck-lg ck-lg-u"></i>Isian Anda</span>' +
+      '<span><i class="ck-lg ck-lg-u ck-lg-o"></i>Angka sheet yang Anda ubah (sheet tetap) · Delete = kembali ke sheet</span>' +
+      '<span><i class="ck-lg ck-lg-f"></i>Tanggal checkpoint &amp; sesudahnya = prognosa</span>' +
       '<span class="ck-legend-k">Enter ↓ · Tab → · Ctrl+V tempel dari Excel · Ctrl+Z urung · geser kotak pojok untuk mengisi</span>'
     : '<span>Tampilan ' + e(met) + ' hanya untuk dibaca — pindah ke Real untuk mengisi.</span>') + '</div>';
   return h;
 }
 function _ckTotals(code){ return _ckCalc(code).T; }
+// V187: warna isian + tanda "angka sheet diubah" pada satu sel harian.
+function _ckMarkCell(inp){
+  const has = _ckHasU(inp.value);
+  inp.classList.toggle('ck-u', has);
+  const td = inp.parentElement;
+  if (td && td.dataset.v !== undefined) td.classList.toggle('ck-ovr', has);
+}
 function _ckSyncTotals(code){
   const sec = document.getElementById('ckP-' + _ckId(code));
   if (!sec) return;
   const C = _ckCalc(code);
-  CK_SUMS.concat(['prognosa']).forEach(k => {
+  CK_SUMS.concat(['realisasi', 'prognosa']).forEach(k => {
     const c = sec.querySelector('[data-cksum="' + k + '"]');
     if (c) c.textContent = _ckFmt(C.T[k]);
   });
   sec.querySelectorAll('[data-ckrow]').forEach(c => { c.textContent = _ckFmt(C.prog[c.dataset.ckrow]); });
+  sec.querySelectorAll('[data-ckreal]').forEach(c => { c.textContent = _ckFmt(C.realz[c.dataset.ckreal]); });
   sec.querySelectorAll('[data-ckday]').forEach(c => { const v = C.day[+c.dataset.ckday]; c.textContent = v === null ? '' : _ckFmt(v); });
 }
 
@@ -35359,7 +35596,7 @@ function _ckBind(){
     if (act === 'day' || act === 'note'){
       const r = ed.rows[t.dataset.key] || (ed.rows[t.dataset.key] = {});
       r.name = t.dataset.name || r.name;
-      if (act === 'day') (r.days || (r.days = {}))[t.dataset.day] = t.value;
+      if (act === 'day') _ckSetDay(code, t.dataset.key, t.dataset.day, t.value, t.dataset.name);
       else r.catatan = t.value;
     } else if (act === 'm-day'){
       const mr = (ed.manual || []).find(x => x.id === t.dataset.mid);
@@ -35370,8 +35607,8 @@ function _ckBind(){
       const mr = (ed.manual || []).find(x => x.id === t.dataset.mid);
       if (mr) mr[act.slice(2)] = t.value;
     } else return;
-    if (t.classList.contains('ck-dinp')) t.classList.toggle('ck-u', _ckHasU(t.value));
-    ckState.dirty = true;
+    if (t.classList.contains('ck-dinp')) _ckMarkCell(t);
+    _ckMarkDirty();
     _ckSyncTotals(code);
   });
   // V163: navigasi, seleksi, salin-tempel, fill handle, undo — gaya Excel.
@@ -35383,12 +35620,12 @@ function _ckBind(){
     if (act === 'add'){
       _ckEd(code).manual.push({ id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: '', jenis: '',
                                 plan: '', confirm: '', ready: '', real: '', days: {}, catatan: '' });
-      ckState.dirty = true;
+      _ckMarkDirty();
       _ckRenderPlant(code, true);
     } else if (act === 'done'){   // V167
       const ed = _ckEd(code);
       ed.done = !ed.done;
-      ckState.dirty = true;
+      _ckMarkDirty();
       // V176: ubah di tempat, bukan render ulang — fokus tombol & seleksi grid tetap.
       const sec = document.getElementById('ckP-' + _ckId(code));
       if (sec) sec.classList.toggle('done', ed.done);
@@ -35400,7 +35637,7 @@ function _ckBind(){
     } else if (act === 'del'){
       const ed = _ckEd(code);
       ed.manual = ed.manual.filter(x => x.id !== t.dataset.mid);
-      ckState.dirty = true;
+      _ckMarkDirty();
       _ckRenderPlant(code);
     }
   });
@@ -35547,7 +35784,7 @@ function _ckgResolveFormula(inp){
   }
   inp.value = _ckNumStr(r);
   _ckgSetState(_ckgDesc(inp), inp.value, inp.dataset.name);
-  inp.classList.toggle('ck-u', _ckHasU(inp.value));
+  _ckMarkCell(inp);
   _ckSyncTotals(inp.dataset.code);
 }
 
@@ -35575,7 +35812,7 @@ function _ckgInp(td){ return td ? td.querySelector('.ck-dinp') : null; }
 // Nilai yang tampil di sel (isian, atau angka sheet di data-v) — untuk salin & Σ.
 function _ckgCellVal(td){
   const i = _ckgInp(td);
-  if (i) return i.value;
+  if (i && i.value !== '') return i.value;   // V187: isian kosong → angka sheet di data-v
   // V175: angka sheet di data-v bertitik ("71.429") — tulis ulang dengan koma supaya
   // tidak terbaca ribuan saat dijumlah, disalin, atau jadi sumber fill.
   if (!td || td.dataset.v === undefined || td.dataset.v === '') return '';
@@ -35604,14 +35841,15 @@ function _ckgSetState(desc, val, name){
   const ed = _ckEd(desc.code);
   let holder;
   if (desc.ck === 'day'){
-    holder = ed.rows[desc.key] || (ed.rows[desc.key] = {});
-    if (name) holder.name = name;
+    _ckSetDay(desc.code, desc.key, desc.day, val, name);   // V187: + angka dasar sheet
+    _ckMarkDirty();
+    return;
   } else {
     holder = (ed.manual || []).find(x => x.id === desc.mid);
     if (!holder) return;
   }
   (holder.days || (holder.days = {}))[desc.day] = val;
-  ckState.dirty = true;
+  _ckMarkDirty();
 }
 // Satu perubahan pengguna = satu entri undo (berisi banyak sel).
 function _ckgApply(items, record){
@@ -35621,7 +35859,7 @@ function _ckgApply(items, record){
     _ckgSetState(it.desc, it.val, inp ? inp.dataset.name : null);
     if (inp){
       inp.value = it.val;
-      inp.classList.toggle('ck-u', _ckHasU(it.val));
+      _ckMarkCell(inp);
       inp._ckOld = it.val;
     }
     codes.add(it.desc.code);
@@ -35799,7 +36037,7 @@ function _ckgPaste(text){
   ckGrid.f = { r: Math.min(rows.length - 1, R.r0 + H - 1), d: Math.min(nd, R.d0 + W - 1) };
   _ckgPaint();
   const msg = [];
-  if (locked) msg.push(locked + ' sel berisi angka sheet dilewati');
+  if (locked) msg.push(locked + ' sel baca-saja dilewati (pindah ke Real untuk mengisi)');
   if (bad) msg.push(bad + ' nilai bukan angka dilewati');
   if (msg.length || !n) showToast((n ? n + ' sel ditempel · ' : 'Tidak ada sel yang berubah · ') + msg.join(' · '), msg.length ? 'warn' : 'info', 3500);
 }
@@ -35963,7 +36201,7 @@ function _ckGridBind(w){
     const p = _ckgPos(ev.target);
     if (!p) return;
     const inp = _ckgInp(p.td);
-    if (!inp){ showToast('Sel ini berisi angka dari sheet — tidak bisa diubah di sini.', 'info', 2500); return; }
+    if (!inp){ showToast('Tampilan ' + ckState.metric + ' hanya untuk dibaca — pindah ke Real untuk mengisi atau mengubah angka.', 'info', 2500); return; }
     ckGrid.edit = true;
     _ckgPaint();
     inp.focus();
@@ -36008,7 +36246,7 @@ function _ckGridBind(w){
     if (k === 'Tab'){ stop(); _ckgCommitTyping(); _ckgMove(0, ev.shiftKey ? -1 : 1, false, false); return; }
     if (k === 'Home' || k === 'End'){ stop(); _ckgCommitTyping(); _ckgMove(0, k === 'Home' ? -1 : 1, ev.shiftKey, true); return; }
     // Mengetik di sel terkunci.
-    if (!inp && k.length === 1 && !ctrl){ stop(); showToast('Sel ini berisi angka dari sheet — tidak bisa diubah di sini.', 'info', 2500); return; }
+    if (!inp && k.length === 1 && !ctrl){ stop(); showToast('Tampilan ' + ckState.metric + ' hanya untuk dibaca — pindah ke Real untuk mengisi atau mengubah angka.', 'info', 2500); return; }
     // Ketikan biasa: isi sel sudah terseleksi → langsung tertimpa, dan panah tetap
     // memindah sel (seperti "mode masuk" Excel) sampai F2 / klik ganda.
   });
@@ -36044,11 +36282,18 @@ function _ckGridBind(w){
 
 // ---------- Simpan / Library ----------
 function _ckBuildModel(){
-  const out = { v: 1, wilayah: ckState.wilayah, year: ckState.year, month: ckState.month, checkpoint_date: ckState.date, plants: {} };
+  // V187: v2 = isian harian boleh menimpa angka sheet; `cut` = hari pertama prognosa.
+  const out = { v: 2, wilayah: ckState.wilayah, year: ckState.year, month: ckState.month, checkpoint_date: ckState.date, plants: {} };
   // Isian harian disimpan sebagai { hari: angka } — hanya sel yang diisi.
-  const cleanDays = days => {
+  // V187: isian basi (kalah oleh angka sheet, lihat _ckStale) tidak ikut disimpan.
+  const cleanDays = (days, er, real) => {
     const o = {};
-    Object.keys(days || {}).forEach(k => { if (_ckHasU(days[k])) o[k] = _ckVal(days[k]); });
+    Object.keys(days || {}).forEach(k => { if (_ckHasU(days[k]) && !(er && _ckStale(er, k, real ? real[+k - 1] : null))) o[k] = _ckVal(days[k]); });
+    return o;
+  };
+  const cleanBase = (days, base) => {
+    const o = {};
+    Object.keys(days).forEach(k => { if (base && base[k] !== undefined) o[k] = base[k]; });
     return o;
   };
   _laporanRegionPlants(ckState.wilayah).forEach(p => {
@@ -36064,7 +36309,9 @@ function _ckBuildModel(){
         const x = r.mt.real[i];
         return x === null || x === undefined || isNaN(x) ? null : +x;
       }) : null;
-      o.days = cleanDays(v.days);
+      o.days = cleanDays(v.days, v, r.mt.real);
+      o.base = cleanBase(o.days, v.base);
+      o.realisasi = C.realz[r.key];   // V187
       o.prognosa = C.prog[r.key];
       o.catatan = v.catatan || '';
       return o;
@@ -36072,12 +36319,12 @@ function _ckBuildModel(){
     Object.keys(ed.rows).forEach(k => {
       const v = ed.rows[k];
       if (C.present.has(k) || (!_ckHasDays(v.days) && !v.catatan)) return;
-      rows.push({ key: k, name: v.name || k.split('|')[0], gone: true, days: cleanDays(v.days), prognosa: C.prog[k], catatan: v.catatan || '' });
+      rows.push({ key: k, name: v.name || k.split('|')[0], gone: true, days: cleanDays(v.days), realisasi: C.realz[k], prognosa: C.prog[k], catatan: v.catatan || '' });
     });
     out.plants[p.code] = {
-      name: p.name, sheet: d.sheet || null, src: d.src || null, fetched_at: d.fetched_at || null, nd: C.nd,
+      name: p.name, sheet: d.sheet || null, src: d.src || null, fetched_at: d.fetched_at || null, nd: C.nd, cut: C.cut,
       rows, manual: (ed.manual || []).map(m => Object.assign({}, m, { days: cleanDays(m.days), prognosa: C.prog['m:' + m.id] })),
-      kendala: ed.kendala || '', prognosa: C.T.prognosa, done: !!ed.done   // V167
+      kendala: ed.kendala || '', realisasi: C.T.realisasi, prognosa: C.T.prognosa, done: !!ed.done   // V167
     };
   });
   return out;
@@ -36086,12 +36333,28 @@ function _ckEditsFromModel(m){
   const out = {};
   // V175: angka tersimpan ditulis dengan koma desimal — String(71.429) = "71.429" akan
   // terbaca balik 71429 oleh _ckParseNum (titik + tiga digit = ribuan).
-  const strDays = days => { const o = {}; Object.keys(days || {}).forEach(k => { o[k] = typeof days[k] === 'number' ? _ckNumStr(days[k]) : String(days[k]); }); return o; };
+  // V187: model v1 (sebelum isian boleh menimpa sheet) bisa menyimpan isian di hari yang
+  // ternyata berangka sheet — dulu diabaikan; buang supaya tidak tiba-tiba jadi ubahan.
+  const v1 = !(m && m.v >= 2);
+  const strDays = (days, realDays) => {
+    const o = {};
+    Object.keys(days || {}).forEach(k => {
+      if (v1 && realDays && !_ckEditable(realDays[+k - 1])) return;
+      o[k] = typeof days[k] === 'number' ? _ckNumStr(days[k]) : String(days[k]);
+    });
+    return o;
+  };
   Object.keys((m && m.plants) || {}).forEach(code => {
     const p = m.plants[code], rows = {};
     (p.rows || []).forEach(r => {
       if (!_ckHasDays(r.days) && !r.catatan) return;
-      rows[r.key] = { days: strDays(r.days), catatan: r.catatan || '', name: r.name };
+      const days = strDays(r.days, r.realDays), base = {};
+      // V187: angka dasar sheet per isian — v2 tersimpan; v1 = Real harian saat laporan dibuat.
+      Object.keys(days).forEach(k => {
+        if (r.base && r.base[k] !== undefined) base[k] = r.base[k];
+        else if (v1 && r.realDays) base[k] = r.realDays[+k - 1] === undefined ? null : r.realDays[+k - 1];
+      });
+      rows[r.key] = { days, base, catatan: r.catatan || '', name: r.name };
     });
     const manual = (p.manual || []).map(x => { const o = Object.assign({}, x, { days: strDays(x.days) }); delete o.prognosa; return o; });
     out[code] = { rows, manual, kendala: p.kendala || '', done: !!p.done };
@@ -36149,7 +36412,8 @@ function ckBuildLaporan(){
     // PLTU tanpa blok di sheet (dan tanpa mitra tambahan) → tetap angka dashboard.
     if (!d.row && !(ed.manual || []).length){ noData.push(p.name || p.code); return; }
     const C = _ckCalc(p.code);
-    setCell(i, 'realnow', C.T.real);
+    // V187: realisasi = angka harian sebelum tanggal checkpoint (termasuk ubahan user).
+    setCell(i, 'realnow', C.T.realisasi);
     setCell(i, 'prognosa', C.T.prognosa);
   });
   _lapFormSyncTotals();
@@ -36170,12 +36434,12 @@ function ckBuildLaporan(){
       return { c, key, nk: _ckNorm(c.pemasok), jk: _ckNorm(c.jenis), used: false };
     });
     const C = _ckCalc(p.code);
-    const items = C.rows.map(r => ({ name: r.name, jenis: r.jenis, real: _ckSum(r.mt.real) || 0, prog: C.prog[r.key] || 0 }));
+    const items = C.rows.map(r => ({ name: r.name, jenis: r.jenis, real: C.realz[r.key] || 0, prog: C.prog[r.key] || 0 }));
     Object.keys(ed.rows).forEach(k => {
-      if (!C.present.has(k) && _ckHasDays(ed.rows[k].days)) items.push({ name: ed.rows[k].name || k.split('|')[0], jenis: '', real: 0, prog: C.prog[k] || 0 });
+      if (!C.present.has(k) && _ckHasDays(ed.rows[k].days)) items.push({ name: ed.rows[k].name || k.split('|')[0], jenis: '', real: C.realz[k] || 0, prog: C.prog[k] || 0 });
     });
     (ed.manual || []).forEach(m => {
-      if (m.name && m.name.trim()) items.push({ name: m.name.trim(), jenis: m.jenis || '', real: _ckVal(m.real), prog: C.prog['m:' + m.id] || 0 });
+      if (m.name && m.name.trim()) items.push({ name: m.name.trim(), jenis: m.jenis || '', real: C.realz['m:' + m.id] || 0, prog: C.prog['m:' + m.id] || 0 });
     });
     items.forEach(it => {
       const nk = _ckNorm(it.name), jk = _ckNorm(it.jenis);
@@ -36201,8 +36465,9 @@ function ckBuildLaporan(){
   }
 
   // 4) Isian harian ikut laporan → bisa dibuka lagi lewat "Edit via Checkpoint".
-  laporanCkSource = _ckBuildModel();
+  laporanCkSource = _ckBuiltSnap = _ckBuildModel();
   ckState.dirty = false;
+  _ckDraftSave();   // V187: draft tetap ada sampai laporan tersimpan ke Library
 
   // 5) Preview laporan yang sama dengan Input Baru.
   setLaporanSubtab('input');
@@ -36222,14 +36487,32 @@ function ckBuildLaporan(){
 function editLaporanViaCheckpoint(){
   const m = laporanPreviewModel, meta = laporanPreviewMeta;
   if (!m || !m.checkpoint || !meta) return;
-  if (ckState.dirty && !confirm('Isian Checkpoint yang belum dijadikan laporan akan diganti. Lanjut?')) return;
-  closeLaporanPreviewModal();
   const c = m.checkpoint;
+  // V187: draft otomatis lain (bukan dari laporan ini) untuk wilayah+bulan yang sama
+  // akan tertimpa begitu isian diubah — minta persetujuan dulu.
+  const dr0 = _ckDraftRead(c.wilayah || '', c.year || 2026, c.month || ckState.month);
+  if (dr0 && dr0.editId !== meta.id){
+    if (!confirm('Ada draft isian Checkpoint lain untuk wilayah & bulan ini (tersimpan ' + _ckTime(dr0.savedAt) + '). Draft itu akan tertimpa bila Anda mengubah isian laporan ini. Lanjut?')) return;
+  } else if (ckState.dirty){
+    // V187: isian yang sedang dikerjakan tetap tersimpan sebagai draft wilayah+bulannya.
+    const kept = _ckDraftSave();
+    if (!confirm('Isian Checkpoint yang belum dijadikan laporan akan diganti' + (kept ? ' (tetap tersimpan sebagai draft wilayah & bulannya)' : ' dan HILANG — draft tidak bisa disimpan di browser ini') + '. Lanjut?')) return;
+  }
+  closeLaporanPreviewModal();
+  _ckDraftSave();
   Object.assign(ckState, {
     wilayah: c.wilayah || '', year: c.year || 2026, month: c.month || ckState.month,
     date: c.checkpoint_date || ckState.date, edits: _ckEditsFromModel(c), data: {}, dirty: false,
-    editLabel: [meta.wilayah, meta.checkpoint_date, meta.keterangan].filter(Boolean).join(' · ')
+    editLabel: [meta.wilayah, meta.checkpoint_date, meta.keterangan].filter(Boolean).join(' · '),
+    editId: meta.id, draftAt: 0, draftRestored: 0, draftFrom: null, draftEditId: null, draftDate: null, draftPending: false
   });
+  ckGrid.undo = []; ckGrid.redo = [];
+  // V187: draft otomatis dari sesi edit laporan ini yang belum sempat disimpan (mis. reload).
+  const dr = _ckDraftRead(ckState.wilayah, ckState.year, ckState.month);
+  // Batal tidak menghapus draft — draft baru tertimpa bila isian diubah.
+  if (dr && dr.editId === meta.id && confirm('Ada draft isian Checkpoint untuk laporan ini yang belum tersimpan (' + _ckTime(dr.savedAt) + '). Lanjutkan dari draft itu?\n\nOK = pakai draft · Batal = pakai isian laporan tersimpan (draft tetap ada sampai isian diubah).')){
+    _ckDraftRestore();
+  }
   laporanCkSource = c;
   // Narasi & keterangan laporan lama ikut ke form, supaya Dukungan tidak hilang.
   const kEl = document.getElementById('laporanKendala'), duEl = document.getElementById('laporanDukungan');
@@ -36275,7 +36558,8 @@ function _lapHarianPlants(c){
       const cells = [];
       for (let i = 0; i < nd; i++){
         const s = realDays ? realDays[i] : null, u = days ? days[i + 1] : undefined;
-        if (_ckHasU(u) && _ckEditable(s)) cells.push({ v: num(u), u: true });
+        // V187: model v2 — isian menimpa angka sheet; v1 — isian hanya di hari kosong.
+        if (_ckHasU(u) && (c.v >= 2 || _ckEditable(s))) cells.push({ v: num(u), u: true, o: s !== null && s !== undefined && c.v >= 2 });
         else cells.push({ v: s === undefined ? null : s, u: false });
       }
       return { name, sub, jenis: jenis || '', cells, real, prog, catatan: catatan || '', cls };
@@ -36291,6 +36575,7 @@ function _lapHarianPlants(c){
     rows.forEach(r => r.cells.forEach((x, i) => { if (x.v !== null) day[i] = (day[i] || 0) + x.v; }));
     const sum = k => rows.reduce((s, r) => s + (+r[k] || 0), 0);
     return { code, name: p.name || code, sheet: p.sheet, fetched_at: p.fetched_at, nd, rows, day,
+             realz: typeof p.realisasi === 'number' ? p.realisasi : null,   // V187
              real: Math.round(sum('real') * 1000) / 1000, prog: p.prognosa !== undefined && p.prognosa !== null ? p.prognosa : sum('prog'),
              kendala: p.kendala || '', legacy: (p.rows || []).some(r => !r.gone && !r.realDays) };
   });
@@ -36305,11 +36590,12 @@ function _lapHarianHtml(c){
   const tReal = withData.reduce((s, p) => s + p.real, 0), tProg = withData.reduce((s, p) => s + (+p.prog || 0), 0);
   const legacy = withData.some(p => p.legacy);
   let h = '<div class="lap-h-sum"><p>Rekaman realisasi harian per mitra dari sheet rakor, sebagaimana tercatat saat laporan ini dibuat lewat Checkpoint. ' +
-    'Angka <span class="lap-h-legend"></span><i>miring</i> diisi user di hari kosong dan menjadi dasar prognosa.</p>' +
+    'Angka <span class="lap-h-legend"></span><i>miring</i> diisi atau diubah user (sheet sumbernya tetap); angka sebelum tanggal checkpoint = realisasi, sesudahnya = prognosa.</p>' +
     '<button type="button" class="update-upload-btn" onclick="downloadLaporanHarianXLSX()">⬇ Excel Harian</button></div>';
   h += '<div class="lap-h-kpi"><div>Bulan<b>' + e(mLabel) + '</b></div>' +
     (c.checkpoint_date ? '<div>Checkpoint<b>' + e(cd ? +cd[3] + ' ' + (LAPORAN_MONTHS_FULL[+cd[2] - 1] || cd[2]) + ' ' + cd[1] : c.checkpoint_date) + '</b></div>' : '') +
     '<div>Σ Real sheet<b>' + _ckFmt(Math.round(tReal * 100) / 100) + ' MT</b></div>' +
+    (withData.some(p => p.realz !== null) ? '<div>Realisasi<b>' + _ckFmt(Math.round(withData.reduce((s, p) => s + (+p.realz || 0), 0) * 100) / 100) + ' MT</b></div>' : '') +
     '<div>Prognosa<b>' + _ckFmt(Math.round(tProg * 100) / 100) + ' MT</b></div>' +
     '<div>PLTU<b>' + withData.length + ' / ' + P.length + '</b></div></div>';
   if (legacy) h += '<p class="ck-warn">⚠ Laporan ini disimpan sebelum Real harian ikut direkam — yang tampil hanya angka isian dan total per mitra. Simpan ulang lewat “Edit via Checkpoint” untuk merekam Real harian.</p>';
@@ -36325,7 +36611,7 @@ function _lapHarianHtml(c){
       h += '<tr class="' + r.cls + '"><td class="ck-m"><div class="ck-mn">' + e(r.name) + '</div>' + (r.sub ? '<div class="ck-raw">' + e(r.sub) + '</div>' : '') + '</td><td class="ck-j">' + e(r.jenis) + '</td>';
       r.cells.forEach((x, i) => {
         const cls = 'ck-d' + (x.u ? ' lap-h-u' : x.v === 0 ? ' ck-zero' : '') + (i + 1 === ckDay && !x.u ? ' ck-today' : '');
-        h += '<td class="' + cls + '"' + (x.u ? ' title="Isian user (prognosa)"' : '') + '>' + _ckFmt(x.v) + '</td>';
+        h += '<td class="' + cls + '"' + (x.u ? ' title="' + (x.o ? 'Angka sheet diubah user (sheet tetap)' : 'Isian user') + '"' : '') + '>' + _ckFmt(x.v) + '</td>';
       });
       h += '<td class="ck-s">' + _ckFmt(r.real) + '</td><td class="ck-s ck-prog">' + _ckFmt(r.prog) + '</td><td class="ck-j">' + e(r.catatan) + '</td></tr>';
     });
@@ -36355,11 +36641,11 @@ function downloadLaporanHarianXLSX(){
     ['Checkpoint: ' + (c.checkpoint_date || '—') + ' · Sumber: sheet rakor saat laporan dibuat. Isian user (dasar prognosa) ditandai di sheet "Isian User".'],
     [], hdr
   ];
-  const isian = [['PLTU', 'Mitra', 'Tanggal', 'Isian (MT)']];
+  const isian = [['PLTU', 'Mitra', 'Tanggal', 'Isian (MT)', 'Jenis isian']];
   P.forEach(p => {
     p.rows.forEach(r => {
       const row = [p.name, r.name, r.sub && r.cls !== 'ck-gone' && r.sub !== 'mitra tambahan' ? r.sub : '', r.jenis];
-      for (let i = 0; i < nd; i++){ const x = r.cells[i]; row.push(x ? r2(x.v) : ''); if (x && x.u) isian.push([p.name, r.name, i + 1, r2(x.v)]); }
+      for (let i = 0; i < nd; i++){ const x = r.cells[i]; row.push(x ? r2(x.v) : ''); if (x && x.u) isian.push([p.name, r.name, i + 1, r2(x.v), x.o ? 'ubah angka sheet' : 'isi hari kosong']); }
       row.push(r2(r.real), r2(r.prog), r.catatan);
       aoa.push(row);
     });
