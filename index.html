@@ -10167,6 +10167,23 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
 .ck-draft-t{flex:1 1 320px}
 .ck-draft-btn{flex:0 0 auto;padding:4px 10px;border:1px solid color-mix(in srgb,#ef4444 45%,var(--border));border-radius:var(--ctl-radius);background:var(--ctl-bg);color:#ef4444;font:600 var(--fs-data) 'Plus Jakarta Sans',sans-serif;cursor:pointer}
 .ck-draft-btn:hover{background:color-mix(in srgb,#ef4444 10%,var(--ctl-bg))}
+/* V190: mode fokus Checkpoint — semua yang bukan form isian disembunyikan, tabel
+   memanjang mengisi layar. Keluar: tombol mengambang, Esc, atau pindah tab/sub-tab. */
+body.ck-focus .topbar,body.ck-focus nav.tabs,body.ck-focus .gf-bar,body.ck-focus .mobile-bottom-nav,
+body.ck-focus .view[data-view="laporan"] .real-header,body.ck-focus .laporan-subnav,
+body.ck-focus .ck-intro,body.ck-focus #toTopBtn{display:none!important}
+body.ck-focus .shell{grid-template-rows:1fr!important}
+body.ck-focus .view[data-view="laporan"] .real-view{padding:12px 16px 16px;gap:10px}
+body.ck-focus .ck-tbl-wrap.ck-vw{max-height:calc(100vh - 210px)}
+.ck-focus-exit{display:none;position:fixed;top:10px;right:16px;z-index:60;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--border);border-radius:999px;background:var(--panel);color:var(--text-bright);font:600 var(--fs-data) 'Plus Jakarta Sans',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer}
+.ck-focus-exit:hover{border-color:var(--accent);color:var(--accent)}
+.ck-focus-exit kbd{padding:0 5px;border:1px solid var(--border);border-radius:4px;font:600 var(--fs-note) 'Plus Jakarta Sans',sans-serif;color:var(--text-dim)}
+body.ck-focus .ck-focus-exit{display:inline-flex}
+body.ck-focus .ck-scope{padding-right:200px}
+@media (max-width:760px){
+  .ck-focus-exit kbd{display:none}
+  body.ck-focus .ck-scope{padding-right:0;padding-top:34px}
+}
 .ck-status .ck-draft-x{margin-left:6px;color:#ef4444;cursor:pointer;text-decoration:underline}
 .ck-legend-k{margin-left:auto}
 @media (max-width:768px){.ck-legend-k{display:none}}
@@ -15160,6 +15177,7 @@ function setLaporanSubtab(tab){
   document.querySelectorAll('.laporan-subpanel').forEach(p => { p.style.display = (p.dataset.lappanel === state.laporanSubtab) ? '' : 'none'; });
   // V164: Checkpoint menarik ulang data sheet setiap kali dibuka.
   if (state.laporanSubtab === 'checkpoint' && typeof ckOnShow === 'function') ckOnShow();
+  else if (typeof ckFocus === 'function') ckFocus(false, true);   // V190: mode fokus hanya di Checkpoint
 }
 window.setLaporanSubtab = setLaporanSubtab;
 
@@ -18434,6 +18452,7 @@ function switchTab(tab){
   }
   // V164: sub-tab Checkpoint di Laporan — data sheet ditarik ulang setiap tampil.
   if (tab === 'laporan' && state.laporanSubtab === 'checkpoint' && typeof ckOnShow === 'function') setTimeout(ckOnShow, 30);
+  if (tab !== 'laporan' && typeof ckFocus === 'function') ckFocus(false, true);   // V190
 
   // V54: Show skeleton loading for tabs that haven't been initialized yet
   if (tab === 'realisasi' && !realInit){
@@ -34977,6 +34996,38 @@ window.addEventListener('pagehide', () => { _ckDraftSave(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') _ckDraftSave(); });
 window.ckDraftDiscard = ckDraftDiscard;
 
+// ---------- V190: mode fokus ----------
+// on: true/false, atau kosong = balik. quiet: tanpa toast (keluar otomatis saat pindah tab).
+function ckFocus(on, quiet){
+  const was = document.body.classList.contains('ck-focus');
+  on = on === undefined ? !was : !!on;
+  if (on === was) return;
+  if (on && !(state.tab === 'laporan' && state.laporanSubtab === 'checkpoint')) return;
+  document.body.classList.toggle('ck-focus', on);
+  let x = document.getElementById('ckFocusExit');
+  if (!x){
+    x = document.createElement('button');
+    x.type = 'button';
+    x.id = 'ckFocusExit';
+    x.className = 'ck-focus-exit';
+    x.title = 'Tampilkan lagi header, tab, dan menu';
+    x.innerHTML = '✕ Keluar mode fokus <kbd>Esc</kbd>';
+    x.addEventListener('click', () => ckFocus(false));
+    document.body.appendChild(x);
+  }
+  const b = document.getElementById('ckFocusBtn');
+  if (b){ b.textContent = on ? '✕ Keluar mode fokus' : '⛶ Mode fokus'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  if (!quiet) showToast(on ? 'Mode fokus aktif — tekan Esc atau "Keluar mode fokus" untuk kembali.' : 'Mode fokus dimatikan.', 'info', 2500);
+}
+// Esc keluar dari mode fokus — kecuali di dalam tabel/isian (Esc di sana = batalkan ketikan sel).
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Escape' || ev.defaultPrevented || !document.body.classList.contains('ck-focus')) return;
+  const t = ev.target;
+  if (t && t.closest && t.closest('.ck-tbl, input, textarea, select, [contenteditable="true"]')) return;
+  ckFocus(false);
+});
+window.ckFocus = ckFocus;
+
 // ---------- Utilitas ----------
 function _ckTodayIso(){
   const d = new Date();
@@ -35247,6 +35298,10 @@ function _ckInputHtml(){
       CK_METRICS.map(([k, t]) => '<button type="button" class="' + (ckState.metric === k ? 'on' : '') + '" onclick="ckSet(\'metric\', \'' + k + '\')">' + t + '</button>').join('') +
     '</div></div>' +
     '<div><button class="ms-btn" onclick="ckLoad(true)"' + (ckState.wilayah ? '' : ' disabled') + ' title="Tarik ulang semua PLTU dari sheet sekarang">↻ Tarik ulang dari sheet</button></div>' +
+    // V190: mode fokus — sembunyikan header, tab, & elemen lain di luar form isian.
+    '<div><button class="ms-btn" id="ckFocusBtn" onclick="ckFocus()" aria-pressed="' + (document.body.classList.contains('ck-focus') ? 'true' : 'false') + '"' +
+      ' title="Sembunyikan header, tab, dan elemen lain supaya fokus mengisi tabel (Esc untuk keluar)">' +
+      (document.body.classList.contains('ck-focus') ? '✕ Keluar mode fokus' : '⛶ Mode fokus') + '</button></div>' +
   '</div>' +
   '<div class="ck-status" id="ckStatus">' + _ckStatusText() + '</div>' +
   (ckState.metric !== 'real' ? '<div class="ck-hint" style="margin:-4px 0 10px">Menampilkan angka ' + escapeHtml(ckState.metric) +
