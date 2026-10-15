@@ -4178,6 +4178,9 @@ html,body{
 .fas-vol-table .fas-vol-rm-table td.podt-real{color:var(--accent)}
 .fas-vol-table .fas-vol-rm-table tfoot td{font-weight:700;border-top:1px solid var(--border);background:none}
 .fas-vol-rm-src{font-size:9.5px;color:var(--text-dim);margin:5px 6px 0}
+/* V191: Ciamis — pemisah tebal antara blok Produksi dan blok Mixed Aren */
+.fas-vol-rm-table .fas-vol-rm-sep{border-left:3px solid var(--text-dim)}
+.fas-vol-table .fas-vol-rm-table td.fas-vol-rm-sep,.fas-vol-rm-table th.fas-vol-rm-sep{text-align:left;color:var(--text-dim)}
 .fas-vol-table tfoot td{font-weight:700;border-top:2px solid var(--accent);background:var(--panel-3)}
 .fas-vol-table input{
   width:72px;text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;
@@ -26651,7 +26654,7 @@ function fasKontrakVolumeSectionsHTML(f){
 // mengikuti `fields` dari respons fungsi.
 const FAS_RM_SITE = { 'Tasikmalaya': 'TSM', 'Ciamis': 'CMS' };
 const FAS_RM_SRC = { TSM: 'Rekap Muat', CMS: 'Tally Harian' };
-const FAS_RM_COLS = { TSM: 'N/O/P', CMS: 'J/L/N' };
+const FAS_RM_COLS = { TSM: 'N/O/P', CMS: 'B/N (produksi) · Q/R/T (mixed aren)' }; // V191
 const FAS_RM_FN_URL = SUPABASE_URL + '/functions/v1/rekap-muat';
 const FAS_RM_TTL = 10 * 60 * 1000;
 const fasRmCache = {};     // site -> { at, months, err, promise }
@@ -26667,7 +26670,7 @@ function fasRmMonth(nama, year){
   const c = fasRmCache[site];
   const key = now.y + '-' + String(now.m + 1).padStart(2, '0');
   const mo = c && c.months && c.months[key];
-  return mo && mo.days && mo.days.length ? Object.assign({ i: now.m, at: c.at, site, fields: c.fields || [] }, mo) : null;
+  return mo && ((mo.days && mo.days.length) || (mo.mix && mo.mix.days && mo.mix.days.length)) ? Object.assign({ i: now.m, at: c.at, site, fields: c.fields || [] }, mo) : null;
 }
 function fasRmLoad(nama){
   const site = FAS_RM_SITE[nama];
@@ -26715,8 +26718,10 @@ function fasVolEffective(nama, year){
     realArr[i] = mr > 0 ? mr : ar;  realSrc[i] = mr > 0 ? 'manual' : (ar > 0 ? 'auto' : 'none');
   }
   const rm = fasRmMonth(nama, year);
-  if (rm && realSrc[rm.i] === 'none' && rm.total && rm.total.netto > 0){
-    realArr[rm.i] = rm.total.netto; realSrc[rm.i] = 'sheet';
+  // V191: Ciamis — Real sementara = Σ Netto Mix (pengiriman ke PLTU), bukan produksi.
+  const rmVal = rm ? (rm.mix ? (rm.mix.total || {}).mix : (rm.total || {}).netto) : 0;
+  if (rm && realSrc[rm.i] === 'none' && rmVal > 0){
+    realArr[rm.i] = rmVal; realSrc[rm.i] = 'sheet';
   }
   return { doArr, realArr, doSrc, realSrc, hasAuto: !!auto, rm };
 }
@@ -26747,11 +26752,24 @@ function fasVolDetailTableHTML(nama, year){
       const t = rm.total || {};
       const flds = rm.fields.length ? rm.fields : [{ key: 'netto', label: 'Netto' }];
       const vals = x => flds.map(fl => '<td' + (fl.key === 'netto' ? ' class="podt-real"' : '') + '>' + f2(x[fl.key]) + '</td>').join('');
-      let d = '<table class="fas-vol-rm-table"><thead><tr><th>Tgl</th><th>Truk</th>' + flds.map(fl => '<th>' + escapeHtml(fl.label) + '</th>').join('') + '</tr></thead><tbody>';
+      let d;
+      if (rm.mix){
+        // V191: Ciamis — dua blok berdampingan: Produksi (B/N) || Mixed Aren (Q/R/T).
+        const L = rm.days || [], R = rm.mix.days || [], tm = rm.mix.total || {};
+        const sep = ' class="fas-vol-rm-sep"';
+        const side = (x, key, first) => x
+          ? '<td' + (first ? '' : sep) + '>' + x.d + ' ' + MONTHS[i] + '</td><td>' + x.truk + '</td><td' + (key === 'netto' ? ' class="podt-real"' : '') + '>' + f2(x[key]) + '</td>'
+          : '<td' + (first ? '' : sep) + '></td><td></td><td></td>';
+        d = '<table class="fas-vol-rm-table"><thead><tr><th>Tanggal</th><th>Truk</th><th>Vol Produksi</th><th' + sep + '>Tanggal</th><th>Truk</th><th>Vol Mixed Aren</th></tr></thead><tbody>';
+        for (let k = 0; k < Math.max(L.length, R.length); k++) d += '<tr>' + side(L[k], 'netto', true) + side(R[k], 'mix', false) + '</tr>';
+        d += '</tbody><tfoot><tr><td>Total</td><td>' + (t.truk || 0) + '</td><td class="podt-real">' + f2(t.netto) + '</td><td' + sep + '>Total</td><td>' + (tm.truk || 0) + '</td><td>' + f2(tm.mix) + '</td></tr></tfoot></table>';
+      } else {
+      d = '<table class="fas-vol-rm-table"><thead><tr><th>Tgl</th><th>Truk</th>' + flds.map(fl => '<th>' + escapeHtml(fl.label) + '</th>').join('') + '</tr></thead><tbody>';
       rm.days.forEach(x => {
         d += '<tr><td>' + x.d + ' ' + MONTHS[i] + '</td><td>' + x.truk + '</td>' + vals(x) + '</tr>';
       });
       d += '</tbody><tfoot><tr><td>Total</td><td>' + (t.truk || 0) + '</td>' + vals(t) + '</tr></tfoot></table>';
+      }
       const upd = rm.at ? new Date(rm.at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
       d += '<div class="fas-vol-rm-src">Sumber: sheet ' + (FAS_RM_SRC[rm.site] || '') + ' (ton) — Σ per tanggal kolom ' + (FAS_RM_COLS[rm.site] || '') + (upd ? ' · dimuat ' + upd : '') +
         (realSrc[i] !== 'sheet' ? ' · Real di atas memakai ' + (realSrc[i] === 'manual' ? 'input manual' : 'Kontrak Auto Refresh') : '') + '</div>';

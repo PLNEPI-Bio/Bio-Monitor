@@ -2,15 +2,17 @@
 // Reads the truck weighing log of a production facility and returns daily
 // sums per month. Tasikmalaya: sheet "Rekap Muat", product (col N), limbah
 // (col O), netto (col P = N + O). Ciamis (V178): sheet "Tally Harian", kotor
-// (J), tara (L), netto (N). Used by the Fasilitas Produksi tab to fill the current
-// month of "Volume Terpasok" until Kontrak Auto Refresh has a value (V177).
+// (J), tara (L), netto (N); V191: + right block "Pengiriman ke PLTU" (date Q,
+// truck plate R, Netto Mix T) returned as months[k].mix. Used by the Fasilitas
+// Produksi tab to fill the current month of "Volume Terpasok" until Kontrak
+// Auto Refresh has a value (V177).
 //
 // The spreadsheet ID lives in table `checkpoint_source` (RLS on, no policy ->
 // service role only) under src = SITES[site].src. It is NOT in index.html
 // because the repo is public, and the sheet holds truck plates and staff
 // names. Only daily aggregates leave this function.
 //
-// Query/body: site=TSM|CMS -> { ok, fields, months: { "2026-10": { days:[...], total } } }
+// Query/body: site=TSM|CMS -> { ok, fields, months: { "2026-10": { days:[...], total, mix? } } }
 //
 // Both sheets: one block per month. Weighing cells are stored in kg, so values
 // >= 100 are divided by 1000. Columns are located by header text (the
@@ -37,10 +39,11 @@ const SITES: Record<string, Site> = {
     src: "REKAP_MUAT_TSM", sheet: "Rekap Muat", layout: "rekap",
     fields: [{ key: "product", label: "Product" }, { key: "limbah", label: "Limbah" }, { key: "netto", label: "Netto" }],
   },
-  // V178: Ciamis — sheet "Tally Harian", left block (truck out: Kotor/Tara/Netto).
+  // V178: Ciamis — sheet "Tally Harian", left block (Netto Produk).
+  // V191: only Netto shown ("Vol Produksi"); right block comes back as `mix`.
   CMS: {
     src: "REKAP_MUAT_CMS", sheet: "Tally Harian", layout: "tally",
-    fields: [{ key: "kotor", label: "Kotor" }, { key: "tara", label: "Tara" }, { key: "netto", label: "Netto" }],
+    fields: [{ key: "netto", label: "Vol Produksi" }],
   },
 };
 
@@ -146,9 +149,11 @@ function rowsRekap(rows: unknown[][]): Rec[] {
 // Ciamis "Tally Harian": blocks start with "Bulan Oktober 2026" in col B,
 // header row "No" with Berat Kotor / Tara / Netto (kg). The same headers repeat
 // in the right-hand "Pengiriman ke PLTU" block, so take the FIRST match (J/L/N).
-function rowsTally(rows: unknown[][]): Rec[] {
-  const out: Rec[] = [];
-  let cols = { k: 9, t: 11, n: 13 };
+// V191: right block — date Q, truck plate R (one row = one truck), Netto Mix T.
+const MIX_FIELDS: Field[] = [{ key: "mix", label: "Vol Mixed Aren" }];
+function rowsTally(rows: unknown[][]): { prod: Rec[]; mix: Rec[] } {
+  const out: Rec[] = [], mix: Rec[] = [];
+  let cols = { k: 9, t: 11, n: 13, q: 16, r: 17, x: 19 };
   let block: { y: number; m: number } | null = null;
   for (const row of rows) {
     if (!row) continue;
@@ -160,16 +165,25 @@ function rowsTally(rows: unknown[][]): Rec[] {
     }
     if (txt(row[0]).toUpperCase().replace(".", "") === "NO") {
       const k = findCol(row, /^berat kotor/i, false), t = findCol(row, /^berat kosong|tara/i, false), n = findCol(row, /^berat netto/i, false);
-      cols = { k: k >= 0 ? k : 9, t: t >= 0 ? t : 11, n: n >= 0 ? n : 13 };
+      // Right block: header cells after the left block (col > Netto Produk).
+      const after = (re: RegExp) => row.findIndex((c, j) => j > (n >= 0 ? n : 13) && re.test(txt(c)));
+      const q = after(/^tanggal/i), rr = after(/polisi/i), x = after(/^berat netto mix/i);
+      cols = { k: k >= 0 ? k : 9, t: t >= 0 ? t : 11, n: n >= 0 ? n : 13, q: q >= 0 ? q : 16, r: rr >= 0 ? rr : 17, x: x >= 0 ? x : 19 };
       continue;
     }
     const dt = dayOf(row[1], block);
-    if (!dt) continue;
-    const kotor = ton(row[cols.k]), tara = ton(row[cols.t]);
-    const netto = ton(row[cols.n]) || Math.max(0, kotor - tara);
-    if (netto) out.push({ ...dt, v: { kotor, tara, netto } });
+    if (dt) {
+      const kotor = ton(row[cols.k]), tara = ton(row[cols.t]);
+      const netto = ton(row[cols.n]) || Math.max(0, kotor - tara);
+      if (netto) out.push({ ...dt, v: { kotor, tara, netto } });
+    }
+    const dq = dayOf(row[cols.q], block);
+    if (dq) {
+      const m = ton(row[cols.x]);
+      if (m || txt(row[cols.r])) mix.push({ ...dq, v: { mix: m } });
+    }
   }
-  return out;
+  return { prod: out, mix };
 }
 
 function aggregate(recs: Rec[], fields: Field[]) {
@@ -234,8 +248,15 @@ Deno.serve(async (req: Request) => {
     const ws = wb.Sheets[name];
     if (ws["!ref"]) { const rg = XLSX.utils.decode_range(ws["!ref"]); rg.s.r = 0; rg.s.c = 0; ws["!ref"] = XLSX.utils.encode_range(rg); }
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as unknown[][];
-    const recs = cfg.layout === "tally" ? rowsTally(rows) : rowsRekap(rows);
-    return json({ ok: true, site, sheet: name, fields: cfg.fields, fetched_at: new Date().toISOString(), months: aggregate(recs, cfg.fields), ms: Date.now() - t0 });
+    let months;
+    if (cfg.layout === "tally") {
+      const t = rowsTally(rows);
+      months = aggregate(t.prod, cfg.fields) as Record<string, { days: Day[]; total: Record<string, number>; mix?: unknown }>;
+      for (const [k, mo] of Object.entries(aggregate(t.mix, MIX_FIELDS))) {
+        (months[k] ||= { days: [], total: { truk: 0 } }).mix = mo;
+      }
+    } else months = aggregate(rowsRekap(rows), cfg.fields);
+    return json({ ok: true, site, sheet: name, fields: cfg.fields, fetched_at: new Date().toISOString(), months, ms: Date.now() - t0 });
   } catch (e) {
     return json({ ok: false, error: (e as Error)?.message || String(e) }, 500);
   }
