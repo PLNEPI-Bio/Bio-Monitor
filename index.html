@@ -3715,7 +3715,7 @@ html,body{
 .fas-vol-rm-table.dual th{padding-top:6px;padding-bottom:6px;white-space:normal;line-height:1.25;vertical-align:bottom}
 .fas-vol-rm-table.dual th:nth-child(3n+2),.fas-vol-table .fas-vol-rm-table.dual td:nth-child(3n+2){text-align:center}
 .fas-vol-rm-table.dual th:nth-child(3n),.fas-vol-table .fas-vol-rm-table.dual td:nth-child(3n){text-align:right}
-.fas-vol-rm-table.dual .fas-vol-rm-sep{border-left:2px solid var(--border-bright);padding-left:10px}
+.fas-vol-rm-table.dual .fas-vol-rm-sep,.fas-vol-table .fas-vol-rm-table.dual td.fas-vol-rm-sep{border-left:2px solid var(--border-bright);padding-left:10px}
 .fas-vol-table .fas-vol-rm-table.dual tbody tr:nth-child(even) td{background:var(--panel-2)}
 .fas-vol-table .fas-vol-rm-table.dual tfoot td{padding-top:6px;padding-bottom:6px}
 .fas-vol-table tfoot td{font-weight:700;border-top:2px solid var(--accent);background:var(--panel-3)}
@@ -17854,6 +17854,7 @@ function getContractDOOverride(c){
 // falls back to narrowing by clicked PLTU, then to all contracts of the mitra.
 function openPemasokModal(pemasok, focusPltu, kontrakNo){
   if (!pemasok) return;
+  window._pemasokLastArgs = [pemasok, focusPltu, kontrakNo]; // V201: render ulang sesudah GCV bulanan dimuat
   const all = (DATA && DATA.contracts) || [];
   let contracts;
   const hasKontrak = kontrakNo !== undefined && kontrakNo !== null &&
@@ -19548,13 +19549,17 @@ window.getKontrakGcv = getKontrakGcv;
 let KONTRAK_GCVB_SRC = [];   // [{ no, mitra, pltu, jenis, tahun, gcv:[12], vol:[12] }]
 let _kontrakGcvbIdx = null;
 let _kontrakGcvbCache = new WeakMap();
+// V201: indeks per tahun sheet → { '2025': { nomorKey: [baris] } }. Dicocokkan per
+// tahun agar beda tulisan PLTU/jenis antar sheet tidak membuat seluruh kontrak
+// dianggap ambigu, atau satu tahun kalah skor dan hilang diam-diam.
 function _kontrakGcvbIndex(){
   if (_kontrakGcvbIdx) return _kontrakGcvbIdx;
   const idx = {};
   for (const r of KONTRAK_GCVB_SRC){
     const nk = _hargaNoKey(r.no);
     if (!nk) continue;
-    (idx[nk.k] = idx[nk.k] || []).push(Object.assign({ y: nk.y }, r));
+    const t = idx[r.tahun] = idx[r.tahun] || {};
+    (t[nk.k] = t[nk.k] || []).push(Object.assign({ y: nk.y }, r));
   }
   return (_kontrakGcvbIdx = idx);
 }
@@ -19570,20 +19575,17 @@ function getKontrakGcvBulanan(c){
   if (!c) return null;
   if (_kontrakGcvbCache.has(c)) return _kontrakGcvbCache.get(c);
   let res = null;
-  const m = _kontrakMatchRows(c, _kontrakGcvbIndex());
-  if (m){
-    const byYear = {};
-    m.best.forEach(r => { (byYear[r.tahun] = byYear[r.tahun] || []).push(r); });
-    res = {};
-    Object.keys(byYear).forEach(y => {
-      const rows = byYear[y], gcv = [], vol = [];
-      for (let i = 0; i < 12; i++){
-        gcv.push(_gcvWAvg(rows.map(r => [r.gcv[i], r.vol[i]])));
-        vol.push(rows.reduce((a, r) => a + (r.vol[i] || 0), 0));
-      }
-      res[y] = { gcv, vol };
-    });
-  }
+  const idx = _kontrakGcvbIndex();
+  Object.keys(idx).forEach(y => {
+    const m = _kontrakMatchRows(c, idx[y]);
+    if (!m) return;
+    const rows = m.best, gcv = [], vol = [];
+    for (let i = 0; i < 12; i++){
+      gcv.push(_gcvWAvg(rows.map(r => [r.gcv[i], r.vol[i]])));
+      vol.push(rows.reduce((a, r) => a + (r.vol[i] || 0), 0));
+    }
+    (res = res || {})[y] = { gcv, vol };
+  });
   _kontrakGcvbCache.set(c, res);
   return res;
 }
@@ -20756,18 +20758,28 @@ async function fetchKontrakGcv(){
 async function fetchKontrakGcvBulanan(){
   if (!supabaseClient) return;
   try {
-    const { data, error } = await supabaseClient
-      .from('kontrak_gcv_bulanan')
-      .select('tahun,no_kontrak,mitra,pltu,jenis,gcv,vol')
-      .limit(5000);
-    if (error){ console.warn('[GCV bulanan] fetch error:', error.message); return; }
+    // V201: PostgREST memotong di max-rows (1000) — ambil per halaman 1000, urut id.
+    const data = [], PG = 1000;
+    for (let from = 0; from < 20000; from += PG){
+      const { data: pg, error } = await supabaseClient.from('kontrak_gcv_bulanan')
+        .select('tahun,no_kontrak,mitra,pltu,jenis,gcv,vol').order('id').range(from, from + PG - 1);
+      if (error){ console.warn('[GCV bulanan] fetch error:', error.message); return; }
+      data.push(...(pg || []));
+      if (!pg || pg.length < PG) break;
+    }
     const arr = a => Array.from({ length: 12 }, (_, i) => (a && a[i] != null && isFinite(Number(a[i]))) ? Number(a[i]) : null);
-    KONTRAK_GCVB_SRC = (data || [])
+    const firstLoad = !KONTRAK_GCVB_SRC.length;
+    KONTRAK_GCVB_SRC = data
       .filter(r => r.no_kontrak)
       .map(r => ({ no: r.no_kontrak, mitra: r.mitra || '', pltu: r.pltu || '', jenis: r.jenis || '',
                    tahun: String(r.tahun), gcv: arr(r.gcv), vol: arr(r.vol) }));
     _kontrakGcvbIdx = null;
     _kontrakGcvbCache = new WeakMap();
+    // V201: modal detil mitra yang sudah terbuka digambar ulang (kecuali editor DO sedang dipakai).
+    const bd = document.getElementById('pemasokModalBackdrop');
+    if (firstLoad && bd && bd.classList.contains('open') && window._pemasokLastArgs && !bd.querySelector('.do-editor-table')){
+      try { openPemasokModal.apply(null, window._pemasokLastArgs); } catch(e){}
+    }
   } catch(e){ console.warn('[GCV bulanan] fetch failed:', e); }
 }
 
@@ -25637,8 +25649,10 @@ function fasVolEffective(nama, year){
   }
   const rm = fasRmMonth(nama, year);
   // V191: Ciamis — Real sementara = Σ Netto Mix (pengiriman ke PLTU), bukan produksi.
-  // V196: Tasikmalaya sama (blok Pengiriman PLTU); bulan tanpa blok itu tetap Netto P.
-  const rmVal = rm ? (rm.mix ? (rm.mix.total || {}).mix : (rm.total || {}).netto) : 0;
+  // V196: Tasikmalaya sama (blok Pengiriman PLTU).
+  // V201: site dengan blok pengiriman (FAS_RM_MIX) SELALU memakai Σ pengiriman, juga
+  // sebelum kiriman pertama (= 0, Real kosong) — tidak melompat dari produksi.
+  const rmVal = !rm ? 0 : FAS_RM_MIX[rm.site] ? ((rm.mix && rm.mix.total) || {}).mix || 0 : (rm.total || {}).netto;
   if (rm && realSrc[rm.i] === 'none' && rmVal > 0){
     realArr[rm.i] = rmVal; realSrc[rm.i] = 'sheet';
   }

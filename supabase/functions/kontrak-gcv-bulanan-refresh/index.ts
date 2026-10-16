@@ -40,13 +40,23 @@ const C_PLTU = 2, C_MITRA = 3, C_JENIS = 4, C_NO = 5, C_M0 = 13;
 const txt = (v: unknown) => (v === null || v === undefined ? "" : String(v)).trim();
 const norm = (v: unknown) => txt(v).toLowerCase().replace(/\s+/g, " ");
 
+// Numeric cell, or text in id-ID ("1.234,5", "3.009") or en ("1234.5") format.
+function cellNum(v: unknown): number {
+  if (typeof v === "number") return v;
+  let s = txt(v).replace(/\s/g, "");
+  if (!s || !/^-?\d[\d.,]*$/.test(s)) return NaN;
+  if (s.includes(",") && s.includes(".")) s = s.replace(/\./g, "").replace(",", ".");
+  else if (s.includes(",")) s = s.replace(",", ".");
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+  return Number(s);
+}
 // GCV outside 1000..8000 kcal/kg is a typo, not a value -> null.
 function gcvNum(v: unknown): number | null {
-  const n = typeof v === "number" ? v : Number(txt(v).replace(/\./g, "").replace(",", "."));
+  const n = cellNum(v);
   return isFinite(n) && n >= 1000 && n <= 8000 ? Math.round(n) : null;
 }
 function volNum(v: unknown): number | null {
-  const n = typeof v === "number" ? v : Number(txt(v).replace(",", "."));
+  const n = cellNum(v);
   return isFinite(n) && n > 0 ? Math.round(n * 1000) / 1000 : null;
 }
 
@@ -93,12 +103,14 @@ async function sourceUrl(): Promise<string> {
   if (!d[0]?.sheet_id) throw new Error("checkpoint_source KONTRAK_GCV_BULANAN kosong");
   return d[0].sheet_id;
 }
-async function prevCount(tahun: number): Promise<number> {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/kontrak_gcv_bulanan?tahun=eq.${tahun}&select=id`, {
-    method: "HEAD", headers: { ...restHeaders(), Prefer: "count=exact" },
-  });
-  const m = /\/(\d+)$/.exec(r.headers.get("content-range") || "");
-  return m ? +m[1] : 0;
+// V201: what is stored now for this year -> rows + filled GCV cells. Fails CLOSED
+// (throws) so a broken read never switches the overwrite guards off.
+async function prevStats(tahun: number): Promise<{ rows: number; gcvCells: number }> {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/kontrak_gcv_bulanan?tahun=eq.${tahun}&select=gcv`, { headers: restHeaders() });
+  if (!r.ok) throw new Error(`baca data lama: HTTP ${r.status}`);
+  const d = await r.json() as { gcv: (number | null)[] | null }[];
+  if (!Array.isArray(d)) throw new Error("baca data lama: respons tidak terbaca");
+  return { rows: d.length, gcvCells: d.reduce((a, x) => a + (x.gcv || []).filter((g) => g !== null).length, 0) };
 }
 
 Deno.serve(async (req) => {
@@ -118,9 +130,11 @@ Deno.serve(async (req) => {
     });
     const report: any[] = [];
     for (const s of SHEETS) {
-      const rep: any = { tahun: s.tahun, prev: await prevCount(s.tahun) };
+      const rep: any = { tahun: s.tahun };
       report.push(rep);
       try {
+        const prev = await prevStats(s.tahun);
+        rep.prev = prev.rows; rep.prevGcvCells = prev.gcvCells;
         const ws = wb.Sheets[s.name];
         if (!ws) throw new Error(`sheet "${s.name}" tidak ada`);
         const { rows, warn } = parseSheet(ws);
@@ -131,6 +145,8 @@ Deno.serve(async (req) => {
         // Guard: an emptied/broken sheet must not wipe what we had.
         if (!rows.length || !rep.gcvCells) throw new Error("hasil parse tidak wajar");
         if (rep.prev && rows.length < rep.prev * 0.5) throw new Error(`baris turun dari ${rep.prev} ke ${rows.length}`);
+        // V201: structure intact but GCV columns emptied must not wipe stored values.
+        if (rep.prevGcvCells && rep.gcvCells < rep.prevGcvCells * 0.5) throw new Error(`sel GCV turun dari ${rep.prevGcvCells} ke ${rep.gcvCells}`);
         if (dry) { rep.sample = rows.slice(0, 2); rep.status = "dry"; continue; }
         const w = await fetch(`${SUPABASE_URL}/rest/v1/rpc/replace_kontrak_gcv_bulanan`, {
           method: "POST", headers: restHeaders(), body: JSON.stringify({ p_tahun: s.tahun, p_rows: rows }),
