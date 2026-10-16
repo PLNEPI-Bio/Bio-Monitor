@@ -35,7 +35,7 @@ import * as XLSX from "npm:xlsx@0.18.5";
 const DEFAULT_DO_URL =
   "https://plnbatubaracoid-my.sharepoint.com/personal/ardan_saputro_plnepi_co_id/_layouts/15/download.aspx?share=IQCuSKUHhTsFRIHVJfhvFc_dAfMvINWLlcquvoMdwnJ-TOo";
 
-// ---------------- helpers ----------------
+// helpers
 function _safeStr(v: unknown): string {
   if (v === null || v === undefined) return "";
   return String(v).trim();
@@ -85,7 +85,7 @@ function ymFromSerial(v: unknown): { year: number; month: number } | null {
 }
 function round2(n: number): number { return Math.round(n * 100) / 100; }
 
-// ---------------- DO parser ----------------
+// DO parser
 // Returns { map: { sig: { "2024":[12], ... } }, rows, contracts, perYear }.
 function parseDoExcel(wb: XLSX.WorkBook) {
   const map: Record<string, Record<string, number[]>> = {};
@@ -164,7 +164,7 @@ function parseDoExcel(wb: XLSX.WorkBook) {
   return { map, rows: rowsUsed, contracts: Object.keys(map).length, perYear, yearSheets };
 }
 
-// ---------------- main handler ----------------
+// main handler
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const DO_URL = Deno.env.get("DO_SHAREPOINT_DOWNLOAD_URL") || DEFAULT_DO_URL;

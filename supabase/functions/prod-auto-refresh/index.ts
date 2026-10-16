@@ -24,7 +24,7 @@ import * as XLSX from "npm:xlsx@0.18.5";
 const DEFAULT_SHAREPOINT_URL =
   "https://plnbatubaracoid-my.sharepoint.com/personal/m_maulana_plnepi_co_id/_layouts/15/download.aspx?share=IQBcjyPF88MOS58A9xUlUFpEAZuGR3K87gBB--m32ya8jeI";
 
-// ---------------- parsing helpers (ported from index.html) ----------------
+// parsing helpers (ported from index.html)
 function _safeStr(v: unknown): string {
   if (v === null || v === undefined) return "";
   return String(v).trim();
@@ -47,7 +47,7 @@ function stableStringify(v: any): string {
   return "{" + keys.map((k) => JSON.stringify(k) + ":" + stableStringify(v[k])).join(",") + "}";
 }
 
-// ---------------- prod parser (port of parseProdExcel, prod fields only) ----
+// prod parser (port of parseProdExcel, prod fields only)
 function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
   const result: any = {
     plants: [],
@@ -388,7 +388,7 @@ function parseProdExcel(wb: XLSX.WorkBook, existingPlants: any[]) {
   return result;
 }
 
-// ---------------- main handler ----------------
+// main handler
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SHAREPOINT_URL = Deno.env.get("SHAREPOINT_DOWNLOAD_URL") || DEFAULT_SHAREPOINT_URL;
