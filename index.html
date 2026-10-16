@@ -9292,6 +9292,15 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
 /* V188: angka sheet yang dihapus untuk laporan ini — sel "-" merah, segitiga merah. */
 .ck-tbl.ck-v td.ck-del::after{border-color:transparent #ef4444 transparent transparent}
 .ck-tbl.ck-v td.ck-del .ck-dinp.ck-u{color:#ef4444!important;font-weight:700;text-align:center}
+/* V195: Σ Plan/Confirm/Ready per mitra bisa diubah. Tampil seperti angka biasa (placeholder =
+   Σ sheet); garis putus-putus saat disorot menandai bisa diketik; isian = biru + segitiga oranye. */
+.ck-tbl.ck-v td.ck-sumc{position:relative;padding:0}
+.ck-tbl.ck-v .ck-suminp{display:block;width:100%;min-width:0;height:30px;min-height:0;padding:0 8px;text-align:right;
+  border:1px dashed transparent;border-radius:0;background:transparent;font-variant-numeric:tabular-nums;cursor:text}
+.ck-tbl.ck-v .ck-suminp::placeholder{color:var(--text);opacity:1}
+.ck-tbl.ck-v td.ck-sumc:hover .ck-suminp{border-color:var(--border-bright)}
+.ck-tbl.ck-v .ck-suminp:focus{border:1px solid var(--accent);background:var(--ctl-bg)}
+.ck-tbl.ck-v .ck-suminp.ck-u{background:color-mix(in srgb,var(--accent) 8%,var(--ctl-bg));color:var(--accent);font-weight:700}
 .ck-legend .ck-lg.ck-lg-d{position:relative;overflow:hidden}
 .ck-legend .ck-lg.ck-lg-d::after{content:'';position:absolute;top:0;right:0;border-style:solid;border-width:0 6px 6px 0;border-color:transparent #ef4444 transparent transparent}
 .ck-tbl.ck-v tr.ck-fut td.ck-m{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}
@@ -33988,8 +33997,8 @@ function _ckCalc(code){
   const present = new Set(Object.keys(ed.rows).filter(k => ed.rows[k].hidden));
   rows.forEach(r => {
     present.add(r.key);
-    CK_SUMS.forEach(k => { T[k] += _ckSum(r.mt[k]) || 0; });
     const er = ed.rows[r.key] || {}, days = er.days || {}, real = r.mt.real || [];
+    CK_SUMS.forEach(k => { T[k] += _ckSumEff(r, er, k) || 0; });   // V195: isian Σ menimpa Σ sheet
     let s = 0, sr = 0;
     for (let i = 0; i < nd; i++){
       const u = days[i + 1];
@@ -34080,7 +34089,7 @@ function _ckTableHtml(p, b, ed){
             ' title="Hapus mitra ini dari checkpoint &amp; laporan (mis. kontrak sudah habis). Sheet tidak berubah; bisa dikembalikan." aria-label="Hapus ' + e(r.name) + '">✕</button>' +
             '<span class="ck-jn">' + e(r.jenis || '—') + '</span></div></th>',
       cell: i => dayCell(r.key, r.name, src, v.days, i),
-      sums: CK_SUMS.map(k => r.mt[k] ? _ckFmt(_ckSum(r.mt[k])) : '—'),
+      sums: CK_SUMS.map(k => _ckSumCell(code, r, v, k)),
       prog: progCell(r.key),
       realz: realzCell(r.key),
       note: noteInp(r.key, r.name, v.catatan)
@@ -34146,7 +34155,10 @@ function _ckTableHtml(p, b, ed){
   }
   h += '</tbody><tfoot>';
   CK_SUMS.forEach((k, j) => {
-    h += '<tr data-sum="' + k + '"><td class="ck-m" data-sum="' + k + '">Σ ' + k.charAt(0).toUpperCase() + k.slice(1) + '</td>' + cols.map(c => '<td class="ck-s">' + c.sums[j] + '</td>').join('') +
+    h += '<tr data-sum="' + k + '"><td class="ck-m" data-sum="' + k + '">Σ ' + k.charAt(0).toUpperCase() + k.slice(1) + '</td>' + cols.map(c => {
+           const x = c.sums[j];   // string = teks biasa; { td } = sel isian siap pakai (V195)
+           return typeof x === 'object' ? x.td : '<td class="ck-s">' + x + '</td>';
+         }).join('') +
          '<td class="ck-s ck-tot" data-cksum="' + k + '">' + _ckFmt(C.T[k]) + '</td></tr>';
   });
   // Prognosa di baris terakhir: menempel di bawah area gulir, selalu terlihat saat mengisi.
@@ -34168,6 +34180,30 @@ function _ckTableHtml(p, b, ed){
   return h;
 }
 function _ckTotals(code){ return _ckCalc(code).T; }
+// V195: Σ Plan/Confirm/Ready per mitra sheet bisa diubah untuk laporan ini (sheet tetap).
+// Isian tersimpan di ed.rows[key].sums[k]; kosong = kembali ke Σ angka sheet.
+// Σ Real tidak diisi di sini — ia mengikuti sel harian Real yang sudah bisa diubah.
+const CK_SUM_EDIT = ['plan', 'confirm', 'ready'];
+function _ckSumUser(er, k){
+  const s = er && er.sums ? er.sums[k] : undefined;
+  return _ckHasU(s) ? s : undefined;
+}
+function _ckSumEff(r, er, k){
+  const u = CK_SUM_EDIT.includes(k) ? _ckSumUser(er, k) : undefined;
+  if (u !== undefined) return _ckVal(u);
+  return r.mt[k] ? _ckSum(r.mt[k]) : null;
+}
+function _ckSumCell(code, r, er, k){
+  const sheet = r.mt[k] ? _ckSum(r.mt[k]) : null;
+  if (!CK_SUM_EDIT.includes(k)) return sheet === null ? '—' : _ckFmt(sheet);
+  const e = escapeHtml, u = _ckSumUser(er, k);
+  const tip = (sheet === null ? 'Tidak ada angka ' + k + ' di sheet' : 'Σ sheet: ' + _ckFmt(sheet)) +
+              (u !== undefined ? ', diubah untuk laporan ini (sheet tetap). Kosongkan untuk kembali ke angka sheet.' : '. Ketik untuk mengubah di laporan ini (sheet tetap).');
+  return { td: '<td class="ck-s ck-sumc' + (u !== undefined ? ' ck-ovr' : '') + '" title="' + e(tip) + '">' +
+    '<input type="text" inputmode="decimal" class="ck-inp ck-suminp' + (u !== undefined ? ' ck-u' : '') + '" data-ck="sum" data-code="' + e(code) +
+    '" data-key="' + e(r.key) + '" data-name="' + e(r.name) + '" data-k="' + k + '" data-ckf="sum|' + e(code) + '|' + e(r.key) + '|' + k +
+    '" value="' + e(u !== undefined ? String(u) : '') + '" placeholder="' + (sheet === null ? '—' : _ckFmt(sheet)) + '" aria-label="' + e('Σ ' + k + ' ' + r.name) + '"></td>' };
+}
 // V187: warna isian + tanda "angka sheet diubah" pada satu sel harian.
 function _ckMarkCell(inp){
   const has = _ckHasU(inp.value);
@@ -34236,6 +34272,15 @@ function _ckBind(){
       r.name = t.dataset.name || r.name;
       if (act === 'day') _ckSetDay(code, t.dataset.key, t.dataset.day, t.value, t.dataset.name);
       else r.catatan = t.value;
+    } else if (act === 'sum'){   // V195
+      const r = ed.rows[t.dataset.key] || (ed.rows[t.dataset.key] = {});
+      r.name = t.dataset.name || r.name;
+      const s = r.sums || (r.sums = {});
+      if (_ckHasU(t.value)) s[t.dataset.k] = t.value; else delete s[t.dataset.k];
+      if (!Object.keys(s).length) delete r.sums;
+      const on = _ckHasU(t.value);
+      t.classList.toggle('ck-u', on);
+      if (t.parentElement) t.parentElement.classList.toggle('ck-ovr', on);
     } else if (act === 'm-day'){
       const mr = (ed.manual || []).find(x => x.id === t.dataset.mid);
       if (mr) (mr.days || (mr.days = {}))[t.dataset.day] = t.value;
@@ -34974,7 +35019,14 @@ function _ckBuildModel(){
       const v = ed.rows[r.key] || {};
       const o = { key: r.key, name: r.name, raw: r.raw, jenis: r.jenis };
       // Angka sheet saat disimpan — arsip tetap terbaca walau sheet berubah.
-      CK_SUMS.forEach(k => { o[k] = r.mt[k] ? _ckSum(r.mt[k]) : null; });
+      // V195: Σ yang diubah pengguna tersimpan sebagai nilai efektif; sumEdit menandai yang diubah
+      // (dan sheetSum menyimpan Σ sheet aslinya) supaya bisa dipulihkan saat laporan dibuka lagi.
+      CK_SUMS.forEach(k => { o[k] = _ckSumEff(r, v, k); });
+      CK_SUM_EDIT.forEach(k => {
+        if (_ckSumUser(v, k) === undefined) return;
+        (o.sumEdit || (o.sumEdit = {}))[k] = true;
+        (o.sheetSum || (o.sheetSum = {}))[k] = r.mt[k] ? _ckSum(r.mt[k]) : null;
+      });
       // V165: Real harian sheet ikut disimpan → tab "Realisasi Harian" di pop-up Library.
       o.realDays = r.mt.real ? Array.from({ length: C.nd }, (_, i) => {
         const x = r.mt.real[i];
@@ -35017,7 +35069,7 @@ function _ckEditsFromModel(m){
   Object.keys((m && m.plants) || {}).forEach(code => {
     const p = m.plants[code], rows = {};
     (p.rows || []).forEach(r => {
-      if (!_ckHasDays(r.days) && !r.catatan) return;
+      if (!_ckHasDays(r.days) && !r.catatan && !r.sumEdit) return;
       const days = strDays(r.days, r.realDays), base = {};
       // V187: angka dasar sheet per isian — v2 tersimpan; v1 = Real harian saat laporan dibuat.
       Object.keys(days).forEach(k => {
@@ -35025,6 +35077,11 @@ function _ckEditsFromModel(m){
         else if (v1 && r.realDays) base[k] = r.realDays[+k - 1] === undefined ? null : r.realDays[+k - 1];
       });
       rows[r.key] = { days, base, catatan: r.catatan || '', name: r.name };
+      if (r.sumEdit){   // V195
+        const s = {};
+        Object.keys(r.sumEdit).forEach(k => { if (r[k] !== null && r[k] !== undefined) s[k] = _ckNumStr(r[k]); });
+        if (Object.keys(s).length) rows[r.key].sums = s;
+      }
     });
     const manual = (p.manual || []).map(x => { const o = Object.assign({}, x, { days: strDays(x.days) }); delete o.prognosa; return o; });
     (p.hidden || []).forEach(x => { rows[x.key] = Object.assign(rows[x.key] || {}, { hidden: true, name: x.name }); });   // V194

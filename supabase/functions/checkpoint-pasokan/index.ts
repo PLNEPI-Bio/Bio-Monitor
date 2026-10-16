@@ -72,9 +72,13 @@ function low(v: unknown): string { return txt(v).toLowerCase(); }
 
 // Numbers: sheet cells are mostly numeric already; strings are "-", "  - ",
 // "1.234,5" (id-ID) or junk. Empty / non-numeric -> null (distinct from 0).
+// V195: 6 desimal, bukan 3. Sel rumus seperti =3000/31 tampil "97" di sheet tapi
+// nilainya 96,774193…; dibulatkan ke 3 desimal per hari, Σ 31 hari jadi 2.999,994
+// dan tampil "2,999.99". 6 desimal menahan galat Σ di bawah 0,0001.
+const P6 = 1e6;
 function num(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
-  if (typeof v === "number") return isFinite(v) ? Math.round(v * 1000) / 1000 : null;
+  if (typeof v === "number") return isFinite(v) ? Math.round(v * P6) / P6 : null;
   if (typeof v === "boolean" || v instanceof Date) return null;
   let s = String(v).trim().replace(/\s/g, "");
   if (!/^-?[\d.,]+$/.test(s) || !/\d/.test(s)) return null;
@@ -82,7 +86,7 @@ function num(v: unknown): number | null {
   else if (s.includes(",")) s = s.replace(",", ".");
   else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
   const n = Number(s);
-  return isFinite(n) ? Math.round(n * 1000) / 1000 : null;
+  return isFinite(n) ? Math.round(n * P6) / P6 : null;
 }
 
 type YMD = { y: number; m: number; d: number };
