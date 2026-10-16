@@ -8174,7 +8174,6 @@ body.gf-on .gf-bar{
         <select id="beritaTopicFilter" class="berita-filter-select">
           <option value="all">Semua Topik</option>
           <option value="plnepi">PLN EPI</option>
-          <option value="hokkop">Hokkop Situngkir</option>
           <option value="biomassa">Biomassa & Cofiring</option>
           <option value="bioenergi">Bioenergi</option>
           <option value="pltu">PLTU</option>
@@ -30094,13 +30093,13 @@ function renderBeritaFeed(){
       const txt = ((a.title||'') + ' ' + (a.snippet||'')).toLowerCase();
       const TOPIC_KEYWORDS = {
         plnepi: ['pln energi primer', 'pln epi'],
-        hokkop: ['hokkop'],
         biomassa: ['biomassa', 'biomass', 'cofiring', 'co-firing'],
         bioenergi: ['bioenergi', 'bioenergy'],
         pltu: ['pltu'],
       };
-      const kws = TOPIC_KEYWORDS[f.topic] || [];
-      const topicMatch = kws.some(kw => {
+      const kws = TOPIC_KEYWORDS[f.topic] || null;
+      // Topik lama yang sudah dihapus dari dropdown (mis. 'hokkop') = semua topik.
+      const topicMatch = !kws || kws.some(kw => {
         const words = kw.split(/\s+/);
         return words.length === 1 ? txt.includes(kw) : words.every(w => txt.includes(w));
       });
