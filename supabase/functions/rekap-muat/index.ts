@@ -1,8 +1,9 @@
 // rekap-muat
 // Reads the truck weighing log of a production facility and returns daily
 // sums per month. Tasikmalaya: sheet "Rekap Muat", product (col N), limbah
-// (col O), netto (col P = N + O). Ciamis (V178): sheet "Tally Harian", kotor
-// (J), tara (L), netto (N); V191: + right block "Pengiriman ke PLTU" (date Q,
+// (col O), netto (col P = N + O); V196: + right block "Pengiriman PLTU" (date R,
+// truck plate S, Netto Mix T) as months[k].mix. Ciamis (V178): sheet "Tally
+// Harian", kotor (J), tara (L), netto (N); V191: + right block "Pengiriman ke PLTU" (date Q,
 // truck plate R, Netto Mix T) returned as months[k].mix. Used by the Fasilitas
 // Produksi tab to fill the current month of "Volume Terpasok" until Kontrak
 // Auto Refresh has a value (V177).
@@ -111,11 +112,23 @@ function dayOf(cell: unknown, block: { y: number; m: number } | null) {
   return dt.d > new Date(Date.UTC(dt.y, dt.m, 0)).getUTCDate() ? null : dt;
 }
 
+// Shipment date: the cell's own month when it is the block month or the next
+// (a truck loaded on the 31st ships on the 1st), else the block decides.
+function shipDayOf(cell: unknown, block: { y: number; m: number } | null) {
+  const c = parseDate(cell);
+  if (!c || !block) return c ? dayOf(cell, block) : null;
+  const nx = block.m === 12 ? { y: block.y + 1, m: 1 } : { y: block.y, m: block.m + 1 };
+  return (c.y === block.y && c.m === block.m) || (c.y === nx.y && c.m === nx.m) ? c : dayOf(cell, block);
+}
+
 // Tasikmalaya "Rekap Muat": blocks start with "DATE OF WEIGHING", header row
 // "No." + sub-header (Product / Limbah). Values in kg.
-function rowsRekap(rows: unknown[][]): Rec[] {
-  const out: Rec[] = [];
-  let cols = { n: COL_N, o: COL_O, p: COL_P };
+// V196: right block "Pengiriman PLTU" (date R, truck plate S, Netto Mix T) from
+// the October block on -> `mix`. Only read when its headers are present: older
+// blocks use column T for "% Produk".
+function rowsRekap(rows: unknown[][]): { prod: Rec[]; mix: Rec[] } {
+  const out: Rec[] = [], mix: Rec[] = [];
+  let cols = { n: COL_N, o: COL_O, p: COL_P, q: -1, r: -1, x: -1 };
   let block: { y: number; m: number } | null = null;
   for (let r = 0; r < rows.length; r++) {
     const row = rows[r] || [];
@@ -133,17 +146,29 @@ function rowsRekap(rows: unknown[][]): Rec[] {
     if (a === "NO." || a === "NO") {
       const sub = rows[r + 1] || [];
       const p = findCol(row, /^netto/i), n = findCol(sub, /^product/i), o = findCol(sub, /^limbah/i);
-      cols = { n: n >= 0 ? n : COL_N, o: o >= 0 ? o : COL_O, p: p >= 0 ? p : COL_P };
+      const pp = p >= 0 ? p : COL_P;
+      const after = (re: RegExp) => row.findIndex((c, j) => j > pp && re.test(txt(c)));
+      const q = after(/^tanggal/i), rr = after(/polisi/i), x = after(/^berat netto mix/i);
+      const hasMix = q >= 0 && x >= 0;
+      cols = { n: n >= 0 ? n : COL_N, o: o >= 0 ? o : COL_O, p: pp, q: hasMix ? q : -1, r: hasMix ? rr : -1, x: hasMix ? x : -1 };
       r++;
       continue;
     }
     const dt = dayOf(row[1], block);
-    if (!dt) continue;
-    const product = ton(row[cols.n]), limbah = ton(row[cols.o]);
-    const netto = ton(row[cols.p]) || product + limbah;
-    if (netto) out.push({ ...dt, v: { product, limbah, netto } });
+    if (dt) {
+      const product = ton(row[cols.n]), limbah = ton(row[cols.o]);
+      const netto = ton(row[cols.p]) || product + limbah;
+      if (netto) out.push({ ...dt, v: { product, limbah, netto } });
+    }
+    if (cols.q >= 0) {
+      const dq = shipDayOf(row[cols.q], block);
+      if (dq) {
+        const m = ton(row[cols.x]);
+        if (m || (cols.r >= 0 && txt(row[cols.r]))) mix.push({ ...dq, v: { mix: m } });
+      }
+    }
   }
-  return out;
+  return { prod: out, mix };
 }
 
 // Ciamis "Tally Harian": blocks start with "Bulan Oktober 2026" in col B,
@@ -248,14 +273,12 @@ Deno.serve(async (req: Request) => {
     const ws = wb.Sheets[name];
     if (ws["!ref"]) { const rg = XLSX.utils.decode_range(ws["!ref"]); rg.s.r = 0; rg.s.c = 0; ws["!ref"] = XLSX.utils.encode_range(rg); }
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as unknown[][];
-    let months;
-    if (cfg.layout === "tally") {
-      const t = rowsTally(rows);
-      months = aggregate(t.prod, cfg.fields) as Record<string, { days: Day[]; total: Record<string, number>; mix?: unknown }>;
-      for (const [k, mo] of Object.entries(aggregate(t.mix, MIX_FIELDS))) {
-        (months[k] ||= { days: [], total: { truk: 0 } }).mix = mo;
-      }
-    } else months = aggregate(rowsRekap(rows), cfg.fields);
+    // V196: both layouts carry a right-hand shipment block -> months[k].mix.
+    const t = cfg.layout === "tally" ? rowsTally(rows) : rowsRekap(rows);
+    const months = aggregate(t.prod, cfg.fields) as Record<string, { days: Day[]; total: Record<string, number>; mix?: unknown }>;
+    for (const [k, mo] of Object.entries(aggregate(t.mix, MIX_FIELDS))) {
+      (months[k] ||= { days: [], total: { truk: 0 } }).mix = mo;
+    }
     return json({ ok: true, site, sheet: name, fields: cfg.fields, fetched_at: new Date().toISOString(), months, ms: Date.now() - t0 });
   } catch (e) {
     return json({ ok: false, error: (e as Error)?.message || String(e) }, 500);

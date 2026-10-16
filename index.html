@@ -3585,7 +3585,8 @@ html,body{
 @media (max-width:560px) and (pointer:coarse){.fas-form-grid{grid-template-columns:1fr}}
 /* V45.1: No sidebar — 2-column grid: map + detail panel. */
 .map-view.fasilitas-view{grid-template-columns:1fr 0px}
-.map-view.fasilitas-view.detail-open{grid-template-columns:1fr 340px}
+/* V196: 340→440px agar tabel harian Produksi || Pengiriman (6 kolom) muat; layar sempit dibatasi 45vw */
+.map-view.fasilitas-view.detail-open{grid-template-columns:1fr min(440px,45vw)}
 #fasilitas-map{width:100%;height:100%;background:var(--panel)}
 
 /* Fasilitas marker — rounded square with embedded icon, distinct from
@@ -25453,7 +25454,12 @@ function fasKontrakVolumeSectionsHTML(f){
 // (ID sheet di checkpoint_source). Kolom rincian mengikuti `fields` respons.
 const FAS_RM_SITE = { 'Tasikmalaya': 'TSM', 'Ciamis': 'CMS' };
 const FAS_RM_SRC = { TSM: 'Rekap Muat', CMS: 'Tally Harian' };
-const FAS_RM_COLS = { TSM: 'N/O/P', CMS: 'B/N (produksi) · Q/R/T (mixed aren)' }; // V191
+const FAS_RM_COLS = { TSM: 'B/N (produksi) · R/S/T (pengiriman)', CMS: 'B/N (produksi) · Q/R/T (mixed aren)' }; // V191/V196
+// V196: tabel ganda Produksi || blok kanan — kunci kolom kiri + label per site.
+const FAS_RM_MIX = {
+  TSM: { key: 'product', truk: 'Jumlah Truk', l: 'Produksi', r: 'Vol Pengiriman' },
+  CMS: { key: 'netto',   truk: 'Truk',        l: 'Vol Produksi', r: 'Vol Mixed Aren' }
+};
 const FAS_RM_FN_URL = SUPABASE_URL + '/functions/v1/rekap-muat';
 const FAS_RM_TTL = 10 * 60 * 1000;
 const fasRmCache = {};     // site -> { at, months, err, promise }
@@ -25515,6 +25521,7 @@ function fasVolEffective(nama, year){
   }
   const rm = fasRmMonth(nama, year);
   // V191: Ciamis — Real sementara = Σ Netto Mix (pengiriman ke PLTU), bukan produksi.
+  // V196: Tasikmalaya sama (blok Pengiriman PLTU); bulan tanpa blok itu tetap Netto P.
   const rmVal = rm ? (rm.mix ? (rm.mix.total || {}).mix : (rm.total || {}).netto) : 0;
   if (rm && realSrc[rm.i] === 'none' && rmVal > 0){
     realArr[rm.i] = rmVal; realSrc[rm.i] = 'sheet';
@@ -25551,14 +25558,16 @@ function fasVolDetailTableHTML(nama, year){
       let d;
       if (rm.mix){
         // V191: Ciamis — dua blok berdampingan: Produksi (B/N) || Mixed Aren (Q/R/T).
+        // V196: Tasikmalaya ikut — Produksi (B/N) || Pengiriman (R/S/T).
         const L = rm.days || [], R = rm.mix.days || [], tm = rm.mix.total || {};
+        const mx = FAS_RM_MIX[rm.site] || FAS_RM_MIX.CMS, lk = mx.key;
         const sep = ' class="fas-vol-rm-sep"';
         const side = (x, key, first) => x
-          ? '<td' + (first ? '' : sep) + '>' + x.d + ' ' + MONTHS[i] + '</td><td>' + x.truk + '</td><td' + (key === 'netto' ? ' class="podt-real"' : '') + '>' + f2(x[key]) + '</td>'
+          ? '<td' + (first ? '' : sep) + '>' + x.d + ' ' + MONTHS[i] + '</td><td>' + x.truk + '</td><td' + (first ? ' class="podt-real"' : '') + '>' + f2(x[key]) + '</td>'
           : '<td' + (first ? '' : sep) + '></td><td></td><td></td>';
-        d = '<table class="fas-vol-rm-table"><thead><tr><th>Tanggal</th><th>Truk</th><th>Vol Produksi</th><th' + sep + '>Tanggal</th><th>Truk</th><th>Vol Mixed Aren</th></tr></thead><tbody>';
-        for (let k = 0; k < Math.max(L.length, R.length); k++) d += '<tr>' + side(L[k], 'netto', true) + side(R[k], 'mix', false) + '</tr>';
-        d += '</tbody><tfoot><tr><td>Total</td><td>' + (t.truk || 0) + '</td><td class="podt-real">' + f2(t.netto) + '</td><td' + sep + '>Total</td><td>' + (tm.truk || 0) + '</td><td>' + f2(tm.mix) + '</td></tr></tfoot></table>';
+        d = '<table class="fas-vol-rm-table"><thead><tr><th>Tanggal</th><th>' + mx.truk + '</th><th>' + mx.l + '</th><th' + sep + '>Tanggal</th><th>' + mx.truk + '</th><th>' + mx.r + '</th></tr></thead><tbody>';
+        for (let k = 0; k < Math.max(L.length, R.length); k++) d += '<tr>' + side(L[k], lk, true) + side(R[k], 'mix', false) + '</tr>';
+        d += '</tbody><tfoot><tr><td>Total</td><td>' + (t.truk || 0) + '</td><td class="podt-real">' + f2(t[lk]) + '</td><td' + sep + '>Total</td><td>' + (tm.truk || 0) + '</td><td>' + f2(tm.mix) + '</td></tr></tfoot></table>';
       } else {
       d = '<table class="fas-vol-rm-table"><thead><tr><th>Tgl</th><th>Truk</th>' + flds.map(fl => '<th>' + escapeHtml(fl.label) + '</th>').join('') + '</tr></thead><tbody>';
       rm.days.forEach(x => {
