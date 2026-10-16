@@ -22,7 +22,7 @@ import * as XLSX from "npm:xlsx@0.18.5";
 // app-shell instead). Overridable via env so the link can be rotated without
 // a redeploy.
 const DEFAULT_SHAREPOINT_URL =
-  "https://plnbatubaracoid-my.sharepoint.com/personal/m_maulana_plnepi_co_id/_layouts/15/download.aspx?share=IQBcjyPF88MOS58A9xUlUFpEAZuGR3K87gBB--m32ya8jeI";
+  "https://plnbatubaracoid-my.sharepoint.com/personal/m_maulana_plnepi_co_id/_layouts/15/download.aspx?share=IQBcjyPF88MOS58A9xUlUFpEAerO8J8RNS2fufb0fzDDdF4";
 
 // parsing helpers (ported from index.html)
 function _safeStr(v: unknown): string {
