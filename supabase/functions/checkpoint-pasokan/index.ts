@@ -363,7 +363,7 @@ function filled(b: Block): number {
   for (const mt of b.mitra) for (const k of ["plan", "confirm", "ready", "real"]) for (const v of (mt[k] || [])) if (v !== null) n++;
   return n;
 }
-function pickBlocks(blocks: Block[]): Map<string, { b: Block; warn: string[] }> {
+function pickBlocks(blocks: Block[]): Map<string, { b: Block; warn: string[]; alts: Block[] }> {
   const byKey = new Map<string, Block[]>();
   const ym = assignYM(blocks);
   blocks.forEach((b, i) => {
@@ -381,7 +381,7 @@ function pickBlocks(blocks: Block[]): Map<string, { b: Block; warn: string[] }> 
     const k = y + "-" + b.dMonth;
     if (!byKey.has(k)) byKey.set(k, [b]);
   });
-  const out = new Map<string, { b: Block; warn: string[] }>();
+  const out = new Map<string, { b: Block; warn: string[]; alts: Block[] }>();
   for (const [k, list] of byKey) {
     const score = (b: Block) => (b.tMonth && b.tMonth === b.dMonth ? 1e6 : 0) + filled(b);
     const sorted = list.slice().sort((a, b) => score(b) - score(a));
@@ -389,7 +389,8 @@ function pickBlocks(blocks: Block[]): Map<string, { b: Block; warn: string[] }> 
     if (sorted.length > 1) {
       w.push(`Ada ${sorted.length} blok untuk bulan ini (baris ${sorted.map((b) => b.row).join(", ")}); dipakai baris ${sorted[0].row}.`);
     }
-    out.set(k, { b: sorted[0], warn: w });
+    // Blok lain ikut dikirim agar pengguna bisa memilih di halaman Checkpoint.
+    out.set(k, { b: sorted[0], warn: w, alts: sorted.slice(1) });
   }
   return out;
 }
@@ -475,11 +476,11 @@ Deno.serve(async (req: Request) => {
     const picked = pickBlocks(blocks);
     const fetchedAt = new Date().toISOString();
 
-    const rows = [...picked.entries()].map(([k, { b, warn }]) => {
+    const rows = [...picked.entries()].map(([k, { b, warn, alts }]) => {
       const [y, m] = k.split("-").map(Number);
       return {
         code, year: y, month: m, src: loc.src, sheet: sh.name, fetched_at: fetchedAt,
-        data: { ...b, warn: [...warn, ...b.warn], gid: sh.gid },
+        data: { ...b, warn: [...warn, ...b.warn], gid: sh.gid, alts },
       };
     });
     if (!dry && rows.length) {
