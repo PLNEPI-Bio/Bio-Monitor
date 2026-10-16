@@ -3709,6 +3709,15 @@ html,body{
 /* V191: Ciamis — pemisah tebal antara blok Produksi dan blok Mixed Aren */
 .fas-vol-rm-table .fas-vol-rm-sep{border-left:3px solid var(--text-dim)}
 .fas-vol-table .fas-vol-rm-table td.fas-vol-rm-sep,.fas-vol-rm-table th.fas-vol-rm-sep{text-align:left;color:var(--text-dim)}
+/* V198: tabel ganda — lebar kolom tetap (colgroup), Truk di tengah, angka sejajar, zebra halus */
+.fas-vol-rm-table.dual{table-layout:fixed}
+.fas-vol-rm-table.dual th,.fas-vol-table .fas-vol-rm-table.dual td{padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.fas-vol-rm-table.dual th{padding-top:6px;padding-bottom:6px;white-space:normal;line-height:1.25;vertical-align:bottom}
+.fas-vol-rm-table.dual th:nth-child(3n+2),.fas-vol-table .fas-vol-rm-table.dual td:nth-child(3n+2){text-align:center}
+.fas-vol-rm-table.dual th:nth-child(3n),.fas-vol-table .fas-vol-rm-table.dual td:nth-child(3n){text-align:right}
+.fas-vol-rm-table.dual .fas-vol-rm-sep{border-left:2px solid var(--border-bright);padding-left:10px}
+.fas-vol-table .fas-vol-rm-table.dual tbody tr:nth-child(even) td{background:var(--panel-2)}
+.fas-vol-table .fas-vol-rm-table.dual tfoot td{padding-top:6px;padding-bottom:6px}
 .fas-vol-table tfoot td{font-weight:700;border-top:2px solid var(--accent);background:var(--panel-3)}
 .fas-vol-table input{
   width:72px;text-align:right;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;
@@ -4069,7 +4078,7 @@ html,body{
 .do-editor-footer{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
 /* Split DO | Realisasi columns per year */
 .pemasok-monthly-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.pemasok-monthly-table-split{min-width:780px}
+.pemasok-monthly-table-split{min-width:980px} /* V199: 4 kolom per tahun (+GCV) */
 .pemasok-monthly-table-split th.pm-th-year{
   text-align:center;border-left:1px solid var(--border-bright);
   color:var(--text-bright);letter-spacing:.5px;
@@ -4098,6 +4107,17 @@ html,body{
 .pemasok-monthly-legend .pm-swatch{width:9px;height:9px;border-radius:2px;display:inline-block}
 .pemasok-monthly-legend .pm-swatch-real{background:var(--accent)}
 .pemasok-monthly-legend .pm-swatch-do{background:#a855f7}
+/* V199: kolom GCV bulanan (kcal/kg) */
+.pemasok-monthly-legend .pm-swatch-gcv{background:#f59e0b}
+.pemasok-monthly-table-split th.pm-th-gcv{color:#d97706;text-align:center}
+.pemasok-monthly-table-split td.pm-cell-gcv{text-align:center;color:#d97706;font-weight:500;font-size:11px}
+.pemasok-monthly-table-split td.pm-cell-gcv.zero{color:var(--text-dim);opacity:.35;font-weight:400}
+/* V200: GCV vs GCV Kontrak — hijau di atas, merah di bawah, netral bila sama */
+.pemasok-monthly-legend .pm-swatch-gcv-up{background:#10b981}
+.pemasok-monthly-legend .pm-swatch-gcv-down{background:#ef4444}
+.pemasok-monthly-table-split td.pm-cell-gcv.gcv-up{color:#059669;background:rgba(16,185,129,.10);font-weight:600}
+.pemasok-monthly-table-split td.pm-cell-gcv.gcv-down{color:#dc2626;background:rgba(239,68,68,.10);font-weight:600}
+.pemasok-monthly-table-split td.pm-cell-gcv.gcv-eq{color:var(--text)}
 .pemasok-monthly-legend .pm-legend-nodata{font-style:italic;opacity:.7}
 
 @media (max-width:720px) and (pointer:coarse){
@@ -7642,7 +7662,6 @@ body.gf-on .gf-bar{
             </button>
           </div>
         </div>
-        <div class="real-card-note">Mengikuti filter Wilayah/PLTU di atas. Target = Target FGD (hanya 2026), DO = Delivery Order, Real = Realisasi (ton).</div>
         <div class="real-podt-scroll"><div id="real-podt-table"></div></div>
       </div>
 
@@ -7660,7 +7679,6 @@ body.gf-on .gf-bar{
             </select>
           </div>
         </div>
-        <div class="real-card-note">Baris PLTU mengikuti filter Wilayah/PLTU di atas. Sumber: sheet &ldquo;Rekap Kalor&rdquo; (kolom H&ndash;BG), satuan kcal/kg. Baris <b>AKUMULASI</b> diambil apa adanya dari baris Total sheet (tertimbang tonase, berlaku untuk seluruh PLTU) sehingga tidak ikut berubah saat filter dipakai.</div>
         <div class="real-podt-scroll"><div id="real-kalor-table"></div></div>
       </div>
     </div>
@@ -9374,6 +9392,13 @@ body.ck-focus .ck-scope{padding-right:200px}
 .ck-mrow-n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ck-mrow b{color:var(--text-bright);font-variant-numeric:tabular-nums}
 .ck-mrow.gone{opacity:.6}
+/* V197: popover DO (Confirm) + realisasi per mitra saat hover/fokus */
+.ck-mrow{position:relative}
+.ck-mrow-tip{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;display:grid;grid-template-columns:1fr auto;gap:3px 10px;
+  padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel);box-shadow:var(--shadow-md);
+  font-size:11px;color:var(--text-dim);opacity:0;visibility:hidden;pointer-events:none;transition:opacity var(--dur-fast) var(--ease-in-out)}
+.ck-mrow-tip b{color:var(--text-bright);font-variant-numeric:tabular-nums;text-align:right}
+.ck-mrow:hover .ck-mrow-tip,.ck-mrow:focus-visible .ck-mrow-tip{opacity:1;visibility:visible}
 .ck-mrow-bar{grid-column:1/-1;display:block;height:4px;border-radius:2px;background:var(--panel-3);overflow:hidden}
 .ck-mrow-bar i{display:block;height:100%;border-radius:2px;background:var(--accent);transition:width var(--dur-fast) var(--ease-in-out)}
 .ck-tbl.ck-v thead th.ck-colhi{background:color-mix(in srgb,var(--accent) 18%,var(--panel-2));box-shadow:inset 0 -3px 0 var(--accent)}
@@ -17914,49 +17939,71 @@ function openPemasokModal(pemasok, focusPltu, kontrakNo){
     // Build monthly table: rows = months. Each year is split into two
     // sub-columns — DO (Delivery Order) and Realisasi — shown side by side.
     const cDO = getContractDO(c);
+    // V199: GCV bulanan (kcal/kg) dari sheet Kontrak 2024–2026; null bila kontrak tak cocok.
+    const cGcv = (typeof getKontrakGcvBulanan === 'function') ? getKontrakGcvBulanan(c) : null;
     const doLegend = '<div class="pemasok-monthly-legend">' +
       '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-do"></span>DO: Delivery Order (MT)</span>' +
       '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-real"></span>Realisasi (MT)</span>' +
+      '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-gcv"></span>GCV (kcal/kg)</span>' +
+      ((typeof getKontrakGcv === 'function') && getKontrakGcv(c) && getKontrakGcv(c).gcv
+        ? '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-gcv-up"></span>di atas GCV Kontrak (' + fmtInt(getKontrakGcv(c).gcv) + ')</span>' +
+          '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-gcv-down"></span>di bawah GCV Kontrak</span>'
+        : '<span class="pm-legend-nodata">· GCV Kontrak tidak tersedia, GCV tidak dibandingkan</span>') +
       (cDO ? '' : '<span class="pm-legend-nodata">· DO tidak tersedia untuk kontrak ini</span>') +
+      (cGcv ? '' : '<span class="pm-legend-nodata">· GCV bulanan tidak ditemukan untuk kontrak ini</span>') +
       '</div>';
+    // [gcv, vol] per tahun & bulan; total = rata-rata tertimbang Vol sheet.
+    // V200: GCV Kontrak (kolom "GCV Kontrak", kontrak_gcv) sebagai patokan warna.
+    const gKr = (typeof getKontrakGcv === 'function') ? getKontrakGcv(c) : null;
+    const gK = gKr && gKr.gcv ? gKr.gcv : null;
+    const gcvAt = (y, mi) => { const g = cGcv && cGcv[y]; return g ? [g.gcv[mi], g.vol[mi]] : [null, 0]; };
     let monthlyTable = doLegend + '<table class="pemasok-monthly-table pemasok-monthly-table-split"><thead>';
     // Row 1: year group headers (each spans DO + Realisasi)
     monthlyTable += '<tr><th rowspan="2" class="pm-th-month">Month</th>';
-    for (let i = 0; i < years.length; i++) monthlyTable += '<th colspan="3" class="pm-th-year">' + years[i] + '</th>';
-    monthlyTable += '<th colspan="3" class="pm-th-year">Total</th></tr>';
-    // Row 2: DO / Realisasi / % sub-headers
+    for (let i = 0; i < years.length; i++) monthlyTable += '<th colspan="4" class="pm-th-year">' + years[i] + '</th>';
+    monthlyTable += '<th colspan="4" class="pm-th-year">Total</th></tr>';
+    // Row 2: DO / Realisasi / % / GCV sub-headers
     monthlyTable += '<tr>';
     for (let i = 0; i <= years.length; i++){
-      monthlyTable += '<th class="pm-th-do">DO</th><th class="pm-th-real">Real</th><th class="pm-th-pct pm-col-end">% SR</th>';
+      monthlyTable += '<th class="pm-th-do">DO</th><th class="pm-th-real">Real</th><th class="pm-th-pct">% SR</th><th class="pm-th-gcv pm-col-end">GCV</th>';
     }
     monthlyTable += '</tr></thead><tbody>';
-    // Three cells per year: DO, Realisasi, then % (Real / DO)
-    const pairCells = (real, dov) => {
+    // Four cells per year: DO, Realisasi, % (Real / DO), then GCV
+    const pairCells = (real, dov, gcv) => {
       const doCls = dov ? 'pm-cell-do has-value' : 'pm-cell-do zero';
       const rCls = real ? 'pm-cell-real has-value' : 'pm-cell-real zero';
       // % SR = Realisasi / DO. Only meaningful when a DO exists.
       const pct = dov ? (real / dov * 100) : null;
-      const pCls = pct !== null ? 'pm-cell-pct has-value pm-col-end' : 'pm-cell-pct zero pm-col-end';
+      const pCls = pct !== null ? 'pm-cell-pct has-value' : 'pm-cell-pct zero';
+      // V200: bandingkan dengan GCV Kontrak — di atas = hijau, di bawah = merah.
+      const gRnd = gcv != null ? Math.round(gcv) : null;
+      const gCmp = gRnd != null && gK ? (gRnd > gK ? ' gcv-up' : gRnd < gK ? ' gcv-down' : ' gcv-eq') : '';
+      const gCls = gRnd != null ? 'pm-cell-gcv has-value pm-col-end' + gCmp : 'pm-cell-gcv zero pm-col-end';
+      const gTip = gCmp ? ' title="GCV Kontrak ' + fmtInt(gK) + ' · selisih ' + (gRnd > gK ? '+' : '') + fmtInt(gRnd - gK) + ' kcal/kg"' : '';
       // Warna dinamis mengikuti ambang badge achievement (pctBadgeClass).
       const pStyle = pct !== null
         ? ' style="color:' + (pct > 100 ? '#8b5cf6' : pct >= 70 ? '#10b981' : pct >= 30 ? '#f59e0b' : '#ef4444') + '"'
         : '';
       return '<td class="' + doCls + '">' + (dov ? fmtInt(dov) : '—') + '</td>' +
              '<td class="' + rCls + '">' + (real ? fmtInt(real) : '—') + '</td>' +
-             '<td class="' + pCls + '"' + pStyle + '>' + (pct !== null ? pct.toFixed(0) + '%' : '—') + '</td>';
+             '<td class="' + pCls + '"' + pStyle + '>' + (pct !== null ? pct.toFixed(0) + '%' : '—') + '</td>' +
+             '<td class="' + gCls + '"' + gTip + '>' + (gRnd != null ? fmtInt(gRnd) : '—') + '</td>';
     };
+    const allGcv = [];
     for (let mi = 0; mi < 12; mi++){
       monthlyTable += '<tr><td class="pm-td-month">' + months[mi] + '</td>';
       let monthTotal = 0, monthDoTotal = 0;
+      const monthGcv = [];
       for (let yi = 0; yi < years.length; yi++){
         const arr = (c.realisasi && c.realisasi[years[yi]]) || [];
         const v = arr[mi] || 0;
         const doArr = (cDO && cDO[years[yi]]) || null;
         const dov = doArr ? (doArr[mi] || 0) : 0;
-        monthTotal += v; monthDoTotal += dov;
-        monthlyTable += pairCells(v, dov);
+        const gv = gcvAt(years[yi], mi);
+        monthTotal += v; monthDoTotal += dov; monthGcv.push(gv); allGcv.push(gv);
+        monthlyTable += pairCells(v, dov, gv[0]);
       }
-      monthlyTable += pairCells(monthTotal, monthDoTotal);
+      monthlyTable += pairCells(monthTotal, monthDoTotal, _gcvWAvg(monthGcv));
       monthlyTable += '</tr>';
     }
     monthlyTable += '</tbody><tfoot><tr><td class="pm-td-month">Year Total</td>';
@@ -17966,9 +18013,11 @@ function openPemasokModal(pemasok, focusPltu, kontrakNo){
       const doArr = (cDO && cDO[years[yi]]) || null;
       const doYTot = doArr ? doArr.reduce((s, x) => s + (x || 0), 0) : 0;
       footerTotal += yTot; footerDoTotal += doYTot;
-      monthlyTable += pairCells(yTot, doYTot);
+      const yGcv = [];
+      for (let mi = 0; mi < 12; mi++) yGcv.push(gcvAt(years[yi], mi));
+      monthlyTable += pairCells(yTot, doYTot, _gcvWAvg(yGcv));
     }
-    monthlyTable += pairCells(footerTotal, footerDoTotal) + '</tr></tfoot></table>';
+    monthlyTable += pairCells(footerTotal, footerDoTotal, _gcvWAvg(allGcv)) + '</tr></tfoot></table>';
 
     const gcColor = c.genco === 'PNP' ? '#10b981' : c.genco === 'PIP' ? '#f59e0b' : c.genco === 'UIW' ? '#3b82f6' : '#64748b';
     const statusBadge = isActive
@@ -19492,6 +19541,54 @@ function getKontrakGcv(c){
 }
 window.getKontrakGcv = getKontrakGcv;
 
+// V199: GCV BULANAN per kontrak dari tabel kontrak_gcv_bulanan (edge function
+// kontrak-gcv-bulanan-refresh, mingguan; sheet "Kontrak 2024/2025/2026" di
+// SharePoint). URL sumber tidak boleh di sini (workbook yang sama memuat harga).
+// Satu kontrak muncul di beberapa sheet tahun; tiap sheet mengisi tahunnya.
+let KONTRAK_GCVB_SRC = [];   // [{ no, mitra, pltu, jenis, tahun, gcv:[12], vol:[12] }]
+let _kontrakGcvbIdx = null;
+let _kontrakGcvbCache = new WeakMap();
+function _kontrakGcvbIndex(){
+  if (_kontrakGcvbIdx) return _kontrakGcvbIdx;
+  const idx = {};
+  for (const r of KONTRAK_GCVB_SRC){
+    const nk = _hargaNoKey(r.no);
+    if (!nk) continue;
+    (idx[nk.k] = idx[nk.k] || []).push(Object.assign({ y: nk.y }, r));
+  }
+  return (_kontrakGcvbIdx = idx);
+}
+// Rata-rata GCV tertimbang Vol sheet; bulan tanpa Vol berbobot 1.
+function _gcvWAvg(pairs){
+  let s = 0, w = 0;
+  for (const [g, v] of pairs){ if (g == null) continue; const b = v > 0 ? v : 1; s += g * b; w += b; }
+  return w > 0 ? s / w : null;
+}
+// → null, atau { '2024': { gcv:[12], vol:[12] }, ... }. Baris ganda di tahun yang
+// sama digabung per bulan, tertimbang Vol.
+function getKontrakGcvBulanan(c){
+  if (!c) return null;
+  if (_kontrakGcvbCache.has(c)) return _kontrakGcvbCache.get(c);
+  let res = null;
+  const m = _kontrakMatchRows(c, _kontrakGcvbIndex());
+  if (m){
+    const byYear = {};
+    m.best.forEach(r => { (byYear[r.tahun] = byYear[r.tahun] || []).push(r); });
+    res = {};
+    Object.keys(byYear).forEach(y => {
+      const rows = byYear[y], gcv = [], vol = [];
+      for (let i = 0; i < 12; i++){
+        gcv.push(_gcvWAvg(rows.map(r => [r.gcv[i], r.vol[i]])));
+        vol.push(rows.reduce((a, r) => a + (r.vol[i] || 0), 0));
+      }
+      res[y] = { gcv, vol };
+    });
+  }
+  _kontrakGcvbCache.set(c, res);
+  return res;
+}
+window.getKontrakGcvBulanan = getKontrakGcvBulanan;
+
 // V157: kolom Harga disembunyikan sampai dibuka dengan password (hash SHA-256,
 // per tab lewat sessionStorage). Hanya penutup tampilan; kontrak_harga tetap
 // terbaca lewat anon key.
@@ -20653,6 +20750,25 @@ async function fetchKontrakGcv(){
       try { renderKontrakTable(); } catch(e){}
     }
   } catch(e){ console.warn('[GCV] fetch failed:', e); }
+}
+
+// V199: GCV bulanan (lihat catatan V199 di dekat getKontrakGcvBulanan).
+async function fetchKontrakGcvBulanan(){
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('kontrak_gcv_bulanan')
+      .select('tahun,no_kontrak,mitra,pltu,jenis,gcv,vol')
+      .limit(5000);
+    if (error){ console.warn('[GCV bulanan] fetch error:', error.message); return; }
+    const arr = a => Array.from({ length: 12 }, (_, i) => (a && a[i] != null && isFinite(Number(a[i]))) ? Number(a[i]) : null);
+    KONTRAK_GCVB_SRC = (data || [])
+      .filter(r => r.no_kontrak)
+      .map(r => ({ no: r.no_kontrak, mitra: r.mitra || '', pltu: r.pltu || '', jenis: r.jenis || '',
+                   tahun: String(r.tahun), gcv: arr(r.gcv), vol: arr(r.vol) }));
+    _kontrakGcvbIdx = null;
+    _kontrakGcvbCache = new WeakMap();
+  } catch(e){ console.warn('[GCV bulanan] fetch failed:', e); }
 }
 
 // Persist a manual DO override for one contract signature. doMap = {year:[12]}.
@@ -22665,6 +22781,7 @@ async function resyncLiveData(reason, full){
         (typeof fetchKontrakPasokan === 'function') ? fetchKontrakPasokan().catch(()=>{}) : null,
         (typeof fetchKontrakHarga === 'function') ? fetchKontrakHarga().catch(()=>{}) : null,
         (typeof fetchKontrakGcv === 'function') ? fetchKontrakGcv().catch(()=>{}) : null,
+        (typeof fetchKontrakGcvBulanan === 'function') ? fetchKontrakGcvBulanan().catch(()=>{}) : null,
         (_bnSyncInit && typeof fetchBottlenecksFromServer === 'function')
           ? fetchBottlenecksFromServer().catch(()=>{}) : null,
       ]);
@@ -25454,10 +25571,9 @@ function fasKontrakVolumeSectionsHTML(f){
 // (ID sheet di checkpoint_source). Kolom rincian mengikuti `fields` respons.
 const FAS_RM_SITE = { 'Tasikmalaya': 'TSM', 'Ciamis': 'CMS' };
 const FAS_RM_SRC = { TSM: 'Rekap Muat', CMS: 'Tally Harian' };
-const FAS_RM_COLS = { TSM: 'B/N (produksi) · R/S/T (pengiriman)', CMS: 'B/N (produksi) · Q/R/T (mixed aren)' }; // V191/V196
 // V196: tabel ganda Produksi || blok kanan — kunci kolom kiri + label per site.
 const FAS_RM_MIX = {
-  TSM: { key: 'product', truk: 'Jumlah Truk', l: 'Produksi', r: 'Vol Pengiriman' },
+  TSM: { key: 'product', truk: 'Truk', l: 'Produksi', r: 'Vol Pengiriman' },
   CMS: { key: 'netto',   truk: 'Truk',        l: 'Vol Produksi', r: 'Vol Mixed Aren' }
 };
 const FAS_RM_FN_URL = SUPABASE_URL + '/functions/v1/rekap-muat';
@@ -25565,7 +25681,9 @@ function fasVolDetailTableHTML(nama, year){
         const side = (x, key, first) => x
           ? '<td' + (first ? '' : sep) + '>' + x.d + ' ' + MONTHS[i] + '</td><td>' + x.truk + '</td><td' + (first ? ' class="podt-real"' : '') + '>' + f2(x[key]) + '</td>'
           : '<td' + (first ? '' : sep) + '></td><td></td><td></td>';
-        d = '<table class="fas-vol-rm-table"><thead><tr><th>Tanggal</th><th>' + mx.truk + '</th><th>' + mx.l + '</th><th' + sep + '>Tanggal</th><th>' + mx.truk + '</th><th>' + mx.r + '</th></tr></thead><tbody>';
+        // V198: lebar kolom tetap — Tanggal 19% · Truk 11% · Volume 20% per blok.
+        const cg = '<col style="width:19%"><col style="width:11%"><col style="width:20%">';
+        d = '<table class="fas-vol-rm-table dual"><colgroup>' + cg + cg + '</colgroup><thead><tr><th>Tanggal</th><th>' + mx.truk + '</th><th>' + mx.l + '</th><th' + sep + '>Tanggal</th><th>' + mx.truk + '</th><th>' + mx.r + '</th></tr></thead><tbody>';
         for (let k = 0; k < Math.max(L.length, R.length); k++) d += '<tr>' + side(L[k], lk, true) + side(R[k], 'mix', false) + '</tr>';
         d += '</tbody><tfoot><tr><td>Total</td><td>' + (t.truk || 0) + '</td><td class="podt-real">' + f2(t[lk]) + '</td><td' + sep + '>Total</td><td>' + (tm.truk || 0) + '</td><td>' + f2(tm.mix) + '</td></tr></tfoot></table>';
       } else {
@@ -25575,10 +25693,8 @@ function fasVolDetailTableHTML(nama, year){
       });
       d += '</tbody><tfoot><tr><td>Total</td><td>' + (t.truk || 0) + '</td>' + vals(t) + '</tr></tfoot></table>';
       }
-      const upd = rm.at ? new Date(rm.at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
-      d += '<div class="fas-vol-rm-src">Sumber: sheet ' + (FAS_RM_SRC[rm.site] || '') + ' (ton): Σ per tanggal kolom ' + (FAS_RM_COLS[rm.site] || '') + (upd ? ' · dimuat ' + upd : '') +
-        (realSrc[i] !== 'sheet' ? ' · Real di atas memakai ' + (realSrc[i] === 'manual' ? 'input manual' : 'Kontrak Auto Refresh') : '') + '</div>';
-      h += '<tr class="fas-vol-rm-detail"><td colspan="3">' + d + '</td></tr>';
+      // V198: keterangan "Sumber: …" di bawah tabel dihapus atas permintaan user.
+      h +='<tr class="fas-vol-rm-detail"><td colspan="3">' + d + '</td></tr>';
     }
   }
   h += '</tbody><tfoot><tr><td>Total</td>' +
@@ -28950,6 +29066,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (typeof fetchKontrakHarga === 'function') fetchKontrakHarga();
     // V180: GCV kontrak — tabel sendiri, dimuat sekali saat boot.
     if (typeof fetchKontrakGcv === 'function') fetchKontrakGcv();
+    // V199: GCV bulanan — untuk tabel detil per mitra.
+    if (typeof fetchKontrakGcvBulanan === 'function') fetchKontrakGcvBulanan();
   }
   // Reflect admin-only pause control on first paint.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();
@@ -33927,7 +34045,7 @@ function _ckMitraList(code, C){
 }
 function _ckSideHtml(code){
   const e = escapeHtml, C = _ckCalc(code), nd = C.nd, cut = C.cut;
-  const cutLbl = cut > nd ? 'Realisasi sebulan penuh' : cut <= 1 ? 'Realisasi (belum ada)' : 'Realisasi s.d. tgl ' + (cut - 1);
+  const cutLbl = _ckCutLbl(C);
   const list = _ckMitraList(code, C), mx = Math.max(1, ...list.map(m => C.prog[m.key] || 0));
   const DOT = { plan: '#8b5cf6', confirm: '#f59e0b', ready: '#3b82f6', real: '#10b981' };
   return '<div class="ck-kpi">' +
@@ -33936,9 +34054,16 @@ function _ckSideHtml(code){
       '<div class="ck-kpi-grid">' + CK_SUMS.map(k => '<div style="--ck-dot:' + DOT[k] + '"><span>Σ ' + k.charAt(0).toUpperCase() + k.slice(1) + '</span><b data-cksd="' + k + '">' + _ckFmt(C.T[k]) + '</b></div>').join('') + '</div>' +
     '</div>' +
     (list.length ? '<div class="ck-mlist"><div class="ck-side-h">Prognosa per mitra</div>' + list.map(m =>
-      '<button type="button" class="ck-mrow' + (m.gone ? ' gone' : '') + '" data-ck="col" data-code="' + e(code) + '" data-key="' + e(m.key) + '" title="Lompat ke kolom ' + e(m.name) + '">' +
+      '<button type="button" class="ck-mrow' + (m.gone ? ' gone' : '') + '" data-ck="col" data-code="' + e(code) + '" data-key="' + e(m.key) + '" aria-label="Lompat ke kolom ' + e(m.name) + '">' +
         '<span class="ck-mrow-n">' + e(m.name) + '</span><b data-cksdrow="' + e(m.key) + '">' + _ckFmt(C.prog[m.key] || 0) + '</b>' +
-        '<i class="ck-mrow-bar"><i data-cksdbar="' + e(m.key) + '" style="width:' + Math.round((C.prog[m.key] || 0) / mx * 100) + '%"></i></i></button>').join('') + '</div>' : '');
+        '<i class="ck-mrow-bar"><i data-cksdbar="' + e(m.key) + '" style="width:' + Math.round((C.prog[m.key] || 0) / mx * 100) + '%"></i></i>' +
+        // V197: popover hover — DO konfirmasi (Σ Confirm) & realisasi s.d. tanggal checkpoint.
+        '<span class="ck-mrow-tip" role="tooltip"><span>DO (Confirm)</span><b data-cksdconf="' + e(m.key) + '">' + _ckTipNum(C.conf[m.key]) + '</b>' +
+        '<span data-cksdcut>' + cutLbl + '</span><b data-cksdreal="' + e(m.key) + '">' + _ckTipNum(C.realz[m.key]) + '</b></span></button>').join('') + '</div>' : '');
+}
+function _ckTipNum(v){ return v === null || v === undefined ? '—' : _ckFmt(v) + ' ton'; }
+function _ckCutLbl(C){
+  return C.cut > C.nd ? 'Realisasi sebulan penuh' : C.cut <= 1 ? 'Realisasi (belum ada)' : 'Realisasi s.d. tgl ' + (C.cut - 1);
 }
 // V162/V187: prognosa = Real harian sheet + isian di hari kosong. Isian boleh
 // menimpa angka sheet untuk laporan ini saja; dikosongkan = kembali ke sheet.
@@ -34000,7 +34125,8 @@ function _ckCalc(code){
   const cut = _ckCutDay(nd);
   // V187: realisasi = Σ angka efektif (ubahan user, atau sheet) di hari < cut;
   // prognosa = Σ seluruh bulan (realisasi + angka mulai tanggal checkpoint).
-  const T = { plan: 0, confirm: 0, ready: 0, real: 0, realisasi: 0, prognosa: 0 }, prog = {}, realz = {}, day = new Array(nd).fill(null);
+  // V197: conf = Σ Confirm (DO konfirmasi) per mitra, untuk popover panel samping.
+  const T = { plan: 0, confirm: 0, ready: 0, real: 0, realisasi: 0, prognosa: 0 }, prog = {}, realz = {}, conf = {}, day = new Array(nd).fill(null);
   const add = (i, v) => { day[i] = (day[i] || 0) + v; };
   const r3 = x => Math.round(x * 1000) / 1000;
   const present = new Set(Object.keys(ed.rows).filter(k => ed.rows[k].hidden));
@@ -34008,6 +34134,7 @@ function _ckCalc(code){
     present.add(r.key);
     const er = ed.rows[r.key] || {}, days = er.days || {}, real = r.mt.real || [];
     CK_SUMS.forEach(k => { T[k] += _ckSumEff(r, er, k) || 0; });   // V195: isian Σ menimpa Σ sheet
+    conf[r.key] = _ckSumEff(r, er, 'confirm');
     let s = 0, sr = 0;
     for (let i = 0; i < nd; i++){
       const u = days[i + 1];
@@ -34033,6 +34160,7 @@ function _ckCalc(code){
   Object.keys(ed.rows).forEach(k => { if (!present.has(k)) onlyDays(ed.rows[k].days, k); });
   (ed.manual || []).forEach(m => {
     CK_SUMS.forEach(k => { T[k] += _ckVal(m[k]); });
+    conf['m:' + m.id] = _ckHasU(m.confirm) ? _ckVal(m.confirm) : null;
     onlyDays(m.days, 'm:' + m.id);
     // Mitra tambahan tanpa angka harian: realisasi = isian Σ Real-nya (perilaku lama).
     // Prognosa = total bulan, jadi tidak boleh lebih kecil dari realisasi itu.
@@ -34040,7 +34168,7 @@ function _ckCalc(code){
   });
   Object.keys(prog).forEach(k => { T.prognosa += prog[k]; T.realisasi += realz[k] || 0; });
   Object.keys(T).forEach(k => { T[k] = r3(T[k]); });
-  return { nd, rows, hidden, prog, realz, day, T, present, cut };
+  return { nd, rows, hidden, prog, realz, conf, day, T, present, cut };
 }
 // V168: tabel isian vertikal — baris = tanggal 1..akhir bulan, kolom = mitra.
 // Ringkasan (Σ Plan/Confirm/Ready/Real, Prognosa, Catatan) jadi baris kaki tabel.
@@ -34237,6 +34365,9 @@ function _ckSyncTotals(code){
   // V194: panel samping.
   sec.querySelectorAll('[data-cksd]').forEach(c => { c.textContent = _ckFmt(C.T[c.dataset.cksd]); });
   sec.querySelectorAll('[data-cksdrow]').forEach(c => { c.textContent = _ckFmt(C.prog[c.dataset.cksdrow] || 0); });
+  sec.querySelectorAll('[data-cksdconf]').forEach(c => { c.textContent = _ckTipNum(C.conf[c.dataset.cksdconf]); });
+  sec.querySelectorAll('[data-cksdreal]').forEach(c => { c.textContent = _ckTipNum(C.realz[c.dataset.cksdreal]); });
+  const cl = _ckCutLbl(C); sec.querySelectorAll('[data-cksdcut]').forEach(c => { c.textContent = cl; });
   const mx = Math.max(1, ...Object.keys(C.prog).map(k => C.prog[k] || 0));
   sec.querySelectorAll('[data-cksdbar]').forEach(c => { c.style.width = Math.round((C.prog[c.dataset.cksdbar] || 0) / mx * 100) + '%'; });
 }
