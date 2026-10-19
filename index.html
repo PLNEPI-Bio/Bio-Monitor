@@ -1216,8 +1216,13 @@ html,body{
 
 /* Map area */
 .map-area{position:relative;background:var(--bg);overflow:hidden}
-#map,#bn-map,#pembangkit-map{width:100%;height:100%;background:#050810}
+#map,#bn-map,#pembangkit-map{width:100%;height:100%;background:#d4dadc}   /* V208: warna laut tile CARTO */
 .leaflet-container{background:#050810;font-family:'Plus Jakarta Sans',sans-serif}
+/* V208: garis grid putih di sambungan tile (skala layar Windows 125/150%, terutama Edge): celah
+   sub-pixel antar-tile memperlihatkan latar kontainer, yang dulu #e2e8f0 (nyaris putih). Latar
+   semua peta kini = warna laut tile CARTO light (#d4dadc), jadi celah tak terbaca sebagai garis.
+   Sudah diuji dan DITOLAK karena justru membuat garis terang baru: mix-blend-mode:plus-lighter
+   pada tile, dan memperbesar tile ke 257px. */
 .leaflet-control-attribution{background:rgba(10,14,20,.8)!important;color:var(--text-dim)!important;font-size:11px!important}
 .leaflet-control-attribution a{color:var(--text-dim)!important}
 .leaflet-control-zoom{margin:16px!important}
@@ -3573,7 +3578,7 @@ html,body{
 .cbg-src p{margin-top:6px}
 /* ── peta ── */
 .cbg-maparea{position:relative;min-height:0;min-width:0;overflow:hidden}
-#cbg-map{position:absolute;inset:0;background:var(--map-bg)}
+#cbg-map{position:absolute;inset:0;background:#d4dadc}
 #cbg-map .leaflet-top.leaflet-left{top:44px}
 .cbg-mapctl{position:absolute;top:10px;left:10px;z-index:1000;display:flex;gap:6px}
 .cbg-mbtn{display:inline-flex;align-items:center;gap:5px;height:30px;min-width:30px;justify-content:center;padding:0 8px;border:1px solid var(--border);
@@ -3822,7 +3827,7 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
 .map-view.fasilitas-view{grid-template-columns:1fr 0px}
 /* V196: 340→440px agar tabel harian Produksi || Pengiriman (6 kolom) muat; layar sempit dibatasi 45vw */
 .map-view.fasilitas-view.detail-open{grid-template-columns:1fr min(440px,45vw)}
-#fasilitas-map{width:100%;height:100%;background:var(--panel)}
+#fasilitas-map{width:100%;height:100%;background:#d4dadc}   /* V208 */
 
 /* Fasilitas marker — rounded square with embedded icon, distinct from
    pembangkit's small round dot so the two map types are visually separable. */
@@ -4388,12 +4393,13 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
 ::-webkit-scrollbar-thumb:hover{background:var(--border-bright)}
 
 /* Leaflet + shell overrides */
-:root[data-theme="light"] .leaflet-container{background:#e2e8f0}
+/* V208: latar = warna laut tile CARTO light (#d4dadc), sehingga sisa celah antar-tile tidak terbaca sebagai garis putih. */
+:root[data-theme="light"] .leaflet-container{background:#d4dadc}
 :root[data-theme="light"] .leaflet-control-attribution{background:rgba(255,255,255,.85)!important;color:#475569!important}
 :root[data-theme="light"] .leaflet-control-zoom a{background:#ffffff!important;color:#334155!important;border-color:#cbd5e1!important}
 :root[data-theme="light"] .leaflet-control-zoom a:hover{background:#f1f5f9!important}
 :root[data-theme="light"] #map,
-:root[data-theme="light"] #bn-map{background:#e2e8f0}
+:root[data-theme="light"] #bn-map{background:#d4dadc}
 :root[data-theme="light"] .leaflet-popup-content-wrapper{background:#ffffff!important;color:#334155!important;border-color:#cbd5e1!important;box-shadow:0 8px 24px rgba(15,23,42,.15)!important}
 :root[data-theme="light"] .leaflet-popup-tip{background:#ffffff!important}
 :root[data-theme="light"] .plant-popup-name{color:#0f172a}
