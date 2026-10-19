@@ -3516,7 +3516,7 @@ html,body{
    (satu baris sel bergaris rambut, bisa digeser bila sempit). Panel detail menempel kanan. */
 .cbg-view{
   --cbg-p1:#10b981; --cbg-p1-ink:var(--status-ok-ink); --cbg-p0:#98A0A9;
-  --cbg-mill:#65a30d; --cbg-mill2:#a8c06a; --cbg-bad-ink:var(--status-crit-ink);
+  --cbg-mill:#65a30d; --cbg-mill2:#a16207;   /* V209: 100–200 km = coklat */ --cbg-bad-ink:var(--status-crit-ink);
   --cbg-side-w:300px; --cbg-sheet-w:384px;
   display:grid;grid-template-rows:auto 1fr;height:100%;min-height:0;background:var(--bg);
 }
@@ -3664,7 +3664,8 @@ html,body{
 .cbg-tt-k{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--text-dim)}
 .cbg-tt-k .d{width:7px;height:7px;border-radius:50%;flex:none}
 .cbg-tt-n{font-size:12.5px;font-weight:700;color:var(--text-bright);margin-top:2px}
-.cbg-tt-m{color:var(--text-dim);font-size:11px}
+.cbg-tt-m{color:var(--text-dim);font-size:11px;margin-top:1px}
+.cbg-tt-m b{color:var(--text);font-weight:600}
 .cbg-tt-v{margin-top:4px;color:var(--text-dim)}
 .cbg-tt-v b{color:var(--text);font-variant-numeric:tabular-nums}
 .cbg-tt-h{margin-top:6px;padding-top:5px;border-top:1px solid var(--border);font-size:10.5px;font-weight:600;color:var(--accent)}
@@ -25498,13 +25499,14 @@ function _cbgDraw(){
   const cP1 = _cbgCss('--cbg-p1'), cP0 = _cbgCss('--cbg-p0');
   if (sel){
     plants.filter(_cbgIsP).forEach(p => CBG_RING_M.forEach((r, k) =>
-      L.circle([p.lat, p.lon], { radius:r, color:cAcc, weight:1.2, dashArray:k ? '6 6' : null, fill:!k, fillOpacity:.04, interactive:false }).addTo(L_.ring)));
+      // V209: renderer sama dengan PKS — kanvas kedua (bawaan peta) menelan hover sehingga tooltip PKS tak muncul.
+      L.circle([p.lat, p.lon], { renderer:L_.canv, radius:r, color:cAcc, weight:1.2, dashArray:k ? '6 6' : null, fill:!k, fillOpacity:.04, interactive:false }).addTo(L_.ring)));
     if (s.cl) mills.forEach(m => { const p = D.PI[m[7]];
       if (p) L.polyline([[m[0], m[1]], [p.lat, p.lon]], { renderer:L_.canv, color:m[9] === 1 ? cM1 : cM2, weight:.8, opacity:.5, interactive:false }).addTo(L_.line); });
   }
   mills.forEach(m => L.circleMarker([m[0], m[1]], { renderer:L_.canv, radius:sel ? 4 : 2.2, stroke:false, fillColor:m[9] === 1 ? cM1 : cM2, fillOpacity:sel ? .9 : .55 })
     .bindTooltip('<div class="cbg-tt-k"><span class="d" style="background:' + (m[9] === 1 ? cM1 : cM2) + '"></span>PKS · ' + m[4] + ' TPH</div>' +
-      '<div class="cbg-tt-n">' + escapeHtml(m[2]) + '</div>' + (m[3] && m[3] !== m[2] ? '<div class="cbg-tt-m">' + escapeHtml(m[3]) + '</div>' : '') +
+      '<div class="cbg-tt-n">' + escapeHtml(m[2]) + '</div>' + (m[3] ? '<div class="cbg-tt-m">Pemilik: <b>' + escapeHtml(m[3]) + '</b></div>' : '') +
       '<div class="cbg-tt-v"><b>' + _cbgNum(m[8], 0) + ' km</b> jalan ke ' + escapeHtml(m[7]) + '</div>', CBG_TT).addTo(L_.mill));
   plants.slice().sort((a, b) => (b.d30 || 0) - (a.d30 || 0)).forEach(p => { const pr = _cbgIsP(p);
     L.circleMarker([p.lat, p.lon], { renderer:L_.svg, pane:'cbgPlants', radius:pr ? _cbgRad(p.d30) : Math.min(_cbgRad(p.d30), 8),
