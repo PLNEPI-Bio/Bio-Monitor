@@ -358,7 +358,7 @@ html,body{
 }
 /* Lives inside .topbar in the DOM, paints on the page plane. Reset off the
    canonical --page-* copies so it does not inherit the band. */
-.login-dropdown{
+.login-dropdown,.online-dropdown{
   --text:var(--page-text);
   --text-bright:var(--page-text-bright);
   --text-dim:var(--page-text-dim);
@@ -469,6 +469,50 @@ html,body{
 .topbar-pause-btn.paused .pause-icon-pause{display:none}
 .topbar-pause-btn.paused .pause-icon-play{display:inline !important}
 .topbar-pause-btn.busy{opacity:.45;pointer-events:none}
+
+/* V209: penghitung pengguna online (admin only) — pil + panel daftar sesi */
+.topbar-online-wrap{display:flex;flex-shrink:0}
+.topbar-online-btn{
+  background:transparent;border:1px solid var(--border);color:var(--text-dim);
+  padding:6px 10px;display:flex;align-items:center;gap:6px;
+  cursor:pointer;border-radius:var(--r-sm);flex-shrink:0;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:.4px;white-space:nowrap;
+  transition:background-color var(--dur-fast) var(--ease-in-out),
+             border-color var(--dur-fast) var(--ease-in-out),
+             color var(--dur-fast) var(--ease-in-out);
+}
+.topbar-online-btn:hover,.topbar-online-btn[aria-expanded="true"]{background:var(--panel-3);border-color:var(--accent);color:var(--accent)}
+.topbar-online-btn .online-dot{
+  width:8px;height:8px;border-radius:var(--r-pill);background:var(--status-ok);flex-shrink:0;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--status-ok) 18%,transparent);
+}
+.topbar-online-btn .online-count{font-variant-numeric:tabular-nums}
+.online-dropdown{
+  position:fixed;top:52px;right:8px;width:300px;max-width:calc(100vw - 16px);
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);
+  box-shadow:var(--shadow-lg);z-index:5500;display:none;overflow:hidden;
+  font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);
+}
+.online-dropdown.open{display:block}
+.online-dd-head{
+  padding:12px 14px;border-bottom:1px solid var(--border);background:var(--panel-2);
+  font-size:12px;font-weight:700;color:var(--text-bright);
+}
+.online-dd-head span{display:block;font-size:11px;font-weight:500;color:var(--text-dim);margin-top:2px}
+.online-dd-list{max-height:min(60vh,420px);overflow-y:auto}
+.online-dd-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border)}
+.online-dd-row:last-child{border-bottom:0}
+.online-dd-av{
+  width:28px;height:28px;border-radius:var(--r-pill);background:var(--panel-3);color:var(--text);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;
+}
+.online-dd-row.admin .online-dd-av{background:var(--accent);color:var(--on-accent)}
+.online-dd-main{min-width:0;flex:1}
+.online-dd-name{font-size:12px;font-weight:600;color:var(--text-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.online-dd-name em{font-style:normal;font-weight:500;color:var(--text-dim)}
+.online-dd-meta{font-size:11px;color:var(--text-dim);margin-top:1px}
+.online-dd-empty{padding:16px 14px;font-size:12px;color:var(--text-dim)}
 
 /* V166: tombol refresh manual edge function (admin only) — satu pil kecil, tiga segmen */
 .topbar-refresh-group{
@@ -7256,6 +7300,13 @@ body.gf-on .gf-bar{
       <svg class="pause-icon-play" viewBox="0 0 16 16" fill="currentColor" width="12" height="12" style="display:none"><path d="M4 2.5v11a1 1 0 0 0 1.5.87l9-5.5a1 1 0 0 0 0-1.74l-9-5.5A1 1 0 0 0 4 2.5z"/></svg>
       <span class="pause-label" id="pauseLabel">Auto-refresh: ON</span>
     </button>
+    <!-- V209: penghitung pengguna online (Realtime Presence) — only visible to "Maulana - Admin" -->
+    <div class="topbar-online-wrap" id="topbarOnlineWrap" style="display:none">
+      <button type="button" class="topbar-online-btn" id="topbarOnlineBtn" onclick="toggleOnlineDropdown(event)" title="Siapa saja yang sedang membuka dashboard" aria-haspopup="true" aria-expanded="false">
+        <span class="online-dot" aria-hidden="true"></span><span class="online-count" id="onlineCount">0</span><span class="online-label">online</span>
+      </button>
+      <div class="online-dropdown" id="onlineDropdown" role="dialog" aria-label="Pengguna online"></div>
+    </div>
     <!-- V166: pemicu manual edge function refresh — only visible to "Maulana - Admin" -->
     <div class="topbar-refresh-group" id="topbarRefreshGroup" style="display:none" role="group" aria-label="Jalankan refresh manual">
       <button type="button" class="topbar-refresh-btn" data-fn="do" onclick="runManualRefresh('do')" title="Jalankan do-auto-refresh sekarang (DO SharePoint → do_data)">
@@ -8775,6 +8826,8 @@ body.gf-on .gf-bar{
   .brand{flex-shrink:0}
   .pause-label{display:none}
   .topbar-pause-btn{width:44px;padding:0;justify-content:center}
+  .topbar-online-btn{min-height:44px;padding:0 10px}
+  .topbar-online-btn .online-label{display:none}
   .do-link-warning .do-warn-text{display:none}
 
   /* 5. Input palet perintah 16px agar iOS tidak zoom saat fokus. */
@@ -17534,6 +17587,7 @@ function switchTab(tab){
     }
   }
   state.tab = tab;
+  if (typeof presenceRetrack === 'function') presenceRetrack(); // V209
   // V118: tab yang basi karena filter global dibangun ulang saat dibuka (chart di
   // display:none jadi gepeng). Dipanggil sebelum lazy-init agar tidak dobel render.
   gfSyncTab(tab);
@@ -20766,6 +20820,8 @@ function renderLoginUI(){
   // Refresh the admin-only auto-refresh pause control whenever identity changes.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();
   if (typeof renderRefreshBtns === 'function') renderRefreshBtns(); // V166
+  if (typeof renderOnlineCounter === 'function') renderOnlineCounter(); // V209
+  if (typeof presenceRetrack === 'function') presenceRetrack();
   // The DO link-health warning is also admin-gated → re-evaluate on identity change.
   if (typeof renderDoLinkWarning === 'function') renderDoLinkWarning();
 }
@@ -20871,6 +20927,122 @@ function renderRefreshBtns(){
   const g = document.getElementById('topbarRefreshGroup');
   if (g) g.style.display = canControlAutoRefresh() ? 'flex' : 'none';
 }
+
+// V209: penghitung online — Supabase Realtime Presence, tanpa tabel. Setiap tab
+// browser men-track dirinya (nama login, tab aktif, perangkat); hanya
+// AUTO_REFRESH_ADMIN yang melihat pil + daftarnya. Presence lenyap sendiri saat
+// tab ditutup / koneksi putus. Catatan: channel ini bisa didengar siapa pun yang
+// memegang anon key — isinya hanya nama tampilan + tab, bukan data.
+const presenceState = { channel: null, key: '', since: 0, list: [], timer: null };
+
+function _presencePayload(){
+  return {
+    name: getUserName() || '',
+    tab: (typeof state !== 'undefined' && state.tab) || '',
+    mobile: !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches),
+    since: presenceState.since
+  };
+}
+
+function subscribePresence(){
+  if (!supabaseClient || presenceState.channel) return;
+  if (!presenceState.since) presenceState.since = Date.now();
+  if (!presenceState.key) presenceState.key = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const ch = supabaseClient.channel('online-users', { config: { presence: { key: presenceState.key } } });
+  presenceState.channel = ch;
+  ch.on('presence', { event: 'sync' }, () => {
+      const st = ch.presenceState();
+      const list = [];
+      Object.keys(st).forEach(k => (st[k] || []).forEach(m => list.push(Object.assign({}, m, { key: k }))));
+      presenceState.list = list;
+      renderOnlineCounter();
+    })
+    // Callback ini terpanggil lagi tiap rejoin → track ulang agar tidak hilang.
+    .subscribe(status => { if (status === 'SUBSCRIBED') ch.track(_presencePayload()); });
+}
+
+// Dipanggil saat nama login / tab aktif berubah. Debounce: switchTab bisa beruntun.
+function presenceRetrack(){
+  const ch = presenceState.channel;
+  if (!ch) return;
+  clearTimeout(presenceState.timer);
+  presenceState.timer = setTimeout(() => {
+    if (ch.state === 'joined'){ try { ch.track(_presencePayload()); } catch(e){} }
+  }, 400);
+}
+
+function _onlineTabLabel(tab){
+  if (!tab) return '—';
+  const el = document.querySelector('.tab[data-tab="' + tab + '"]');
+  const t = el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+  return t || tab;
+}
+
+function _onlineAgo(ms){
+  const m = Math.max(0, Math.floor((Date.now() - (ms || Date.now())) / 60000));
+  if (m < 1) return 'baru saja';
+  if (m < 60) return m + ' mnt';
+  return Math.floor(m / 60) + ' j ' + (m % 60) + ' mnt';
+}
+
+function renderOnlineCounter(){
+  const wrap = document.getElementById('topbarOnlineWrap');
+  if (!wrap) return;
+  if (!canControlAutoRefresh()){ wrap.style.display = 'none'; closeOnlineDropdown(); return; }
+  wrap.style.display = 'flex';
+  const list = presenceState.list.slice().sort((a, b) => (a.since || 0) - (b.since || 0));
+  const cnt = document.getElementById('onlineCount');
+  if (cnt) cnt.textContent = list.length;
+  const btn = document.getElementById('topbarOnlineBtn');
+  if (btn) btn.title = list.length + ' sesi sedang membuka dashboard';
+  const dd = document.getElementById('onlineDropdown');
+  if (!dd || !dd.classList.contains('open')) return;
+  const names = new Set(list.map(p => p.name || ''));
+  const guests = list.filter(p => !p.name).length;
+  const head = '<div class="online-dd-head">' + list.length + ' sesi online' +
+    '<span>' + (names.size - (guests ? 1 : 0)) + ' nama login' + (guests ? ' · ' + guests + ' belum login' : '') + '</span></div>';
+  if (!list.length){
+    dd.innerHTML = head + '<div class="online-dd-empty">' +
+      (presenceState.channel && presenceState.channel.state === 'joined' ? 'Belum ada sesi lain.' : 'Menghubungkan ke server…') + '</div>';
+    return;
+  }
+  dd.innerHTML = head + '<div class="online-dd-list">' + list.map(p => {
+    const me = p.key === presenceState.key;
+    const nm = p.name || 'Tamu';
+    const since = p.since ? new Date(p.since).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '—';
+    return '<div class="online-dd-row' + (p.name && isAdminRole(p.name) ? ' admin' : '') + '">' +
+      '<span class="online-dd-av">' + escapeHtml(p.name ? userInitials(p.name) : '?') + '</span>' +
+      '<div class="online-dd-main">' +
+        '<div class="online-dd-name">' + escapeHtml(nm) + (me ? ' <em>(Anda)</em>' : '') + (!p.name ? ' <em>(belum login)</em>' : '') + '</div>' +
+        '<div class="online-dd-meta">' + escapeHtml(_onlineTabLabel(p.tab)) + ' · ' + (p.mobile ? 'HP' : 'Desktop') +
+          ' · sejak ' + since + ' (' + _onlineAgo(p.since) + ')</div>' +
+      '</div></div>';
+  }).join('') + '</div>';
+}
+
+function toggleOnlineDropdown(e){
+  if (e) e.stopPropagation();
+  const dd = document.getElementById('onlineDropdown');
+  const btn = document.getElementById('topbarOnlineBtn');
+  if (!dd) return;
+  const open = !dd.classList.contains('open');
+  dd.classList.toggle('open', open);
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) renderOnlineCounter();
+}
+
+function closeOnlineDropdown(){
+  const dd = document.getElementById('onlineDropdown');
+  if (dd) dd.classList.remove('open');
+  const btn = document.getElementById('topbarOnlineBtn');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('topbarOnlineWrap');
+  if (wrap && !wrap.contains(e.target)) closeOnlineDropdown();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOnlineDropdown(); });
 
 async function _callRefreshFn(slug, dry){
   const ctl = new AbortController();
@@ -23145,6 +23317,12 @@ async function resyncLiveData(reason, full){
       if (_lsChannelDead(autoRefreshState.channel)){
         autoRefreshState.channel = null;
         subscribeAutoRefreshState();
+      }
+      // V209: channel presence putus → buang & gabung ulang (track ulang di subscribe).
+      if (typeof presenceState !== 'undefined' && presenceState.channel && _lsChannelDead(presenceState.channel)){
+        try { supabaseClient.removeChannel(presenceState.channel); } catch(e){}
+        presenceState.channel = null;
+        subscribePresence();
       }
       if (typeof subscribeBottlenecksRealtime === 'function'
           && typeof bnChannel !== 'undefined' && _lsChannelDead(bnChannel)){
@@ -29781,6 +29959,8 @@ window.addEventListener('DOMContentLoaded', () => {
   if (supabaseClient){
     fetchAutoRefreshState();
     subscribeAutoRefreshState();
+    // V209: penghitung online (presence) — semua sesi ikut terhitung.
+    if (typeof subscribePresence === 'function') subscribePresence();
     // V117: key basemap CARTO — lihat catatan di dekat addBaseTiles().
     if (typeof fetchCartoBasemapKey === 'function') fetchCartoBasemapKey();
     // DO store (auto + manual overrides + link health) — fetch once on boot.
@@ -29797,6 +29977,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Reflect admin-only pause control on first paint.
   if (typeof renderPauseBtn === 'function') renderPauseBtn();
   if (typeof renderRefreshBtns === 'function') renderRefreshBtns(); // V166
+  if (typeof renderOnlineCounter === 'function') renderOnlineCounter(); // V209
   // Pre-load the usulan base rows (no longer embedded in the HTML) so the Update
   // Data status count is correct and the Usulan tab paints instantly when opened.
   if (typeof fetchUsulanBaseFromServer === 'function'){
