@@ -25402,12 +25402,33 @@ function _cbgInitMap(){
   addBaseTiles(cbgMap, 12, 4);
   // Titik pembangkit di atas label basemap (shadowPane 500), di bawah marker/tooltip.
   cbgMap.createPane('cbgPlants').style.zIndex = 520;
+  _cbgDefineHit();
   _cbgL = {
     line: L.layerGroup().addTo(cbgMap), ring: L.layerGroup().addTo(cbgMap),
     mill: L.layerGroup().addTo(cbgMap), plant: L.layerGroup().addTo(cbgMap),
-    canv: L.canvas({ padding:.3 }), svg: L.svg({ pane:'cbgPlants' }),
+    // V210: tolerance memperluas area hover/klik titik PKS (radius 2,2 px) tanpa memperbesar gambarnya; lebih lebar di layar sentuh.
+    canv: new _CbgCanvas({ padding:.3, tolerance:window.matchMedia('(pointer:coarse)').matches ? 10 : 5 }), svg: L.svg({ pane:'cbgPlants' }),
   };
   if (window.innerWidth <= 900){ const lg = document.getElementById('cbgLegend'); if (lg) lg.open = false; }
+}
+
+// V210: bawaan Leaflet memilih titik yang digambar TERAKHIR di area toleransi; di klaster PKS padat itu sering tetangganya.
+// _CbgDot hanya "kena" bila ia yang terdekat ke kursor. Hasil dicache per objek titik (satu event = satu objek).
+let _CbgCanvas, _CbgDot;
+function _cbgDefineHit(){
+  if (_CbgCanvas) return;
+  _CbgCanvas = L.Canvas.extend({
+    _cbgPick(pt){
+      if (this._cbgPt === pt) return this._cbgHit;
+      let best = null, bd = Infinity;
+      for (let o = this._drawFirst; o; o = o.next){ const l = o.layer;
+        if (!l.options.interactive || !l._point || l._radius == null) continue;
+        const d = pt.distanceTo(l._point) - l._radius;
+        if (d <= l._clickTolerance() && d < bd){ bd = d; best = l; } }
+      this._cbgPt = pt; this._cbgHit = best; return best;
+    },
+  });
+  _CbgDot = L.CircleMarker.extend({ _containsPoint(p){ return this._renderer._cbgPick(p) === this; } });
 }
 
 let _cbgWired = false;
@@ -25504,10 +25525,13 @@ function _cbgDraw(){
     if (s.cl) mills.forEach(m => { const p = D.PI[m[7]];
       if (p) L.polyline([[m[0], m[1]], [p.lat, p.lon]], { renderer:L_.canv, color:m[9] === 1 ? cM1 : cM2, weight:.8, opacity:.5, interactive:false }).addTo(L_.line); });
   }
-  mills.forEach(m => L.circleMarker([m[0], m[1]], { renderer:L_.canv, radius:sel ? 4 : 2.2, stroke:false, fillColor:m[9] === 1 ? cM1 : cM2, fillOpacity:sel ? .9 : .55 })
+  mills.forEach(m => new _CbgDot([m[0], m[1]], { renderer:L_.canv, radius:sel ? 4 : 2.2, stroke:false, fillColor:m[9] === 1 ? cM1 : cM2, fillOpacity:sel ? .9 : .55 })
     .bindTooltip('<div class="cbg-tt-k"><span class="d" style="background:' + (m[9] === 1 ? cM1 : cM2) + '"></span>PKS · ' + m[4] + ' TPH</div>' +
       '<div class="cbg-tt-n">' + escapeHtml(m[2]) + '</div>' + (m[3] ? '<div class="cbg-tt-m">Pemilik: <b>' + escapeHtml(m[3]) + '</b></div>' : '') +
-      '<div class="cbg-tt-v"><b>' + _cbgNum(m[8], 0) + ' km</b> jalan ke ' + escapeHtml(m[7]) + '</div>', CBG_TT).addTo(L_.mill));
+      '<div class="cbg-tt-v"><b>' + _cbgNum(m[8], 0) + ' km</b> jalan ke ' + escapeHtml(m[7]) + '</div>', CBG_TT)
+    // V210: titik yang sedang ditunjuk membesar + bergaris putih supaya jelas PKS mana yang terkena.
+    .on('mouseover', e => e.target.setStyle({ radius:sel ? 6 : 5, stroke:true, color:'#fff', weight:1.5, fillOpacity:1 }))
+    .on('mouseout', e => e.target.setStyle({ radius:sel ? 4 : 2.2, stroke:false, fillOpacity:sel ? .9 : .55 })).addTo(L_.mill));
   plants.slice().sort((a, b) => (b.d30 || 0) - (a.d30 || 0)).forEach(p => { const pr = _cbgIsP(p);
     L.circleMarker([p.lat, p.lon], { renderer:L_.svg, pane:'cbgPlants', radius:pr ? _cbgRad(p.d30) : Math.min(_cbgRad(p.d30), 8),
       fillColor:pr ? cP1 : cP0, fillOpacity:.9, color:p === focus ? '#FFC72C' : '#fff', weight:p === focus ? 3.5 : 1.5 })
