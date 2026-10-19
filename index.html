@@ -3462,6 +3462,232 @@ html,body{
   display:flex;gap:0;border:1px solid var(--border);border-radius:5px;overflow:hidden;
 }
 
+/* V204: tab Prioritas CBG POME. Warna titik = status (aman/abu), PKS = hijau biomassa.
+   V205: peta adalah isi utama. Satu bilah 64px: identitas (selebar sidebar) | angka kunci
+   (satu baris sel bergaris rambut, bisa digeser bila sempit). Panel detail menempel kanan. */
+.cbg-view{
+  --cbg-p1:#10b981; --cbg-p1-ink:var(--status-ok-ink); --cbg-p0:#98A0A9;
+  --cbg-mill:#65a30d; --cbg-mill2:#a8c06a; --cbg-bad-ink:var(--status-crit-ink);
+  --cbg-side-w:300px; --cbg-sheet-w:384px;
+  display:grid;grid-template-rows:auto 1fr;height:100%;min-height:0;background:var(--bg);
+}
+/* ── bilah atas ── */
+.cbg-bar{display:grid;grid-template-columns:minmax(var(--cbg-side-w),max-content) minmax(0,1fr);background:var(--panel);
+  border-bottom:1px solid var(--border);min-height:64px}
+.cbg-id{display:flex;flex-direction:column;justify-content:center;gap:5px;padding:8px 14px;border-right:1px solid var(--border);min-width:0}
+.cbg-trow{display:flex;align-items:center;gap:8px;position:relative;min-width:0}
+.cbg-h1{font-size:15px;font-weight:700;color:var(--text-bright);line-height:1.2;margin:0;white-space:nowrap;letter-spacing:-.005em}
+.cbg-def summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--text-dim);
+  padding:2px 6px;border-radius:var(--r-sm);transition:color var(--dur-fast),background var(--dur-fast)}
+.cbg-def summary::-webkit-details-marker{display:none}
+.cbg-def summary:hover,.cbg-def[open] summary{color:var(--accent);background:var(--accent-soft)}
+.cbg-defbox{position:absolute;left:0;top:calc(100% + 8px);z-index:1500;width:min(440px,90vw);background:var(--panel);
+  border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px 12px;font-size:12.5px;line-height:var(--lh-body);
+  color:var(--text-dim);box-shadow:var(--shadow-lg);animation:cbgPop var(--dur-base) var(--ease-out);transform-origin:12px 0}
+.cbg-defbox b{color:var(--text)}
+.cbg-dh{font-size:13px;font-weight:700;color:var(--text-bright);margin-bottom:6px}
+.cbg-defbox p{margin:0 0 8px}
+.cbg-defbox .cbg-dsub{margin:10px 0 4px;color:var(--text)}
+.cbg-defbox ol{margin:0 0 10px;padding:0;list-style:none;counter-reset:cbgd;display:grid;gap:4px}
+.cbg-defbox ol li{counter-increment:cbgd;display:grid;grid-template-columns:18px 1fr;gap:6px;align-items:start}
+.cbg-defbox ol li::before{content:counter(cbgd);display:grid;place-items:center;width:18px;height:18px;border-radius:50%;
+  background:var(--accent-soft);color:var(--accent);font-size:10.5px;font-weight:700;margin-top:1px}
+.cbg-defbox dl{display:grid;grid-template-columns:62px 1fr;gap:6px 10px;margin:0;padding-top:10px;border-top:1px solid var(--border)}
+.cbg-defbox dt{font-size:11px;font-weight:700;color:var(--text);padding-top:1px}
+.cbg-defbox dd{margin:0}
+@keyframes cbgPop{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
+.cbg-seg{margin-left:auto;padding-left:2px;display:inline-flex;padding:2px;background:var(--panel-3);border-radius:var(--r-sm);flex:none}
+.cbg-subtab{font:inherit;font-size:12px;font-weight:600;padding:3px 10px;border:none;border-radius:4px;background:transparent;
+  color:var(--text-dim);cursor:pointer;transition:color var(--dur-fast),background var(--dur-fast),box-shadow var(--dur-fast)}
+.cbg-subtab:hover{color:var(--text-bright)}
+.cbg-subtab.active{background:var(--panel);color:var(--accent);box-shadow:var(--shadow-sm)}
+.cbg-kscope{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--text);min-width:0}
+.cbg-kscope span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbg-kdot{width:6px;height:6px;border-radius:50%;background:var(--text-dim);flex:none;transition:background var(--dur-base)}
+.cbg-view.has-sel .cbg-kdot{background:var(--accent-2)}
+.cbg-view.has-sel .cbg-kscope{color:var(--accent)}
+.cbg-kband{min-width:0;transition:background var(--dur-base) var(--ease-out)}
+.cbg-view.has-sel .cbg-kband{background:var(--accent-soft)}
+.cbg-kstrip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(118px,1fr);height:100%;overflow-x:auto;scrollbar-width:thin}
+.cbg-kc{display:flex;flex-direction:column;justify-content:center;gap:1px;padding:8px 14px;border-left:1px solid var(--border);min-width:0}
+.cbg-kc:first-child{border-left:0}
+.cbg-klab{font-size:10.5px;font-weight:600;color:var(--text-dim);line-height:1.25;white-space:nowrap}
+.cbg-kval{font-size:18px;font-weight:700;color:var(--text-bright);line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em}
+.cbg-ksub{font-size:10.5px;color:var(--text-dim);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbg-kc.good .cbg-kval{color:var(--cbg-p1-ink)}
+.cbg-kc.bad .cbg-kval{color:var(--cbg-bad-ink)}
+/* ── badan: sidebar | peta ── */
+.cbg-body{display:grid;grid-template-columns:var(--cbg-side-w) minmax(0,1fr);min-height:0;
+  transition:grid-template-columns var(--dur-slow) var(--ease-out)}
+.cbg-body.side-off{grid-template-columns:0 minmax(0,1fr)}
+.cbg-side{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--panel-2);border-right:1px solid var(--border);overflow:hidden;
+  transition:opacity var(--dur-base)}
+.cbg-body.side-off .cbg-side{opacity:0;pointer-events:none;border-right:0}
+.cbg-filters{padding:12px 12px 10px;display:grid;gap:8px;border-bottom:1px solid var(--border)}
+.cbg-search{position:relative}
+.cbg-search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none}
+.cbg-filters input[type=search]{width:100%;font:inherit;font-size:13px;padding-left:30px}
+.cbg-filters select{width:100%;font:inherit;font-size:12.5px}
+.cbg-chips{display:flex;padding:2px;background:var(--panel-3);border-radius:var(--r-sm)}
+.cbg-chip{border:0;background:transparent;color:var(--text-dim);border-radius:4px;padding:3px 8px;font:inherit;font-size:12px;font-weight:600;
+  cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:1;min-height:26px;transition:background var(--dur-fast),color var(--dur-fast)}
+.cbg-chip:hover{color:var(--text)}
+.cbg-chip[aria-pressed="true"]{background:var(--panel);color:var(--text);box-shadow:var(--shadow-sm)}
+.cbg-chip[aria-pressed="false"] .cbg-dot{opacity:.35}
+.cbg-explain{font-size:12px;line-height:var(--lh-body);color:var(--text-dim)}
+.cbg-explain summary{cursor:pointer;font-weight:600;color:var(--accent);list-style:none;display:inline-flex;align-items:center;gap:5px}
+.cbg-explain summary::-webkit-details-marker{display:none}
+.cbg-explain summary::before,.cbg-src summary::before{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:rotate(-45deg);transition:transform var(--dur-fast) var(--ease-out);margin-right:2px}
+.cbg-explain[open] summary::before,.cbg-src[open] summary::before{transform:rotate(45deg)}
+.cbg-explain p{margin-top:6px}
+.cbg-explain b{color:var(--text)}
+.cbg-list{overflow:auto;flex:1;min-height:120px;scrollbar-width:thin;scrollbar-color:var(--border-bright) transparent}
+.cbg-list h3{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--text-dim);margin:0;padding:10px 12px 6px;
+  position:sticky;top:0;background:var(--panel-2);z-index:1;border-bottom:1px solid var(--border)}
+.cbg-list h3 small{font-weight:600;font-size:10.5px}
+.cbg-item{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:4px 9px;align-items:start;padding:8px 12px;border:0;border-bottom:1px solid var(--border);
+  cursor:pointer;background:none;width:100%;text-align:left;font:inherit;color:inherit;transition:background var(--dur-fast)}
+.cbg-item:hover{background:var(--panel)}
+.cbg-item.on{background:var(--accent-soft)}
+.cbg-item .dot{width:8px;height:8px;border-radius:50%;margin-top:4px}
+.cbg-item .nm{font-size:12.5px;font-weight:600;line-height:1.3;color:var(--text)}
+.cbg-item .meta{font-size:11px;color:var(--text-dim);margin-top:1px;line-height:1.35}
+.cbg-item .v{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;color:var(--text-bright);margin-top:1px}
+.cbg-item .v.neg{color:var(--cbg-bad-ink)}
+.cbg-foot{font-size:11px;color:var(--text-dim);line-height:var(--lh-note)}
+.cbg-list .cbg-foot{padding:10px 12px}
+.cbg-src{border-top:1px solid var(--border);padding:8px 12px;font-size:11px;color:var(--text-dim);line-height:var(--lh-note);max-height:40%;overflow:auto}
+.cbg-src summary{cursor:pointer;font-weight:600;color:var(--text-dim);list-style:none;display:inline-flex;align-items:center;gap:5px}
+.cbg-src summary::-webkit-details-marker{display:none}
+.cbg-src summary:hover{color:var(--accent)}
+.cbg-src p{margin-top:6px}
+/* ── peta ── */
+.cbg-maparea{position:relative;min-height:0;min-width:0;overflow:hidden}
+#cbg-map{position:absolute;inset:0;background:var(--map-bg)}
+#cbg-map .leaflet-top.leaflet-left{top:44px}
+.cbg-mapctl{position:absolute;top:10px;left:10px;z-index:1000;display:flex;gap:6px}
+.cbg-mbtn{display:inline-flex;align-items:center;gap:5px;height:30px;min-width:30px;justify-content:center;padding:0 8px;border:1px solid var(--border);
+  background:var(--panel);color:var(--text);border-radius:var(--r-sm);font:inherit;font-size:12px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-sm);
+  transition:border-color var(--dur-fast),color var(--dur-fast)}
+.cbg-mbtn:hover{border-color:var(--accent);color:var(--accent)}
+.cbg-mbtn[hidden]{display:none}
+.cbg-legend{position:absolute;left:10px;bottom:24px;z-index:1000;background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--r-md);font-size:11px;width:236px;box-shadow:var(--shadow-md);overflow:hidden}
+.cbg-legend summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:7px 10px;font-weight:700;color:var(--text-bright);font-size:11.5px}
+.cbg-legend summary::-webkit-details-marker{display:none}
+.cbg-legend summary:hover{background:var(--panel-2)}
+.cbg-legend:not([open]){width:auto}
+.cbg-legend:not([open]) .cbg-chev{transform:rotate(180deg)}
+.cbg-chev{color:var(--text-dim);transition:transform var(--dur-fast) var(--ease-out)}
+.cbg-lsec{padding:7px 10px 8px;border-top:1px solid var(--border);display:grid;gap:5px}
+.cbg-lh{font-size:10px;font-weight:700;color:var(--text-dim);letter-spacing:.01em}
+.cbg-lrow{display:flex;gap:14px;flex-wrap:wrap}
+.cbg-li{display:inline-flex;align-items:center;gap:6px;color:var(--text);line-height:1.3}
+.cbg-sw{display:inline-block;flex:none}
+.cbg-sw.pl{width:11px;height:11px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px #fff,0 0 0 2.5px var(--border)}
+.cbg-sw.ml{width:7px;height:7px;border-radius:50%;background:var(--c)}
+.cbg-sw.rg{width:18px;height:0;border-top:1.5px solid var(--accent)}
+.cbg-sw.rg.dash{border-top-style:dashed}
+.cbg-lsize{color:var(--text-dim)}
+.cbg-sizes{display:inline-flex;align-items:flex-end;gap:2px;flex:none}
+.cbg-sizes i{display:block;border-radius:50%;border:1.2px solid var(--cbg-p1)}
+.cbg-sizes i:nth-child(1){width:5px;height:5px}.cbg-sizes i:nth-child(2){width:8px;height:8px}.cbg-sizes i:nth-child(3){width:11px;height:11px}
+.cbg-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.cbg-dot.sm{width:7px;height:7px}
+/* tooltip peta: panel kecil, sudut & bayangan sama dengan popover lain */
+.leaflet-tooltip.cbg-tt{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:var(--r-md);
+  box-shadow:var(--shadow-md);padding:8px 10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:11.5px;line-height:1.35;
+  white-space:normal;width:max-content;max-width:260px}
+.leaflet-tooltip-top.cbg-tt::before{border-top-color:var(--panel)}
+.leaflet-tooltip-left.cbg-tt::before{border-left-color:var(--panel)}
+.leaflet-tooltip-right.cbg-tt::before{border-right-color:var(--panel)}
+.cbg-tt-k{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--text-dim)}
+.cbg-tt-k .d{width:7px;height:7px;border-radius:50%;flex:none}
+.cbg-tt-n{font-size:12.5px;font-weight:700;color:var(--text-bright);margin-top:2px}
+.cbg-tt-m{color:var(--text-dim);font-size:11px}
+.cbg-tt-v{margin-top:4px;color:var(--text-dim)}
+.cbg-tt-v b{color:var(--text);font-variant-numeric:tabular-nums}
+.cbg-tt-h{margin-top:6px;padding-top:5px;border-top:1px solid var(--border);font-size:10.5px;font-weight:600;color:var(--accent)}
+#cbg-map .leaflet-control-zoom{margin:0 0 0 10px!important;border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-sm);overflow:hidden}
+#cbg-map .leaflet-control-zoom a{width:30px;height:30px;line-height:28px;font-size:17px;font-weight:500;border:0!important;
+  border-bottom:1px solid var(--border)!important;transition:background var(--dur-fast),color var(--dur-fast)}
+#cbg-map .leaflet-control-zoom a:last-child{border-bottom:0!important}
+#cbg-map .leaflet-control-zoom a:hover{background:var(--panel-2)!important;color:var(--accent)!important}
+/* ── panel profil: menempel kanan ── */
+.cbg-sheet{position:absolute;top:0;right:0;bottom:0;width:var(--cbg-sheet-w);z-index:1100;background:var(--panel);border-left:1px solid var(--border);
+  overflow:auto;box-shadow:var(--shadow-lg);scrollbar-width:thin;scrollbar-color:var(--border-bright) transparent;
+  animation:cbgSheetIn var(--dur-slow) var(--ease-out)}
+.cbg-sheet[hidden]{display:none}
+@keyframes cbgSheetIn{from{transform:translateX(16px);opacity:0}to{transform:none;opacity:1}}
+@keyframes cbgSheetUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.cbg-sheet{animation:none}.cbg-body{transition:none}}
+.cbg-sh-head{position:sticky;top:0;z-index:2;background:var(--panel);padding:14px 52px 10px 16px;border-bottom:1px solid var(--border)}
+.cbg-sh-head h2{font-size:16px;font-weight:700;color:var(--text-bright);margin:0;line-height:1.25;text-wrap:balance}
+.cbg-sh-body{padding:12px 16px 20px}
+.cbg-close{position:absolute;top:12px;right:12px;display:grid;place-items:center;border:1px solid var(--border);background:var(--panel);color:var(--text-dim);
+  width:30px;height:30px;border-radius:var(--r-sm);cursor:pointer}
+.cbg-close:hover{color:var(--text-bright);border-color:var(--accent)}
+.cbg-pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--r-pill);color:#fff}
+.cbg-pill.p1{background:var(--status-ok-ink)} .cbg-pill.p0{background:var(--text-dim)}
+.cbg-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.cbg-tag{font-size:11px;font-weight:600;background:var(--panel-3);border-radius:var(--r-xs);padding:2px 7px;color:var(--text-dim)}
+.cbg-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:2px 0 12px}
+.cbg-m span{display:block;font-size:10.5px;color:var(--text-dim);line-height:1.3}
+.cbg-m b{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
+.cbg-m b.neg{color:var(--cbg-bad-ink)}
+.cbg-sec{font-size:12px;font-weight:700;color:var(--text-bright);margin:18px 0 6px;padding-top:12px;border-top:1px solid var(--border)}
+.cbg-scope{font-size:11.5px;color:var(--text-dim);margin:-2px 0 8px;line-height:1.4}
+.cbg-scope.lead{color:var(--text);margin:0 0 10px}
+.cbg-note{font-size:12px;line-height:1.45;background:rgba(245,158,11,.12);border-radius:var(--r-md);padding:8px 10px;margin-top:8px;color:var(--text)}
+.cbg-kwh{border-radius:var(--r-md);padding:10px 12px;margin:2px 0 14px;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;background:var(--panel-2)}
+.cbg-kwh .lab{font-size:10.5px;color:var(--text-dim)}
+.cbg-kwh .val{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px}
+.cbg-kwh .pct{font-size:22px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.cbg-down{color:var(--cbg-p1-ink)} .cbg-up{color:var(--cbg-bad-ink)}
+.cbg-link{border:0;background:none;padding:0;font:inherit;color:var(--accent);font-weight:600;cursor:pointer;text-align:left;
+  text-decoration:underline;text-decoration-color:var(--accent-line);text-underline-offset:2px}
+.cbg-link:hover{text-decoration-color:var(--accent)}
+table.cbg-pk,table.cbg-ts{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+table.cbg-pk td{padding:5px 4px;border-top:1px solid var(--border);vertical-align:top}
+table.cbg-pk tr:first-child td{border-top:0}
+table.cbg-pk td.n{text-align:right;white-space:nowrap}
+table.cbg-pk tr.h td{font-size:10.5px;color:var(--text-dim);font-weight:600}
+table.cbg-ts{font-size:11.5px}
+table.cbg-ts th{font-weight:600;color:var(--text-dim);text-align:right;padding:4px;font-size:10.5px;line-height:1.25;background:var(--panel-2);vertical-align:bottom}
+table.cbg-ts th:first-child,table.cbg-ts td:first-child{text-align:left}
+table.cbg-ts td{padding:3px 4px;border-top:1px solid var(--border);text-align:right}
+table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
+.cbg-view .cbg-def summary:focus-visible,.cbg-subtab:focus-visible,.cbg-chip:focus-visible,.cbg-item:focus-visible,.cbg-legend summary:focus-visible,
+.cbg-link:focus-visible,.cbg-mbtn:focus-visible,#cbg-map .leaflet-control-zoom a:focus-visible,.cbg-close:focus-visible,.cbg-src summary:focus-visible,.cbg-explain summary:focus-visible{
+  outline:var(--focus-ring-w) solid var(--focus-ring);outline-offset:var(--focus-ring-offset)}
+@media (max-width:1280px){ .cbg-view{--cbg-side-w:272px;--cbg-sheet-w:356px} .cbg-kc{padding:8px 10px} .cbg-kval{font-size:16px} }
+/* Sempit / mobile: bilah identitas di atas, angka kunci jadi satu baris geser, peta 58vh lalu daftar. */
+@media (max-width:900px){
+  .cbg-view{display:block;height:auto}
+  .cbg-bar{grid-template-columns:1fr}
+  .cbg-id{border-right:0;border-bottom:1px solid var(--border);padding:10px 12px}
+  .cbg-trow{flex-wrap:wrap;row-gap:8px}
+  .cbg-seg{order:3;width:100%;margin-left:0}
+  .cbg-subtab{flex:1;padding:5px 10px}
+  .cbg-kscope{order:4}
+  .cbg-kstrip{grid-auto-columns:minmax(132px,max-content);scroll-snap-type:x proximity}
+  .cbg-kc{scroll-snap-align:start;padding:8px 12px}
+  .cbg-body,.cbg-body.side-off{display:flex;flex-direction:column}
+  .cbg-maparea{order:-1;height:58vh;min-height:340px}
+  .cbg-mapctl #cbgSideBtn{display:none}
+  #cbg-map .leaflet-top.leaflet-left{top:10px}
+  .cbg-mapctl{left:52px}
+  .cbg-side,.cbg-body.side-off .cbg-side{border-right:0;overflow:visible;opacity:1;pointer-events:auto}
+  .cbg-list{overflow:visible}
+  .cbg-src{max-height:none}
+  .cbg-legend{width:210px;bottom:12px}
+  .cbg-sheet{position:fixed;left:0;right:0;bottom:56px;top:auto;width:auto;max-height:70vh;border-left:0;border-top:1px solid var(--border);
+    border-radius:var(--r-lg) var(--r-lg) 0 0;z-index:2040;animation-name:cbgSheetUp}
+  .cbg-sh-head{border-radius:var(--r-lg) var(--r-lg) 0 0}
+}
+
 /* POME heatmap panel (Gas Power Plant submenu) */
 .pome-heat-panel{
   position:absolute;top:10px;right:10px;z-index:1000;
@@ -7060,6 +7286,11 @@ body.gf-on .gf-bar{
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3zM5 2v12M11 4v12"/></svg>
     Map Cofiring
   </button>
+  <!-- V204: Prioritas CBG POME (co-mingle CBG 10% di pembangkit gas/BBM) -->
+  <button class="tab" data-tab="cbg">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13c0-6 3.5-10 10-10 0 6.5-4 10-10 10zM3 13l5-5"/></svg>
+    BioCNG
+  </button>
   <button class="tab tab-dd-trigger" data-tab="pembangkit" id="pembangkitTabTrigger">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 14V6l4-2v3l4-2v3l4-2v8zM4 14v-3M8 14v-3M12 14v-3"/></svg>
     <span id="pembangkitTabLabel">Overview Pembangkit</span>
@@ -7148,6 +7379,10 @@ body.gf-on .gf-bar{
 </div>
 <div class="mobile-more-backdrop" id="mobMoreBackdrop" onclick="mobCloseMore()"></div>
 <div class="mobile-more-menu" id="mobMoreMenu">
+  <button class="mobile-more-item" data-mob-tab="cbg" onclick="mobNav('cbg')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13c0-6 3.5-10 10-10 0 6.5-4 10-10 10zM3 13l5-5"/></svg>
+    BioCNG
+  </button>
   <div class="mobile-more-group" id="mobPembangkitGroup">
     <button class="mobile-more-item mobile-more-parent" data-mob-tab="pembangkit" onclick="mobTogglePembangkitSub()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
@@ -7400,6 +7635,86 @@ body.gf-on .gf-bar{
 
     <!-- Right detail panel (hidden by default until a marker is clicked) -->
     <aside class="detail-panel" id="pembangkitDetailPanel"></aside>
+  </div>
+</div>
+
+<!-- V204: Tab Prioritas CBG POME — data dari data/cbg_pome_2027.js (dimuat lazy) -->
+<!-- V205: tata letak dirapatkan — satu bilah ringkas (identitas | angka kunci) agar peta dapat tinggi penuh -->
+<div class="view" data-view="cbg">
+  <div class="cbg-view" id="cbgView">
+    <header class="cbg-bar">
+      <div class="cbg-id">
+        <div class="cbg-trow">
+          <h2 class="cbg-h1">Prioritas CBG POME</h2>
+          <details class="cbg-def" id="cbgDef">
+            <summary aria-label="Definisi dan basis perhitungan"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.8v.1"/></svg>Definisi</summary>
+            <div class="cbg-defbox" role="note">
+              <div class="cbg-dh">Definisi &amp; basis perhitungan</div>
+              <p>Co-mingle CBG 10% dari kebutuhan pembangkit gas PLN Group (KK RKAP 2027).</p>
+              <p class="cbg-dsub">Pembangkit <b>prioritas</b> bila ketiganya terpenuhi:</p>
+              <ol>
+                <li>Harga bahan bakar saat ini lebih mahal dari CBG.</li>
+                <li>Ada PKS ≥45 TPH dalam 200 km jalan darat di pulau yang sama.</li>
+                <li>Volume CBG 2030 klaster &gt;0,1 BBTUD.</li>
+              </ol>
+              <dl>
+                <dt>Basis</dt><dd>Volume, potensi penghematan, dan potensi revenue berbasis <b>2030</b> dengan harga energi 2027.</dd>
+                <dt>Harga</dt><dd>Harga BBM yang digantikan sudah <b>termasuk ongkos angkut</b> ke pembangkit (KK Produksi); harga gas KK sudah harga di titik serah pembangkit; harga CBG 13,5 juga harga di pembangkit dan berlaku hingga jarak jalan 200 km.</dd>
+                <dt>Revenue</dt><dd>Potensi revenue = volume CBG × harga CBG.</dd>
+              </dl>
+            </div>
+          </details>
+          <div class="cbg-seg" role="tablist" aria-label="Sudut pandang">
+            <button class="cbg-subtab active" role="tab" id="cbgTabP" aria-selected="true" onclick="cbgSetTab('P', true)">Pembangkit</button>
+            <button class="cbg-subtab" role="tab" id="cbgTabK" aria-selected="false" onclick="cbgSetTab('K', true)">Klaster</button>
+          </div>
+        </div>
+        <div class="cbg-kscope"><span class="cbg-kdot" aria-hidden="true"></span><span id="cbgKscope">—</span></div>
+      </div>
+      <section class="cbg-kband" id="cbgKband" aria-live="polite" aria-label="Angka kunci">
+        <div class="cbg-kstrip" id="cbgKpis"></div>
+      </section>
+    </header>
+    <div class="cbg-body" id="cbgBody">
+      <aside class="cbg-side" id="cbgSide" aria-label="Filter dan daftar">
+        <div class="cbg-filters" id="cbgFilters"></div>
+        <div class="cbg-list" id="cbgList"></div>
+        <details class="cbg-src">
+          <summary>Sumber &amp; asumsi</summary>
+          <p>Sumber: KK Produksi RKAP 2027 Usulan Awal V.3.3; Data Pembangkit Juni 2026; List_PO_Mills_IDN (seluruh PKS diasumsikan ISPO); Draft RUPTL 2024–2033 Demand Gas (2025–2034); GIZ Biomethane Investment Guideline (2025); FS Lombok Biomethane 5 MMSCFD.</p>
+          <p>Potensi = kapasitas × 336/60 MMBTU/hari (PKS ≥45 TPH). Jarak jalan = 1,4 × garis lurus (estimasi kasar). Volume dan penghematan basis 2030 (kebutuhan RUPTL/KK), harga energi KK RKAP 2027; BBM termasuk ongkos angkut per pembangkit (KK Produksi, kolom Harga Satuan Ongkos Angkut), gas = harga di titik serah. Rp/kWh = (biaya bahan bakar + ongkos angkut) ÷ produksi netto 2027, dikurangi efek substitusi CBG pada porsi 2030. Pembangkit BBM diasumsikan dual-fuel.</p>
+        </details>
+      </aside>
+      <div class="cbg-maparea">
+        <div id="cbg-map"></div>
+        <div class="pk-loading" id="cbgLoading" role="status" aria-live="polite" hidden></div>
+        <div class="cbg-mapctl">
+          <button class="cbg-mbtn" id="cbgSideBtn" onclick="cbgToggleSide()" aria-controls="cbgSide" aria-expanded="true" title="Sembunyikan panel daftar">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M6 2.5v11"/></svg>
+          </button>
+          <button class="cbg-mbtn cbg-reset" id="cbgReset" hidden onclick="cbgReset()">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>Tampilkan semua
+          </button>
+        </div>
+        <details class="cbg-legend" id="cbgLegend" open>
+          <summary><span>Legenda</span><svg class="cbg-chev" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 10l4-4 4 4"/></svg></summary>
+          <div class="cbg-lsec">
+            <div class="cbg-lh">Pembangkit</div>
+            <div class="cbg-lrow"><span class="cbg-li"><span class="cbg-sw pl" style="--c:var(--cbg-p1)"></span>Prioritas</span><span class="cbg-li"><span class="cbg-sw pl" style="--c:var(--cbg-p0)"></span>Non-prioritas</span></div>
+            <div class="cbg-li cbg-lsize"><span class="cbg-sizes" aria-hidden="true"><i></i><i></i><i></i></span>Ukuran titik ∝ kebutuhan gas 2030</div>
+          </div>
+          <div class="cbg-lsec">
+            <div class="cbg-lh">PKS ≥45 TPH · jarak jalan</div>
+            <div class="cbg-lrow"><span class="cbg-li"><span class="cbg-sw ml" style="--c:var(--cbg-mill)"></span>≤100 km</span><span class="cbg-li"><span class="cbg-sw ml" style="--c:var(--cbg-mill2)"></span>100–200 km</span></div>
+          </div>
+          <div class="cbg-lsec">
+            <div class="cbg-lh">Radius dari pembangkit terpilih</div>
+            <div class="cbg-lrow"><span class="cbg-li"><span class="cbg-sw rg"></span>100 km</span><span class="cbg-li"><span class="cbg-sw rg dash"></span>200 km</span></div>
+          </div>
+        </details>
+        <aside class="cbg-sheet" id="cbgSheet" hidden aria-label="Profil terpilih"></aside>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -17333,6 +17648,13 @@ function switchTab(tab){
   } else if (tab === 'fasilitas' && fasilitasMap){
     setTimeout(() => { try { fasilitasMap.invalidateSize(); } catch(e){} }, 50);
   }
+  // V204: Prioritas CBG POME — lazy init setelah view tampil (peta butuh ukuran nyata)
+  if (tab === 'cbg' && !cbgInit){
+    cbgInit = true;
+    setTimeout(() => { try { bootCbgTab(); } catch(e){ console.error('CBG tab init failed:', e); cbgInit = false; } }, 30);
+  } else if (tab === 'cbg' && cbgMap){
+    setTimeout(() => { try { cbgMap.invalidateSize(); } catch(e){} }, 50);
+  }
   // V49: MoU tab — V51: only Timeline remains (Busdev removed)
   if (tab === 'mou-timeline'){
     bootMouTab(tab);
@@ -24814,6 +25136,338 @@ const FASILITAS_DATA = [
   },
 ];
 
+// ═══════════════════════════════════════════════════════════════════════════
+// V204: Prioritas CBG POME — co-mingle CBG 10% di pembangkit gas/BBM PLN Group.
+// Porting dari "Peta Klaster Prioritas CBG-R8.html"; data di file terpisah (lazy, 130 KB).
+// Batas provinsi/negara versi asli tidak dibawa: basemap dashboard sudah memuatnya.
+// ═══════════════════════════════════════════════════════════════════════════
+const CBG_SRC = 'data/cbg_pome_2027.js';
+const CBG_YEARS = [2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034];
+// 100 & 200 km jalan darat ÷ 1,4 (faktor jalan) = radius garis lurus dalam meter.
+const CBG_RING_M = [71430, 142860];
+const CBG_ID_BOUNDS = [[-9.5, 95], [5.8, 141]];
+let cbgData = null, _cbgLoadPromise = null, cbgMap = null, cbgInit = false, _cbgL = null;
+let _cbgCL = {};   // id klaster -> klaster
+// 'auto' = kiri/kanan titik sesuai posisi di peta, supaya tidak terpotong panel daftar di tepi kiri.
+const CBG_TT = { className:'cbg-tt', direction:'auto', offset:[0, 0], opacity:1 };
+const cbgState = { tab:'P', pr:{ y:true, n:true }, reg:'', q:'', plant:null, cl:null };
+
+function _cbgNum(v, d){ return (v == null || isNaN(v)) ? '–' : Number(v).toLocaleString('id-ID', { minimumFractionDigits: d == null ? 2 : d, maximumFractionDigits: d == null ? 2 : d }); }
+function _cbgPct(v){ return v == null ? '–' : (v > 0 ? '+' : '') + _cbgNum(v * 100, 1) + '%'; }
+function _cbgIsP(p){ return !!(p && p.pr && _cbgCL[p.cl]); }
+function _cbgCss(n){ return getComputedStyle(document.getElementById('cbgView')).getPropertyValue(n).trim(); }
+function _cbgRad(d){ return Math.max(4.5, Math.min(24, 4 + Math.sqrt(d || 0) * 2.4)); }
+
+function _cbgLoad(){
+  if (_cbgLoadPromise) return _cbgLoadPromise;
+  _cbgLoadPromise = new Promise((resolve, reject) => {
+    const done = () => {
+      const raw = window.CBG_POME;
+      if (!raw){ _cbgLoadPromise = null; reject(new Error('File data tidak berisi CBG_POME')); return; }
+      raw.plants.forEach((p, i) => { p.i = i; });
+      _cbgCL = Object.fromEntries(raw.clusters.map(c => [c.id, c]));
+      raw.PI = Object.fromEntries(raw.plants.map(p => [p.n, p]));
+      cbgData = raw; window.CBG_POME = null; resolve(raw);
+    };
+    if (window.CBG_POME){ done(); return; }
+    const s = document.createElement('script');
+    s.src = CBG_SRC; s.async = true; s.onload = done;
+    s.onerror = () => { _cbgLoadPromise = null; s.remove(); reject(new Error('Gagal memuat ' + CBG_SRC)); };
+    document.head.appendChild(s);
+  });
+  return _cbgLoadPromise;
+}
+
+function _cbgSetLoading(msg, isError){
+  const el = document.getElementById('cbgLoading');
+  if (!el) return;
+  if (!msg){ el.hidden = true; return; }
+  el.hidden = false;
+  el.classList.toggle('is-error', !!isError);
+  el.innerHTML = isError
+    ? '<strong>Data prioritas CBG tidak bisa dimuat.</strong><span>' + escapeHtml(msg) + '</span><button type="button" onclick="bootCbgTab()">Coba lagi</button>'
+    : '<span class="pk-spinner" aria-hidden="true"></span><span>' + escapeHtml(msg) + '</span>';
+}
+
+function bootCbgTab(){
+  _cbgInitMap();
+  _cbgWireOnce();
+  if (cbgData){ _cbgRenderAll(); return; }
+  _cbgSetLoading('Memuat data prioritas CBG POME…');
+  _cbgLoad().then(() => {
+    _cbgSetLoading(null);
+    _cbgRenderAll();
+    try { cbgMap.invalidateSize(); cbgMap.fitBounds(CBG_ID_BOUNDS); } catch(e){}
+  }).catch(e => _cbgSetLoading(e.message || String(e), true));
+}
+
+function _cbgInitMap(){
+  if (cbgMap) return;
+  cbgMap = L.map('cbg-map', { zoomSnap:.25, preferCanvas:true, minZoom:4, maxZoom:12,
+    maxBounds: SEA_BOUNDS, maxBoundsViscosity: 0.8 }).setView([-1.5, 113], 5);
+  addBaseTiles(cbgMap, 12, 4);
+  // Titik pembangkit di atas label basemap (shadowPane 500), di bawah marker/tooltip.
+  cbgMap.createPane('cbgPlants').style.zIndex = 520;
+  _cbgL = {
+    line: L.layerGroup().addTo(cbgMap), ring: L.layerGroup().addTo(cbgMap),
+    mill: L.layerGroup().addTo(cbgMap), plant: L.layerGroup().addTo(cbgMap),
+    canv: L.canvas({ padding:.3 }), svg: L.svg({ pane:'cbgPlants' }),
+  };
+  if (window.innerWidth <= 900){ const lg = document.getElementById('cbgLegend'); if (lg) lg.open = false; }
+}
+
+let _cbgWired = false;
+function _cbgWireOnce(){
+  if (_cbgWired) return;
+  _cbgWired = true;
+  // Popover Definisi tertutup saat klik di luar / Escape.
+  document.addEventListener('pointerdown', e => {
+    const d = document.getElementById('cbgDef');
+    if (d && d.open && !d.contains(e.target)) d.open = false;
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || state.tab !== 'cbg') return;
+    const d = document.getElementById('cbgDef');
+    if (d && d.open){ d.open = false; return; }
+    if (cbgState.plant || cbgState.cl) cbgReset();
+  });
+}
+
+function _cbgRenderAll(){ _cbgFiltersHTML(); _cbgDrawList(); _cbgDraw(); _cbgSetKPI(null); }
+
+/* ---------- filter & daftar ---------- */
+function _cbgVisP(p){ const s = cbgState; return (_cbgIsP(p) ? s.pr.y : s.pr.n) && (!s.reg || p.reg === s.reg) && (!s.q || p.n.toLowerCase().includes(s.q)); }
+function _cbgVisC(c){ const q = cbgState.q; return !q || c.name.toLowerCase().includes(q) || c.members.some(m => m.toLowerCase().includes(q)); }
+
+function _cbgFiltersHTML(){
+  const f = document.getElementById('cbgFilters'); if (!f || !cbgData) return;
+  const s = cbgState;
+  const search = ph => '<div class="cbg-search"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>' +
+    '<input id="cbgQ" type="search" placeholder="' + ph + '" aria-label="' + ph + '" autocomplete="off"></div>';
+  if (s.tab === 'P'){
+    const regs = [...new Set(cbgData.plants.map(p => p.reg))].sort();
+    f.innerHTML = search('Cari pembangkit, mis. Belawan') +
+      '<div class="cbg-chips" role="group" aria-label="Tampilkan">' +
+      '<button class="cbg-chip" id="cbgChipY" aria-pressed="' + s.pr.y + '"><span class="cbg-dot" style="background:var(--cbg-p1)"></span>Prioritas</button>' +
+      '<button class="cbg-chip" id="cbgChipN" aria-pressed="' + s.pr.n + '"><span class="cbg-dot" style="background:var(--cbg-p0)"></span>Non-prioritas</button></div>' +
+      '<select id="cbgReg" aria-label="Region"><option value="">Semua region</option>' +
+      regs.map(r => '<option' + (r === s.reg ? ' selected' : '') + '>' + escapeHtml(r) + '</option>').join('') + '</select>';
+    document.getElementById('cbgChipY').onclick = e => { s.pr.y = !s.pr.y; e.currentTarget.setAttribute('aria-pressed', s.pr.y); _cbgDrawList(); _cbgDraw(); };
+    document.getElementById('cbgChipN').onclick = e => { s.pr.n = !s.pr.n; e.currentTarget.setAttribute('aria-pressed', s.pr.n); _cbgDrawList(); _cbgDraw(); };
+    document.getElementById('cbgReg').onchange = e => { s.reg = e.target.value; _cbgDrawList(); _cbgDraw(); };
+  } else {
+    f.innerHTML = search('Cari klaster atau pembangkit, mis. Riau') +
+      '<details class="cbg-explain"><summary>Apa itu klaster?</summary><p>Pembangkit prioritas yang letaknya berdekatan (≤50 km jalan) digabung menjadi satu klaster karena menyerap PKS yang sama. Setiap PKS hanya dihitung untuk satu klaster, sehingga pasokan tidak terhitung dua kali. <b>Semua angka di tab ini adalah gabungan seluruh pembangkit dalam klaster.</b></p></details>';
+  }
+  const q = document.getElementById('cbgQ');
+  q.value = s.q;
+  q.oninput = e => { s.q = e.target.value.toLowerCase(); _cbgDrawList(); if (!s.plant && !s.cl) _cbgDraw(); };
+}
+
+function _cbgDrawList(){
+  const el = document.getElementById('cbgList'); if (!el || !cbgData) return;
+  const keepTop = el.scrollTop;   // V205: render ulang (sorotan terpilih) tidak melompat ke atas
+  if (cbgState.tab === 'P'){
+    const ps = cbgData.plants.filter(_cbgVisP);
+    const a = ps.filter(_cbgIsP).sort((x, y) => (y.sav || 0) - (x.sav || 0));
+    const b = ps.filter(p => !_cbgIsP(p)).sort((x, y) => x.n.localeCompare(y.n));
+    const row = p => { const pr = _cbgIsP(p);
+      return '<button class="cbg-item' + (cbgState.plant === p ? ' on' : '') + '" data-pi="' + p.i + '"><span class="dot" style="background:var(--cbg-' + (pr ? 'p1' : 'p0') + ')"></span><span><div class="nm">' + escapeHtml(p.n) + '</div><div class="meta">' +
+        escapeHtml(p.isl) + ' · ' + escapeHtml(p.fuel) + ' · ' + (pr && p.pct != null ? 'Rp/kWh ' + _cbgPct(p.pct) : _cbgNum(p.d30) + ' BBTUD (2030)') + '</div></span>' +
+        '<span class="v' + (p.sav < 0 ? ' neg' : '') + '">' + (pr ? '$' + _cbgNum(p.sav, 1) + ' jt' : '') + '</span></button>'; };
+    el.innerHTML = (a.length ? '<h3><span>Prioritas · ' + a.length + '</span><small>Hemat 2030</small></h3>' + a.map(row).join('') : '') +
+      (b.length ? '<h3><span>Non-prioritas · ' + b.length + '</span></h3>' + b.map(row).join('') : '') +
+      (ps.length ? '<div class="cbg-foot">Angka kanan = potensi penghematan 2030 per pembangkit.</div>' : '<div class="cbg-foot">Tidak ada pembangkit yang cocok dengan filter.</div>');
+    el.querySelectorAll('.cbg-item').forEach(btn => btn.onclick = () => _cbgSelPlant(cbgData.plants[+btn.dataset.pi]));
+  } else {
+    const cs = cbgData.clusters.filter(_cbgVisC);
+    el.innerHTML = '<h3><span>Klaster prioritas · ' + cs.length + '</span><small>Hemat 2030</small></h3>' + cs.map(c =>
+      '<button class="cbg-item' + (cbgState.cl === c.id ? ' on' : '') + '" data-cl="' + escapeHtml(c.id) + '"><span class="dot" style="background:var(--cbg-p1)"></span><span><div class="nm">' + escapeHtml(c.name) + '</div><div class="meta">' +
+      c.members.length + ' pembangkit · ' + escapeHtml(c.isl) + ' · Rp/kWh ' + _cbgPct(c.pct) + '</div></span><span class="v' + (c.sav < 0 ? ' neg' : '') + '">$' + _cbgNum(c.sav, 1) + ' jt</span></button>').join('') +
+      '<div class="cbg-foot">Angka kanan = potensi penghematan 2030 gabungan klaster.</div>';
+    el.querySelectorAll('.cbg-item').forEach(btn => btn.onclick = () => _cbgSelCl(btn.dataset.cl));
+  }
+  el.scrollTop = keepTop;
+}
+
+/* ---------- peta ---------- */
+function _cbgDraw(){
+  if (!cbgMap || !cbgData) return;
+  const L_ = _cbgL, s = cbgState, D = cbgData;
+  L_.line.clearLayers(); L_.ring.clearLayers(); L_.mill.clearLayers(); L_.plant.clearLayers();
+  document.getElementById('cbgReset').hidden = !(s.plant || s.cl);
+  let plants, mills = [], focus = null;
+  if (s.plant){ focus = s.plant; plants = [s.plant]; mills = _cbgIsP(s.plant) ? D.mills.filter(m => m[6] === s.plant.cl) : []; }
+  else if (s.cl){ plants = D.plants.filter(p => p.cl === s.cl); mills = D.mills.filter(m => m[6] === s.cl); }
+  else { plants = s.tab === 'P' ? D.plants.filter(_cbgVisP) : D.plants.filter(p => _cbgIsP(p) && _cbgVisC(_cbgCL[p.cl])); mills = D.mills; }
+  const sel = s.plant || s.cl;
+  const cAcc = _cbgCss('--accent') || '#0F496E', cM1 = _cbgCss('--cbg-mill'), cM2 = _cbgCss('--cbg-mill2');
+  const cP1 = _cbgCss('--cbg-p1'), cP0 = _cbgCss('--cbg-p0');
+  if (sel){
+    plants.filter(_cbgIsP).forEach(p => CBG_RING_M.forEach((r, k) =>
+      L.circle([p.lat, p.lon], { radius:r, color:cAcc, weight:1.2, dashArray:k ? '6 6' : null, fill:!k, fillOpacity:.04, interactive:false }).addTo(L_.ring)));
+    if (s.cl) mills.forEach(m => { const p = D.PI[m[7]];
+      if (p) L.polyline([[m[0], m[1]], [p.lat, p.lon]], { renderer:L_.canv, color:m[9] === 1 ? cM1 : cM2, weight:.8, opacity:.5, interactive:false }).addTo(L_.line); });
+  }
+  mills.forEach(m => L.circleMarker([m[0], m[1]], { renderer:L_.canv, radius:sel ? 4 : 2.2, stroke:false, fillColor:m[9] === 1 ? cM1 : cM2, fillOpacity:sel ? .9 : .55 })
+    .bindTooltip('<div class="cbg-tt-k"><span class="d" style="background:' + (m[9] === 1 ? cM1 : cM2) + '"></span>PKS · ' + m[4] + ' TPH</div>' +
+      '<div class="cbg-tt-n">' + escapeHtml(m[2]) + '</div>' + (m[3] && m[3] !== m[2] ? '<div class="cbg-tt-m">' + escapeHtml(m[3]) + '</div>' : '') +
+      '<div class="cbg-tt-v"><b>' + _cbgNum(m[8], 0) + ' km</b> jalan ke ' + escapeHtml(m[7]) + '</div>', CBG_TT).addTo(L_.mill));
+  plants.slice().sort((a, b) => (b.d30 || 0) - (a.d30 || 0)).forEach(p => { const pr = _cbgIsP(p);
+    L.circleMarker([p.lat, p.lon], { renderer:L_.svg, pane:'cbgPlants', radius:pr ? _cbgRad(p.d30) : Math.min(_cbgRad(p.d30), 8),
+      fillColor:pr ? cP1 : cP0, fillOpacity:.9, color:p === focus ? '#FFC72C' : '#fff', weight:p === focus ? 3.5 : 1.5 })
+      .bindTooltip('<div class="cbg-tt-k"><span class="d" style="background:' + (pr ? cP1 : cP0) + '"></span>' + (pr ? 'Prioritas' : 'Non-prioritas') + ' · ' + escapeHtml(p.isl) + '</div>' +
+        '<div class="cbg-tt-n">' + escapeHtml(p.n) + '</div><div class="cbg-tt-v"><b>' + _cbgNum(p.d30) + ' BBTUD</b> kebutuhan 2030</div>' +
+        '<div class="cbg-tt-h">Klik untuk profil</div>', CBG_TT)
+      .on('click', () => (s.tab === 'K' && pr) ? _cbgSelCl(p.cl) : _cbgSelPlant(p)).addTo(L_.plant); });
+}
+
+function _cbgFitTo(ps){
+  const pts = [];
+  ps.forEach(p => pts.push([p.lat + 1.3, p.lon + 1.3], [p.lat - 1.3, p.lon - 1.3]));
+  if (!pts.length) return;
+  const sw = window.innerWidth > 900 ? (parseFloat(_cbgCss('--cbg-sheet-w')) || 384) + 20 : 0;
+  cbgMap.flyToBounds(L.latLngBounds(pts), { duration:.6, maxZoom:9, paddingTopLeft:[20, 50], paddingBottomRight:[sw, 20] });
+}
+
+// V205: sembunyikan/tampilkan panel daftar supaya peta melebar penuh.
+function cbgToggleSide(){
+  const body = document.getElementById('cbgBody'), btn = document.getElementById('cbgSideBtn');
+  const off = body.classList.toggle('side-off');
+  btn.setAttribute('aria-expanded', String(!off));
+  btn.title = off ? 'Tampilkan panel daftar' : 'Sembunyikan panel daftar';
+  setTimeout(() => { try { cbgMap.invalidateSize(); } catch(e){} }, 280);
+}
+
+/* ---------- pilihan ---------- */
+function cbgSetTab(t, resetSel){
+  cbgState.tab = t; cbgState.q = '';
+  ['P', 'K'].forEach(k => { const b = document.getElementById('cbgTab' + k); b.classList.toggle('active', k === t); b.setAttribute('aria-selected', k === t); });
+  _cbgFiltersHTML(); _cbgDrawList(); document.getElementById('cbgList').scrollTop = 0;
+  if (resetSel) cbgReset();
+}
+function _cbgSelPlant(p){ if (!p) return; if (cbgState.tab !== 'P') cbgSetTab('P'); cbgState.plant = p; cbgState.cl = null; _cbgDrawList(); _cbgDraw(); _cbgFitTo([p]); _cbgSheetPlant(p); _cbgSetKPI(p, 'P'); }
+function _cbgSelCl(id){ const c = _cbgCL[id]; if (!c) return; if (cbgState.tab !== 'K') cbgSetTab('K'); cbgState.cl = id; cbgState.plant = null; _cbgDrawList(); _cbgDraw(); _cbgFitTo(cbgData.plants.filter(p => p.cl === id)); _cbgSheetCl(c); _cbgSetKPI(c, 'K'); }
+function cbgReset(){
+  cbgState.plant = null; cbgState.cl = null;
+  document.getElementById('cbgSheet').hidden = true;
+  if (!cbgData) return;
+  _cbgSetKPI(null); _cbgDrawList(); _cbgDraw();
+  if (cbgMap) cbgMap.flyToBounds(CBG_ID_BOUNDS, { duration:.6 });
+}
+
+/* ---------- panel detail ---------- */
+// V206: file data publik tidak memuat Rp/kWh absolut (k0/k1) — kotak tinggal menampilkan perubahan persen.
+function _cbgKwhBox(k0, k1, pct, lab){
+  if (k0 == null && pct == null) return '';
+  return '<div class="cbg-kwh"><div><div class="lab">' + (k0 == null ? 'Perubahan biaya bahan bakar per kWh setelah co-mingle' : lab) + '</div>' +
+    (k0 == null ? '' : '<div class="val">Rp' + _cbgNum(k0, 0) + ' → Rp' + _cbgNum(k1, 0) + '</div>') + '</div>' +
+    '<div class="pct ' + (pct < 0 ? 'cbg-down' : pct > 0 ? 'cbg-up' : '') + '">' + _cbgPct(pct) + '</div></div>';
+}
+function _cbgTs(d, v, s, r){
+  return '<table class="cbg-ts"><tr><th>Tahun</th><th>Kebutuhan (BBTUD)</th><th>CBG 10% (BBTUD)</th><th>Potensi hemat (jt USD)</th><th>Potensi revenue (jt USD)</th></tr>' +
+    CBG_YEARS.map((y, i) => '<tr class="' + (y === 2030 ? 'hl' : '') + '"><td>' + y + (y === 2030 ? ' ★' : '') + '</td><td>' + _cbgNum(d[i], 1) + '</td><td>' + (v ? _cbgNum(v[i]) : '–') +
+      '</td><td>' + (s ? _cbgNum(s[i]) : '–') + '</td><td>' + (r ? _cbgNum(r[i]) : '–') + '</td></tr>').join('') +
+    '</table><div class="cbg-foot">★ 2030 = basis volume, potensi penghematan, dan potensi revenue.</div>';
+}
+// V205: html = kepala + '<!--/head-->' + isi; kepala (nama, tag, tombol tutup) menempel di atas saat digulir.
+function _cbgShow(html){
+  const sh = document.getElementById('cbgSheet');
+  const parts = html.split('<!--/head-->');
+  sh.innerHTML = '<div class="cbg-sh-head"><button class="cbg-close" aria-label="Tutup profil" title="Tutup (Esc)"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>' +
+    parts[0] + '</div><div class="cbg-sh-body">' + (parts[1] || '') + '</div>';
+  sh.hidden = false; sh.scrollTop = 0;
+  sh.querySelector('.cbg-close').onclick = cbgReset;
+  sh.querySelectorAll('[data-cl]').forEach(b => b.onclick = () => _cbgSelCl(b.dataset.cl));
+  sh.querySelectorAll('[data-pl]').forEach(b => b.onclick = () => _cbgSelPlant(cbgData.plants[+b.dataset.pl]));
+}
+const _cbgM = (lab, val, cls) => '<div class="cbg-m"><span>' + lab + '</span><b' + (cls ? ' class="' + cls + '"' : '') + '>' + val + '</b></div>';
+
+function _cbgSheetPlant(p){
+  const c = _cbgIsP(p) ? _cbgCL[p.cl] : null;
+  const near = p.near.length
+    ? '<table class="cbg-pk">' + p.near.map(x => '<tr><td>' + escapeHtml(x[0]) + '</td><td class="n">' + x[1] + ' TPH</td><td class="n">' + x[2] + ' km</td></tr>').join('') + '</table>'
+    : '<div class="cbg-foot">Tidak ada PKS ≥45 TPH di pulau yang sama.</div>';
+  const price = c ? p.mpe : (p.bs > 0 ? p.pb : p.pg);
+  let h = '<h2>' + escapeHtml(p.n) + '</h2><div class="cbg-tags"><span class="cbg-pill ' + (c ? 'p1' : 'p0') + '">' + (c ? 'Prioritas' : 'Non-prioritas') + '</span>' +
+    '<span class="cbg-tag">' + escapeHtml(p.reg) + '</span><span class="cbg-tag">' + escapeHtml(p.isl) + '</span></div><!--/head--><div class="cbg-grid2">' +
+    _cbgM('Bahan bakar 2027', escapeHtml(p.fuel)) + _cbgM('Daya mampu (DMN)', _cbgNum(p.dmn, 1) + ' MW') +
+    _cbgM('Kebutuhan 2030', _cbgNum(p.d30) + ' BBTUD') + (price != null ? _cbgM('Harga bahan bakar ' + (c ? 'yang digantikan' : 'marjinal'), '$' + _cbgNum(price) + '/MMBtu') : '') +
+    (p.oa > 0 ? _cbgM('Ongkos angkut BBM', '$' + _cbgNum(p.oa) + '/MMBtu') + _cbgM('BBM komoditas', '$' + _cbgNum(p.pbk) + '/MMBtu') : '') + '</div>';
+  if (!c){
+    const why = (p.note.match(/Non-prioritas:[^;]*/) || ['Non-prioritas'])[0];
+    _cbgShow(h + (p.k0 != null ? '<div class="cbg-m" style="margin-bottom:10px"><span>Biaya bahan bakar</span><b>Rp' + _cbgNum(p.k0, 0) + '/kWh</b></div>' : '') +
+      '<div class="cbg-note">' + escapeHtml(why) + '.</div><div class="cbg-sec">PKS ≥45 TPH terdekat (jarak jalan)</div>' + near);
+    return;
+  }
+  h += _cbgKwhBox(p.k0, p.k1, p.pct, 'Rp/kWh sebelum → sesudah co-mingle') + '<div class="cbg-grid2">' +
+    _cbgM('Volume CBG 2030 (10%)', _cbgNum(p.vol) + ' BBTUD') + _cbgM('Potensi hemat 2030', 'USD ' + _cbgNum(p.sav) + ' jt', p.sav < 0 ? 'neg' : '') +
+    _cbgM('Potensi revenue 2030', 'USD ' + _cbgNum(p.rev) + ' jt') + '</div>' +
+    (p.note ? '<div class="cbg-note">' + escapeHtml(p.note) + '</div>' : '') +
+    '<div class="cbg-sec">Time series pembangkit ini</div><div class="cbg-scope">Kebutuhan ' + escapeHtml(p.n) + ' saja (bukan klaster). Sumber: ' + escapeHtml(p.src) + '</div>' +
+    _cbgTs(p.tsd, p.tsv, p.tss, p.tsr) + '<div class="cbg-sec">Pasokan PKS</div><div class="cbg-foot" style="margin-bottom:6px">' + p.n100 + ' PKS ≥45 TPH dalam ±100 km jalan dan ' + p.n200 + ' PKS lagi dalam 100–200 km. ' +
+    (c.members.length > 1
+      ? 'Pasokan dibagi bersama ' + (c.members.length - 1) + ' pembangkit lain dalam <button class="cbg-link" data-cl="' + escapeHtml(c.id) + '">klaster ' + escapeHtml(c.name) + '</button>.'
+      : 'Pasokan dihitung di <button class="cbg-link" data-cl="' + escapeHtml(c.id) + '">klaster ' + escapeHtml(c.id) + '</button>.') + '</div>' + near;
+  _cbgShow(h);
+}
+
+function _cbgSheetCl(c){
+  const D = cbgData, ms = D.mills.filter(m => m[6] === c.id).sort((a, b) => a[8] - b[8]);
+  const plLink = m => { const p = D.PI[m]; return p ? '<button class="cbg-link" data-pl="' + p.i + '">' + escapeHtml(m) + '</button>' : escapeHtml(m); };
+  _cbgShow('<h2>Klaster ' + escapeHtml(c.name) + '</h2><div class="cbg-tags"><span class="cbg-pill p1">' + c.members.length + ' pembangkit</span><span class="cbg-tag">' + escapeHtml(c.isl) +
+    '</span><span class="cbg-tag">' + escapeHtml(c.reg) + '</span>' + (c.fs ? '<span class="cbg-tag">FS non-POME</span>' : '') + '</div><!--/head-->' +
+    '<div class="cbg-scope lead">Gabungan: ' + c.members.map(plLink).join(', ') + '</div>' +
+    '<div class="cbg-grid2" style="margin-top:8px">' + _cbgM('Potensi pasokan', _cbgNum(c.pot) + ' BBTUD') + _cbgM(c.fs ? 'Sumber' : 'Jumlah PKS ≥45 TPH', c.fs ? 'FS Lombok' : (c.n1 + c.n2) + ' PKS') +
+    _cbgM('Kebutuhan gabungan 2030', _cbgNum(c.d30) + ' BBTUD') + _cbgM('Volume CBG 2030 (10%)', _cbgNum(c.vol) + ' BBTUD') +
+    _cbgM('Potensi hemat 2030', 'USD ' + _cbgNum(c.sav) + ' jt', c.sav < 0 ? 'neg' : '') + _cbgM('Potensi revenue 2030', 'USD ' + _cbgNum(c.rev) + ' jt') +
+    (c.mpw != null ? _cbgM('Harga digantikan (rata-rata)', '$' + _cbgNum(c.mpw) + '/MMBtu') : '') + '</div>' +
+    _cbgKwhBox(c.k0, c.k1, c.pct, 'Rp/kWh rata-rata klaster, sebelum → sesudah') +
+    (c.note ? '<div class="cbg-note">' + escapeHtml(c.note) + '</div>' : '') +
+    '<div class="cbg-sec">Pembangkit dalam klaster</div><table class="cbg-pk"><tr class="h"><td>Pembangkit</td><td class="n">Kebutuhan 2030</td><td class="n">Rp/kWh</td></tr>' +
+    c.members.map(m => { const p = D.PI[m]; if (!p) return '';
+      return '<tr><td>' + plLink(m) + '<div class="cbg-foot">' + escapeHtml(p.fuel) + '</div></td><td class="n">' + _cbgNum(p.d30, 1) + '</td><td class="n">' +
+        (p.k0 != null ? _cbgNum(p.k0, 0) + ' → ' + _cbgNum(p.k1, 0) + '<br>' : '') + (p.pct != null ? '<span class="' + (p.pct < 0 ? 'cbg-down' : p.pct > 0 ? 'cbg-up' : '') + '">' + _cbgPct(p.pct) + '</span>' : '–') + '</td></tr>'; }).join('') + '</table>' +
+    '<div class="cbg-sec">Time series gabungan klaster</div><div class="cbg-scope">Jumlah kebutuhan ' + c.members.length + ' pembangkit di atas.</div>' + _cbgTs(c.tsd, c.tsv, c.tss, c.tsr) +
+    (ms.length ? '<div class="cbg-sec">PKS pemasok (' + ms.length + ')</div><table class="cbg-pk">' +
+      ms.slice(0, 30).map(m => '<tr><td>' + escapeHtml(m[2]) + '<div class="cbg-foot">' + escapeHtml(m[3]) + '</div></td><td class="n">' + m[4] + ' TPH</td><td class="n">' + _cbgNum(m[8], 0) + ' km</td></tr>').join('') + '</table>' +
+      (ms.length > 30 ? '<div class="cbg-foot">+' + (ms.length - 30) + ' PKS lain (lihat Excel, sheet PKS_Prioritas)</div>' : '') : ''));
+}
+
+/* ---------- pita KPI ---------- */
+function _cbgSetKPI(o, kind){
+  if (!cbgData) return;
+  const K = cbgData.kpi, np = cbgData.plants.filter(_cbgIsP).length;
+  document.getElementById('cbgView').classList.toggle('has-sel', !!o);
+  const cbg = K['Harga CBG (USD/MMBtu)'];
+  let lab, f, v, r, h, k0, k1, pc;
+  if (!o){
+    lab = 'Total ' + K['Klaster prioritas'] + ' klaster prioritas · ' + np + ' pembangkit';
+    f = K['Harga bahan bakar eksisting rata-rata (USD/MMBtu)']; v = K['Volume CBG 2030 (BBTUD)']; r = K['Potensi revenue CBG 2030 (Juta USD/thn)'];
+    h = K['Potensi penghematan 2030 (Juta USD/thn)']; k0 = K['Rp/kWh klaster prioritas: sebelum']; k1 = K['Rp/kWh klaster prioritas: sesudah']; pc = K['Perubahan Rp/kWh'];
+  } else if (kind === 'K'){
+    lab = 'Klaster ' + o.name + ' · ' + o.members.length + ' pembangkit'; f = o.mpw; v = o.vol; r = o.rev; h = o.sav; k0 = o.k0; k1 = o.k1; pc = o.pct;
+  } else {
+    const pr = _cbgIsP(o);
+    lab = 'Pembangkit ' + o.n + (pr ? '' : ' · non-prioritas');
+    f = pr ? o.mpe : (o.bs > 0 ? o.pb : o.pg); v = pr ? o.vol : null; r = pr ? o.rev : null; h = pr ? o.sav : null; k0 = o.k0; k1 = pr ? o.k1 : null; pc = pr ? o.pct : null;
+  }
+  const gap = f != null ? f - cbg : null, gp = f ? gap / f : null;
+  const hasPrice = !!cbgData.plants[0] && ('mpe' in cbgData.plants[0]);   // V206: false pada file data publik
+  document.getElementById('cbgKscope').textContent = lab;
+  const T = [
+    ['fuel', 'Fuel eksisting', f != null ? '$' + _cbgNum(f) : '–', 'USD/MMBtu + angkut', ''],
+    ['cbg', 'Harga CBG', '$' + _cbgNum(cbg), 'USD/MMBtu', ''],
+    ['gap', 'Selisih harga', gap != null ? '$' + _cbgNum(gap) : '–', gp != null ? 'CBG ' + _cbgNum(gp * 100, 1) + '% lebih murah' : 'USD/MMBtu', gap > 0 ? 'good' : gap < 0 ? 'bad' : ''],
+    ['vol', 'Volume 2030', v != null ? _cbgNum(v) : '–', 'BBTUD', ''],
+    ['rev', 'Revenue 2030', r != null ? '$' + _cbgNum(r, 1) + ' jt' : '–', 'potensi, USD/thn', ''],
+    ['save', 'Hemat 2030', h != null ? '$' + _cbgNum(h, 1) + ' jt' : '–', 'potensi, USD/thn', h > 0 ? 'good' : ''],
+    ['kwh', 'Rp/kWh', pc != null ? _cbgPct(pc) : '–', k0 != null ? (k1 != null ? _cbgNum(k0, 0) + ' → ' + _cbgNum(k1, 0) : 'Rp' + _cbgNum(k0, 0)) : 'perubahan biaya BB', pc < 0 ? 'good' : pc > 0 ? 'bad' : '']
+  ].filter(x => hasPrice || (x[0] !== 'fuel' && x[0] !== 'gap'));
+  document.getElementById('cbgKpis').innerHTML = T.map(([i, l, val, sub, cls]) =>
+    '<div class="cbg-kc ' + cls + '" data-k="' + i + '"><div class="cbg-klab">' + l + '</div><div class="cbg-kval">' + val + '</div><div class="cbg-ksub" title="' + escapeHtml(sub) + '">' + sub + '</div></div>').join('');
+}
+
 let fasilitasMap = null;
 let fasilitasMarkerLayer = null;
 let fasilitasInit = false;
@@ -30809,6 +31463,7 @@ const QOL_TAB_KW = {
   'map':          'peta cofiring marker lokasi sebaran titik pltu heatmap',
   'pembangkit':   'overview pembangkit inventaris kit jenis pltu pltgu pltg pltmg pltd pltp plta pltm pltmh plts pltb pltbm pltbg kapasitas unit mesin sentral',
   'fasilitas':    'fasilitas produksi pabrik pelet sawdust wood chip woodchip supplier',
+  'cbg':          'biocng cbg prioritas pome biometana biomethane pome pks pabrik kelapa sawit klaster prioritas co-mingle gas pltg pltmg pltgu penghematan',
   'realisasi':    'realisasi target gap capaian achievement tahunan bulanan yoy 2023 2024 2025 2026 rekap',
   'bottleneck':   'bottleneck kendala hambatan isu masalah problem',
   'pareto':       'pareto loss kehilangan kategori penyebab analisa',
@@ -31610,7 +32265,7 @@ const QOL_LAST_TAB_KEY = 'bio-qol-last-tab';
 // Dua tab SENGAJA tidak pernah dipulihkan otomatis: keduanya memasang gerbang
 // identitas, dan memunculkan prompt nama sebelum pengguna melakukan apa pun
 // adalah cara yang buruk untuk membuka sebuah dashboard.
-const QOL_RESTORABLE = ['map','pembangkit','fasilitas','realisasi','bottleneck',
+const QOL_RESTORABLE = ['map','cbg','pembangkit','fasilitas','realisasi','bottleneck',
                         'pareto','kontrak','mou-timeline','berita','laporan','calendar'];
 const qolScrollMem = Object.create(null);
 let qolTabRestored = false;
