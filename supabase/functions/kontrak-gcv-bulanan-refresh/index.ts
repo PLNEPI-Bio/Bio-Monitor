@@ -1,7 +1,7 @@
 // kontrak-gcv-bulanan-refresh
 // V199: pulls the MONTHLY GCV (kcal/kg) per contract from sheets "Kontrak 2026",
 // "Kontrak 2025" and "Kontrak 2024" of the rekap kontrak workbook on SharePoint,
-// and stores ONLY the matching keys + 12 monthly GCV + 12 monthly Vol in table
+// and stores ONLY the matching keys + GCV Kontrak (col J, V203) + 12 monthly GCV + 12 monthly Vol in table
 // `kontrak_gcv_bulanan` (anon SELECT). The dashboard (Daftar Kontrak -> detail
 // per mitra) matches these rows by nomor kontrak + mitra + PLTU + jenis and shows
 // DO | Real | %SR | GCV per year. Vol is kept to weight the yearly/total GCV.
@@ -35,7 +35,7 @@ const CORS = {
 };
 
 const SHEETS = [2026, 2025, 2024].map((tahun) => ({ tahun, name: `Kontrak ${tahun}` }));
-const C_PLTU = 2, C_MITRA = 3, C_JENIS = 4, C_NO = 5, C_M0 = 13;
+const C_PLTU = 2, C_MITRA = 3, C_JENIS = 4, C_NO = 5, C_GK = 9, C_M0 = 13;   // V203: J = GCV Kontrak
 
 const txt = (v: unknown) => (v === null || v === undefined ? "" : String(v)).trim();
 const norm = (v: unknown) => txt(v).toLowerCase().replace(/\s+/g, " ");
@@ -60,7 +60,7 @@ function volNum(v: unknown): number | null {
   return isFinite(n) && n > 0 ? Math.round(n * 1000) / 1000 : null;
 }
 
-type Row = { no_kontrak: string; mitra: string; pltu: string; jenis: string; gcv: (number | null)[]; vol: (number | null)[] };
+type Row = { no_kontrak: string; mitra: string; pltu: string; jenis: string; gcv_kontrak: number | null; gcv: (number | null)[]; vol: (number | null)[] };
 
 function parseSheet(ws: XLSX.WorkSheet): { rows: Row[]; warn: string[] } {
   const M = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null }) as unknown[][];
@@ -68,7 +68,7 @@ function parseSheet(ws: XLSX.WorkSheet): { rows: Row[]; warn: string[] } {
   const hr = M.slice(0, 10).findIndex((r) => norm((r || [])[C_NO]) === "nomor kontrak");
   if (hr < 0) throw new Error('header "Nomor Kontrak" (kolom F) tidak ditemukan');
   const h = M[hr];
-  const ident: [number, string][] = [[C_PLTU, "pltu"], [C_MITRA, "mitra"], [C_JENIS, "jenis biomassa"]];
+  const ident: [number, string][] = [[C_PLTU, "pltu"], [C_MITRA, "mitra"], [C_JENIS, "jenis biomassa"], [C_GK, "gcv kontrak"]];
   for (const [c, want] of ident) if (norm(h[c]) !== want) throw new Error(`kolom ${XLSX.utils.encode_col(c)} bukan "${want}"`);
   for (let m = 0; m < 12; m++) {
     const v = norm(h[C_M0 + 6 * m]), g = norm(h[C_M0 + 6 * m + 2]);
@@ -88,7 +88,7 @@ function parseSheet(ws: XLSX.WorkSheet): { rows: Row[]; warn: string[] } {
       gcv.push(g);
       vol.push(volNum(r[C_M0 + 6 * m]));
     }
-    rows.push({ no_kontrak: no, mitra: txt(r[C_MITRA]), pltu: txt(r[C_PLTU]), jenis: txt(r[C_JENIS]), gcv, vol });
+    rows.push({ no_kontrak: no, mitra: txt(r[C_MITRA]), pltu: txt(r[C_PLTU]), jenis: txt(r[C_JENIS]), gcv_kontrak: gcvNum(r[C_GK]), gcv, vol });
   }
   return { rows, warn };
 }
@@ -141,6 +141,7 @@ Deno.serve(async (req) => {
         rep.rows = rows.length;
         rep.withGcv = rows.filter((x) => x.gcv.some((g) => g !== null)).length;
         rep.gcvCells = rows.reduce((a, x) => a + x.gcv.filter((g) => g !== null).length, 0);
+        rep.withGcvKontrak = rows.filter((x) => x.gcv_kontrak !== null).length;
         if (warn.length) rep.warn = warn.slice(0, 20);
         // Guard: an emptied/broken sheet must not wipe what we had.
         if (!rows.length || !rep.gcvCells) throw new Error("hasil parse tidak wajar");

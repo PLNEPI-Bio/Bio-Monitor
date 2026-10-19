@@ -8926,6 +8926,7 @@ body.gf-on .gf-bar{
 .ms-seg button:first-child{border-left:none}
 .ms-seg button.on{background:var(--accent);color:#fff}
 
+.ms-kpis.ms-kpis-6{grid-template-columns:repeat(6,minmax(0,1fr))} /* V202: Ringkasan Mitra + Capaian GCV */
 .ms-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border)}
 .ms-kpi{background:var(--panel);padding:14px 16px;min-width:0}
 .ms-kpi-l{font-size:var(--fs-note);letter-spacing:var(--ls-caps);color:var(--text-dim);font-weight:700}
@@ -9019,7 +9020,7 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
   .ms-hero{grid-template-columns:minmax(0,1fr)}
   .ms-grade{border-left:none;border-top:var(--hairline);padding:16px 0 0;min-width:0}
   .ms-two{grid-template-columns:minmax(0,1fr)}
-  .ms-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ms-kpis,.ms-kpis.ms-kpis-6{grid-template-columns:repeat(2,minmax(0,1fr))}
   .ms-kpis > :last-child:nth-child(odd){grid-column:1 / -1}
 }
 @media (max-width:768px) and (pointer:coarse){
@@ -17946,8 +17947,8 @@ function openPemasokModal(pemasok, focusPltu, kontrakNo){
       '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-do"></span>DO: Delivery Order (MT)</span>' +
       '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-real"></span>Realisasi (MT)</span>' +
       '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-gcv"></span>GCV (kcal/kg)</span>' +
-      ((typeof getKontrakGcv === 'function') && getKontrakGcv(c) && getKontrakGcv(c).gcv
-        ? '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-gcv-up"></span>di atas GCV Kontrak (' + fmtInt(getKontrakGcv(c).gcv) + ')</span>' +
+      ((typeof getGcvKontrakPatokan === 'function') && getGcvKontrakPatokan(c)
+        ? '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-gcv-up"></span>di atas GCV Kontrak (' + fmtInt(getGcvKontrakPatokan(c).gcv) + ')</span>' +
           '<span class="pm-legend-item"><span class="pm-swatch pm-swatch-gcv-down"></span>di bawah GCV Kontrak</span>'
         : '<span class="pm-legend-nodata">· GCV Kontrak tidak tersedia, GCV tidak dibandingkan</span>') +
       (cDO ? '' : '<span class="pm-legend-nodata">· DO tidak tersedia untuk kontrak ini</span>') +
@@ -17955,7 +17956,7 @@ function openPemasokModal(pemasok, focusPltu, kontrakNo){
       '</div>';
     // [gcv, vol] per tahun & bulan; total = rata-rata tertimbang Vol sheet.
     // V200: GCV Kontrak (kolom "GCV Kontrak", kontrak_gcv) sebagai patokan warna.
-    const gKr = (typeof getKontrakGcv === 'function') ? getKontrakGcv(c) : null;
+    const gKr = (typeof getGcvKontrakPatokan === 'function') ? getGcvKontrakPatokan(c) : null;   // V203: + cadangan kolom J sheet
     const gK = gKr && gKr.gcv ? gKr.gcv : null;
     const gcvAt = (y, mi) => { const g = cGcv && cGcv[y]; return g ? [g.gcv[mi], g.vol[mi]] : [null, 0]; };
     let monthlyTable = doLegend + '<table class="pemasok-monthly-table pemasok-monthly-table-split"><thead>';
@@ -19584,12 +19585,26 @@ function getKontrakGcvBulanan(c){
       gcv.push(_gcvWAvg(rows.map(r => [r.gcv[i], r.vol[i]])));
       vol.push(rows.reduce((a, r) => a + (r.vol[i] || 0), 0));
     }
-    (res = res || {})[y] = { gcv, vol };
+    const gk = rows.map(r => r.gk).find(v => v != null);
+    (res = res || {})[y] = { gcv, vol, gk: gk == null ? null : gk };
   });
   _kontrakGcvbCache.set(c, res);
   return res;
 }
 window.getKontrakGcvBulanan = getKontrakGcvBulanan;
+// V203: patokan GCV Kontrak — kolom "GCV Kontrak" Daftar Kontrak (kontrak_gcv) dulu;
+// bila kosong, kolom J sheet Kontrak YYYY (tahun terbaru yang mengisinya).
+function getGcvKontrakPatokan(c){
+  const r = (typeof getKontrakGcv === 'function') ? getKontrakGcv(c) : null;
+  if (r && r.gcv) return { gcv: +r.gcv, src: 'kontrak_gcv' };
+  const gb = getKontrakGcvBulanan(c);
+  if (gb){
+    const ys = Object.keys(gb).sort().reverse();
+    for (const y of ys) if (gb[y].gk) return { gcv: +gb[y].gk, src: 'sheet ' + y };
+  }
+  return null;
+}
+window.getGcvKontrakPatokan = getGcvKontrakPatokan;
 
 // V157: kolom Harga disembunyikan sampai dibuka dengan password (hash SHA-256,
 // per tab lewat sessionStorage). Hanya penutup tampilan; kontrak_harga tetap
@@ -20742,6 +20757,7 @@ async function fetchKontrakGcv(){
       .select('tahun,no_kontrak,mitra,pltu,jenis,gcv')
       .limit(5000);
     if (error){ console.warn('[GCV] fetch error:', error.message); return; }
+    const firstGcvK = !KONTRAK_GCV_SRC.length;
     KONTRAK_GCV_SRC = (data || [])
       .filter(r => r.no_kontrak && r.gcv != null && isFinite(Number(r.gcv)))
       .map(r => ({ no: r.no_kontrak, mitra: r.mitra || '', pltu: r.pltu || '', jenis: r.jenis || '',
@@ -20750,6 +20766,13 @@ async function fetchKontrakGcv(){
     _kontrakGcvCache = new WeakMap();
     if (typeof renderKontrakTable === 'function' && document.querySelector('.view[data-view="kontrak"].active')){
       try { renderKontrakTable(); } catch(e){}
+    }
+    // V202: skor mitra butuh GCV Kontrak DAN GCV bulanan; fetch ini bisa selesai belakangan.
+    if (firstGcvK && KONTRAK_GCVB_SRC.length){
+      try {
+        if (state.tab === 'mitra' && msState.mitra) renderMitraSummary(true);
+        else if (state.tab === 'mitrarank') renderMitraRanking(true);
+      } catch(e){}
     }
   } catch(e){ console.warn('[GCV] fetch failed:', e); }
 }
@@ -20762,7 +20785,7 @@ async function fetchKontrakGcvBulanan(){
     const data = [], PG = 1000;
     for (let from = 0; from < 20000; from += PG){
       const { data: pg, error } = await supabaseClient.from('kontrak_gcv_bulanan')
-        .select('tahun,no_kontrak,mitra,pltu,jenis,gcv,vol').order('id').range(from, from + PG - 1);
+        .select('tahun,no_kontrak,mitra,pltu,jenis,gcv_kontrak,gcv,vol').order('id').range(from, from + PG - 1);
       if (error){ console.warn('[GCV bulanan] fetch error:', error.message); return; }
       data.push(...(pg || []));
       if (!pg || pg.length < PG) break;
@@ -20772,13 +20795,21 @@ async function fetchKontrakGcvBulanan(){
     KONTRAK_GCVB_SRC = data
       .filter(r => r.no_kontrak)
       .map(r => ({ no: r.no_kontrak, mitra: r.mitra || '', pltu: r.pltu || '', jenis: r.jenis || '',
-                   tahun: String(r.tahun), gcv: arr(r.gcv), vol: arr(r.vol) }));
+                   tahun: String(r.tahun), gk: r.gcv_kontrak != null && isFinite(Number(r.gcv_kontrak)) ? Number(r.gcv_kontrak) : null,
+                   gcv: arr(r.gcv), vol: arr(r.vol) }));
     _kontrakGcvbIdx = null;
     _kontrakGcvbCache = new WeakMap();
     // V201: modal detil mitra yang sudah terbuka digambar ulang (kecuali editor DO sedang dipakai).
     const bd = document.getElementById('pemasokModalBackdrop');
     if (firstLoad && bd && bd.classList.contains('open') && window._pemasokLastArgs && !bd.querySelector('.do-editor-table')){
       try { openPemasokModal.apply(null, window._pemasokLastArgs); } catch(e){}
+    }
+    // V202: skor Ringkasan/Ranking Mitra memakai capaian GCV — gambar ulang bila sedang tampil.
+    if (firstLoad){
+      try {
+        if (state.tab === 'mitra' && msState.mitra) renderMitraSummary(true);
+        else if (state.tab === 'mitrarank') renderMitraRanking(true);
+      } catch(e){}
     }
   } catch(e){ console.warn('[GCV bulanan] fetch failed:', e); }
 }
@@ -31854,6 +31885,11 @@ const MS_NM = 48;                      // Jan 2023 … Des 2026
 // dijepit 100%). SR ≤ p → skor = SR; SR > p → p + (SR − p) × DO ÷ (DO + k).
 // Volume DO kecil hanya membatasi kenaikan di atas ambang B; nilai A (≥ 85) butuh DO ≥ k.
 const MS_SHRINK = { p:70, k:5000 };
+// V202: capaian GCV masuk skor. Skor GCV per bulan = 100 bila GCV realisasi ≥ GCV
+// Kontrak, turun `pen` poin per 1% di bawahnya (dijepit 0), tertimbang Vol sheet.
+// Skor akhir = (1 − w) × skor SR + w × skor GCV; tanpa data GCV → skor SR saja.
+const MS_GCV = { w:0.3, pen:4 };
+function _msGcvMonthScore(g, k){ return g >= k ? 100 : Math.max(0, 100 - (1 - g / k) * 100 * MS_GCV.pen); }
 function _msShrink(num, den){
   if (!(den > 0)) return null;
   const sr = Math.min(num, den) / den * 100;
@@ -31948,6 +31984,32 @@ function _msContractStats(c, lastYM, today, win){
     else if (real[k] > 0) doAnom++;
     if (real[k] > 0){ lastSup = k; if (firstSup === null) firstSup = k; }
   }
+  // V202: GCV bulanan (kontrak_gcv_bulanan) vs GCV Kontrak (kontrak_gcv), bobot Vol sheet.
+  const gb = (typeof getKontrakGcvBulanan === 'function') ? getKontrakGcvBulanan(c) : null;
+  const gkr = (typeof getGcvKontrakPatokan === 'function') ? getGcvKontrakPatokan(c) : null;   // V203
+  const gK = gkr && gkr.gcv ? +gkr.gcv : null;
+  // Lingkup bulan sama dengan SR: hanya bulan ber-DO dan ≤ bulan evaluasi (bukan bulan berjalan).
+  // GCV dibulatkan ke kcal (sama dengan tampilan) sebelum dibandingkan.
+  let gW = 0, gSum = 0, gScore = 0, gMeet = 0;
+  const kEval = lastYM - MS_YM0;
+  // V203: tampilan (bagian Mutu GCV) memakai SEMUA bulan ber-GCV dalam lingkup tahun,
+  // tidak dibatasi DO/bulan evaluasi. dgS = Σ GCV·Vol, dgW = Σ Vol, dgM = Σ Vol yang memenuhi.
+  const dgS = new Array(MS_NM).fill(0), dgW = new Array(MS_NM).fill(0), dgM = new Array(MS_NM).fill(0);
+  let dW = 0, dS = 0;
+  if (gb) for (let yi = 0; yi < MS_YEARS.length; yi++){
+    const yr = gb[MS_YEARS[yi]];
+    if (!yr) continue;
+    for (let mi = 0; mi < 12; mi++){
+      const k = yi * 12 + mi, g = yr.gcv[mi] == null ? null : Math.round(yr.gcv[mi]);
+      if (g == null || (win && (k < win.k0 || k > win.k1))) continue;
+      const w = yr.vol[mi] > 0 ? yr.vol[mi] : 1;
+      dgS[k] += g * w; dgW[k] += w; dW += w; dS += g * w;
+      if (gK && g >= gK) dgM[k] += w;
+      if (!gK || k > kEval || !(dov[k] > 0)) continue;   // skor: hanya bulan ber-DO s.d. bulan evaluasi
+      gW += w; gSum += g * w; gScore += _msGcvMonthScore(g, gK) * w;
+      if (g >= gK) gMeet += w;
+    }
+  }
   const status = c.terminated ? 'ter'
     : !c.akhir ? 'exp'
     : c.akhir < today ? 'exp'
@@ -31959,12 +32021,16 @@ function _msContractStats(c, lastYM, today, win){
   const inWin = !win || totReal > 0 || totDo > 0 ||
     (a !== null && b !== null && a <= MS_YM0 + win.k1 && b >= MS_YM0 + win.k0);
   return { c, vol, real, dov, hasDO: !!DO, totReal, totDo, srReal, srDo, doAnom,
-           lastSup, firstSup, status, a, b, inWin };
+           lastSup, firstSup, status, a, b, inWin,
+           gK, gW, gSum, gKSum: gK ? gK * gW : 0, gScore, gMeet,
+           dgS, dgW, dgM, gAvg: dW > 0 ? dS / dW : null };
 }
 
 function _msAggregate(stats){
   const o = { n: stats.length, vol:0, real:0, doTot:0, srR:0, srD:0,
               ter:0, act:0, exp_:0, fut:0, withDO:0, anom:0, lastSup:null, firstSup:null,
+              gW:0, gSum:0, gKSum:0, gScore:0, gMeet:0, withGcv:0, srRGcv:0,
+              mGS:new Array(MS_NM).fill(0), mGW:new Array(MS_NM).fill(0), mGKS:new Array(MS_NM).fill(0), mGKW:new Array(MS_NM).fill(0), mGM:new Array(MS_NM).fill(0),
               mReal:new Array(MS_NM).fill(0), mDo:new Array(MS_NM).fill(0) };
   stats.forEach(s => {
     o.vol += s.vol; o.real += s.totReal; o.doTot += s.totDo;
@@ -31973,15 +32039,34 @@ function _msAggregate(stats){
     else if (s.status === 'fut') o.fut++; else o.exp_++;
     if (s.hasDO) o.withDO++;
     o.anom += s.doAnom;
+    if (s.gW > 0){ o.withGcv++; o.gW += s.gW; o.gSum += s.gSum; o.gKSum += s.gKSum; o.gScore += s.gScore; o.gMeet += s.gMeet; o.srRGcv += s.srReal; }
     if (s.lastSup !== null && (o.lastSup === null || s.lastSup > o.lastSup)) o.lastSup = s.lastSup;
     if (s.firstSup !== null && (o.firstSup === null || s.firstSup < o.firstSup)) o.firstSup = s.firstSup;
     for (let k = 0; k < MS_NM; k++){ o.mReal[k] += s.real[k]; o.mDo[k] += s.dov[k]; }
+    // V203: GCV bulanan tampilan; GCV Kontrak hanya dari kontrak yang punya patokan.
+    if (s.dgW) for (let k = 0; k < MS_NM; k++){
+      if (!s.dgW[k]) continue;
+      o.mGS[k] += s.dgS[k]; o.mGW[k] += s.dgW[k];
+      if (s.gK){ o.mGKS[k] += s.gK * s.dgW[k]; o.mGKW[k] += s.dgW[k]; o.mGM[k] += s.dgM[k]; }
+    }
   });
   o.sr      = o.srD > 0 ? o.srR / o.srD * 100 : null;
   o.serapan = o.vol > 0 ? o.real / o.vol * 100 : null;
   o.srAdj   = _msShrink(o.srR, o.srD);
-  // Skor = SR tertimbang volume, dijepit 0–100. Tanpa DO → tanpa skor.
-  o.score = o.srAdj === null ? null : Math.min(100, Math.max(0, o.srAdj));
+  // V202: capaian GCV — rata-rata GCV & GCV Kontrak tertimbang Vol, % ton memenuhi kontrak.
+  o.gcvAvg   = o.gW > 0 ? o.gSum / o.gW : null;
+  o.gcvKAvg  = o.gW > 0 ? o.gKSum / o.gW : null;
+  o.gcvMeet  = o.gW > 0 ? o.gMeet / o.gW * 100 : null;
+  o.gcvScore = o.gW > 0 ? o.gScore / o.gW : null;
+  // Skor = SR tertimbang volume, dijepit 0–100, digabung skor GCV (V202). Tanpa DO → tanpa skor.
+  o.scoreSr = o.srAdj === null ? null : Math.min(100, Math.max(0, o.srAdj));
+  // Bobot GCV diskalakan dengan cakupan: porsi realisasi ber-DO dari kontrak yang
+  // punya data GCV. Satu kontrak kecil ber-GCV tidak membawa bobot penuh.
+  o.gcvCov = o.gcvScore === null ? 0 : (o.srR > 0 ? Math.min(1, o.srRGcv / o.srR) : 0);
+  o.gcvW   = MS_GCV.w * o.gcvCov;
+  o.score = o.scoreSr === null ? null
+    : o.gcvScore === null ? o.scoreSr
+    : (1 - o.gcvW) * o.scoreSr + o.gcvW * o.gcvScore;
   return o;
 }
 
@@ -32109,6 +32194,14 @@ function _msInsights(M){
     out.push({ t:'info', h:'Belum ada data DO untuk kontrak mitra ini, keandalan pengiriman tidak bisa dinilai.' });
   }
   if (a.ter > 0) out.push({ t:'bad', h:'<b>' + a.ter + ' kontrak diterminasi</b> dari ' + a.n + ' kontrak.' });
+  // V203: mutu GCV terhadap GCV Kontrak (lingkup skor: bulan ber-DO s.d. bulan evaluasi).
+  if (a.gcvMeet !== null){
+    const d = Math.round(a.gcvAvg) - Math.round(a.gcvKAvg);
+    const txt = 'rata-rata ' + fmtInt(Math.round(a.gcvAvg)) + ' vs kontrak ' + fmtInt(Math.round(a.gcvKAvg)) + ' kcal/kg (' + (d >= 0 ? '+' : '') + fmtInt(d) + ')';
+    if (a.gcvMeet >= 80) out.push({ t:'good', h:'GCV <b>memenuhi kontrak</b> pada ' + _msFmtPct(a.gcvMeet, 0) + ' ton, ' + txt + '.' });
+    else if (a.gcvMeet >= 50) out.push({ t:'warn', h:'GCV <b>belum konsisten</b>: hanya ' + _msFmtPct(a.gcvMeet, 0) + ' ton memenuhi GCV Kontrak, ' + txt + '.' });
+    else out.push({ t:'bad', h:'GCV <b>sering di bawah kontrak</b>: hanya ' + _msFmtPct(a.gcvMeet, 0) + ' ton memenuhi GCV Kontrak, ' + txt + '.' });
+  }
   // Tren 6 bulan terakhir vs 6 bulan sebelumnya. V158: dilewati bila lingkup
   // satu tahun — bulan di luar tahun itu sudah dinolkan, perbandingannya palsu.
   const L = M.lastYM - MS_YM0;
@@ -32233,7 +32326,7 @@ function msSwitchMitra(v){
 
 // Render
 const MS_SECTIONS = [
-  ['msSecRingkasan', 'Ringkasan'], ['msSecTren', 'Tren Pasokan'], ['msSecPltu', 'Per PLTU'],
+  ['msSecRingkasan', 'Ringkasan'], ['msSecTren', 'Tren Pasokan'], ['msSecGcv', 'Mutu GCV'], ['msSecPltu', 'Per PLTU'],
   ['msSecKontrak', 'Kontrak'], ['msSecPeer', 'Perbandingan']
 ];
 const MS_IC = {
@@ -32308,17 +32401,25 @@ function renderMitraSummary(keepScroll){
       '</div>' +
       '<div class="ms-grade"' + (a.score === null ? '' : calcAttr({
           title: 'Skor Kinerja Mitra (indikatif)',
-          formula: 'SR ≤ ' + MS_SHRINK.p + '% → skor = SR; di atas itu: ' + MS_SHRINK.p + ' + (SR − ' + MS_SHRINK.p + ') × DO ÷ (DO + ' + fmtInt(MS_SHRINK.k) + ')',
+          formula: a.gcvScore === null
+            ? 'SR ≤ ' + MS_SHRINK.p + '% → skor = SR; di atas itu: ' + MS_SHRINK.p + ' + (SR − ' + MS_SHRINK.p + ') × DO ÷ (DO + ' + fmtInt(MS_SHRINK.k) + ')'
+            : (100 - a.gcvW * 100).toFixed(1) + '% × skor SR + ' + (a.gcvW * 100).toFixed(1) + '% × skor GCV',
           steps: [
             ['Realisasi di bulan ber-DO', fmtInt(a.srR) + ' MT'],
             ['DO', fmtInt(a.srD) + ' MT'],
-            ['SR mentah', _msFmtPct(a.sr)]
-          ],
+            ['SR mentah', _msFmtPct(a.sr)],
+            ['Skor SR (tertimbang volume)', a.scoreSr.toFixed(1)]
+          ].concat(a.gcvScore === null ? [['Skor GCV', 'tidak ada data GCV bulanan — tidak dihitung']] : [
+            ['GCV rata-rata vs Kontrak', fmtInt(Math.round(a.gcvAvg)) + ' vs ' + fmtInt(Math.round(a.gcvKAvg)) + ' kcal/kg'],
+            ['Ton memenuhi GCV Kontrak', _msFmtPct(a.gcvMeet)],
+            ['Skor GCV', a.gcvScore.toFixed(1)],
+            ['Cakupan GCV (realisasi ber-DO)', _msFmtPct(a.gcvCov * 100, 0) + ' → bobot ' + (a.gcvW * 100).toFixed(1) + '%']
+          ]),
           result: ['Skor', a.score.toFixed(1) + ' → ' + g.g],
-          note: 'A ≥ 85 · B ≥ 70 · C ≥ 50 · D < 50. Indikatif, bukan penilaian resmi vendor.'
+          note: 'Skor GCV per bulan (bulan ber-DO, s.d. bulan evaluasi): 100 bila GCV ≥ GCV Kontrak, −' + MS_GCV.pen + ' poin per 1% di bawahnya, tertimbang Vol. Bobot GCV = ' + Math.round(MS_GCV.w * 100) + '% × cakupan. A ≥ 85 · B ≥ 70 · C ≥ 50 · D < 50. Indikatif, bukan penilaian resmi vendor.'
         })) + '>' + ring +
         '<div class="ms-grade-txt"><b>' + (g ? g.t : 'Belum bisa dinilai') + '</b>' +
-          '<span>' + (g ? 'Skor indikatif dari realisasi terhadap DO' + (M.win ? ' tahun ' + M.win.y : '') + '.' : 'Belum ada data DO pada lingkup ini.') + '</span></div>' +
+          '<span>' + (g ? 'Skor indikatif dari realisasi terhadap DO' + (a.gcvScore !== null ? ' dan capaian GCV Kontrak' : '') + (M.win ? ' tahun ' + M.win.y : '') + '.' : 'Belum ada data DO pada lingkup ini.') + '</span></div>' +
       '</div>' +
     '</div>' +
     '<nav class="ms-nav" id="msNav" aria-label="Bagian ringkasan mitra">' +
@@ -32344,7 +32445,7 @@ function renderMitraSummary(keepScroll){
   html += '<section class="ms-sec" id="msSecRingkasan" style="margin-top:16px">' +
     '<div class="ms-sec-h"><h3>Ringkasan Kinerja<small>data s.d. ' + _msYMLabel(M.lastDataYM, true) +
       (M.lastDataYM !== M.lastYM ? ' · dinilai s.d. ' + _msYMLabel(M.lastYM, true) + ' (bulan penuh)' : '') + '</small></h3></div>' +
-    '<div class="ms-kpis">' +
+    '<div class="ms-kpis ms-kpis-6">' +
       kpi('Kontrak', a.n, statusTxt) +
       kpi('Volume Kontrak', fmtInt(a.vol) + '<small>MT</small>', 'Seumur kontrak, ' + M.pltuRows.length + ' PLTU') +
       kpi('Realisasi ' + realLbl, fmtInt(a.real) + '<small>MT</small>', 'Serapan ' + _msFmtPct(a.serapan) + ' dari volume' + (M.win ? ' seumur' : ''), a.vol > 0 ? {
@@ -32358,6 +32459,18 @@ function renderMitraSummary(keepScroll){
         steps:[['Realisasi di bulan ber-DO', fmtInt(a.srR) + ' MT'], ['÷ DO', fmtInt(a.srD) + ' MT']],
         result:['SR', _msFmtPct(a.sr)],
         note:'Bulan dengan realisasi tetapi DO kosong tidak ikut. Yang masuk skor adalah SR tertimbang volume = ' + _msFmtPct(a.srAdj) + ': SR (maks. 100%) di atas ' + MS_SHRINK.p + '% dikalikan DO ÷ (DO + ' + fmtInt(MS_SHRINK.k) + ' MT), jadi volume DO kecil membatasi kenaikan ke A tanpa menurunkan skor di bawah ' + MS_SHRINK.p + '.' }) +
+      // V202: capaian GCV terhadap GCV Kontrak.
+      kpi('Capaian GCV', a.gcvMeet === null ? '—' : '<span style="color:' + _msPctColor(a.gcvMeet) + '">' + _msFmtPct(a.gcvMeet, 0) + '</span>',
+        a.gcvMeet === null ? 'Belum ada GCV bulanan / GCV Kontrak'
+          : 'ton ≥ GCV Kontrak · rata-rata ' + fmtInt(Math.round(a.gcvAvg)) + ' vs ' + fmtInt(Math.round(a.gcvKAvg)) + ' kcal/kg',
+        a.gcvMeet === null ? null : {
+          title:'Capaian GCV', formula:'Σ Vol bulan dengan GCV ≥ GCV Kontrak ÷ Σ Vol bulan ber-GCV',
+          steps:[['GCV realisasi rata-rata (tertimbang Vol)', fmtInt(Math.round(a.gcvAvg)) + ' kcal/kg'],
+                 ['GCV Kontrak rata-rata (tertimbang Vol)', fmtInt(Math.round(a.gcvKAvg)) + ' kcal/kg'],
+                 ['Kontrak dengan data GCV', a.withGcv + '/' + a.n],
+                 ['Skor GCV', a.gcvScore.toFixed(1)]],
+          result:['Ton memenuhi GCV Kontrak', _msFmtPct(a.gcvMeet)],
+          note:'GCV bulanan dari sheet Kontrak 2024–2026 (bulan ber-DO, s.d. ' + _msYMLabel(M.lastYM, true) + '), GCV Kontrak dari kolom GCV Kontrak Daftar Kontrak. Skor GCV masuk skor mitra dengan bobot ' + Math.round(MS_GCV.w * 100) + '% × cakupan (' + _msFmtPct(a.gcvCov * 100, 0) + '): 100 bila GCV ≥ kontrak, −' + MS_GCV.pen + ' poin per 1% di bawahnya.' }) +
     '</div>' +
     '<div class="ms-card" style="margin-top:var(--gutter)"><div class="ms-card-t">Temuan Utama</div><ul class="ms-ins">' +
       M.insights.map(x => '<li><span class="ms-ins-ic ' + x.t + '" aria-hidden="true">' + ({ good:'✓', warn:'!', bad:'×', info:'i' })[x.t] + '</span><span>' + x.h + '</span></li>').join('') +
@@ -32375,6 +32488,23 @@ function renderMitraSummary(keepScroll){
       for (let mi = 0; mi < 12; mi++){ const k = yi * 12 + mi; r += a.mReal[k]; d += a.mDo[k]; if (a.mDo[k] > 0){ sr += a.mReal[k]; sd += a.mDo[k]; } }
       return '<div' + (M.win && M.win.y !== y ? ' style="opacity:.35"' : '') + '><span>' + y + '</span><b>' + fmtInt(r) + ' MT</b><em>DO ' + fmtInt(d) + ' · SR ' + (sd > 0 ? '<span style="color:' + _msPctColor(sr / sd * 100) + ';font-weight:800">' + _msFmtPct(sr / sd * 100, 0) + '</span>' : '—') + '</em></div>';
     }).join('') + '</div></div>' +
+  '</section>';
+
+  // V203: Mutu GCV — realisasi GCV bulanan vs GCV Kontrak (tertimbang Vol sheet).
+  const hasG = a.mGW.some(v => v > 0);
+  html += '<section class="ms-sec" id="msSecGcv">' +
+    '<div class="ms-sec-h"><h3>Mutu GCV<small>GCV realisasi vs GCV Kontrak, kcal/kg, tertimbang Vol</small></h3></div>' +
+    (!hasG ? '<div class="ms-card"><div class="ms-empty" style="padding:18px">Belum ada data GCV bulanan untuk kontrak pada lingkup ini.</div></div>' :
+    '<div class="ms-card"><div class="ms-chart"><canvas id="msGcvChart"></canvas></div>' +
+    '<div class="ms-yearstrip">' + MS_YEARS.map((y, yi) => {
+      let s = 0, w = 0, ks = 0, kw = 0, mt = 0;
+      for (let mi = 0; mi < 12; mi++){ const k = yi * 12 + mi; s += a.mGS[k]; w += a.mGW[k]; ks += a.mGKS[k]; kw += a.mGKW[k]; mt += a.mGM[k]; }
+      const g = w > 0 ? s / w : null, kk = kw > 0 ? ks / kw : null, pm = kw > 0 ? mt / kw * 100 : null;
+      const col = g !== null && kk !== null ? (Math.round(g) >= Math.round(kk) ? '#10b981' : '#ef4444') : 'var(--text-bright)';
+      return '<div' + (M.win && M.win.y !== y ? ' style="opacity:.35"' : '') + '><span>' + y + '</span>' +
+        '<b style="color:' + col + '">' + (g === null ? '—' : fmtInt(Math.round(g)) + ' kcal/kg') + '</b>' +
+        '<em>Kontrak ' + (kk === null ? '—' : fmtInt(Math.round(kk))) + ' · memenuhi ' + (pm === null ? '—' : '<span style="color:' + _msPctColor(pm) + ';font-weight:800">' + _msFmtPct(pm, 0) + '</span>') + '</em></div>';
+    }).join('') + '</div></div>') +
   '</section>';
 
   // Per PLTU
@@ -32403,6 +32533,7 @@ function renderMitraSummary(keepScroll){
 
   wrap.innerHTML = html;
   _msRenderTrend(M);
+  _msRenderGcv(M);
   _msRenderPltu(M);
   _msRenderJenis(M);
   _msRenderContracts(M);
@@ -32486,6 +32617,46 @@ function _msRenderTrend(M){
   _msDestroy('trend');
   if (!cv || typeof Chart === 'undefined') return;
   mitraCharts.trend = new Chart(cv, _msTrendCfg(M, msState.trend, _msPal()));
+}
+// V203: grafik Mutu GCV — batang GCV realisasi bulanan (hijau ≥ kontrak, merah di
+// bawah), garis putus GCV Kontrak. Rentang = bulan pertama s.d. terakhir ber-GCV.
+function _msRenderGcv(M){
+  _msDestroy('gcv');
+  const cv = document.getElementById('msGcvChart');
+  if (!cv || !M || typeof Chart === 'undefined') return;
+  const a = M.ag, P = _msPal();
+  let k0 = -1, k1 = -1;
+  for (let k = 0; k < MS_NM; k++) if (a.mGW[k] > 0){ if (k0 < 0) k0 = k; k1 = k; }
+  if (k0 < 0) return;
+  const labels = [], g = [], kk = [], meet = [];
+  for (let k = k0; k <= k1; k++){
+    labels.push(_msYMLabel(MS_YM0 + k));
+    g.push(a.mGW[k] > 0 ? Math.round(a.mGS[k] / a.mGW[k]) : null);
+    kk.push(a.mGKW[k] > 0 ? Math.round(a.mGKS[k] / a.mGKW[k]) : null);
+    meet.push(a.mGKW[k] > 0 ? a.mGM[k] / a.mGKW[k] * 100 : null);
+  }
+  const o = _msBaseOpts(P);
+  const vals = g.concat(kk).filter(v => v !== null);
+  o.scales.y.beginAtZero = false;
+  o.scales.y.suggestedMin = Math.floor((Math.min.apply(null, vals) - 200) / 100) * 100;
+  o.scales.y.suggestedMax = Math.ceil((Math.max.apply(null, vals) + 100) / 100) * 100;
+  o.plugins.tooltip.callbacks = {
+    label: c => c.parsed.y === null ? '' : c.dataset.label + ': ' + fmtInt(c.parsed.y) + ' kcal/kg',
+    footer: items => { const i = items[0].dataIndex; return meet[i] === null ? '' : 'Ton memenuhi GCV Kontrak: ' + meet[i].toFixed(0) + '%'; }
+  };
+  // Legenda tetap (warna batang bervariasi per bulan, legenda bawaan ikut batang pertama).
+  const lf = o.plugins.legend.labels;
+  lf.generateLabels = () => [
+    { text:'GCV ≥ kontrak', fillStyle:'rgba(16,185,129,.85)', strokeStyle:'transparent', lineWidth:0, fontColor:P.dim },
+    { text:'GCV < kontrak', fillStyle:'rgba(239,68,68,.85)', strokeStyle:'transparent', lineWidth:0, fontColor:P.dim },
+    { text:'Tanpa patokan', fillStyle:P.blue, strokeStyle:'transparent', lineWidth:0, fontColor:P.dim },
+    { text:'GCV Kontrak', fillStyle:'transparent', strokeStyle:P.gold, lineWidth:2, lineDash:[5,4], fontColor:P.dim }
+  ];
+  o.plugins.legend.onClick = () => {};
+  mitraCharts.gcv = new Chart(cv, { type:'bar', data:{ labels, datasets:[
+    { type:'line', label:'GCV Kontrak', data:kk, borderColor:P.gold, backgroundColor:P.gold, borderDash:[5,4], pointRadius:0, pointHoverRadius:3, borderWidth:2, stepped:'middle', spanGaps:true, order:0 },
+    { label:'GCV realisasi', data:g, borderRadius:0, maxBarThickness:22, order:1,
+      backgroundColor: g.map((v, i) => v === null || kk[i] === null ? P.blue : v >= kk[i] ? 'rgba(16,185,129,.85)' : 'rgba(239,68,68,.85)') } ] }, options:o });
 }
 function _msPltuCfg(M, P, limit){
   const rows = M.pltuRows.slice().sort((x, y) => (y.ag.vol + y.ag.real) - (x.ag.vol + x.ag.real)).slice(0, limit || 999);
@@ -32576,11 +32747,13 @@ function _msRenderContracts(M){
   const harga = x => { if (!_hargaUnlocked) return null; try { const hg = typeof getKontrakHarga === 'function' ? getKontrakHarga(x.c) : null; return hg && hg.h ? hg.h : null; } catch(e){ return null; } };
   const val = (x, k) => k === 'kontrak' ? (x.c.kontrak || '') : k === 'pltu' ? (x.c.pltu || '') : k === 'jenis' ? (x.c.jenis || '')
     : k === 'awal' ? (x.c.awal || '') : k === 'status' ? x.status : k === 'vol' ? x.vol : k === 'real' ? x.totReal
-    : k === 'serap' ? (serap(x) === null ? -1 : serap(x)) : k === 'sr' ? (sr(x) === null ? -1 : sr(x)) : k === 'harga' ? (harga(x) || -1) : 0;
+    : k === 'serap' ? (serap(x) === null ? -1 : serap(x)) : k === 'sr' ? (sr(x) === null ? -1 : sr(x)) : k === 'harga' ? (harga(x) || -1)
+    : k === 'gcv' ? (x.gAvg === null ? -1 : x.gAvg) : 0;
   const rows = M.stats.slice().sort((x, y) => { const p = val(x, s.k), q = val(y, s.k); return (p < q ? -1 : p > q ? 1 : 0) * s.d; });
   const th = (k, t, num) => '<th class="' + (num ? 'num ' : '') + (s.k === k ? 'sorted' : '') + '" onclick="msSort(\'ct\',\'' + k + '\')">' + t + '<span class="ar">' + (s.k === k ? (s.d > 0 ? '▲' : '▼') : '↕') + '</span></th>';
   let h = '<table class="ms-tbl"><thead><tr>' + th('kontrak', 'No. Kontrak') + th('pltu', 'PLTU') + th('jenis', 'Jenis') + th('awal', 'Periode') +
     th('status', 'Status') + th('vol', 'Volume (MT)', 1) + th('real', 'Realisasi (MT)', 1) + th('serap', 'Serapan', 1) + th('sr', 'SR', 1) +
+    '<th class="num" style="cursor:default" title="GCV Kontrak (kcal/kg)">GCV Kontrak</th>' + th('gcv', 'GCV Real', 1) +
     (_hargaUnlocked
       ? th('harga', 'Harga (Rp/ton)<span class="harga-lock-btn" role="button" tabindex="0" aria-label="Sembunyikan harga lagi" onclick="lockHarga(event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \')lockHarga(event)" title="Sembunyikan harga lagi">' + HARGA_LOCK_SVG + '</span>', 1)
       : '<th class="num harga-locked" tabindex="0" role="columnheader" onclick="unlockHarga(event)" onkeydown="if(event.key===\'Enter\'||event.key===\' \')unlockHarga(event)"' +
@@ -32594,6 +32767,11 @@ function _msRenderContracts(M){
       '<td class="num">' + fmtInt(x.vol) + '</td><td class="num">' + fmtInt(x.totReal) + '</td>' +
       '<td class="num ms-pct" style="color:' + _msPctColor(p) + '">' + _msFmtPct(p, 0) + '</td>' +
       '<td class="num ms-pct" style="color:' + _msPctColor(q) + '">' + (x.hasDO ? _msFmtPct(q, 0) : '<span title="DO tidak tersedia">—</span>') + '</td>' +
+      // V203: GCV Kontrak & rata-rata GCV realisasi (tertimbang Vol), hijau/merah vs kontrak.
+      '<td class="num">' + (x.gK ? fmtInt(x.gK) : '—') + '</td>' +
+      '<td class="num ms-pct"' + (x.gAvg === null ? '>—'
+        : (x.gK ? ' style="color:' + (Math.round(x.gAvg) >= x.gK ? '#10b981' : '#ef4444') + '" title="Selisih ' + (Math.round(x.gAvg) - x.gK >= 0 ? '+' : '') + fmtInt(Math.round(x.gAvg) - x.gK) + ' kcal/kg"' : '') +
+          '>' + fmtInt(Math.round(x.gAvg))) + '</td>' +
       '<td class="num">' + (!_hargaUnlocked ? '<span class="harga-mask" title="Harga tersembunyi">•••</span>' : hg ? fmtInt(hg) : '—') + '</td></tr>';
   });
   el.innerHTML = h + '</tbody></table>';
@@ -32858,7 +33036,10 @@ function _msBuildPdf(JsPDF, M){
     ['VOLUME KONTRAK', fmtInt(a.vol) + ' MT', M.pltuRows.length + ' PLTU', null],
     ['REALISASI ' + (M.win ? M.win.y : '2023-2026'), fmtInt(a.real) + ' MT', 'serapan ' + _msFmtPct(a.serapan), null],
     ['KIRIMAN TERAKHIR', a.lastSup === null ? '-' : _msYMLabel(MS_YM0 + a.lastSup, true), a.firstSup === null ? '-' : 'pertama ' + _msYMLabel(MS_YM0 + a.firstSup, true), null],
-    ['SUPPLY RELIABILITY', _msFmtPct(a.sr), 'realisasi / DO', a.sr]
+    ['SUPPLY RELIABILITY', _msFmtPct(a.sr), 'realisasi / DO', a.sr],
+    // V202: capaian GCV (slot ke-6 grid 3x2)
+    ['CAPAIAN GCV', a.gcvMeet === null ? '-' : _msFmtPct(a.gcvMeet, 0),
+      a.gcvMeet === null ? 'belum ada data GCV' : 'rata-rata ' + fmtInt(Math.round(a.gcvAvg)) + ' vs kontrak ' + fmtInt(Math.round(a.gcvKAvg)) + ' kcal/kg', a.gcvMeet]
   ];
   const kw = CW / 3, kh = 50;
   ensure(kh * 2 + 10);
@@ -32871,8 +33052,14 @@ function _msBuildPdf(JsPDF, M){
   });
   y += kh * 2 + 2;
   font(7, 'normal', DIM);
-  doc.text(T('Skor = SR (maks. 100%); bagian di atas ' + MS_SHRINK.p + '% dikali DO / (DO + ' + fmtInt(MS_SHRINK.k) + '). A >= 85, B >= 70, C >= 50, D < 50. Indikatif, bukan penilaian resmi vendor.'), X, y + 4);
-  y += 14;
+  // V202: catatan rumus mengikuti ada/tidaknya komponen GCV.
+  const srNote = 'Skor SR = SR (maks. 100%); bagian di atas ' + MS_SHRINK.p + '% dikali DO / (DO + ' + fmtInt(MS_SHRINK.k) + ').';
+  const gcvNote = a.gcvScore === null ? ' Tanpa data GCV: skor = skor SR.'
+    : ' Skor = ' + (100 - a.gcvW * 100).toFixed(1) + '% x skor SR + ' + (a.gcvW * 100).toFixed(1) + '% x skor GCV (bobot ' + Math.round(MS_GCV.w * 100) +
+      '% x cakupan ' + _msFmtPct(a.gcvCov * 100, 0) + '); skor GCV bulanan 100 bila GCV >= kontrak, -' + MS_GCV.pen + ' poin per 1% di bawahnya.';
+  const fnLines = doc.splitTextToSize(T(srNote + gcvNote + ' A >= 85, B >= 70, C >= 50, D < 50. Indikatif, bukan penilaian resmi vendor.'), CW);
+  doc.text(fnLines, X, y + 4);
+  y += 6 + fnLines.length * 8;
 
   section('Temuan Utama');
   M.insights.forEach(it => {
@@ -32997,7 +33184,8 @@ function _msPdfTable(doc, ctx, cols, rows){
 // V158: Ranking Mitra (mesin skor sama dengan Ringkasan Mitra; tanpa harga).
 // Peringkat dihitung sebelum kotak cari diterapkan.
 const MR_METRICS = [
-  { k:'score',   t:'Skor kinerja',        d:'Skor SR tertimbang volume (0–100), sama dengan skor di Ringkasan Mitra.' },
+  { k:'score',   t:'Skor kinerja',        d:'Skor SR tertimbang volume digabung skor capaian GCV (0–100), sama dengan skor di Ringkasan Mitra.' },
+  { k:'gcv',     t:'Skor GCV',            d:'Skor capaian GCV Kontrak (0–100): 100 bila GCV bulanan ≥ GCV Kontrak, turun 4 poin per 1% di bawahnya, tertimbang Vol.' },
   { k:'real',    t:'Realisasi',           d:'Total realisasi pada lingkup (MT).' },
   { k:'sr',      t:'Supply Reliability',  d:'Σ realisasi ÷ Σ DO, hanya bulan yang ada DO-nya (tanpa penimbang volume).' },
   { k:'do',      t:'Volume DO',           d:'Σ DO pada bulan ber-DO (MT), ukuran seberapa banyak mitra dipercaya memasok.' },
@@ -33018,6 +33206,7 @@ function _mrVal(r, k){
     case 'sr':      return a.sr;
     case 'do':      return a.srD > 0 ? a.srD : null;
     case 'serapan': return a.serapan;
+    case 'gcv':     return a.gcvScore;
     case 'vol':     return a.vol;
     case 'n':       return r.n;
   }
@@ -33025,7 +33214,7 @@ function _mrVal(r, k){
 }
 function _mrFmt(k, v){
   if (v === null || v === undefined || !isFinite(v)) return '—';
-  if (k === 'score') return v.toFixed(1);
+  if (k === 'score' || k === 'gcv') return v.toFixed(1);
   if (k === 'sr' || k === 'serapan') return _msFmtPct(v, 1);
   if (k === 'n') return String(v);
   return fmtInt(v) + ' MT';
@@ -33246,8 +33435,8 @@ function _mrRenderTable(){
   };
   let h = '<table class="ms-tbl mr-tbl"><thead><tr>' + th(null, '#', 1) + th(null, 'Mitra') + th(null, 'Jenis utama') + th(null, 'Genco') +
     th(null, 'PLTU', 1) + th('n', 'Kontrak', 1) + th('vol', 'Volume (MT)', 1) + th('real', 'Realisasi (MT)', 1) + th(null, 'Porsi', 1) +
-    th('do', 'DO (MT)', 1) + th('sr', 'SR', 1) + th('serapan', 'Serapan', 1) + th('score', 'Skor', 1) + '</tr></thead><tbody>';
-  if (!rows.length) h += '<tr><td colspan="13" style="text-align:center;color:var(--text-dim);cursor:default">Tidak ada mitra yang cocok dengan "' + e(q) + '".</td></tr>';
+    th('do', 'DO (MT)', 1) + th('sr', 'SR', 1) + th('serapan', 'Serapan', 1) + th('gcv', 'GCV', 1) + th('score', 'Skor', 1) + '</tr></thead><tbody>';
+  if (!rows.length) h += '<tr><td colspan="14" style="text-align:center;color:var(--text-dim);cursor:default">Tidak ada mitra yang cocok dengan "' + e(q) + '".</td></tr>';
   rows.forEach(r => {
     const a = r.ag, g = _msGrade(a.score);
     h += '<tr data-m="' + e(r.m) + '" onclick="mrOpenMitra(this.dataset.m)" title="Buka ringkasan mitra ini">' +
@@ -33261,6 +33450,9 @@ function _mrRenderTable(){
       '<td class="num">' + (a.srD > 0 ? fmtInt(a.srD) : '—') + '</td>' +
       '<td class="num ms-pct" style="color:' + _msPctColor(a.sr) + '">' + _msFmtPct(a.sr, 0) + '</td>' +
       '<td class="num">' + _msFmtPct(a.serapan, 0) + '</td>' +
+      // V202: skor GCV; tooltip = % ton memenuhi GCV Kontrak + cakupan.
+      '<td class="num ms-pct"' + (a.gcvScore === null ? '>—' : ' style="color:' + _msPctColor(a.gcvScore) + '" title="' +
+        _msFmtPct(a.gcvMeet, 0) + ' ton ≥ GCV Kontrak · cakupan ' + _msFmtPct(a.gcvCov * 100, 0) + '">' + a.gcvScore.toFixed(0)) + '</td>' +
       '<td class="num ms-pct"' + (g ? ' style="color:' + g.c + '"' : '') + '>' + (g ? g.g + ' · ' + a.score.toFixed(0) : '—') + '</td></tr>';
   });
   el.innerHTML = h + '</tbody></table>';
@@ -33275,9 +33467,9 @@ function _mrRenderChart(R){
   box.style.height = Math.max(220, top.length * 28 + 40) + 'px';
   const o = _msBaseOpts(P, { indexAxis:'y' });
   o.plugins.legend = { display:false };
-  const isPct = k === 'sr' || k === 'serapan' || k === 'score';
+  const isPct = k === 'sr' || k === 'serapan' || k === 'score' || k === 'gcv';
   o.scales = {
-    x:{ min:0, max: k === 'score' ? 100 : undefined, ticks:{ font:o.scales.x.ticks.font, color:P.dim, callback: v => isPct ? v + (k === 'score' ? '' : '%') : fmt(v) }, grid:{ color:P.grid } },
+    x:{ min:0, max: k === 'score' || k === 'gcv' ? 100 : undefined, ticks:{ font:o.scales.x.ticks.font, color:P.dim, callback: v => isPct ? v + (k === 'score' || k === 'gcv' ? '' : '%') : fmt(v) }, grid:{ color:P.grid } },
     y:{ ticks:{ font:o.scales.x.ticks.font, color:P.text, autoSkip:false }, grid:{ display:false } }
   };
   o.interaction = { mode:'nearest', intersect:true, axis:'y' };
@@ -33342,15 +33534,15 @@ function mrExportExcel(){
     ['Diurutkan menurut: ' + _mrMetric(mrState.metric).t + (mrState.minDo ? ' · min. DO ' + mrState.minDo + ' MT' : '') + (mrState.active ? ' · hanya kontrak aktif' : '') +
       ' · data s.d. ' + _msYMLabel(M.lastDataYM, true)],
     [],
-    ['Peringkat', 'Mitra', 'Jenis utama', 'Genco', 'PLTU', 'Kontrak', 'Volume kontrak (MT)', 'Realisasi (MT)', 'Porsi realisasi (%)', 'DO (MT)', 'SR (%)', 'Serapan (%)', 'Skor', 'Nilai']
+    ['Peringkat', 'Mitra', 'Jenis utama', 'Genco', 'PLTU', 'Kontrak', 'Volume kontrak (MT)', 'Realisasi (MT)', 'Porsi realisasi (%)', 'DO (MT)', 'SR (%)', 'Serapan (%)', 'Skor GCV', 'Capaian GCV (%)', 'Skor', 'Nilai']
   ];
   R.list.forEach(r => {
     const a = r.ag, g = _msGrade(a.score);
     aoa.push([r.rank || '', r.m, r.jenis || '', r.gencos.join(', '), r.pltu, r.n, Math.round(a.vol), Math.round(a.real),
-      tReal > 0 ? r1(a.real / tReal * 100) : '', a.srD > 0 ? Math.round(a.srD) : '', r1(a.sr), r1(a.serapan), r1(a.score), g ? g.g : '']);
+      tReal > 0 ? r1(a.real / tReal * 100) : '', a.srD > 0 ? Math.round(a.srD) : '', r1(a.sr), r1(a.serapan), r1(a.gcvScore), r1(a.gcvMeet), r1(a.score), g ? g.g : '']);
   });
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [8, 44, 22, 12, 6, 8, 16, 14, 14, 12, 8, 10, 8, 6].map(w => ({ wch: w }));
+  ws['!cols'] = [8, 44, 22, 12, 6, 8, 16, 14, 14, 12, 8, 10, 9, 14, 8, 6].map(w => ({ wch: w }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Ranking Mitra');
   const tag = [mrState.year === 'all' ? '2023-2026' : mrState.year, mrState.jenis === 'all' ? '' : mrState.jenis, mrState.genco === 'all' ? '' : mrState.genco]

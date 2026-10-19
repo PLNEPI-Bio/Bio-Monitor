@@ -24,8 +24,8 @@ returns integer language plpgsql set search_path to 'public' as $$
 declare n int;
 begin
   delete from kontrak_gcv_bulanan where tahun = p_tahun;
-  insert into kontrak_gcv_bulanan(tahun, no_kontrak, mitra, pltu, jenis, gcv, vol)
-  select p_tahun, r->>'no_kontrak', r->>'mitra', r->>'pltu', r->>'jenis',
+  insert into kontrak_gcv_bulanan(tahun, no_kontrak, mitra, pltu, jenis, gcv_kontrak, gcv, vol)
+  select p_tahun, r->>'no_kontrak', r->>'mitra', r->>'pltu', r->>'jenis', nullif(r->>'gcv_kontrak','')::numeric,
     array(select nullif(x, 'null')::numeric from jsonb_array_elements_text(r->'gcv') with ordinality t(x, i) order by i),
     array(select nullif(x, 'null')::numeric from jsonb_array_elements_text(r->'vol') with ordinality t(x, i) order by i)
   from jsonb_array_elements(p_rows) r
@@ -34,6 +34,10 @@ begin
   return n;
 end $$;
 revoke execute on function public.replace_kontrak_gcv_bulanan(integer, jsonb) from public, anon, authenticated;
+
+-- V203 (2026-10-19): GCV Kontrak dari kolom J sheet, cadangan bila kontrak_gcv tidak punya patokan.
+-- RPC di atas diganti agar ikut menulis gcv_kontrak (lihat definisi live).
+alter table public.kontrak_gcv_bulanan add column if not exists gcv_kontrak numeric;
 
 -- Cron (dijalankan terpisah, header Authorization disalin dari job kontrak-gcv-refresh-daily):
 -- select cron.schedule('kontrak-gcv-bulanan-weekly', '30 19 * * 0', <net.http_post ke /functions/v1/kontrak-gcv-bulanan-refresh>);
