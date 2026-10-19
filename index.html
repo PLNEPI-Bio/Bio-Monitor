@@ -3508,12 +3508,21 @@ html,body{
 .cbg-view.has-sel .cbg-kscope{color:var(--accent)}
 .cbg-kband{min-width:0;transition:background var(--dur-base) var(--ease-out)}
 .cbg-view.has-sel .cbg-kband{background:var(--accent-soft)}
-.cbg-kstrip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(118px,1fr);height:100%;overflow-x:auto;scrollbar-width:thin}
-.cbg-kc{display:flex;flex-direction:column;justify-content:center;gap:1px;padding:8px 14px;border-left:1px solid var(--border);min-width:0}
+.cbg-kstrip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(132px,1fr);height:100%;overflow-x:auto;scrollbar-width:thin}
+.cbg-kc{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;border-left:1px solid var(--border);min-width:0}
+.cbg-kbody{display:flex;flex-direction:column;gap:1px;min-width:0}
+.cbg-kic{width:26px;height:26px;border-radius:var(--r-sm);display:grid;place-items:center;flex:none;margin-top:1px}
+.cbg-kic svg{width:16px;height:16px}
+.cbg-kic.k-fuel{color:var(--danger);background:rgba(182,48,43,.10)}
+.cbg-kic.k-cbg,.cbg-kic.k-save{color:var(--status-ok-ink);background:rgba(16,185,129,.13)}
+.cbg-kic.k-gap{color:var(--accent);background:var(--accent-soft)}
+.cbg-kic.k-vol{color:var(--accent-cyan-ink);background:rgba(0,160,224,.12)}
+.cbg-kic.k-rev{color:var(--accent-2-ink);background:rgba(255,199,44,.22)}
+.cbg-kic.k-kwh{color:var(--purple-ink);background:rgba(109,40,217,.10)}
 .cbg-kc:first-child{border-left:0}
 .cbg-klab{font-size:10.5px;font-weight:600;color:var(--text-dim);line-height:1.25;white-space:nowrap}
 .cbg-kval{font-size:18px;font-weight:700;color:var(--text-bright);line-height:1.15;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em}
-.cbg-ksub{font-size:10.5px;color:var(--text-dim);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbg-ksub{font-size:10.5px;color:var(--text-dim);line-height:1.25;overflow-wrap:anywhere}
 .cbg-kc.good .cbg-kval{color:var(--cbg-p1-ink)}
 .cbg-kc.bad .cbg-kval{color:var(--cbg-bad-ink)}
 /* ── badan: sidebar | peta ── */
@@ -3662,7 +3671,7 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
 .cbg-view .cbg-def summary:focus-visible,.cbg-subtab:focus-visible,.cbg-chip:focus-visible,.cbg-item:focus-visible,.cbg-legend summary:focus-visible,
 .cbg-link:focus-visible,.cbg-mbtn:focus-visible,#cbg-map .leaflet-control-zoom a:focus-visible,.cbg-close:focus-visible,.cbg-src summary:focus-visible,.cbg-explain summary:focus-visible{
   outline:var(--focus-ring-w) solid var(--focus-ring);outline-offset:var(--focus-ring-offset)}
-@media (max-width:1280px){ .cbg-view{--cbg-side-w:272px;--cbg-sheet-w:356px} .cbg-kc{padding:8px 10px} .cbg-kval{font-size:16px} }
+@media (max-width:1280px){ .cbg-view{--cbg-side-w:272px;--cbg-sheet-w:356px} .cbg-kstrip{grid-auto-columns:minmax(114px,1fr)} .cbg-kc{padding:8px;gap:6px} .cbg-kval{font-size:15.5px} .cbg-kic{width:22px;height:22px} .cbg-kic svg{width:13px;height:13px} }
 /* Sempit / mobile: bilah identitas di atas, angka kunci jadi satu baris geser, peta 58vh lalu daftar. */
 @media (max-width:900px){
   .cbg-view{display:block;height:auto}
@@ -3672,7 +3681,7 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
   .cbg-seg{order:3;width:100%;margin-left:0}
   .cbg-subtab{flex:1;padding:5px 10px}
   .cbg-kscope{order:4}
-  .cbg-kstrip{grid-auto-columns:minmax(132px,max-content);scroll-snap-type:x proximity}
+  .cbg-kstrip{grid-auto-columns:minmax(150px,max-content);scroll-snap-type:x proximity}
   .cbg-kc{scroll-snap-align:start;padding:8px 12px}
   .cbg-body,.cbg-body.side-off{display:flex;flex-direction:column}
   .cbg-maparea{order:-1;height:58vh;min-height:340px}
@@ -25357,7 +25366,7 @@ function cbgReset(){
 }
 
 /* ---------- panel detail ---------- */
-// V206: file data publik tidak memuat Rp/kWh absolut (k0/k1) — kotak tinggal menampilkan perubahan persen.
+// V206: bila file data tanpa Rp/kWh absolut (k0/k1), kotak tinggal menampilkan perubahan persen.
 function _cbgKwhBox(k0, k1, pct, lab){
   if (k0 == null && pct == null) return '';
   return '<div class="cbg-kwh"><div><div class="lab">' + (k0 == null ? 'Perubahan biaya bahan bakar per kWh setelah co-mingle' : lab) + '</div>' +
@@ -25435,6 +25444,16 @@ function _cbgSheetCl(c){
 }
 
 /* ---------- pita KPI ---------- */
+// V207: ikon sama dengan HTML sumber (stroke 1.8, viewBox 24).
+const CBG_IC = {
+  fuel:'<path d="M12 3c2.5 3 5 5.6 5 9.2A5 5 0 0 1 7 12.2C7 9.6 8.6 8 10 6.5c.3 1.6 1 2.7 2 3.3.2-2.4-.6-4.5 0-6.8z"/><path d="M10.2 15.6a1.8 1.8 0 0 0 3.6 0c0-1.2-1.8-3-1.8-3s-1.8 1.8-1.8 3z"/>',
+  cbg:'<path d="M5 19c0-8 5-14 14-14 0 9-6 14-14 14z"/><path d="M5 19l7-7"/>',
+  gap:'<path d="M12 4v13"/><path d="M6.5 11.5L12 17l5.5-5.5"/><path d="M5 20h14"/>',
+  vol:'<rect x="7" y="3" width="10" height="18" rx="5"/><path d="M7 9h10M7 15h10"/>',
+  rev:'<ellipse cx="12" cy="6" rx="7" ry="2.6"/><path d="M5 6v6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6"/><path d="M5 12v6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-6"/>',
+  save:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  kwh:'<path d="M13 2L5 14h6l-1 8 8-12h-6z"/>'
+};
 function _cbgSetKPI(o, kind){
   if (!cbgData) return;
   const K = cbgData.kpi, np = cbgData.plants.filter(_cbgIsP).length;
@@ -25453,19 +25472,20 @@ function _cbgSetKPI(o, kind){
     f = pr ? o.mpe : (o.bs > 0 ? o.pb : o.pg); v = pr ? o.vol : null; r = pr ? o.rev : null; h = pr ? o.sav : null; k0 = o.k0; k1 = pr ? o.k1 : null; pc = pr ? o.pct : null;
   }
   const gap = f != null ? f - cbg : null, gp = f ? gap / f : null;
-  const hasPrice = !!cbgData.plants[0] && ('mpe' in cbgData.plants[0]);   // V206: false pada file data publik
+  const hasPrice = !!cbgData.plants[0] && ('mpe' in cbgData.plants[0]);   // V206: false bila diekstrak --tanpa-harga
   document.getElementById('cbgKscope').textContent = lab;
   const T = [
-    ['fuel', 'Fuel eksisting', f != null ? '$' + _cbgNum(f) : '–', 'USD/MMBtu + angkut', ''],
+    ['fuel', 'Fuel eksisting', f != null ? '$' + _cbgNum(f) : '–', 'USD/MMBtu, incl. angkut', ''],
     ['cbg', 'Harga CBG', '$' + _cbgNum(cbg), 'USD/MMBtu', ''],
     ['gap', 'Selisih harga', gap != null ? '$' + _cbgNum(gap) : '–', gp != null ? 'CBG ' + _cbgNum(gp * 100, 1) + '% lebih murah' : 'USD/MMBtu', gap > 0 ? 'good' : gap < 0 ? 'bad' : ''],
     ['vol', 'Volume 2030', v != null ? _cbgNum(v) : '–', 'BBTUD', ''],
     ['rev', 'Revenue 2030', r != null ? '$' + _cbgNum(r, 1) + ' jt' : '–', 'potensi, USD/thn', ''],
     ['save', 'Hemat 2030', h != null ? '$' + _cbgNum(h, 1) + ' jt' : '–', 'potensi, USD/thn', h > 0 ? 'good' : ''],
-    ['kwh', 'Rp/kWh', pc != null ? _cbgPct(pc) : '–', k0 != null ? (k1 != null ? _cbgNum(k0, 0) + ' → ' + _cbgNum(k1, 0) : 'Rp' + _cbgNum(k0, 0)) : 'perubahan biaya BB', pc < 0 ? 'good' : pc > 0 ? 'bad' : '']
+    ['kwh', 'Rp/kWh', pc != null ? _cbgPct(pc) : '–', k0 != null ? (k1 != null ? _cbgNum(k0, 0) + ' → ' + _cbgNum(k1, 0) : 'Rp' + _cbgNum(k0, 0)) : '', pc < 0 ? 'good' : pc > 0 ? 'bad' : '']
   ].filter(x => hasPrice || (x[0] !== 'fuel' && x[0] !== 'gap'));
   document.getElementById('cbgKpis').innerHTML = T.map(([i, l, val, sub, cls]) =>
-    '<div class="cbg-kc ' + cls + '" data-k="' + i + '"><div class="cbg-klab">' + l + '</div><div class="cbg-kval">' + val + '</div><div class="cbg-ksub" title="' + escapeHtml(sub) + '">' + sub + '</div></div>').join('');
+    '<div class="cbg-kc ' + cls + '" data-k="' + i + '"><div class="cbg-kic k-' + i + '"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + CBG_IC[i] + '</svg></div>' +
+    '<div class="cbg-kbody"><div class="cbg-klab">' + l + '</div><div class="cbg-kval">' + val + '</div>' + (sub ? '<div class="cbg-ksub">' + sub + '</div>' : '') + '</div></div>').join('');
 }
 
 let fasilitasMap = null;
