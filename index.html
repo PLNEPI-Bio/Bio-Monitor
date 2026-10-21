@@ -1221,6 +1221,8 @@ html,body{
 .tbt-btn:hover:not(:disabled){color:var(--text-bright)}
 .tbt-btn.active[data-basis="deklarasi"]{background:transparent;color:var(--accent);border-bottom-color:var(--accent)}
 .tbt-btn.active[data-basis="fgd"]{background:transparent;color:var(--purple-ink);border-bottom-color:var(--purple-ink)}
+/* V211: basis ketiga Waiver = teal */
+.tbt-btn.active[data-basis="waiver"]{background:transparent;color:var(--teal-ink);border-bottom-color:var(--teal-ink)}
 .tbt-btn:disabled{opacity:.35;cursor:not-allowed}
 /* V73: toggle basis yang sama, dipakai ulang di header panel detail PLTU */
 .detail-basis-toggle{margin-top:12px;margin-bottom:0}
@@ -1234,6 +1236,11 @@ html,body{
 .kpi-grid.fgd-active #kpi-card-target-berjalan{
   border-left-color:var(--purple-ink);
   background:linear-gradient(0deg,rgba(139,92,246,.10),rgba(139,92,246,.10)),var(--panel);
+}
+.kpi-grid.waiver-active #kpi-card-target,
+.kpi-grid.waiver-active #kpi-card-target-berjalan{
+  border-left-color:var(--teal-ink);
+  background:linear-gradient(0deg,rgba(15,118,110,.10),rgba(15,118,110,.10)),var(--panel);
 }
 
 .filter-group{display:flex;flex-direction:column;gap:4px}
@@ -7504,6 +7511,7 @@ body.gf-on .gf-bar{
       <div class="target-basis-toggle" id="targetBasisToggle" role="group" aria-label="Basis target">
         <button type="button" class="tbt-btn active" data-basis="deklarasi" onclick="setTargetBasis('deklarasi')">Deklarasi</button>
         <button type="button" class="tbt-btn" data-basis="fgd" onclick="setTargetBasis('fgd')">FGD</button>
+        <button type="button" class="tbt-btn" data-basis="waiver" onclick="setTargetBasis('waiver')">Waiver</button>
       </div>
       <div class="kpi-grid" id="kpi-grid">
         <div class="kpi neutral" id="kpi-card-target">
@@ -10153,7 +10161,7 @@ const state = {
   tab: 'map',
   filters: { genco: new Set(), boiler: new Set(), regional: new Set() },
   mapPeriod: { month: 'all', year: '2026' }, // Map Overview period filter
-  targetBasis: 'deklarasi', // National Overview: 'deklarasi' | 'fgd' (basis kartu Target/Gap)
+  targetBasis: 'deklarasi', // National Overview: 'deklarasi' | 'fgd' | 'waiver' (basis kartu Target/Gap)
   // V73: basis target panel detail PLTU. Sengaja TERPISAH dari targetBasis di atas supaya
   // pengguna bisa membandingkan satu PLTU dalam basis FGD tanpa mengubah panel nasional.
   detailBasis: 'deklarasi',
@@ -10901,24 +10909,99 @@ function plantTargetFgdMonthly(p){
   return (seed && Array.isArray(seed.m) && seed.m.some(v => v > 0)) ? seed.m : null;
 }
 
-// V73: target panel detail sesuai basis (Deklarasi/FGD, FGD hanya 2026).
+// V211: Target Waiver 2026 per PLTU (tabel yang diserahkan user 2026-10-21; Jan–Des, t =
+// kolom Total tabel tersebut — bisa beda ±2 dari Σm karena pembulatan). Belum ada di
+// workbook Prod, jadi tabel ini satu-satunya sumber. PLTU tanpa entri = belum ada data.
+// Baris Total sheet (nasional, dipakai bila tanpa filter — sama seperti FGD V118):
+const TARGET_WAIVER_2026_TOTAL = {t:2360613,m:[143645,156353,160259,171669,180546,173210,203865,220977,233321,243933,239660,233175]};
+const TARGET_WAIVER_2026 = {
+  'ANY':{t:41923,m:[2129,3698,4330,5128,5152,5649,2128,2083,2126,2000,3500,4000]},
+  'BLK':{t:6637,m:[159,46,101,98,86,10,152,154,181,575,4500,575]},
+  'HTK':{t:13511,m:[1140,1085,52,212,1512,1003,142,1197,1769,1500,1700,2200]},
+  'JRJ':{t:53566,m:[4238,3588,5045,5372,4929,5469,3288,4868,4770,5000,3500,3500]},
+  'RPA':{t:1923,m:[0,0,1,0,0,0,83,159,180,500,500,500]},
+  'SGE':{t:22254,m:[1876,2005,1724,2145,1873,1839,1811,1888,1693,1800,1800,1800]},
+  'SBW':{t:6582,m:[395,290,500,663,761,819,305,500,550,600,600,600]},
+  'TDR':{t:6886,m:[0,0,0,239,0,53,394,0,0,200,0,6000]},
+  'MLN':{t:3003,m:[0,92,71,0,0,0,9,137,695,600,800,600]},
+  'TJB':{t:400,m:[0,0,0,0,0,0,0,0,0,400,0,0]},
+  'BLT EXT':{t:0,m:[0,0,0,0,0,0,0,0,0,0,0,0]},
+  'ASM EXT':{t:0,m:[0,0,0,0,0,0,0,0,0,0,0,0]},
+  'BRU EXT':{t:0,m:[0,0,0,0,0,0,0,0,0,0,0,0]},
+  'UPKD EXT':{t:1562,m:[0,0,0,0,0,0,349,313,0,300,300,300]},
+  'ADP':{t:76287,m:[5136,5110,7067,5090,7046,6157,7181,8222,9278,10000,4000,2000]},
+  'ASM':{t:11942,m:[806,752,801,1151,915,922,1106,703,1187,1200,1200,1200]},
+  'BRU':{t:49689,m:[6592,3012,2319,3706,3400,3022,2590,2964,3481,6803,6600,5200]},
+  'BEU':{t:36982,m:[2653,1566,3375,4302,3657,2659,2883,3485,3402,3000,3000,3000]},
+  'BKY':{t:23161,m:[2370,1775,1765,1903,1025,907,1284,1448,2669,2215,2000,3800]},
+  'BLB':{t:87623,m:[1029,5027,6433,6767,3339,8325,11155,9506,9043,9000,9000,9000]},
+  'LBA':{t:19495,m:[341,744,1796,2154,1001,2517,2793,1703,1547,1900,1500,1500]},
+  'BLT':{t:77774,m:[504,3981,4996,7945,6049,616,357,2495,6931,14400,14500,15000]},
+  'OMB':{t:29950,m:[4392,3295,2156,0,754,1581,2624,2961,3187,3000,3000,3000]},
+  'PNS':{t:25969,m:[860,1057,942,1229,1721,2047,2259,2837,3068,2950,3500,3500]},
+  'JPR':{t:123704,m:[2062,1760,18039,1708,15298,1452,11483,19084,13314,8904,12600,18000]},
+  'SGU':{t:63489,m:[5654,5637,4757,5678,1312,4859,8583,6849,4910,4250,5000,6000]},
+  'STG':{t:72246,m:[5063,6565,4960,3271,2762,3798,5844,5448,8934,7600,9000,9000]},
+  'SLA 1-7':{t:265299,m:[7799,16221,7546,19335,13526,16664,21592,27971,33644,35500,35500,30000]},
+  'SLA 8':{t:93568,m:[1349,3645,7533,12418,13244,14150,11890,4249,3369,7720,7000,7000]},
+  'TBK':{t:3402,m:[0,418,0,0,303,229,225,348,379,500,500,500]},
+  'TIR':{t:85962,m:[5663,5547,5554,5564,5791,6921,7307,6848,7808,8960,10000,10000]},
+  'UPMN':{t:5446,m:[395,527,568,564,322,222,420,319,59,800,500,750]},
+  'UPMH':{t:10853,m:[257,229,3,405,556,541,475,444,443,1500,1500,4500]},
+  'UPGT':{t:11497,m:[562,305,500,639,294,405,1186,1087,443,1006,3670,1400]},
+  'UPBA':{t:32727,m:[2966,3516,1688,2709,2119,2197,3365,3503,3963,2100,2100,2500]},
+  'UPID':{t:96369,m:[10601,14183,1744,4043,9730,9371,12879,10698,7870,7250,5000,3000]},
+  'UPKS':{t:26112,m:[1335,1751,1743,1974,1975,2096,2399,3760,2578,2200,2150,2150]},
+  'UPNR':{t:70925,m:[3921,4810,4357,4081,4361,2156,2876,4981,12833,9250,8650,8650]},
+  'UPKD':{t:18846,m:[1491,2083,1580,1661,1503,1484,2276,1706,862,1400,1400,1400]},
+  'UPCT':{t:69644,m:[9118,4575,0,5481,7147,3578,4598,4050,4098,9000,10000,8000]},
+  'UPTN 1-2':{t:63977,m:[9829,3899,6027,0,1838,1557,8019,8400,8009,8400,4000,4000]},
+  'UPTN 9':{t:31911,m:[0,0,0,371,1515,606,3327,4979,6113,6000,6000,3000]},
+  'UPPS':{t:46996,m:[3179,3603,2332,2414,3261,3150,4015,5113,5329,4000,5300,5300]},
+  'UPPY':{t:67305,m:[3685,4751,3812,4667,5798,6101,5938,8865,7688,8000,4000,4000]},
+  'UPRB':{t:152476,m:[7346,13364,12119,16351,13250,13248,13250,11268,12278,15000,15000,10000]},
+  'UPSB':{t:72625,m:[5170,4107,3947,7171,5948,3284,6958,5796,7243,8000,8000,7000]},
+  'UPTA':{t:55546,m:[7601,4774,3772,3982,5318,10616,5000,6127,3007,1850,1750,1750]},
+  'UPTH':{t:114591,m:[6472,6403,11024,11913,13290,9437,9463,12066,11522,9000,6000,8000]},
+  'UPKT':{t:48575,m:[2877,2262,9024,2904,2422,6317,2654,2997,4617,2900,4600,5000]},
+  'UPTBH':{t:2347,m:[73,230,282,0,0,0,0,97,164,500,500,500]},
+  'UPTY':{t:57055,m:[4557,4062,3875,4261,4446,5177,4950,6301,6087,4400,4440,4500]},
+};
+
+// V211: entri Waiver satu PLTU ({t, m}) atau null bila PLTU belum ada di tabel.
+function plantTargetWaiverEntry(p){
+  return TARGET_WAIVER_2026[p.code] || null;
+}
+function plantTargetWaiver(p){
+  const e = plantTargetWaiverEntry(p);
+  return e ? (e.t || 0) : 0;
+}
+
+// V73: target panel detail sesuai basis (Deklarasi/FGD/Waiver; FGD & Waiver hanya 2026).
 // .monthly null bila FGD tanpa rincian bulanan; pemanggil wajib tampilkan "—".
+// V211: isAlt = basis selain Deklarasi aktif (gap & % dihitung ulang di browser).
 function plantTargetSet(p){
   const dek = {
     total: p.target_2026_total || 0,
     monthly: p.target_2026 || [],
-    isFgd: false,
+    isFgd: false, isWaiver: false, isAlt: false,
     label: 'Deklarasi',
   };
-  if (state.detailBasis !== 'fgd' || state.mapPeriod.year !== '2026') return dek;
+  if (state.mapPeriod.year !== '2026') return dek;
+  if (state.detailBasis === 'waiver'){
+    const w = plantTargetWaiverEntry(p);
+    if (!w || !w.t) return dek;
+    return { total: w.t, monthly: w.m, isFgd: false, isWaiver: true, isAlt: true, label: 'Waiver' };
+  }
+  if (state.detailBasis !== 'fgd') return dek;
   const total = plantTargetFgd(p);
   if (!total) return dek;
-  return { total: total, monthly: plantTargetFgdMonthly(p), isFgd: true, label: 'FGD' };
+  return { total: total, monthly: plantTargetFgdMonthly(p), isFgd: true, isWaiver: false, isAlt: true, label: 'FGD' };
 }
 
 // V73: ganti basis target panel detail, lalu render ulang panelnya.
 function setDetailBasis(basis){
-  state.detailBasis = (basis === 'fgd') ? 'fgd' : 'deklarasi';
+  state.detailBasis = (basis === 'fgd' || basis === 'waiver') ? basis : 'deklarasi';
   if (state.selected) selectPlant(state.selected);
 }
 
@@ -11355,7 +11438,7 @@ function periodLabelStr(){
 // Toggle basis target National Overview (Deklarasi ↔ FGD). FGD hanya berlaku 2026;
 // bila belum ada data FGD, updateKPIs otomatis jatuh balik ke tampilan Deklarasi.
 function setTargetBasis(basis){
-  state.targetBasis = (basis === 'fgd') ? 'fgd' : 'deklarasi';
+  state.targetBasis = (basis === 'fgd' || basis === 'waiver') ? basis : 'deklarasi';
   updateKPIs();
 }
 
@@ -11417,41 +11500,86 @@ function updateKPIs(){
     fgdMonthly = (_tbYear === '2026' && Array.isArray(DATA.target_fgd_2026_monthly)) ? DATA.target_fgd_2026_monthly : [];
   }
   const fgdReady = (_tbYear === '2026') && (fgdAnnual > 0);
-  const useFgd = (state.targetBasis === 'fgd') && fgdReady;
+  // V211: Target Waiver — pola sama dengan FGD: tanpa filter pakai baris Total sheet,
+  // dengan filter dijumlah ulang per-PLTU. _wvMissing = PLTU terfilter tanpa data.
+  let wvAnnual = 0, _wvMissing = 0;
+  let wvMonthly = new Array(12).fill(0);
+  if (_tbYear === '2026' && !_fgdFiltered){
+    wvAnnual = TARGET_WAIVER_2026_TOTAL.t;
+    wvMonthly = TARGET_WAIVER_2026_TOTAL.m;
+  } else if (_tbYear === '2026'){
+    for (const p of plants){
+      const w = plantTargetWaiverEntry(p);
+      if (!w){ _wvMissing++; continue; }
+      wvAnnual += (w.t || 0);
+      for (let i = 0; i < 12; i++) wvMonthly[i] += (w.m[i] || 0);
+    }
+  }
+  const waiverReady = (_tbYear === '2026') && (wvAnnual > 0);
+  const useWaiver = (state.targetBasis === 'waiver') && waiverReady;
+  const useFgd = !useWaiver && (state.targetBasis === 'fgd') && fgdReady;
+  // useAlt = basis non-Deklarasi aktif; semua angka alt* berasal dari basis itu.
+  const useAlt = useFgd || useWaiver;
+  const altLbl = useWaiver ? 'Waiver' : 'FGD';
+  const altAnnual = useWaiver ? wvAnnual : fgdAnnual;
+  const altMonthly = useWaiver ? wvMonthly : fgdMonthly;
   // Periode "elapsed" untuk Gap & %: bulan tertentu → satu bulan; 'all' → Jan s/d cutoff.
   const _periodMonths = (_tbMonth === 'all')
     ? Array.from({ length: Math.max(tbCutoff + 1, 0) }, (_, i) => i)
     : [parseInt(_tbMonth, 10)];
   let realElapsed = 0;
   for (const p of plants){ const ra = _tbRealArr(p); for (const mm of _periodMonths){ realElapsed += (ra[mm] || 0); } }
-  let fgdBerjalan = 0; for (let mm = 0; mm <= tbCutoff; mm++){ fgdBerjalan += (fgdMonthly[mm] || 0); }
-  let fgdElapsed = 0; for (const mm of _periodMonths){ fgdElapsed += (fgdMonthly[mm] || 0); }
-  const gapFgd = realElapsed - fgdElapsed;
-  // V72: Target FGD ikut filter bulan ('all' = setahun). Bukan fgdElapsed (itu
+  let altBerjalan = 0; for (let mm = 0; mm <= tbCutoff; mm++){ altBerjalan += (altMonthly[mm] || 0); }
+  let altElapsed = 0; for (const mm of _periodMonths){ altElapsed += (altMonthly[mm] || 0); }
+  const gapAlt = realElapsed - altElapsed;
+  // V72: Target FGD ikut filter bulan ('all' = setahun). Bukan altElapsed (itu
   // untuk Gap). Bila bulan belum ada, pakai angka tahunan.
-  const fgdPeriod = (_tbMonth === 'all')
-    ? fgdAnnual
-    : (fgdMonthly.length ? (fgdMonthly[parseInt(_tbMonth, 10)] || 0) : fgdAnnual);
+  const altPeriod = (_tbMonth === 'all')
+    ? altAnnual
+    : (altMonthly.length ? (altMonthly[parseInt(_tbMonth, 10)] || 0) : altAnnual);
 
   // Sinkronkan tombol toggle + warna kartu sesuai basis aktif.
   const _tbtToggle = document.getElementById('targetBasisToggle');
   if (_tbtToggle){
+    const _activeBasis = useWaiver ? 'waiver' : (useFgd ? 'fgd' : 'deklarasi');
     _tbtToggle.querySelectorAll('.tbt-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.basis === (useFgd ? 'fgd' : 'deklarasi'));
+      b.classList.toggle('active', b.dataset.basis === _activeBasis);
       if (b.dataset.basis === 'fgd') b.disabled = !fgdReady;
+      if (b.dataset.basis === 'waiver') b.disabled = !waiverReady;
     });
   }
   const _kpiGrid = document.getElementById('kpi-grid');
-  if (_kpiGrid) _kpiGrid.classList.toggle('fgd-active', useFgd);
+  if (_kpiGrid){
+    _kpiGrid.classList.toggle('fgd-active', useFgd);
+    _kpiGrid.classList.toggle('waiver-active', useWaiver);
+  }
 
   // TARGET
-  const targetVal = useFgd ? fgdPeriod : target;
+  const targetVal = useAlt ? altPeriod : target;
   document.getElementById('kpi-target').innerHTML = fmt(targetVal) + UNIT;
   // V105: rumus di balik tiap kartu. Label periode dipakai ulang dari periodLabelStr()
   // supaya isi tooltip selalu sepadan dengan filter yang sedang aktif.
   const _cPeriode = periodLabelStr();
   const _cBulanTxt = (_tbMonth === 'all') ? 'seluruh 12 bulan' : ('bulan ' + MONTHS[parseInt(_tbMonth, 10)]);
-  setCalc(document.getElementById('kpi-target'), useFgd ? {
+  setCalc(document.getElementById('kpi-target'), useWaiver ? {
+    title: 'Target Waiver',
+    formula: _fgdFiltered
+      ? ('Σ target Waiver per PLTU yang lolos filter, untuk ' + _cBulanTxt + ' ' + _tbYear)
+      : ('Target Waiver nasional untuk ' + _cBulanTxt + ' ' + _tbYear),
+    steps: [
+      _fgdFiltered
+        ? ['PLTU lolos filter', fmtInt(plants.length) + ' dari ' + fmtInt((DATA.plants || []).length)]
+        : ['Cakupan', 'nasional (seluruh PLTU)'],
+      ['Target Waiver setahun', fmtInt(wvAnnual) + ' ton'],
+      ['Periode terpilih', _cPeriode],
+      (_tbMonth === 'all') ? ['Bulan «all» → dipakai angka setahun penuh'] : ['Diambil dari rincian Waiver bulanan']
+    ],
+    result: ['Target Waiver', fmtInt(targetVal) + ' ton'],
+    note: _fgdFiltered
+      ? 'Angka terfilter dijumlah ulang dari rincian Waiver per PLTU. Tanpa filter, kartu ini memakai baris Total tabel Waiver, jadi selisih beberapa ton karena pembulatan per baris adalah hal yang wajar.'
+      : 'Baris Total tabel Target Waiver. Aktifkan chip Genco / Boiler / Regional di panel kiri untuk menyempitkan angka ini.'
+      + (_wvMissing > 0 ? (' PERHATIAN: ' + _wvMissing + ' PLTU terfilter belum punya data Waiver dan TIDAK ikut dijumlah; angka ini lebih rendah dari yang seharusnya.') : '')
+  } : useFgd ? {
     title: 'Target FGD',
     formula: _fgdFiltered
       ? ('Σ target FGD per PLTU yang lolos filter, untuk ' + _cBulanTxt + ' ' + _tbYear)
@@ -11481,12 +11609,14 @@ function updateKPIs(){
   });
   const tLabelEl = document.getElementById('kpi-target-label');
   const tMetaEl = document.getElementById('kpi-target-meta');
-  if (tLabelEl) tLabelEl.textContent = useFgd ? 'Target FGD' : 'Target Deklarasi';
+  if (tLabelEl) tLabelEl.textContent = useAlt ? ('Target ' + altLbl) : 'Target Deklarasi';
   // V118: kata "NASIONAL" hanya boleh muncul kalau angkanya memang nasional. Begitu
   // ada chip filter aktif, labelnya berganti jadi "TERFILTER" — label yang berbohong
   // lebih berbahaya daripada label yang panjang.
-  if (tMetaEl) tMetaEl.textContent = useFgd
-    ? ('Target FGD ' + (_fgdFiltered ? 'terfilter ' : 'nasional ') + (_tbMonth === 'all' ? _tbYear : ((MONTHS[parseInt(_tbMonth, 10)] || '') + ' ' + _tbYear).trim()))
+  if (tMetaEl) tMetaEl.textContent = useAlt
+    ? ('Target ' + altLbl + ' ' + ((useWaiver ? globalFilterActive() : _fgdFiltered) ? 'terfilter ' : 'nasional ') + (_tbMonth === 'all' ? _tbYear : ((MONTHS[parseInt(_tbMonth, 10)] || '') + ' ' + _tbYear).trim())
+       // V211: data Waiver belum lengkap → sebut cakupannya agar % tidak dibaca nasional penuh.
+       + ((useWaiver && _wvMissing > 0) ? (' · ' + (plants.length - _wvMissing) + '/' + plants.length + ' PLTU') : ''))
     : 'Target deklarasi periode ini';
 
   // TARGET BERJALAN
@@ -11494,15 +11624,15 @@ function updateKPIs(){
   const tbEl = document.getElementById('kpi-target-berjalan');
   const tbLabelEl = document.getElementById('kpi-target-berjalan-label');
   const tbMetaEl = document.getElementById('kpi-target-berjalan-meta');
-  if (tbLabelEl) tbLabelEl.textContent = useFgd ? 'Target Berjalan (FGD)' : 'Target Berjalan (Deklarasi)';
-  const tbVal = useFgd ? fgdBerjalan : targetBerjalan;
+  if (tbLabelEl) tbLabelEl.textContent = 'Target Berjalan (' + (useAlt ? altLbl : 'Deklarasi') + ')';
+  const tbVal = useAlt ? altBerjalan : targetBerjalan;
   if (tbEl){
     if (tbCutoff >= 0){
       tbEl.innerHTML = fmt(tbVal) + UNIT;
       if (tbMetaEl) tbMetaEl.textContent = 'Akumulasi target Jan–' + MONTHS[tbCutoff] + ' ' + _tbYear;
       if (tbCard) tbCard.style.display = '';
       setCalc(tbEl, {
-        title: 'Target Berjalan (' + (useFgd ? 'FGD' : 'Deklarasi') + ')',
+        title: 'Target Berjalan (' + (useAlt ? altLbl : 'Deklarasi') + ')',
         formula: 'Σ target bulan Jan s/d ' + MONTHS[tbCutoff] + ' ' + _tbYear,
         steps: [
           ['Batas bulan (cutoff)', MONTHS[tbCutoff] + ' ' + _tbYear],
@@ -11510,7 +11640,9 @@ function updateKPIs(){
             ? ['Cutoff = bulan terakhir yang sudah punya realisasi']
             : ['Cutoff = bulan yang dipilih di filter'],
           ['Jumlah bulan diakumulasi', (tbCutoff + 1) + ' bulan'],
-          useFgd
+          useWaiver
+            ? ['Sumber', 'rincian Waiver bulanan ' + fmtInt(plants.length - _wvMissing) + ' PLTU']
+          : useFgd
             ? ['Sumber', _fgdFiltered
                 ? ('rincian FGD bulanan ' + fmtInt(plants.length) + ' PLTU terfilter')
                 : 'rincian FGD bulanan (nasional)']
@@ -11520,6 +11652,9 @@ function updateKPIs(){
         note: 'Kartu ini ada supaya realisasi dibandingkan dengan target pada rentang bulan yang sama, bukan dengan target 12 bulan penuh.'
           + ((useFgd && _fgdNoMonthly > 0)
              ? (' PERHATIAN: ' + _fgdNoMonthly + ' PLTU terfilter punya total FGD tetapi tanpa rincian bulanan, jadi kontribusinya BELUM masuk angka ini; nilainya lebih rendah dari yang seharusnya.')
+             : '')
+          + ((useWaiver && _wvMissing > 0)
+             ? (' PERHATIAN: ' + _wvMissing + ' PLTU terfilter belum punya data Waiver, jadi BELUM masuk angka ini.')
              : '')
       });
     } else {
@@ -11535,9 +11670,9 @@ function updateKPIs(){
   // V72: pembagi ikut basis DAN periode. Di mode Deklarasi pembaginya (`target`) memang
   // sudah mengikuti filter, jadi FGD memakai fgdPeriod supaya persentase selalu dihitung
   // terhadap angka yang benar-benar tampil di kartu Target di sebelahnya.
-  const _pctBase = useFgd ? fgdPeriod : target;
+  const _pctBase = useAlt ? altPeriod : target;
   const _pctEl = document.getElementById('kpi-real-pct');
-  _pctEl.textContent = _pctBase ? `${(real/_pctBase*100).toFixed(1)}% dari target ${useFgd ? 'FGD' : 'deklarasi'}` : '—';
+  _pctEl.textContent = _pctBase ? `${(real/_pctBase*100).toFixed(1)}% dari target ${useAlt ? altLbl : 'deklarasi'}` : '—';
   setCalc(document.getElementById('kpi-real'), {
     title: 'Realisasi',
     formula: 'Σ realisasi bulanan dari seluruh PLTU yang lolos filter, untuk ' + _cBulanTxt,
@@ -11547,15 +11682,15 @@ function updateKPIs(){
       ['Σ realisasi per PLTU', fmtInt(real) + ' ton']
     ],
     result: ['Realisasi', fmtInt(real) + ' ton'],
-    note: 'Tonase realisasi sama di basis Deklarasi maupun FGD, yang berbeda hanya pembandingnya.'
+    note: 'Tonase realisasi sama di basis Deklarasi, FGD, maupun Waiver; yang berbeda hanya pembandingnya.'
   });
   if (_pctBase){
     setCalc(_pctEl, {
       title: 'Realisasi vs Target',
-      formula: 'Realisasi ÷ Target ' + (useFgd ? 'FGD' : 'Deklarasi') + ' × 100',
+      formula: 'Realisasi ÷ Target ' + (useAlt ? altLbl : 'Deklarasi') + ' × 100',
       steps: [
         ['Realisasi', fmtInt(real) + ' ton'],
-        ['÷ Target ' + (useFgd ? 'FGD' : 'Deklarasi'), fmtInt(_pctBase) + ' ton'],
+        ['÷ Target ' + (useAlt ? altLbl : 'Deklarasi'), fmtInt(_pctBase) + ' ton'],
         ['× 100']
       ],
       result: ['Persentase', (real / _pctBase * 100).toFixed(1) + '%'],
@@ -11578,28 +11713,28 @@ function updateKPIs(){
   });
 
   // GAP = Realisasi − Target (basis aktif)
-  const gapVal = useFgd ? gapFgd : gap;
+  const gapVal = useAlt ? gapAlt : gap;
   document.getElementById('kpi-gap').innerHTML = fmt(gapVal) + UNIT;
   // Pembilang & pembagi diturunkan dari gapVal itu sendiri (pembanding = pembilang −
   // gap) supaya pengurangan yang ditampilkan di tooltip DIJAMIN menghasilkan angka
   // yang tertera di kartu, apa pun basis/tahun/bulan yang aktif.
-  const _gapReal = useFgd ? realElapsed : real;
+  const _gapReal = useAlt ? realElapsed : real;
   const _gapRentang = (_tbMonth === 'all')
     ? ('Jan–' + (tbCutoff >= 0 ? MONTHS[tbCutoff] : '—') + ' ' + _tbYear)
     : (MONTHS[parseInt(_tbMonth, 10)] + ' ' + _tbYear);
   setCalc(document.getElementById('kpi-gap'), {
     title: 'Gap',
-    formula: 'Realisasi − Target ' + (useFgd ? 'FGD' : 'Deklarasi') + ', keduanya pada rentang ' + _gapRentang,
+    formula: 'Realisasi − Target ' + (useAlt ? altLbl : 'Deklarasi') + ', keduanya pada rentang ' + _gapRentang,
     steps: [
       ['Realisasi ' + _gapRentang, fmtInt(_gapReal) + ' ton'],
-      ['− Target ' + (useFgd ? 'FGD' : 'Deklarasi') + ' rentang sama', fmtInt(_gapReal - gapVal) + ' ton'],
+      ['− Target ' + (useAlt ? altLbl : 'Deklarasi') + ' rentang sama', fmtInt(_gapReal - gapVal) + ' ton'],
       (gapVal < 0) ? ['Hasil negatif → realisasi di bawah target'] : ['Hasil positif → realisasi melampaui target']
     ],
     result: ['Gap', (gapVal > 0 ? '+' : '') + fmtInt(gapVal) + ' ton'],
     note: 'Target pembanding hanya sampai bulan yang sudah punya realisasi, bukan target 12 bulan penuh. Kalau tidak, gap akan selalu tampak besar di awal tahun.'
   });
   const gapMetaEl = document.getElementById('kpi-gap-meta');
-  if (gapMetaEl) gapMetaEl.textContent = 'Realisasi vs target ' + (useFgd ? 'FGD' : 'deklarasi');
+  if (gapMetaEl) gapMetaEl.textContent = 'Realisasi vs target ' + (useAlt ? altLbl : 'deklarasi');
   // V54/V55: Animate KPI counters ONLY on first render (avoid flicker on every filter change)
   if (!window._kpiAnimatedOnce && typeof animateValue === 'function'){
     window._kpiAnimatedOnce = true;
@@ -11905,15 +12040,16 @@ function selectPlant(code, fromMarkerClick){
       </div>
       ${state.mapPeriod.year === '2026' ? `
       <div class="target-basis-toggle detail-basis-toggle" role="group" aria-label="Basis target PLTU">
-        <button type="button" class="tbt-btn${ts.isFgd ? '' : ' active'}" data-basis="deklarasi" onclick="setDetailBasis('deklarasi')">Deklarasi</button>
+        <button type="button" class="tbt-btn${ts.isAlt ? '' : ' active'}" data-basis="deklarasi" onclick="setDetailBasis('deklarasi')">Deklarasi</button>
         <button type="button" class="tbt-btn${ts.isFgd ? ' active' : ''}" data-basis="fgd" onclick="setDetailBasis('fgd')"${plantTargetFgd(p) ? '' : ' disabled title="Target FGD untuk PLTU ini belum tersedia"'}>FGD</button>
+        <button type="button" class="tbt-btn${ts.isWaiver ? ' active' : ''}" data-basis="waiver" onclick="setDetailBasis('waiver')"${plantTargetWaiver(p) ? '' : ' disabled title="Target Waiver untuk PLTU ini belum tersedia"'}>Waiver</button>
       </div>` : ''}
     </div>
     <div class="detail-body">
       ${state.mapPeriod.year === '2026' ? (() => {
         // V21: warna dari real_pct langsung (status lama bisa basi). V73: di basis FGD
-        // persentase dihitung ulang; basis Deklarasi tetap nilai Excel.
-        const pct = ts.isFgd ? (tTotal ? (p.real_2026_total || 0) / tTotal : 0) : (p.real_pct || 0);
+        // (V211: dan Waiver) persentase dihitung ulang; basis Deklarasi tetap nilai Excel.
+        const pct = ts.isAlt ? (tTotal ? (p.real_2026_total || 0) / tTotal : 0) : (p.real_pct || 0);
         let achColor = '#475569'; // default: no_data slate
         if (tTotal){
           if (pct >= 0.95) achColor = '#10b981';      // on_track green
@@ -12001,7 +12137,7 @@ function selectPlant(code, fromMarkerClick){
       </div>
 
       <div class="detail-section">
-        <h4>Monthly Breakdown · ${state.mapPeriod.year}${ts.isFgd ? ' · FGD' : ''}</h4>
+        <h4>Monthly Breakdown · ${state.mapPeriod.year}${ts.isAlt ? ' · ' + ts.label : ''}</h4>
         ${ts.isFgd && !ts.monthly ? `<div class="detail-basis-note">Rincian bulanan Target FGD belum tersedia untuk PLTU ini (hanya total tahunan). Batang Target disembunyikan; unggah ulang Excel Prod atau jalankan prod-auto-refresh untuk mengisinya.</div>` : ''}
         <div class="mini-chart-wrap"><canvas id="plantChart"></canvas></div>
       </div>
@@ -12023,7 +12159,7 @@ function selectPlant(code, fromMarkerClick){
                 const t = ts.monthly ? (ts.monthly[i] || 0) : null;
                 const d = p.do_2026[i] || 0;
                 const r = p.real_2026[i] || 0;
-                const g = ts.isFgd ? (t === null ? null : r - t) : (p.gap_2026[i] || 0);
+                const g = ts.isAlt ? (t === null ? null : r - t) : (p.gap_2026[i] || 0);
                 if (t) sT += t;
                 sD += d; sR += r;
                 if (g) sG += g;
@@ -12034,14 +12170,14 @@ function selectPlant(code, fromMarkerClick){
                   <td class="num ${r?'':'dim'}">${r ? fmtInt(r) : '—'}</td>
                   <td class="num ${g > 0 ? 'pos' : g < 0 ? 'neg' : 'dim'}"${g ? calcAttr({
                     title: 'Gap ' + m + ' ' + selYear,
-                    formula: 'Realisasi − Target ' + (ts.isFgd ? 'FGD' : 'Deklarasi') + ' bulan ' + m,
+                    formula: 'Realisasi − Target ' + ts.label + ' bulan ' + m,
                     steps: [
                       ['Realisasi ' + m, fmtInt(r) + ' ton'],
                       ['− Target ' + m, (t === null ? '—' : fmtInt(t) + ' ton')]
                     ],
                     result: ['Gap', (g > 0 ? '+' : '') + fmtInt(g) + ' ton'],
-                    note: ts.isFgd
-                      ? 'Basis FGD: gap dihitung ulang dari rincian FGD bulanan.'
+                    note: ts.isAlt
+                      ? ('Basis ' + ts.label + ': gap dihitung ulang dari rincian ' + ts.label + ' bulanan.')
                       : 'Basis Deklarasi: gap diambil dari kolom gap hasil unggahan Excel, bukan dihitung ulang di browser.'
                   }) : ''}>${g ? (g > 0 ? '+' : '') + fmtInt(g) : '—'}</td>
                 </tr>`;
@@ -12078,7 +12214,7 @@ function selectPlant(code, fromMarkerClick){
                   note: 'Menjumlahkan gap per bulan, bukan Total Realisasi − Total Target. Bila ada bulan yang targetnya kosong, kedua cara itu bisa berbeda.'
                 }) : ''}>${sG ? (sG > 0 ? '+' : '') + fmtInt(sG) : '—'}</td>
               </tr></tfoot>`;
-              return `<thead><tr><th>Month</th><th class="num">Target ${ts.isFgd ? 'FGD' : ''}</th><th class="num">DO</th><th class="num">Real</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody>${foot}`;
+              return `<thead><tr><th>Month</th><th class="num">Target ${ts.isAlt ? ts.label : ''}</th><th class="num">DO</th><th class="num">Real</th><th class="num">Gap</th></tr></thead><tbody>${rows}</tbody>${foot}`;
             }
             // 2025: Target/DO/Real/Gap (V26: now includes DO from Excel cols 20-31)
             if (selYear === '2025'){
@@ -12283,7 +12419,7 @@ function selectPlant(code, fromMarkerClick){
       // dengan label FGD).
       datasets = [];
       if (ts.monthly){
-        datasets.push({ label: ts.isFgd ? 'Target FGD' : 'Target', data: ts.monthly, backgroundColor: ts.isFgd ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)', borderColor: ts.isFgd ? '#8b5cf6' : '#3b82f6', borderWidth:1, borderRadius:2, categoryPercentage:.85, barPercentage:.9 });
+        datasets.push({ label: ts.isAlt ? 'Target ' + ts.label : 'Target', data: ts.monthly, backgroundColor: ts.isWaiver ? 'rgba(15,118,110,.25)' : ts.isFgd ? 'rgba(139,92,246,.25)' : 'rgba(59,130,246,.25)', borderColor: ts.isWaiver ? '#0f766e' : ts.isFgd ? '#8b5cf6' : '#3b82f6', borderWidth:1, borderRadius:2, categoryPercentage:.85, barPercentage:.9 });
       }
       datasets.push(
         { label:'DO', data: p.do_2026, backgroundColor:'rgba(245,158,11,.35)', borderColor:'#f59e0b', borderWidth:1, borderRadius:2, categoryPercentage:.85, barPercentage:.9 },
