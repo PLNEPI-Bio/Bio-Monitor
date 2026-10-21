@@ -3524,6 +3524,7 @@ html,body{
 .cbg-view{
   --cbg-p1:#10b981; --cbg-p1-ink:var(--status-ok-ink); --cbg-p0:#98A0A9;
   --cbg-mill:#65a30d; --cbg-mill2:#a16207;   /* V209: 100–200 km = coklat */ --cbg-bad-ink:var(--status-crit-ink);
+  --cbg-cad:#f97316; --cbg-millx:#94a3b8;   /* V212: PKS cadangan (oranye) & di luar jangkauan (abu) */
   --cbg-side-w:300px; --cbg-sheet-w:384px;
   display:grid;grid-template-rows:auto 1fr;height:100%;min-height:0;background:var(--bg);
 }
@@ -3676,6 +3677,20 @@ html,body{
 .cbg-tt-v{margin-top:4px;color:var(--text-dim)}
 .cbg-tt-v b{color:var(--text);font-variant-numeric:tabular-nums}
 .cbg-tt-h{margin-top:6px;padding-top:5px;border-top:1px solid var(--border);font-size:10.5px;font-weight:600;color:var(--accent)}
+/* V212: popup detail PKS (master PKS) + baris legenda yang bisa dimatikan */
+.cbg-pop{padding:10px 26px 10px 12px;font-size:11.5px;line-height:1.5;color:var(--text);min-width:220px}
+.cbg-pop .k{font-size:10.5px;font-weight:700;letter-spacing:.01em}
+.cbg-pop .n{font-size:13px;font-weight:700;color:var(--text-bright);line-height:1.25;margin:2px 0}
+.cbg-pop .id{font-size:10.5px;color:var(--text-dim);font-weight:500}
+.cbg-pop dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:6px 0 0}
+.cbg-pop dt{color:var(--text-dim)}.cbg-pop dd{margin:0;font-variant-numeric:tabular-nums}
+.cbg-pop a{color:var(--accent);font-weight:600}
+.cbg-pop .est{color:var(--cbg-cad);font-weight:700}
+.cbg-pop .src{margin-top:6px;padding-top:5px;border-top:1px solid var(--border);font-size:10.5px;color:var(--text-dim)}
+.cbg-ltg{display:flex;align-items:flex-start;gap:6px;color:var(--text);line-height:1.3;cursor:pointer}
+.cbg-ltg input{margin:1px 0 0;accent-color:var(--accent);flex:none}
+.cbg-ltg small{display:block;color:var(--text-dim);font-size:10px}
+.cbg-ispo{display:inline-block;font-size:9.5px;font-weight:700;padding:0 4px;margin-left:4px;border:1px solid var(--border);border-radius:3px;color:var(--cbg-p1-ink);vertical-align:1px}
 #cbg-map .leaflet-control-zoom{margin:0 0 0 10px!important;border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-sm);overflow:hidden}
 #cbg-map .leaflet-control-zoom a{width:30px;height:30px;line-height:28px;font-size:17px;font-weight:500;border:0!important;
   border-bottom:1px solid var(--border)!important;transition:background var(--dur-fast),color var(--dur-fast)}
@@ -7756,7 +7771,7 @@ body.gf-on .gf-bar{
         <div class="cbg-list" id="cbgList"></div>
         <details class="cbg-src">
           <summary>Sumber &amp; asumsi</summary>
-          <p>Sumber: KK Produksi RKAP 2027 Usulan Awal V.3.3; Data Pembangkit Juni 2026; List_PO_Mills_IDN (seluruh PKS diasumsikan ISPO); Draft RUPTL 2024–2033 Demand Gas (2025–2034); GIZ Biomethane Investment Guideline (2025); FS Lombok Biomethane 5 MMSCFD.</p>
+          <p>Sumber: KK Produksi RKAP 2027 Usulan Awal V.3.3; Data Pembangkit Juni 2026; Master PKS: Trase List_PO_Mills_IDN + Universal Mill List (shapefile, 2022) + Data Sertifikasi ISPO Agustus 2024 (kapasitas estimasi tidak dipakai dalam perhitungan); Draft RUPTL 2024–2033 Demand Gas (2025–2034); GIZ Biomethane Investment Guideline (2025); FS Lombok Biomethane 5 MMSCFD.</p>
           <p>Potensi = kapasitas × 336/60 MMBTU/hari (PKS ≥45 TPH). Jarak jalan = 1,4 × garis lurus (estimasi kasar). Volume dan penghematan basis 2030 (kebutuhan RUPTL/KK), harga energi KK RKAP 2027; BBM termasuk ongkos angkut per pembangkit (KK Produksi, kolom Harga Satuan Ongkos Angkut), gas = harga di titik serah. Rp/kWh = (biaya bahan bakar + ongkos angkut) ÷ produksi netto 2027, dikurangi efek substitusi CBG pada porsi 2030. Pembangkit BBM diasumsikan dual-fuel.</p>
         </details>
       </aside>
@@ -7779,8 +7794,10 @@ body.gf-on .gf-bar{
             <div class="cbg-li cbg-lsize"><span class="cbg-sizes" aria-hidden="true"><i></i><i></i><i></i></span>Ukuran titik ∝ kebutuhan gas 2030</div>
           </div>
           <div class="cbg-lsec">
-            <div class="cbg-lh">PKS ≥45 TPH · jarak jalan</div>
-            <div class="cbg-lrow"><span class="cbg-li"><span class="cbg-sw ml" style="--c:var(--cbg-mill)"></span>≤100 km</span><span class="cbg-li"><span class="cbg-sw ml" style="--c:var(--cbg-mill2)"></span>100–200 km</span></div>
+            <div class="cbg-lh">PKS · klik titik untuk detail</div>
+            <label class="cbg-ltg"><input type="checkbox" id="cbgTgA" checked onchange="_cbgDraw()"><span><span class="cbg-lrow"><span class="cbg-li"><span class="cbg-sw ml" style="--c:var(--cbg-mill)"></span>≤100 km</span><span class="cbg-li"><span class="cbg-sw ml" style="--c:var(--cbg-mill2)"></span>100–200 km</span></span><small>Prioritas: ≥45 TPH, pemasok model</small></span></label>
+            <label class="cbg-ltg"><input type="checkbox" id="cbgTgB" checked onchange="_cbgDraw()"><span class="cbg-sw ml" style="--c:var(--cbg-cad);margin-top:3px"></span><span>Cadangan<small>≤200 km, belum ≥45 TPH terkonfirmasi</small></span></label>
+            <label class="cbg-ltg"><input type="checkbox" id="cbgTgE" onchange="_cbgDraw()"><span class="cbg-sw ml" style="--c:var(--cbg-millx);margin-top:3px"></span><span>Di luar jangkauan<small>&gt;200 km, beda pulau, atau tutup</small></span></label>
           </div>
           <div class="cbg-lsec">
             <div class="cbg-lh">Radius dari pembangkit terpilih</div>
@@ -25497,6 +25514,7 @@ function _cbgLoad(){
       raw.plants.forEach((p, i) => { p.i = i; });
       _cbgCL = Object.fromEntries(raw.clusters.map(c => [c.id, c]));
       raw.PI = Object.fromEntries(raw.plants.map(p => [p.n, p]));
+      raw.PK = Object.fromEntries((raw.pks || []).map(x => [x[2], x]));   // V212: master PKS per id
       cbgData = raw; window.CBG_POME = null; resolve(raw);
     };
     if (window.CBG_POME){ done(); return; }
@@ -25540,7 +25558,7 @@ function _cbgInitMap(){
   cbgMap.createPane('cbgPlants').style.zIndex = 520;
   _cbgDefineHit();
   _cbgL = {
-    line: L.layerGroup().addTo(cbgMap), ring: L.layerGroup().addTo(cbgMap),
+    line: L.layerGroup().addTo(cbgMap), ring: L.layerGroup().addTo(cbgMap), all: L.layerGroup().addTo(cbgMap),
     mill: L.layerGroup().addTo(cbgMap), plant: L.layerGroup().addTo(cbgMap),
     // V210: tolerance memperluas area hover/klik titik PKS (radius 2,2 px) tanpa memperbesar gambarnya; lebih lebar di layar sentuh.
     canv: new _CbgCanvas({ padding:.3, tolerance:window.matchMedia('(pointer:coarse)').matches ? 10 : 5 }), svg: L.svg({ pane:'cbgPlants' }),
@@ -25645,13 +25663,15 @@ function _cbgDrawList(){
 function _cbgDraw(){
   if (!cbgMap || !cbgData) return;
   const L_ = _cbgL, s = cbgState, D = cbgData;
-  L_.line.clearLayers(); L_.ring.clearLayers(); L_.mill.clearLayers(); L_.plant.clearLayers();
+  L_.line.clearLayers(); L_.ring.clearLayers(); L_.mill.clearLayers(); L_.plant.clearLayers(); L_.all.clearLayers();
   document.getElementById('cbgReset').hidden = !(s.plant || s.cl);
   let plants, mills = [], focus = null;
   if (s.plant){ focus = s.plant; plants = [s.plant]; mills = _cbgIsP(s.plant) ? D.mills.filter(m => m[6] === s.plant.cl) : []; }
   else if (s.cl){ plants = D.plants.filter(p => p.cl === s.cl); mills = D.mills.filter(m => m[6] === s.cl); }
   else { plants = s.tab === 'P' ? D.plants.filter(_cbgVisP) : D.plants.filter(p => _cbgIsP(p) && _cbgVisC(_cbgCL[p.cl])); mills = D.mills; }
   const sel = s.plant || s.cl;
+  _cbgDrawOther();
+  if (!_cbgTg('cbgTgA')) mills = [];
   const cAcc = _cbgCss('--accent') || '#0F496E', cM1 = _cbgCss('--cbg-mill'), cM2 = _cbgCss('--cbg-mill2');
   const cP1 = _cbgCss('--cbg-p1'), cP0 = _cbgCss('--cbg-p0');
   if (sel){
@@ -25664,7 +25684,8 @@ function _cbgDraw(){
   mills.forEach(m => new _CbgDot([m[0], m[1]], { renderer:L_.canv, radius:sel ? 4 : 2.2, stroke:false, fillColor:m[9] === 1 ? cM1 : cM2, fillOpacity:sel ? .9 : .55 })
     .bindTooltip('<div class="cbg-tt-k"><span class="d" style="background:' + (m[9] === 1 ? cM1 : cM2) + '"></span>PKS · ' + m[4] + ' TPH</div>' +
       '<div class="cbg-tt-n">' + escapeHtml(m[2]) + '</div>' + (m[3] ? '<div class="cbg-tt-m">Pemilik: <b>' + escapeHtml(m[3]) + '</b></div>' : '') +
-      '<div class="cbg-tt-v"><b>' + _cbgNum(m[8], 0) + ' km</b> jalan ke ' + escapeHtml(m[7]) + '</div>', CBG_TT)
+      '<div class="cbg-tt-v"><b>' + _cbgNum(m[8], 0) + ' km</b> jalan ke ' + escapeHtml(m[7]) + '</div><div class="cbg-tt-h">Klik untuk detail</div>', CBG_TT)
+    .bindPopup(() => { const x = D.PK[m[10]]; return x ? _cbgPksPop(x, _cbgNum(m[8], 0) + ' km jalan ke ' + m[7]) : ''; }, CBG_POP)
     // V210: titik yang sedang ditunjuk membesar + bergaris putih supaya jelas PKS mana yang terkena.
     .on('mouseover', e => e.target.setStyle({ radius:sel ? 6 : 5, stroke:true, color:'#fff', weight:1.5, fillOpacity:1 }))
     .on('mouseout', e => e.target.setStyle({ radius:sel ? 4 : 2.2, stroke:false, fillOpacity:sel ? .9 : .55 })).addTo(L_.mill));
@@ -25675,6 +25696,45 @@ function _cbgDraw(){
         '<div class="cbg-tt-n">' + escapeHtml(p.n) + '</div><div class="cbg-tt-v"><b>' + _cbgNum(p.d30) + ' BBTUD</b> kebutuhan 2030</div>' +
         '<div class="cbg-tt-h">Klik untuk profil</div>', CBG_TT)
       .on('click', () => (s.tab === 'K' && pr) ? _cbgSelCl(p.cl) : _cbgSelPlant(p)).addTo(L_.plant); });
+}
+
+// V212: PKS master di luar pemasok model — cadangan (B/C, ≤200 km) & di luar jangkauan (E/F).
+// Klaster terpilih menyorot PKS cadangannya. Layer kanvas sama dengan PKS pemasok (hover/klik terdekat).
+const CBG_POP = { maxWidth:300, autoPanPaddingTopLeft:[70, 60], autoPanPaddingBottomRight:[20, 20] };
+const CBG_KAT = { A:'Prioritas · pemasok model', B:'Cadangan · ≤200 km', C:'Cadangan · ≤200 km', E:'Di luar jangkauan (>200 km / beda pulau)', F:'Tidak beroperasi lagi' };
+function _cbgTg(id){ const el = document.getElementById(id); return !el || el.checked; }
+function _cbgKatVar(k){ return k === 'A' ? '--cbg-mill' : (k === 'B' || k === 'C') ? '--cbg-cad' : '--cbg-millx'; }
+function _cbgPksPop(x, jarak){
+  const cap = x[5] == null ? '–' : _cbgNum(x[5], 0) + ' TPH' + (x[6] === 'E' ? ' <span class="est">(estimasi, perlu konfirmasi)</span>' : x[6] === 'I' ? ' (ISPO)' : '');
+  const ispo = x[8] === 1 ? 'Berlaku s.d. ' + escapeHtml(x[10]) : x[8] === 2 ? 'Tercatat' + (x[10] ? ' (berakhir ' + escapeHtml(x[10]) + ')' : '') + ', cek resertifikasi' : 'Tidak tercatat (data Agt 2024)';
+  const kl = x[12] ? 'Pemasok klaster <b>' + escapeHtml(x[12]) + '</b>' :
+    ((x[16] === 'B' || x[16] === 'C') && x[17] && _cbgCL[x[17]]) ? 'Terdekat ke <b>' + escapeHtml(_cbgCL[x[17]].name) + '</b>, ±' + _cbgNum(x[18], 0) + ' km jalan' : '';
+  const row = (k, v) => '<dt>' + k + '</dt><dd>' + v + '</dd>';
+  return '<div class="cbg-pop"><div class="k" style="color:var(' + _cbgKatVar(x[16]) + ')">' + (CBG_KAT[x[16]] || '') + '</div>' +
+    '<div class="n">' + escapeHtml(x[3]) + ' <span class="id">' + escapeHtml(x[2]) + '</span></div><div>' + escapeHtml(x[4]) + '</div><dl>' +
+    row('Lokasi', escapeHtml(x[13]) + ', ' + escapeHtml(x[14])) +
+    row('Koordinat', x[0] + ', ' + x[1] + ' <a href="https://www.google.com/maps?q=' + x[0] + ',' + x[1] + '" target="_blank" rel="noopener">peta ↗</a>') +
+    row('Kapasitas', cap) + row('Operasi', x[7] === 1 ? 'Beroperasi' : x[7] === 0 ? 'Tidak beroperasi lagi' : 'Tidak diketahui') +
+    row('ISPO', ispo + (x[9] ? '<br><span class="id">' + escapeHtml(x[9]) + '</span>' : '')) + row('RSPO', x[11] === 1 ? 'Tersertifikasi' : x[11] === 0 ? 'Tidak' : '–') +
+    (kl ? row('Klaster', kl) : '') + (jarak ? row('Jarak', escapeHtml(jarak)) : '') +
+    '</dl><div class="src">Sumber: ' + escapeHtml(x[15]) + '</div></div>';
+}
+function _cbgDrawOther(){
+  const D = cbgData, L_ = _cbgL, sB = _cbgTg('cbgTgB'), sE = _cbgTg('cbgTgE');
+  if (!D.pks || (!sB && !sE)) return;
+  const cC = _cbgCss('--cbg-cad'), cX = _cbgCss('--cbg-millx'), hlCl = cbgState.cl;
+  D.pks.forEach(x => { const k = x[16];
+    if (k === 'A' || x[0] == null) return;
+    const cad = k === 'B' || k === 'C';
+    if (cad ? !sB : !sE) return;
+    const hl = cad && hlCl && x[17] === hlCl, r = hl ? 3.6 : cad ? 2.4 : 1.8, op = cad ? (hl ? .95 : .7) : .5;
+    new _CbgDot([x[0], x[1]], { renderer:L_.canv, radius:r, stroke:false, fillColor:cad ? cC : cX, fillOpacity:op })
+      .bindTooltip('<div class="cbg-tt-k"><span class="d" style="background:' + (cad ? cC : cX) + '"></span>PKS ' + (cad ? 'cadangan' : 'di luar jangkauan') + ' · ' + (x[5] == null ? '–' : _cbgNum(x[5], 0) + ' TPH' + (x[6] === 'E' ? ' (est.)' : '')) + '</div>' +
+        '<div class="cbg-tt-n">' + escapeHtml(x[3]) + '</div><div class="cbg-tt-m">' + escapeHtml(x[13]) + ', ' + escapeHtml(x[14]) + '</div><div class="cbg-tt-h">Klik untuk detail</div>', CBG_TT)
+      .bindPopup(() => _cbgPksPop(x), CBG_POP)
+      .on('mouseover', e => e.target.setStyle({ radius:r + 2.5, stroke:true, color:'#fff', weight:1.5, fillOpacity:1 }))
+      .on('mouseout', e => e.target.setStyle({ radius:r, stroke:false, fillOpacity:op })).addTo(L_.all);
+  });
 }
 
 function _cbgFitTo(ps){
@@ -25785,8 +25845,13 @@ function _cbgSheetCl(c){
         (p.k0 != null ? _cbgNum(p.k0, 0) + ' → ' + _cbgNum(p.k1, 0) + '<br>' : '') + (p.pct != null ? '<span class="' + (p.pct < 0 ? 'cbg-down' : p.pct > 0 ? 'cbg-up' : '') + '">' + _cbgPct(p.pct) + '</span>' : '–') + '</td></tr>'; }).join('') + '</table>' +
     '<div class="cbg-sec">Time series gabungan klaster</div><div class="cbg-scope">Jumlah kebutuhan ' + c.members.length + ' pembangkit di atas.</div>' + _cbgTs(c.tsd, c.tsv, c.tss, c.tsr) +
     (ms.length ? '<div class="cbg-sec">PKS pemasok (' + ms.length + ')</div><table class="cbg-pk">' +
-      ms.slice(0, 30).map(m => '<tr><td>' + escapeHtml(m[2]) + '<div class="cbg-foot">' + escapeHtml(m[3]) + '</div></td><td class="n">' + m[4] + ' TPH</td><td class="n">' + _cbgNum(m[8], 0) + ' km</td></tr>').join('') + '</table>' +
-      (ms.length > 30 ? '<div class="cbg-foot">+' + (ms.length - 30) + ' PKS lain (lihat Excel, sheet PKS_Prioritas)</div>' : '') : ''));
+      ms.slice(0, 30).map(m => { const x = D.PK[m[10]];
+        return '<tr><td>' + escapeHtml(m[2]) + (x && x[8] === 1 ? '<span class="cbg-ispo">ISPO</span>' : '') + '<div class="cbg-foot">' + escapeHtml(m[3]) + (x ? ' · ' + x[0] + ', ' + x[1] : '') + '</div></td><td class="n">' + m[4] + ' TPH</td><td class="n">' + _cbgNum(m[8], 0) + ' km</td></tr>'; }).join('') + '</table>' +
+      (ms.length > 30 ? '<div class="cbg-foot">+' + (ms.length - 30) + ' PKS lain (lihat Excel Master PKS, kolom Pemasok klaster)</div>' : '') : '') +
+    (() => { const cb = (D.pks || []).filter(x => (x[16] === 'B' || x[16] === 'C') && x[17] === c.id); if (!cb.length) return '';
+      const nC = cb.filter(x => x[16] === 'C').length;
+      return '<div class="cbg-sec">PKS cadangan (' + cb.length + ')</div><div class="cbg-foot">PKS &lt;45 TPH' + (nC ? ' (termasuk ' + nC + ' PKS berkapasitas estimasi)' : '') +
+        ' dalam ±200 km jalan, potensi gabungan ±' + _cbgNum(cb.reduce((a, x) => a + (x[19] || 0), 0), 1) + ' BBTUD. Tidak dihitung dalam volume dan penghematan; disorot oranye di peta.</div>'; })());
 }
 
 /* ---------- pita KPI ---------- */
