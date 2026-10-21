@@ -2500,6 +2500,8 @@ html,body{
 /* V155: kolom Target FGD kini pembuka tiap grup bulan, jadi garis grup pindah ke sana */
 .recap-table th.podt-mgroup,.recap-table td.podt-tgt{border-left:1px solid var(--border-bright)}
 .recap-table th.podt-tgt,.recap-table td.podt-tgt{color:#0d9488}
+/* V213: toggle basis Target di header kartu; tanpa garis bawah/margin bawaan */
+.real-podt-basis{margin-bottom:0;border-bottom:0;margin-right:var(--sp-3)}
 .recap-table th.podt-do,.recap-table td.podt-do{color:#a855f7}
 .recap-table th.podt-real,.recap-table td.podt-real{color:var(--accent)}
 /* V95: same reasoning as .num.dim above — opacity:.4 on top of --text-dim was
@@ -8055,6 +8057,12 @@ body.gf-on .gf-bar{
         <div class="real-card-head">
           <h3>Realisasi &amp; DO per PLTU · Bulanan</h3>
           <div class="real-card-head-controls">
+            <!-- V213: basis kolom Target (Deklarasi/FGD/Waiver); FGD & Waiver hanya 2026 -->
+            <div class="target-basis-toggle real-podt-basis" id="realPodtBasisToggle" role="group" aria-label="Basis target tabel">
+              <button type="button" class="tbt-btn" data-basis="deklarasi" onclick="setRealPodtBasis('deklarasi')">Deklarasi</button>
+              <button type="button" class="tbt-btn" data-basis="fgd" onclick="setRealPodtBasis('fgd')">FGD</button>
+              <button type="button" class="tbt-btn" data-basis="waiver" onclick="setRealPodtBasis('waiver')">Waiver</button>
+            </div>
             <label class="real-filter-label" for="realPodtYearSel">Tahun</label>
             <select id="realPodtYearSel" class="real-filter-select real-filter-select-sm">
               <option value="2023">2023</option>
@@ -10211,6 +10219,7 @@ const state = {
   realSubtab: 'ringkasan',
   // V66: year filter khusus untuk tabel DO/Real per PLTU di Ringkasan
   realPodtYear: '2026',
+  realPodtBasis: 'fgd', // V213: basis kolom Target tabel Realisasi & DO per PLTU
   // V92: year filter khusus untuk tabel Rekap Kalori (GCV) per PLTU di Ringkasan
   realKalorYear: '2026',
 };
@@ -15721,6 +15730,38 @@ function renderRealView(){
 
 // V89: fungsi tab Rekap lama dihapus. CSS .real-recap-* tetap dipakai Kontrak & Usulan.
 
+// V213: basis kolom Target tabel Realisasi & DO per PLTU. Default 'fgd' = perilaku V155.
+// FGD & Waiver hanya ada untuk 2026; tahun lain otomatis memakai Deklarasi.
+function _realPodtBasis(year){
+  const b = state.realPodtBasis || 'fgd';
+  return (year === '2026') ? b : 'deklarasi';
+}
+function setRealPodtBasis(basis){
+  state.realPodtBasis = (basis === 'deklarasi' || basis === 'waiver') ? basis : 'fgd';
+  renderRealPodtTable();
+}
+const _REAL_PODT_BASIS_LABEL = { deklarasi: 'Target Deklarasi', fgd: 'Target FGD', waiver: 'Target Waiver' };
+// Target satu PLTU untuk tabel: { arr: 12 angka bulanan, tot: total cadangan bila
+// rincian bulanan kosong (FGD tanpa rincian) }.
+function _realPodtTarget(p, year, basis){
+  if (basis === 'waiver'){
+    const w = plantTargetWaiverEntry(p);
+    return { arr: (w && w.m) || [], tot: 0 };
+  }
+  if (basis === 'fgd') return { arr: plantTargetFgdMonthly(p) || [], tot: plantTargetFgd(p) || 0 };
+  const arr = (year === '2026') ? (p.target_2026 || []) : ((p.historical_target && p.historical_target[year]) || []);
+  return { arr: arr, tot: 0 };
+}
+
+// Basis Waiver dengan seluruh PLTU tampil → footer Target memakai baris Total tabel
+// Waiver (2.360.613), bukan Σ baris yang selisih beberapa ton karena pembulatan.
+// Mengisi ulang colSum di tempat; mengembalikan grand total yang dipakai.
+function _realPodtOfficialTotal(plants, basis, colSum, grand){
+  if (basis !== 'waiver' || plants.length !== ((DATA.plants || []).length)) return grand;
+  for (let mi = 0; mi < 12; mi++) colSum[mi] = TARGET_WAIVER_2026_TOTAL.m[mi];
+  return TARGET_WAIVER_2026_TOTAL.t;
+}
+
 // V66: Tabel DO vs Realisasi per PLTU (bulanan) untuk submenu Ringkasan.
 // Mengikuti filter Wilayah/PLTU global (realFilteredPlants) + filter tahun sendiri.
 function renderRealPodtTable(){
@@ -15737,9 +15778,18 @@ function renderRealPodtTable(){
   const year = state.realPodtYear || '2026';
   const plants = realFilteredPlants().slice().sort((a, b) => a.name.localeCompare(b.name));
 
-  // V155: tiap bulan 3 sub-kolom — Target FGD, DO, Real (sama dengan export Excel).
-  // Target FGD hanya ada untuk 2026; tahun lain tampil "—".
-  const hasFgd = year === '2026';
+  // V155: tiap bulan 3 sub-kolom — Target, DO, Real (sama dengan export Excel).
+  // V213: Target ikut basis terpilih (Deklarasi/FGD/Waiver); FGD & Waiver hanya 2026.
+  const basis = _realPodtBasis(year);
+  const tgtLabel = _REAL_PODT_BASIS_LABEL[basis];
+  const _bt = document.getElementById('realPodtBasisToggle');
+  if (_bt){
+    _bt.querySelectorAll('.tbt-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.basis === basis);
+      b.disabled = (year !== '2026') && b.dataset.basis !== 'deklarasi';
+      b.title = b.disabled ? 'Hanya tersedia untuk 2026' : '';
+    });
+  }
 
   // Header: two rows (month group over Target/DO/Real sub-columns)
   let header = '<thead><tr><th class="pltu-col" rowspan="2">PLTU</th><th rowspan="2">Genco</th>';
@@ -15747,7 +15797,7 @@ function renderRealPodtTable(){
   header += '<th class="num year-total podt-mgroup" colspan="3">Total</th></tr><tr>';
   for (let i = 0; i <= 12; i++){
     const tot = i === 12 ? ' year-total' : '';
-    header += `<th class="num podt-tgt podt-mgroup${tot}" title="Target FGD">Target</th>` +
+    header += `<th class="num podt-tgt podt-mgroup${tot}" title="${tgtLabel}">Target</th>` +
               `<th class="num podt-do${tot}">DO</th><th class="num podt-real${tot}">Real</th>`;
   }
   header += '</tr></thead>';
@@ -15765,7 +15815,8 @@ function renderRealPodtTable(){
   const rowsHtml = plants.map(p => {
     const doArr = (p.historical_do && p.historical_do[year]) || [];
     const realArr = (p.historical_real && p.historical_real[year]) || [];
-    const tgtArr = (hasFgd && plantTargetFgdMonthly(p)) || [];
+    const tgtInfo = _realPodtTarget(p, year, basis);
+    const tgtArr = tgtInfo.arr;
     let row = `<td class="pltu-cell">${escapeHtml(p.name)}<span class="code">${escapeHtml(p.code)}</span></td>` +
       `<td><span class="kontrak-genco-pill" style="color:color-mix(in srgb,${gencoColor(p.genco)} 55%,#12222E);border-color:${gencoColor(p.genco)}40">${p.genco}</span></td>`;
     let tgtTot = 0, doTot = 0, realTot = 0;
@@ -15776,11 +15827,12 @@ function renderRealPodtTable(){
       row += triple(tgt, dov, real, '');
     }
     // Rincian bulanan belum ada tapi total tahunan FGD ada → isi kolom Total saja.
-    if (hasFgd && !tgtTot) tgtTot = plantTargetFgd(p) || 0;
+    if (!tgtTot) tgtTot = tgtInfo.tot;
     grandTgt += tgtTot;
     row += triple(tgtTot, doTot, realTot, ' year-total');
     return `<tr>${row}</tr>`;
   }).join('');
+  grandTgt = _realPodtOfficialTotal(plants, basis, tgtColSum, grandTgt);
 
   // Footer: column totals
   let footer = '<tfoot><tr><td class="pltu-cell" colspan="2"><b>TOTAL</b></td>';
@@ -15826,12 +15878,12 @@ function downloadRealPodtExcel(){
   const NCOL = FIXED + 13 * STRIDE;      // 12 bulan + Total
   const blank = () => new Array(NCOL).fill('');
   const HDR1 = 4, HDR2 = 5, DATA0 = 6;   // indeks baris (0-based)
-  const hasFgd = year === '2026';
+  const basis = _realPodtBasis(year);    // V213: sama dengan tabel di layar
 
   const aoa = [];
   aoa.push(Object.assign(blank(), { 0: 'Realisasi & DO per PLTU · Bulanan — Tahun ' + year }));
   aoa.push(Object.assign(blank(), { 0: filterParts.join('   |   ') }));
-  aoa.push(Object.assign(blank(), { 0: 'Target = Target FGD' + (hasFgd ? '' : ' (hanya tersedia untuk 2026)') +
+  aoa.push(Object.assign(blank(), { 0: 'Target = ' + _REAL_PODT_BASIS_LABEL[basis] +
     ', DO = Delivery Order, Real = Realisasi (ton). "—" = tidak ada data. Diunduh ' +
     new Date().toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' }) + '.' }));
   aoa.push(blank());
@@ -15850,7 +15902,8 @@ function downloadRealPodtExcel(){
   plants.forEach((p, idx) => {
     const doArr = (p.historical_do && p.historical_do[year]) || [];
     const realArr = (p.historical_real && p.historical_real[year]) || [];
-    const tgtArr = (hasFgd && plantTargetFgdMonthly(p)) || [];
+    const tgtInfo = _realPodtTarget(p, year, basis);
+    const tgtArr = tgtInfo.arr;
     const row = [idx + 1, p.name || '', p.code || '', p.genco || ''];
     let tgtTot = 0, doTot = 0, realTot = 0;
     for (let mi = 0; mi < 12; mi++){
@@ -15860,11 +15913,12 @@ function downloadRealPodtExcel(){
       row.push(tgt, dov, real);
     }
     // Rincian bulanan belum ada tapi total tahunan FGD ada → isi kolom Total saja.
-    if (hasFgd && !tgtTot) tgtTot = plantTargetFgd(p) || 0;
+    if (!tgtTot) tgtTot = tgtInfo.tot;
     grandTgt += tgtTot;
     row.push(tgtTot, doTot, realTot);
     aoa.push(row);
   });
+  grandTgt = _realPodtOfficialTotal(plants, basis, tgtColSum, grandTgt);
   const foot = ['TOTAL', '', '', ''];
   let grandDo = 0, grandReal = 0;
   for (let mi = 0; mi < 12; mi++){
