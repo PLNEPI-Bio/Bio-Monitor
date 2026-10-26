@@ -2447,7 +2447,10 @@ html,body{
 .real-recap-filter input[type="text"]:hover,.real-recap-filter input[type="text"]:focus{border-color:var(--accent);color:var(--text-bright)}
 
 .recap-scroll{overflow-x:auto;overflow-y:auto;max-height:600px;border:1px solid var(--border);border-radius:var(--r-md);-webkit-overflow-scrolling:touch}
-.recap-table{width:100%;border-collapse:collapse;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px}
+/* V214: separate + spacing 0, bukan collapse — dengan collapse border digambar tabel,
+   bukan sel, sehingga tidak ikut sel sticky dan header/footer bercelah tembus pandang.
+   Aman: semua border di tabel ini satu sisi (bawah/kiri), jadi tidak ada garis dobel. */
+.recap-table{width:100%;border-collapse:separate;border-spacing:0;font-family:'Plus Jakarta Sans',sans-serif;font-size:11px}
 
 /* V95: tabel rekap (51 PLTU × hingga 48 kolom); kepadatan sengaja dipertahankan.
    Urutan z sticky: td.pltu-cell 1, tfoot td & th 2, sudut kiri-atas dan
@@ -2486,7 +2489,9 @@ html,body{
 /* V95: "num year-total dim" → tampil sebagai dim; "tidak ada data" menang atas kolom total. */
 .recap-table td.num.year-total.dim,
 .recap-table td.num.grand-total.dim{color:var(--text-dim);font-weight:500}
-.recap-table tfoot td{background:var(--panel-3);border-top:1px solid var(--accent);color:var(--text-bright);padding:8px 6px;position:sticky;bottom:0;z-index:2;box-shadow:0 -3px 6px -3px rgba(15,42,66,.22)}
+/* V214: garis atas lewat box-shadow inset, bukan border-top — dengan border-collapse
+   border sel sticky ikut tergulir dan meninggalkan celah 1px tembus pandang. */
+.recap-table tfoot td{background:var(--panel-3);border-top:0;border-bottom:0;color:var(--text-bright);padding:8px 6px;position:sticky;bottom:0;z-index:2;box-shadow:inset 0 1px 0 var(--accent),0 2px 0 var(--panel-3),0 -3px 6px -3px rgba(15,42,66,.22)}
 .recap-table tfoot td.pltu-cell{background:var(--panel-3);color:var(--text-bright);font-weight:700;letter-spacing:2px;font-size:11px;z-index:3}
 /* V101: sel Akumulasi di footer sticky diberi dasar opak (0,3,2); varian hover (0,4,3). */
 .recap-table tfoot td.num.year-total{background:linear-gradient(rgba(var(--accent-rgb),.05),rgba(var(--accent-rgb),.05)),var(--panel-3)}
@@ -2502,6 +2507,12 @@ html,body{
 .recap-table th.podt-tgt,.recap-table td.podt-tgt{color:#0d9488}
 /* V213: toggle basis Target di header kartu; tanpa garis bawah/margin bawaan */
 .real-podt-basis{margin-bottom:0;border-bottom:0;margin-right:var(--sp-3)}
+/* V214: dua baris header sticky. Baris bulan dikunci 32px (nowrap, jadi tak pernah
+   lebih tinggi), baris Target/DO/Real menempel tepat di bawahnya. Border-collapse
+   membuat garis bawah sel sticky ikut tergulir → celah 1px tembus pandang; baris 2
+   dinaikkan 1px (top:31px) agar menimpa celah itu. */
+.recap-table tr.podt-r1 th{height:32px;box-sizing:border-box;box-shadow:none}
+.recap-table tr.podt-r2 th{top:31px}
 .recap-table th.podt-do,.recap-table td.podt-do{color:#a855f7}
 .recap-table th.podt-real,.recap-table td.podt-real{color:var(--accent)}
 /* V95: same reasoning as .num.dim above — opacity:.4 on top of --text-dim was
@@ -6508,7 +6519,7 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
   /* Kolom PLTU sticky diberi bayangan tepi (geometri sama dengan thead/tfoot). */
   .recap-table td.pltu-cell{box-shadow:3px 0 6px -3px rgba(15,42,66,.22)}
   .recap-table th.pltu-col{box-shadow:3px 0 6px -3px rgba(15,42,66,.22),0 3px 6px -3px rgba(15,42,66,.22)}
-  .recap-table tfoot td.pltu-cell{box-shadow:3px 0 6px -3px rgba(15,42,66,.22),0 -3px 6px -3px rgba(15,42,66,.22)}
+  .recap-table tfoot td.pltu-cell{box-shadow:inset 0 1px 0 var(--accent),0 2px 0 var(--panel-3),3px 0 6px -3px rgba(15,42,66,.22),0 -3px 6px -3px rgba(15,42,66,.22)}
   /* A sticky tfoot pins to the bottom of ITS scroll container. At max-height:600px
      that container's bottom edge is below the fold on every phone, so the totals row
      — the one row you scrolled down for — was never actually on screen. */
@@ -15792,9 +15803,10 @@ function renderRealPodtTable(){
   }
 
   // Header: two rows (month group over Target/DO/Real sub-columns)
-  let header = '<thead><tr><th class="pltu-col" rowspan="2">PLTU</th><th rowspan="2">Genco</th>';
+  // V214: kelas baris podt-r1/podt-r2 → baris sub-kolom sticky di bawah baris bulan.
+  let header = '<thead><tr class="podt-r1"><th class="pltu-col" rowspan="2">PLTU</th><th rowspan="2">Genco</th>';
   MONTHS.forEach(m => { header += `<th class="num podt-mgroup" colspan="3">${m}</th>`; });
-  header += '<th class="num year-total podt-mgroup" colspan="3">Total</th></tr><tr>';
+  header += '<th class="num year-total podt-mgroup" colspan="3">Total</th></tr><tr class="podt-r2">';
   for (let i = 0; i <= 12; i++){
     const tot = i === 12 ? ' year-total' : '';
     header += `<th class="num podt-tgt podt-mgroup${tot}" title="${tgtLabel}">Target</th>` +
