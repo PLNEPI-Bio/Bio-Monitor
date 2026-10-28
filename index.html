@@ -23622,6 +23622,21 @@ function applyDashboardData(newData, meta){
       if (ov){ p.lat = ov.lat; p.lon = ov.lon; }
     });
   }
+  // V215: kapasitas yang di Rekap masih salah. dashboard_data ditulis ulang
+  // prod-auto-refresh tiap 20 menit, jadi koreksi dipasang di klien.
+  const KAPASITAS_OVERRIDES = {
+    'Pangkalan Susu': { jumlah_unit: 4, kapasitas_per_unit: 200 },
+  };
+  if (DATA.plants && Array.isArray(DATA.plants)){
+    DATA.plants.forEach(p => {
+      const ov = KAPASITAS_OVERRIDES[p.name];
+      if (!ov) return;
+      p.jumlah_unit = ov.jumlah_unit;
+      p.kapasitas_per_unit = ov.kapasitas_per_unit;
+      p.kapasitas_per_unit_raw = String(ov.kapasitas_per_unit);
+      p.total_kapasitas = ov.jumlah_unit * ov.kapasitas_per_unit;
+    });
+  }
   // V27: backfill missing historical_target/historical_do on plants from older uploads.
   // Supabase may have plant records that pre-date the V26 parser update. Without these
   // fields, the National Overview shows 0 for past-year Target/DO.
