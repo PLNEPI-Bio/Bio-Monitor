@@ -17,9 +17,9 @@
 <meta property="og:site_name" content="PLN EPI · Biomassa Monitor">
 <meta property="og:title" content="Bioenergy Dashboard · PT PLN EPI">
 <meta property="og:description" content="Real-time monitoring 51 PLTU · Target vs Realisasi 2023-2026 · Map Cofiring Bio PLTU · Bottleneck analysis · Kontrak Mitra.">
-<meta property="og:url" content="https://plnepi-bio.github.io/Bio-Monitor/">
-<meta property="og:image" content="https://plnepi-bio.github.io/Bio-Monitor/preview.jpg">
-<meta property="og:image:secure_url" content="https://plnepi-bio.github.io/Bio-Monitor/preview.jpg">
+<meta property="og:url" content="https://bioenergi-plnepi.bio/">
+<meta property="og:image" content="https://bioenergi-plnepi.bio/preview.jpg">
+<meta property="og:image:secure_url" content="https://bioenergi-plnepi.bio/preview.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -30,7 +30,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Bioenergy Dashboard · PT PLN EPI">
 <meta name="twitter:description" content="Real-time monitoring 51 PLTU · Map Cofiring Bio PLTU · Realisasi 2023-2026 · Bottleneck · Kontrak.">
-<meta name="twitter:image" content="https://plnepi-bio.github.io/Bio-Monitor/preview.jpg">
+<meta name="twitter:image" content="https://bioenergi-plnepi.bio/preview.jpg">
 <meta name="twitter:image:alt" content="PLN EPI Bioenergy Dashboard preview">
 
 <!-- Theme color (mobile browser address bar) -->
@@ -33472,7 +33472,35 @@ let verChk = {
   dismissed: null,  // sidik jari yang sudah ditolak lewat "Nanti"
   busy: false,
   off: false,       // server tak memberi header yang bisa dipakai → menyerah
+  src: null,        // V239: 'txt' (version.txt, Cloudflare Pages) | 'head' (header, GitHub Pages)
 };
+
+// V239: Cloudflare Pages tidak mengirim ETag/Last-Modified/Content-Length, jadi build-nya
+// menulis commit SHA ke version.txt. Di GitHub Pages berkas itu 404 → jatuh ke HEAD.
+// Pages menyajikan index.html untuk path yang tak ada (200), maka isinya divalidasi.
+// Sumber dikunci setelah terdeteksi agar sidik jari dua cara tidak tercampur.
+async function _verFetch(){
+  if (verChk.src !== 'head'){
+    let sha = '';
+    try {
+      const r = await fetch('version.txt?_vc=' + Date.now(), { cache:'no-store' });
+      if (r.ok) sha = (await r.text()).trim();
+    } catch(e){
+      if (verChk.src === 'txt') return null;
+      throw e;
+    }
+    if (/^[0-9a-f]{7,40}$/i.test(sha)){
+      verChk.src = 'txt';
+      return { fp: 'v:' + sha.toLowerCase(), lm: null };
+    }
+    if (verChk.src === 'txt') return null;
+    verChk.src = 'head';
+  }
+  const res = await fetch(location.pathname + '?_vc=' + Date.now(),
+                         { method:'HEAD', cache:'no-store' });
+  if (!res.ok) return null;
+  return { fp: _verFingerprint(res), lm: res.headers.get('last-modified') };
+}
 
 // ETag paling tepat; Last-Modified cadangan; Content-Length jaring terakhir
 // (berubah pada hampir semua suntingan nyata di berkas 1,9 MB ini).
@@ -33514,16 +33542,14 @@ async function checkAppVersion(){
   if (!/^https?:$/.test(location.protocol)) return;   // dibuka lewat file://
   verChk.busy = true;
   try {
-    const res = await fetch(location.pathname + '?_vc=' + Date.now(),
-                           { method:'HEAD', cache:'no-store' });
-    if (!res.ok) return;
-    const fp = _verFingerprint(res);
+    const got = await _verFetch();
+    if (!got) return;
+    const fp = got.fp, lm = got.lm;
     if (!fp){
       verChk.off = true;
-      console.warn('[Versi] Server tidak mengirim ETag/Last-Modified/Content-Length, pemantauan versi dimatikan.');
+      console.warn('[Versi] Server tidak mengirim version.txt/ETag/Last-Modified/Content-Length, pemantauan versi dimatikan.');
       return;
     }
-    const lm = res.headers.get('last-modified');
     if (verChk.base === null){
       verChk.base = fp;
       // Cek document.lastModified: halaman bisa berasal dari cache browser (≤10 menit).
