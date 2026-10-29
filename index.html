@@ -5440,28 +5440,41 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
 }
 .berita-card:hover::before{height:4px}
 
-/* V62) Thumbnail — real photo (cover) or publisher logo/favicon (contain) */
+/* V243) Thumbnail — foto artikel di atas sampul sumber. Sampul (gradasi aksen +
+   logo + nama media) selalu ada, jadi kartu tanpa/gagal foto tetap bergambar. */
 .berita-card-thumb{
   position:relative;width:100%;height:140px;
   overflow:hidden;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
   background:var(--panel-2);border-bottom:1px solid var(--border);
 }
-.berita-card-thumb img{display:block;border:0}
-.berita-card-thumb.has-photo img{width:100%;height:100%;object-fit:cover}
-.berita-card-thumb.has-logo img{
-  width:auto;height:auto;max-width:72px;max-height:72px;object-fit:contain;
-  filter:drop-shadow(0 1px 3px rgba(0,0,0,.12));
+.berita-thumb-cover{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  padding:0 16px;
+  background:
+    radial-gradient(circle at 85% 15%, color-mix(in srgb, var(--card-accent) 30%, transparent) 0, transparent 55%),
+    linear-gradient(135deg, color-mix(in srgb, var(--card-accent) 22%, var(--panel-2)) 0%, var(--panel-2) 100%);
 }
-.berita-thumb-fallback{
-  display:none;align-items:center;justify-content:center;
-  width:64px;height:64px;border-radius:14px;
-  font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:30px;color:#fff;
+.berita-thumb-logo{
+  position:relative;width:56px;height:56px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--card-accent);color:#fff;
+  font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:26px;
+  box-shadow:0 4px 12px rgba(0,0,0,.14);overflow:hidden;
 }
-.berita-card-thumb.no-thumb img,
-.berita-card-thumb.thumb-failed img{display:none}
-.berita-card-thumb.no-thumb .berita-thumb-fallback,
-.berita-card-thumb.thumb-failed .berita-thumb-fallback{display:flex}
+.berita-thumb-logo img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:contain;padding:8px;background:#fff;border:0;
+}
+.berita-thumb-name{
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:700;
+  letter-spacing:.4px;text-transform:uppercase;color:var(--text-dim);
+}
+.berita-thumb-photo{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;display:block;border:0;background:var(--panel-2);
+}
 
 /* 1) Source bar (top): publisher + time-ago */
 .berita-card-source-bar{
@@ -32998,18 +33011,21 @@ function renderBeritaCard(a, index){
   // V41: kartu teks: sumber + waktu, judul (3 baris), cuplikan (3 baris), tag.
   const accentClass = sourceAccentClass(a.source);
 
-  // V62: thumbnail — use a real article image when available, otherwise fall back
-  // to the publisher logo (favicon) so every card shows a recognizable thumbnail.
+  // V243: sampul sumber (logo + nama media) selalu dirender; foto artikel, bila
+  // ada, ditumpuk di atasnya. Foto gagal/terlalu kecil dibuang → sampul terlihat.
+  // Logo favicon menutupi huruf inisial; favicon gagal → inisial terlihat.
   const domain = beritaSourceDomain(a);
-  const photo = (a.image || '').trim();
+  let photo = (a.image || '').trim();
+  if (/favicon|\/logo[^/]*\.(png|svg|ico)/i.test(photo)) photo = ''; // ikon situs, bukan foto berita
   const fav = domain ? ('https://www.google.com/s2/favicons?sz=128&domain=' + encodeURIComponent(domain)) : '';
-  const thumbSrc = photo || fav;
-  const thumbClass = photo ? 'has-photo' : (thumbSrc ? 'has-logo' : 'no-thumb');
   const initial = escapeHtml(((a.source || '?').trim().charAt(0) || '?').toUpperCase());
   const thumbHtml = `
-      <div class="berita-card-thumb ${thumbClass}">
-        ${thumbSrc ? `<img src="${escapeHtml(thumbSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-fav="${escapeHtml(fav)}" onerror="beritaThumbErr(this)">` : ''}
-        <span class="berita-thumb-fallback" style="background:var(--card-accent)">${initial}</span>
+      <div class="berita-card-thumb">
+        <div class="berita-thumb-cover">
+          <span class="berita-thumb-logo">${initial}${fav ? `<img src="${escapeHtml(fav)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</span>
+          <span class="berita-thumb-name">${source}</span>
+        </div>
+        ${photo ? `<img class="berita-thumb-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onload="beritaThumbLoad(this)" onerror="this.remove()">` : ''}
       </div>`;
 
   return `
@@ -33054,17 +33070,10 @@ function beritaSourceDomain(a){
   } catch(e){ return ''; }
 }
 
-// V62: thumbnail error handler — if a real article image fails, retry with the
-// publisher favicon; if that also fails, show the source-initial placeholder.
-function beritaThumbErr(img){
-  const fav = img.getAttribute('data-fav') || '';
-  const wrap = img.closest('.berita-card-thumb');
-  if (fav && img.src !== fav){
-    img.src = fav;
-    if (wrap){ wrap.classList.remove('has-photo'); wrap.classList.add('has-logo'); }
-    return;
-  }
-  if (wrap) wrap.classList.add('thumb-failed');
+// V243: foto yang termuat tapi kecil (ikon/piksel pelacak) dibuang supaya sampul
+// sumber yang tampil, bukan ikon kecil yang di-stretch.
+function beritaThumbLoad(img){
+  if (img.naturalWidth < 160 || img.naturalHeight < 90) img.remove();
 }
 
 // V36: strip HTML tags + decode entities from text that may have leaked
