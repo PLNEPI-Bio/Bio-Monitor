@@ -7066,6 +7066,8 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
   animation:qtoastIn var(--dur-slow) var(--ease-out) both;
 }
 .verbanner.show{display:flex}
+/* V245: Beranda (V226) menutup seluruh layar di z 2147483000 — banner harus di atasnya. */
+body.home-open .verbanner{z-index:2147483001}
 .verbanner-title{
   font-size:12px;font-weight:700;color:var(--text-bright);
   letter-spacing:.01em;
