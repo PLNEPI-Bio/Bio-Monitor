@@ -25032,7 +25032,34 @@ function pembDdOutside(e){
   }
 }
 
+// V219: menu jenis juga terbuka saat mouse hover, sama dengan Map Cofiring (V217).
+// var (bukan let): closePembangkitDropdown bisa terpanggil sebelum baris ini dieksekusi.
+var _pkDdTimer = null, _pkDdByHover = false;
+function _pkWireHover(trig){
+  const menu = document.getElementById('pembangkitDropdownMenu');
+  if (!menu) return;
+  // Jeda tutup supaya kursor sempat menyeberang celah 2px dari tombol ke menu.
+  const closeSoon = e => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(_pkDdTimer);
+    _pkDdTimer = setTimeout(closePembangkitDropdown, 180);
+  };
+  trig.addEventListener('pointerenter', e => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(_pkDdTimer);
+    if (menu.classList.contains('open')) return;
+    closeMapDropdown();
+    togglePembangkitDropdown();
+    _pkDdByHover = true;
+  });
+  trig.addEventListener('pointerleave', closeSoon);
+  menu.addEventListener('pointerenter', () => clearTimeout(_pkDdTimer));
+  menu.addEventListener('pointerleave', closeSoon);
+}
+
 function closePembangkitDropdown(){
+  clearTimeout(_pkDdTimer);
+  _pkDdByHover = false;
   const menu = document.getElementById('pembangkitDropdownMenu');
   const trig = document.getElementById('pembangkitTabTrigger');
   if (menu) menu.classList.remove('open');
@@ -30051,7 +30078,15 @@ window.addEventListener('DOMContentLoaded', () => {
     if (b.id === 'mapTabTrigger'){
       _mgWireDropdown(b);   // V217
     } else if (b.classList.contains('tab-dd-trigger')){
-      b.onclick = (e) => { e.stopPropagation(); closeMapDropdown(); togglePembangkitDropdown(); };
+      _pkWireHover(b);   // V219
+      // Klik pertama setelah hover tidak menutup menu yang baru saja muncul.
+      b.onclick = (e) => {
+        e.stopPropagation();
+        closeMapDropdown();
+        const m = document.getElementById('pembangkitDropdownMenu');
+        if (m && m.classList.contains('open') && _pkDdByHover){ _pkDdByHover = false; return; }
+        togglePembangkitDropdown();
+      };
     } else {
       b.onclick = () => switchTab(b.dataset.tab);
     }
