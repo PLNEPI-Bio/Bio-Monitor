@@ -52,6 +52,12 @@ supabase-js 2.45.4, xlsx 0.18.5, xlsx-js-style 1.2.0, jsPDF 2.5.1. Font Plus Jak
 - **Tidak ada reaktivitas.** Ubah `state` → panggil `render*` terkait secara manual.
 - 11 tab. Desktop `.tab[data-tab]` → `switchTab()`. Mobile `.mobile-nav-item[data-mob-tab]` →
   `mobNav()`. **Menambah tab berarti mengurus keduanya.**
+- **Beranda (V226)** `#homePage`: overlay sesudah gerbang password, 8 kartu program/halaman.
+  `state.sektor` (biomass/cbg/biohidrogen/dedieselisasi/waste/biochar, config `SEKTOR`).
+  Rail & bottom nav memanggil `sektorNav(tab)` (map/realisasi → view program aktif; tab di
+  `SEKTOR_BIOMASS_ONLY` → view `sektor-uc` di program lain). `switchTab()` langsung tetap ke
+  view yang diminta dan `_sektorAdopt()` menyesuaikan program. Berita & Kalender = halaman
+  solo (`body.page-solo`, tanpa rail).
 - Chart.js: instance di registry `realCharts.*`, `paretoCharts.*`, `insightsCharts.*`,
   `trendChart`, `kontrakJenisPieChart`. **Selalu `.destroy()` sebelum `new Chart()` di canvas sama.**
 - Supabase: `dashboard_data`, `upload_log`, `bottleneck_entries`, `laporan_arsip`,
