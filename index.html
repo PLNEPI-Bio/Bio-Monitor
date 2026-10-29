@@ -1059,6 +1059,35 @@ html,body{
 /* Tab 1: Map view */
 /* V94: animasi grid-template-columns memicu layout tiap frame. Dipertahankan karena
    hanya terjadi saat sidebar/detail dibuka. Hapus dulu bila peta tersendat. */
+/* V216: grup Map Cofiring — bilah subtab di atas, isi view mengisi sisa tinggi. */
+.view.mg-view.active{display:flex;flex-direction:column}
+.mg-view > .map-view,.mg-view > .cbg-view,.mg-view > .mg-uc-view{flex:1 1 0;min-height:0;height:auto}
+/* V217: desktop memakai dropdown di tombol rail; bilah ini hanya untuk mobile (rail tersembunyi). */
+.mg-subnav{display:none}
+.mg-dd-menu{min-width:220px}
+/* V218: rambu "under construction" (segitiga kuning, palu + kunci) — SVG inline, bukan gambar. */
+.mg-uc-ic{display:inline-block;flex-shrink:0;width:21px;height:18px;background:no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 42'><path d='M24 2.5L45.5 39.5H2.5Z' fill='%23FFD400' stroke='%23FFD400' stroke-width='3' stroke-linejoin='round'/><path d='M24 8L41 37.5H7Z' fill='none' stroke='%23111' stroke-width='2.6' stroke-linejoin='round'/><g transform='translate(0 2)' fill='%23111'><path d='M19.5 22.5l10 10M28.5 22.5l-10 10' stroke='%23111' stroke-width='2.4' stroke-linecap='round'/><path d='M22.95 20.09L20.41 17.55L14.05 23.91L16.59 26.45Z'/><circle cx='29.5' cy='21.5' r='3.3'/><circle cx='31.2' cy='19.8' r='1.6' fill='%23FFD400'/></g></svg>")}
+.tab-dd-item .mg-uc-ic{margin-left:auto}
+.mg-uc-note .mg-uc-ic{width:52px;height:46px;margin-bottom:6px}
+@media (max-width:768px) and (pointer:coarse){ .mg-subnav{display:flex} }
+.mg-subnav{flex:0 0 auto;gap:2px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--border);
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.mg-subnav::-webkit-scrollbar{display:none}
+.mg-subtab{font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;padding:9px 14px;border:none;
+  background:transparent;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+  white-space:nowrap;flex-shrink:0;transition:color .15s,border-color .15s}
+.mg-subtab:hover{color:var(--text-bright)}
+.mg-subtab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.mg-subnav .mg-subtab:focus-visible{outline:var(--focus-ring-w) solid var(--focus-ring);outline-offset:calc(-1 * var(--focus-ring-w))}
+.mg-uc-view{position:relative;background:var(--bg)}
+.mg-uc-map{position:absolute;inset:0}
+.mg-uc-note{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:600;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;gap:4px;max-width:calc(100% - 32px);padding:16px 24px;
+  background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);text-align:center}
+.mg-uc-note strong{font-size:15px;font-weight:700;color:var(--text-bright)}
+.mg-uc-note span{font-size:12px;color:var(--text-dim)}
+@media (max-width:900px){ .mg-view > .cbg-view{flex:0 0 auto} }
+@media (max-width:768px) and (pointer:coarse){ .view.mg-view:not([data-view="cbg"]){overflow:hidden!important} }
 .map-view{display:grid;grid-template-columns:260px 1fr 0px;height:100%;overflow:hidden;transition:grid-template-columns var(--dur-slow) var(--ease-out)}
 .map-view.detail-open{grid-template-columns:260px 1fr 340px}
 .map-view.sidebar-collapsed{grid-template-columns:0px 1fr 0px}
@@ -7384,14 +7413,11 @@ body.gf-on .gf-bar{
 
 <!-- Tab navigation (V49: dropdown menus for Maps + MoU) -->
 <nav class="tabs">
-  <button class="tab active" data-tab="map">
+  <!-- V217: Map Cofiring jadi dropdown subtab (hover/klik) — menu #mapDropdownMenu -->
+  <button class="tab tab-dd-trigger active" data-tab="map" id="mapTabTrigger">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3zM5 2v12M11 4v12"/></svg>
-    Map Cofiring
-  </button>
-  <!-- V204: Prioritas CBG POME (co-mingle CBG 10% di pembangkit gas/BBM) -->
-  <button class="tab" data-tab="cbg">
-    <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13c0-6 3.5-10 10-10 0 6.5-4 10-10 10zM3 13l5-5"/></svg>
-    BioCNG
+    <span id="mapTabLabel">Map Cofiring</span>
+    <span class="tab-caret">▾</span>
   </button>
   <button class="tab tab-dd-trigger" data-tab="pembangkit" id="pembangkitTabTrigger">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 14V6l4-2v3l4-2v3l4-2v8zM4 14v-3M8 14v-3M12 14v-3"/></svg>
@@ -7455,6 +7481,14 @@ body.gf-on .gf-bar{
 
 <!-- Pembangkit jenis dropdown menu (fixed-position to escape tab-bar overflow) -->
 <div class="tab-dd-menu" id="pembangkitDropdownMenu"></div>
+<!-- V217: subtab Map Cofiring (desktop). Di mobile tetap bilah #mgSubnav. -->
+<div class="tab-dd-menu mg-dd-menu" id="mapDropdownMenu" role="menu" aria-label="Subtab Map Cofiring">
+  <button class="tab-dd-item active" role="menuitem" data-mgtab="map">Biomassa</button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="cbg">BioCBG</button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="biohidrogen">Bio Hydrogen<span class="mg-uc-ic" role="img" aria-label="Under construction" title="Data under construction"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="syngas">Syngas<span class="mg-uc-ic" role="img" aria-label="Under construction" title="Data under construction"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="waste">Waste Management<span class="mg-uc-ic" role="img" aria-label="Under construction" title="Data under construction"></span></button>
+</div>
 
 <!-- V54: Mobile Bottom Navigation -->
 <div class="mobile-bottom-nav" style="display:none">
@@ -7481,10 +7515,6 @@ body.gf-on .gf-bar{
 </div>
 <div class="mobile-more-backdrop" id="mobMoreBackdrop" onclick="mobCloseMore()"></div>
 <div class="mobile-more-menu" id="mobMoreMenu">
-  <button class="mobile-more-item" data-mob-tab="cbg" onclick="mobNav('cbg')">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 13c0-6 3.5-10 10-10 0 6.5-4 10-10 10zM3 13l5-5"/></svg>
-    BioCNG
-  </button>
   <div class="mobile-more-group" id="mobPembangkitGroup">
     <button class="mobile-more-item mobile-more-parent" data-mob-tab="pembangkit" onclick="mobTogglePembangkitSub()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3z"/></svg>
@@ -7524,7 +7554,16 @@ body.gf-on .gf-bar{
 </div>
 
 <!-- Tab 1: Map view -->
-<div class="view active" data-view="map">
+<!-- V216: grup Map Cofiring = 5 subtab (view terpisah). Bilah #mgSubnav hanya satu;
+     _mgSyncSubnav() memindahkannya ke view grup yang sedang aktif. -->
+<div class="view mg-view active" data-view="map">
+  <div class="mg-subnav" id="mgSubnav" role="tablist" aria-label="Jenis bioenergi">
+    <button class="mg-subtab active" role="tab" aria-selected="true" data-mgtab="map" onclick="switchTab('map')">Biomassa</button>
+    <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="cbg" onclick="switchTab('cbg')">BioCBG</button>
+    <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="biohidrogen" onclick="switchTab('biohidrogen')">Bio Hydrogen</button>
+    <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="syngas" onclick="switchTab('syngas')">Syngas</button>
+    <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="waste" onclick="switchTab('waste')">Waste Management</button>
+  </div>
   <div class="map-view">
     <aside class="sidebar">
       <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Sembunyikan panel">◀</button>
@@ -7743,7 +7782,7 @@ body.gf-on .gf-bar{
 
 <!-- V204: Tab Prioritas CBG POME — data dari data/cbg_pome_2027.js (dimuat lazy) -->
 <!-- V205: tata letak dirapatkan — satu bilah ringkas (identitas | angka kunci) agar peta dapat tinggi penuh -->
-<div class="view" data-view="cbg">
+<div class="view mg-view" data-view="cbg">
   <div class="cbg-view" id="cbgView">
     <header class="cbg-bar">
       <div class="cbg-id">
@@ -7820,6 +7859,26 @@ body.gf-on .gf-bar{
         <aside class="cbg-sheet" id="cbgSheet" hidden aria-label="Profil terpilih"></aside>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- V216: subtab Map Cofiring yang sumber datanya belum ada — peta dasar + tanda konstruksi -->
+<div class="view mg-view" data-view="biohidrogen">
+  <div class="mg-uc-view">
+    <div class="mg-uc-map" id="mgMap-biohidrogen"></div>
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Data Under Construction</strong><span>Sumber data Bio Hydrogen sedang disiapkan.</span></div>
+  </div>
+</div>
+<div class="view mg-view" data-view="syngas">
+  <div class="mg-uc-view">
+    <div class="mg-uc-map" id="mgMap-syngas"></div>
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Data Under Construction</strong><span>Sumber data Syngas sedang disiapkan.</span></div>
+  </div>
+</div>
+<div class="view mg-view" data-view="waste">
+  <div class="mg-uc-view">
+    <div class="mg-uc-map" id="mgMap-waste"></div>
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Data Under Construction</strong><span>Sumber data Waste Management sedang disiapkan.</span></div>
   </div>
 </div>
 
@@ -17787,6 +17846,118 @@ let kontrakInit = false;
 let usulanInit = false;
 let updateInit = false;
 let pembangkitInit = false;
+// V216: grup Map Cofiring — tab 'map' (Biomassa) tetap tab default; BioCBG dan tiga
+// jenis yang datanya belum ada jadi subtab. Tombol rail .tab[data-tab="map"] aktif
+// untuk semuanya.
+const MG_TABS = ['map', 'cbg', 'biohidrogen', 'syngas', 'waste'];
+const MG_UC_TABS = ['biohidrogen', 'syngas', 'waste'];
+const mgUcMaps = {};
+function _mgSyncSubnav(tab){
+  const nav = document.getElementById('mgSubnav');
+  if (!nav || !MG_TABS.includes(tab)) return;
+  const view = document.querySelector('.view[data-view="' + tab + '"]');
+  if (view && nav.parentNode !== view) view.insertBefore(nav, view.firstChild);
+  nav.querySelectorAll('.mg-subtab').forEach(b => {
+    const on = b.dataset.mgtab === tab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  // V217: dropdown desktop + label tombol rail ikut subtab aktif
+  let label = '';
+  document.querySelectorAll('#mapDropdownMenu .tab-dd-item').forEach(b => {
+    const on = b.dataset.mgtab === tab;
+    b.classList.toggle('active', on);
+    if (on) label = b.firstChild.textContent.trim();
+  });
+  const lbl = document.getElementById('mapTabLabel');
+  if (lbl) lbl.textContent = tab === 'map' ? 'Map Cofiring' : 'Map · ' + label;
+  // Bilah bisa digeser di layar sempit — pusatkan subtab aktif setelah view tampil.
+  requestAnimationFrame(() => {
+    const act = nav.querySelector('.mg-subtab.active');
+    if (!act) return;
+    const r = act.getBoundingClientRect(), nr = nav.getBoundingClientRect();
+    nav.scrollLeft += (r.left - nr.left) - (nr.width - r.width) / 2;
+  });
+}
+function _mgBootUc(tab){
+  if (mgUcMaps[tab]){
+    setTimeout(() => { try { mgUcMaps[tab].invalidateSize(); } catch(e){} }, 50);
+    return;
+  }
+  setTimeout(() => {
+    try {
+      const m = L.map('mgMap-' + tab, { zoomSnap:.25, minZoom:4, maxZoom:12,
+        maxBounds: SEA_BOUNDS, maxBoundsViscosity: 0.8 }).setView([-1.5, 113], 5);
+      addBaseTiles(m, 12, 4);
+      m.fitBounds(CBG_ID_BOUNDS);
+      mgUcMaps[tab] = m;
+    } catch(e){ console.error('Map ' + tab + ' init failed:', e); }
+  }, 30);
+}
+
+// V217: dropdown subtab di tombol rail Map Cofiring — terbuka saat mouse hover, atau
+// lewat klik (touch/keyboard). Posisi fixed seperti dropdown Overview Pembangkit.
+let _mgDdTimer = null, _mgDdByHover = false;
+function openMapDropdown(byHover){
+  const menu = document.getElementById('mapDropdownMenu');
+  const trig = document.getElementById('mapTabTrigger');
+  if (!menu || !trig) return;
+  clearTimeout(_mgDdTimer);
+  if (menu.classList.contains('open')) return;
+  closePembangkitDropdown();
+  _mgDdByHover = !!byHover;
+  menu.classList.add('open');
+  const r = trig.getBoundingClientRect();
+  menu.style.top = (r.bottom + 2) + 'px';
+  menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+  trig.classList.add('dd-open');
+  trig.setAttribute('aria-expanded', 'true');
+  setTimeout(() => { document.addEventListener('click', _mgDdOutside); }, 0);
+}
+function closeMapDropdown(){
+  clearTimeout(_mgDdTimer);
+  const menu = document.getElementById('mapDropdownMenu');
+  const trig = document.getElementById('mapTabTrigger');
+  if (menu) menu.classList.remove('open');
+  if (trig){ trig.classList.remove('dd-open'); trig.setAttribute('aria-expanded', 'false'); }
+  document.removeEventListener('click', _mgDdOutside);
+}
+function _mgDdOutside(e){
+  const menu = document.getElementById('mapDropdownMenu');
+  const trig = document.getElementById('mapTabTrigger');
+  if ((menu && menu.contains(e.target)) || (trig && trig.contains(e.target))) return;
+  closeMapDropdown();
+}
+// Jeda tutup supaya kursor sempat menyeberang celah 2px dari tombol ke menu.
+function _mgDdCloseSoon(e){
+  if (e.pointerType !== 'mouse') return;
+  clearTimeout(_mgDdTimer);
+  _mgDdTimer = setTimeout(closeMapDropdown, 180);
+}
+function _mgWireDropdown(trig){
+  const menu = document.getElementById('mapDropdownMenu');
+  if (!menu) return;
+  trig.setAttribute('aria-expanded', 'false');
+  trig.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') openMapDropdown(true); });
+  trig.addEventListener('pointerleave', _mgDdCloseSoon);
+  menu.addEventListener('pointerenter', () => clearTimeout(_mgDdTimer));
+  menu.addEventListener('pointerleave', _mgDdCloseSoon);
+  // Klik pertama setelah hover tidak menutup menu yang baru saja muncul.
+  trig.onclick = e => {
+    e.stopPropagation();
+    if (!menu.classList.contains('open')) openMapDropdown(false);
+    else if (_mgDdByHover) _mgDdByHover = false;
+    else closeMapDropdown();
+  };
+  menu.querySelectorAll('.tab-dd-item').forEach(it => {
+    it.onclick = () => { closeMapDropdown(); switchTab(it.dataset.mgtab); };
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMapDropdown(); });
+  window.addEventListener('resize', closeMapDropdown);
+  const bar = document.querySelector('.tabs');
+  if (bar) bar.addEventListener('scroll', closeMapDropdown);
+}
+
 function switchTab(tab){
   // V53/V55: Identity gate for Update Data — check BEFORE view switch
   if (tab === 'update'){
@@ -17811,9 +17982,11 @@ function switchTab(tab){
   // V118: tab yang basi karena filter global dibangun ulang saat dibuka (chart di
   // display:none jadi gepeng). Dipanggil sebelum lazy-init agar tidak dobel render.
   gfSyncTab(tab);
+  const railTab = MG_TABS.includes(tab) ? 'map' : tab;   // V216
   document.querySelectorAll('.tab').forEach(b => {
-    b.classList.toggle('active', b.dataset.tab === tab);
+    b.classList.toggle('active', b.dataset.tab === railTab);
   });
+  _mgSyncSubnav(tab);
   // Scroll the active tab into view in the horizontal tab bar
   const activeTabBtn = document.querySelector('.tab.active');
   if (activeTabBtn && activeTabBtn.scrollIntoView){
@@ -17944,6 +18117,8 @@ function switchTab(tab){
   } else if (tab === 'cbg' && cbgMap){
     setTimeout(() => { try { cbgMap.invalidateSize(); } catch(e){} }, 50);
   }
+  // V216: subtab Map yang belum punya data — peta dasar saja
+  if (MG_UC_TABS.includes(tab)) _mgBootUc(tab);
   // V49: MoU tab — V51: only Timeline remains (Busdev removed)
   if (tab === 'mou-timeline'){
     bootMouTab(tab);
@@ -21193,7 +21368,7 @@ function presenceRetrack(){
 
 function _onlineTabLabel(tab){
   if (!tab) return '—';
-  const el = document.querySelector('.tab[data-tab="' + tab + '"]');
+  const el = document.querySelector('.tab[data-tab="' + tab + '"], .mg-subtab[data-mgtab="' + tab + '"]');   // V216
   const t = el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
   return t || tab;
 }
@@ -29873,8 +30048,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Tabs — simple click to switch (pembangkit trigger opens jenis dropdown instead)
   document.querySelectorAll('.tab').forEach(b => {
-    if (b.classList.contains('tab-dd-trigger')){
-      b.onclick = (e) => { e.stopPropagation(); togglePembangkitDropdown(); };
+    if (b.id === 'mapTabTrigger'){
+      _mgWireDropdown(b);   // V217
+    } else if (b.classList.contains('tab-dd-trigger')){
+      b.onclick = (e) => { e.stopPropagation(); closeMapDropdown(); togglePembangkitDropdown(); };
     } else {
       b.onclick = () => switchTab(b.dataset.tab);
     }
@@ -31978,7 +32155,10 @@ const QOL_TAB_KW = {
   'map':          'peta cofiring marker lokasi sebaran titik pltu heatmap',
   'pembangkit':   'overview pembangkit inventaris kit jenis pltu pltgu pltg pltmg pltd pltp plta pltm pltmh plts pltb pltbm pltbg kapasitas unit mesin sentral',
   'fasilitas':    'fasilitas produksi pabrik pelet sawdust wood chip woodchip supplier',
-  'cbg':          'biocng cbg prioritas pome biometana biomethane pome pks pabrik kelapa sawit klaster prioritas co-mingle gas pltg pltmg pltgu penghematan',
+  'biohidrogen':  'bio hydrogen hidrogen h2 map peta',
+  'syngas':       'syngas gasifikasi gas sintetis map peta',
+  'waste':        'waste management sampah limbah rdf map peta',
+  'cbg':          'biocbg biocng cbg prioritas pome biometana biomethane pome pks pabrik kelapa sawit klaster prioritas co-mingle gas pltg pltmg pltgu penghematan',
   'realisasi':    'realisasi target gap capaian achievement tahunan bulanan yoy 2023 2024 2025 2026 rekap',
   'bottleneck':   'bottleneck kendala hambatan isu masalah problem',
   'pareto':       'pareto loss kehilangan kategori penyebab analisa',
@@ -32010,6 +32190,12 @@ function qolBuildCmdkIndex(){
     const lblEl = btn.querySelector('#pembangkitTabLabel');
     const label = (lblEl ? lblEl.textContent : btn.textContent).replace('▾','').trim();
     items.push({ kind:'tab', tab, label, kw: QOL_TAB_KW[tab] || '', digit: QOL_TAB_DIGIT[tab] || '' });
+  });
+  // V216: subtab Map Cofiring selain Biomassa (tab 'map' sudah terambil di atas).
+  document.querySelectorAll('#mgSubnav .mg-subtab').forEach(btn => {
+    const tab = btn.dataset.mgtab;
+    if (!tab || tab === 'map') return;
+    items.push({ kind:'tab', tab, label: btn.textContent.trim(), kw: QOL_TAB_KW[tab] || '', digit: '' });
   });
   // V179: Kalender kini tab biasa — sudah terambil dari bilah tab di atas.
   // V158: halaman Ranking Mitra (tanpa tombol di bilah tab).
@@ -32728,7 +32914,8 @@ function qolSyncMobNavA11y(){
   const menu = document.getElementById('mobMoreMenu');
   // Sumber kebenaran: panel yang benar-benar aktif (bukan tab yang diketuk).
   const activeView = document.querySelector('.view.active');
-  const activeTab = activeView ? activeView.dataset.view : null;
+  let activeTab = activeView ? activeView.dataset.view : null;
+  if (MG_TABS.includes(activeTab)) activeTab = 'map';   // V216: subtab Map → tombol Map
   // "Lainnya" aktif hanya bila panel aktif memang ada di dalam lembarnya.
   const activeIsInMore = !!activeTab &&
     !!document.querySelector('#mobMoreMenu [data-mob-tab="' + activeTab + '"]');
@@ -32780,7 +32967,7 @@ const QOL_LAST_TAB_KEY = 'bio-qol-last-tab';
 // Dua tab SENGAJA tidak pernah dipulihkan otomatis: keduanya memasang gerbang
 // identitas, dan memunculkan prompt nama sebelum pengguna melakukan apa pun
 // adalah cara yang buruk untuk membuka sebuah dashboard.
-const QOL_RESTORABLE = ['map','cbg','pembangkit','fasilitas','realisasi','bottleneck',
+const QOL_RESTORABLE = ['map','cbg','biohidrogen','syngas','waste','pembangkit','fasilitas','realisasi','bottleneck',
                         'pareto','kontrak','mou-timeline','berita','laporan','calendar'];
 const qolScrollMem = Object.create(null);
 let qolTabRestored = false;
