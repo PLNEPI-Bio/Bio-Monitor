@@ -27263,7 +27263,7 @@ function fasKontrakVolumeSectionsHTML(f){
     ? 'Ditarik otomatis dari Daftar Kontrak (cocok Nomor Kontrak + PLTU). Nilai bergaris bawah = input manual yang menimpa bulan kosong. Klik “Edit Volume” untuk menambah.'
     : 'Belum ada kontrak cocok di Daftar Kontrak. Isi manual via “Edit Volume”, atau samakan Nomor Kontrak & PLTU Terpasok dengan Daftar Kontrak.';
   const rmNote = FAS_RM_SITE[f.nama]
-    ? ' Bulan berjalan: Real bergaris putus = sementara dari sheet ' + FAS_RM_SRC[FAS_RM_SITE[f.nama]] + ' sampai Kontrak Auto Refresh terisi; klik baris bulannya untuk rincian harian.'
+    ? ' Bulan berjalan: Real bergaris putus = Σ pengiriman dari sheet ' + FAS_RM_SRC[FAS_RM_SITE[f.nama]] + ' (menimpa realisasi kontrak); klik baris bulannya untuk rincian harian.'
     : '';
   html += '<div class="pembangkit-detail-grid" style="margin-top:4px"><div class="pembangkit-detail-cell" style="grid-column:1/-1">';
   html += '<div class="fas-vol-head">';
@@ -27354,7 +27354,11 @@ function fasVolEffective(nama, year){
   // V201: site dengan blok pengiriman (FAS_RM_MIX) SELALU memakai Σ pengiriman, juga
   // sebelum kiriman pertama (= 0, Real kosong) — tidak melompat dari produksi.
   const rmVal = !rm ? 0 : FAS_RM_MIX[rm.site] ? ((rm.mix && rm.mix.total) || {}).mix || 0 : (rm.total || {}).netto;
-  if (rm && realSrc[rm.i] === 'none' && rmVal > 0){
+  // V225: site FAS_RM_MIX — bulan berjalan memakai Σ pengiriman sheet walau realisasi
+  // kontrak (Profil Pasokan) sudah terisi; kontrak tertinggal & mencatat terima di PLTU.
+  // Input manual tetap menang.
+  const rmWins = rm && (realSrc[rm.i] === 'none' || (FAS_RM_MIX[rm.site] && realSrc[rm.i] === 'auto'));
+  if (rmWins && rmVal > 0){
     realArr[rm.i] = rmVal; realSrc[rm.i] = 'sheet';
   }
   return { doArr, realArr, doSrc, realSrc, hasAuto: !!auto, rm };
@@ -27367,7 +27371,7 @@ function fasVolDetailTableHTML(nama, year){
   const cell = (val, src, cls) => {
     const man = src === 'manual', sh = src === 'sheet';
     const c = cls + (val ? '' : ' dim') + (man ? ' man' : '') + (sh ? ' rm' : '');
-    const tip = man ? ' title="Input manual"' : (sh ? ' title="Sementara dari sheet harian, menunggu Kontrak Auto Refresh"' : '');
+    const tip = man ? ' title="Input manual"' : (sh ? ' title="Bulan berjalan dari sheet harian (pengiriman)"' : '');
     return '<td class="' + c + '"' + tip + '>' + (val ? fmtInt(val) : '—') + '</td>';
   };
   const f2 = v => v ? v.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
