@@ -1,0 +1,12 @@
+# Disaring dari aset Worker bio-monitor (sintaks .gitignore).
+# Yang tersaji: index.html, version.txt, preview.jpg/png, data/*.js.
+.*
+backups/
+docs/
+supabase/
+tools/
+node_modules/
+*.md
+*.py
+*.jsonc
+skills-lock.json
