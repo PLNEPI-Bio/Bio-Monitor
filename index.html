@@ -1065,9 +1065,12 @@ html,body{
 /* V217: desktop memakai dropdown di tombol rail; bilah ini hanya untuk mobile (rail tersembunyi). */
 .mg-subnav{display:none}
 .mg-dd-menu{min-width:220px}
-/* V218: rambu "under construction" (segitiga kuning, palu + kunci) — SVG inline, bukan gambar. */
+/* V218: rambu "under construction" (V224: label "Under Study") (segitiga kuning, palu + kunci) — SVG inline, bukan gambar. */
 .mg-uc-ic{display:inline-block;flex-shrink:0;width:21px;height:18px;background:no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 42'><path d='M24 2.5L45.5 39.5H2.5Z' fill='%23FFD400' stroke='%23FFD400' stroke-width='3' stroke-linejoin='round'/><path d='M24 8L41 37.5H7Z' fill='none' stroke='%23111' stroke-width='2.6' stroke-linejoin='round'/><g transform='translate(0 2)' fill='%23111'><path d='M19.5 22.5l10 10M28.5 22.5l-10 10' stroke='%23111' stroke-width='2.4' stroke-linecap='round'/><path d='M22.95 20.09L20.41 17.55L14.05 23.91L16.59 26.45Z'/><circle cx='29.5' cy='21.5' r='3.3'/><circle cx='31.2' cy='19.8' r='1.6' fill='%23FFD400'/></g></svg>")}
 .tab-dd-item .mg-uc-ic{margin-left:auto}
+/* V224: subtab Realisasi Under Study — tanpa peta, kartu yang sama di atas latar polos. */
+.mg-view > .rg-uc-view{background:var(--bg)}
+@media (max-width:768px) and (pointer:coarse){ .view[data-view="realisasi"] .real-view > .mg-subnav{margin:0 -12px} }
 .mg-uc-note .mg-uc-ic{width:52px;height:46px;margin-bottom:6px}
 @media (max-width:768px) and (pointer:coarse){ .mg-subnav{display:flex} }
 .mg-subnav{flex:0 0 auto;gap:2px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--border);
@@ -1783,6 +1786,19 @@ html,body{
 .real-card-head h3{margin-bottom:0;flex:1 1 auto;min-width:0}
 .real-card-head-controls{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2)}
 .real-podt-export-btn{width:auto;margin-top:0;padding:8px 12px} /* V154 */
+/* V222: pemilih seri sub-tab Bandingkan. --cmp = warna garis serinya. */
+.real-cmp-picks{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2);margin-bottom:var(--sp-3)}
+.real-cmp-pick{display:flex;align-items:center;gap:var(--sp-2);flex:1 1 300px;min-width:0;
+  padding:6px 8px;border:1px solid var(--border);border-left:3px solid var(--cmp);border-radius:8px;background:var(--panel-2)}
+.real-cmp-pick .real-filter-select{flex:1 1 auto;min-width:0}
+.real-cmp-pick .real-cmp-year{flex:0 0 84px}
+.real-cmp-tag{flex:0 0 auto;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--cmp);color:#fff;font-size:11px;font-weight:700}
+.real-cmp-swap{flex:0 0 auto;width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:var(--panel-3);
+  color:var(--text-dim);font-size:16px;cursor:pointer}
+.real-cmp-swap:hover{border-color:var(--accent);color:var(--accent)}
+.real-cmp-table td:not(:first-child),.real-cmp-table th:not(:first-child){text-align:right}
+@media (max-width:640px){ .real-cmp-swap{width:100%;height:28px} }
 /* META EXHIBIT — periode, satuan, cakupan. Optional; the class is new markup, see the
    V97 EXHIBIT layer note at the end of this stylesheet. */
 .real-card-meta{
@@ -6693,6 +6709,23 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
   .topbar-cmdk-btn{width:32px;padding:0;justify-content:center}
   .topbar-cmdk-btn .cmdk-btn-label,.topbar-cmdk-btn .cmdk-btn-kbd{display:none}
 }
+/* V221: alat tabel mengambang — satu elemen untuk SEMUA tabel, muncul saat kursor
+   di atas tabel. Tidak perlu menyentuh fungsi render tabel mana pun. */
+.tbl-tools{
+  position:fixed;z-index:900;display:none;gap:2px;padding:2px;
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  box-shadow:0 4px 14px rgba(15,73,110,.14);
+}
+.tbl-tools.show{display:flex}
+.tbl-tools button{
+  display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border:0;border-radius:6px;
+  background:transparent;color:var(--text-dim);cursor:pointer;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;font-weight:600;white-space:nowrap;
+}
+.tbl-tools button:hover{background:var(--panel-3);color:var(--accent)}
+.tbl-tools svg{width:12px;height:12px}
+
+
 
 /* Palet perintah (Ctrl+K / "/") */
 .cmdk-backdrop{
@@ -7348,7 +7381,6 @@ body.gf-on .gf-bar{
       <span class="cmdk-btn-label">Cari</span>
       <span class="cmdk-btn-kbd" aria-hidden="true">Ctrl K</span>
     </button>
-
     <div class="updated-indicator" id="updatedIndicator" title="Tanggal terakhir data di-refresh">
       <span class="updated-label">Data per</span>
       <span class="updated-date" id="updatedDate">—</span>
@@ -7429,9 +7461,11 @@ body.gf-on .gf-bar{
     Fasilitas Produksi
   </button>
   <span class="tab-sep" aria-hidden="true"></span>
-  <button class="tab" data-tab="realisasi">
+  <!-- V224: Realisasi jadi dropdown subtab, pola sama dengan Map Cofiring — menu #realDropdownMenu -->
+  <button class="tab tab-dd-trigger" data-tab="realisasi" id="realTabTrigger">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V2M2 14h12M4 11l3-4 3 2 4-6"/></svg>
-    Realisasi 2023–2026
+    <span id="realTabLabel">Realisasi 2023–2026</span>
+    <span class="tab-caret">▾</span>
   </button>
   <button class="tab" data-tab="bottleneck">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v3m0 8v3M1 8h3m8 0h3M3.5 3.5l2 2m5 5l2 2M3.5 12.5l2-2m5-5l2-2"/></svg>
@@ -7484,10 +7518,20 @@ body.gf-on .gf-bar{
 <!-- V217: subtab Map Cofiring (desktop). Di mobile tetap bilah #mgSubnav. -->
 <div class="tab-dd-menu mg-dd-menu" id="mapDropdownMenu" role="menu" aria-label="Subtab Map Cofiring">
   <button class="tab-dd-item active" role="menuitem" data-mgtab="map">Biomassa</button>
-  <button class="tab-dd-item" role="menuitem" data-mgtab="cbg">BioCBG</button>
-  <button class="tab-dd-item" role="menuitem" data-mgtab="biohidrogen">Bio Hydrogen<span class="mg-uc-ic" role="img" aria-label="Under construction" title="Data under construction"></span></button>
-  <button class="tab-dd-item" role="menuitem" data-mgtab="syngas">Syngas<span class="mg-uc-ic" role="img" aria-label="Under construction" title="Data under construction"></span></button>
-  <button class="tab-dd-item" role="menuitem" data-mgtab="waste">Waste Management<span class="mg-uc-ic" role="img" aria-label="Under construction" title="Data under construction"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="cbg">CBG</button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="biohidrogen">Bio Hydrogen<span class="mg-uc-ic" role="img" aria-label="Under study" title="Under study"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="syngas">Dedieselisasi<span class="mg-uc-ic" role="img" aria-label="Under study" title="Under study"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="waste">Waste Management<span class="mg-uc-ic" role="img" aria-label="Under study" title="Under study"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="biochar">Bio Char<span class="mg-uc-ic" role="img" aria-label="Under study" title="Under study"></span></button>
+</div>
+<!-- V224: subtab Realisasi (desktop). Di mobile bilah #rgSubnav. -->
+<div class="tab-dd-menu mg-dd-menu" id="realDropdownMenu" role="menu" aria-label="Subtab Realisasi">
+  <button class="tab-dd-item active" role="menuitem" data-mgtab="realisasi">Realisasi Biomass</button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="real-cbg">Realisasi CBG<span class="mg-uc-ic" role="img" aria-label="Under study" title="Under study"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="real-biohidrogen">Realisasi Bio Hydrogen<span class="mg-uc-ic" role="img" aria-label="Under study" title="Under study"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="real-dedieselisasi">Realisasi Dedieselisasi (Biomass to Syngas)<span class="mg-uc-ic" role="img" aria-label="Under study" title="Under study"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="real-waste">Realisasi Waste Management<span class="mg-uc-ic" role="img" aria-label="Under study" title="Under study"></span></button>
+  <button class="tab-dd-item" role="menuitem" data-mgtab="real-biochar">Realisasi Bio Char<span class="mg-uc-ic" role="img" aria-label="Under study" title="Under study"></span></button>
 </div>
 
 <!-- V54: Mobile Bottom Navigation -->
@@ -7554,15 +7598,16 @@ body.gf-on .gf-bar{
 </div>
 
 <!-- Tab 1: Map view -->
-<!-- V216: grup Map Cofiring = 5 subtab (view terpisah). Bilah #mgSubnav hanya satu;
+<!-- V216: grup Map Cofiring = 5 subtab (V224: 6, + Bio Char) (view terpisah). Bilah #mgSubnav hanya satu;
      _mgSyncSubnav() memindahkannya ke view grup yang sedang aktif. -->
 <div class="view mg-view active" data-view="map">
   <div class="mg-subnav" id="mgSubnav" role="tablist" aria-label="Jenis bioenergi">
     <button class="mg-subtab active" role="tab" aria-selected="true" data-mgtab="map" onclick="switchTab('map')">Biomassa</button>
-    <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="cbg" onclick="switchTab('cbg')">BioCBG</button>
+    <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="cbg" onclick="switchTab('cbg')">CBG</button>
     <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="biohidrogen" onclick="switchTab('biohidrogen')">Bio Hydrogen</button>
-    <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="syngas" onclick="switchTab('syngas')">Syngas</button>
+    <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="syngas" onclick="switchTab('syngas')">Dedieselisasi</button>
     <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="waste" onclick="switchTab('waste')">Waste Management</button>
+    <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="biochar" onclick="switchTab('biochar')">Bio Char</button>
   </div>
   <div class="map-view">
     <aside class="sidebar">
@@ -7862,23 +7907,29 @@ body.gf-on .gf-bar{
   </div>
 </div>
 
-<!-- V216: subtab Map Cofiring yang sumber datanya belum ada — peta dasar + tanda konstruksi -->
+<!-- V216: subtab Map Cofiring yang sumber datanya belum ada — peta dasar + tanda Under Study (V224) -->
 <div class="view mg-view" data-view="biohidrogen">
   <div class="mg-uc-view">
     <div class="mg-uc-map" id="mgMap-biohidrogen"></div>
-    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Data Under Construction</strong><span>Sumber data Bio Hydrogen sedang disiapkan.</span></div>
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Under Study</strong><span>Bio Hydrogen masih dalam kajian.</span></div>
   </div>
 </div>
 <div class="view mg-view" data-view="syngas">
   <div class="mg-uc-view">
     <div class="mg-uc-map" id="mgMap-syngas"></div>
-    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Data Under Construction</strong><span>Sumber data Syngas sedang disiapkan.</span></div>
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Under Study</strong><span>Dedieselisasi (Biomass to Syngas) masih dalam kajian.</span></div>
   </div>
 </div>
 <div class="view mg-view" data-view="waste">
   <div class="mg-uc-view">
     <div class="mg-uc-map" id="mgMap-waste"></div>
-    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Data Under Construction</strong><span>Sumber data Waste Management sedang disiapkan.</span></div>
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Under Study</strong><span>Waste Management masih dalam kajian.</span></div>
+  </div>
+</div>
+<div class="view mg-view" data-view="biochar">
+  <div class="mg-uc-view">
+    <div class="mg-uc-map" id="mgMap-biochar"></div>
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Under Study</strong><span>Bio Char masih dalam kajian.</span></div>
   </div>
 </div>
 
@@ -7992,9 +8043,46 @@ body.gf-on .gf-bar{
   </div>
 </div>
 
+<!-- V224: subtab Realisasi selain Biomass — belum ada data, kartu Under Study -->
+<div class="view mg-view" data-view="real-cbg">
+  <div class="mg-uc-view rg-uc-view">
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Under Study</strong><span>Realisasi CBG masih dalam kajian.</span></div>
+  </div>
+</div>
+<div class="view mg-view" data-view="real-biohidrogen">
+  <div class="mg-uc-view rg-uc-view">
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Under Study</strong><span>Realisasi Bio Hydrogen masih dalam kajian.</span></div>
+  </div>
+</div>
+<div class="view mg-view" data-view="real-dedieselisasi">
+  <div class="mg-uc-view rg-uc-view">
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Under Study</strong><span>Realisasi Dedieselisasi (Biomass to Syngas) masih dalam kajian.</span></div>
+  </div>
+</div>
+<div class="view mg-view" data-view="real-waste">
+  <div class="mg-uc-view rg-uc-view">
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Under Study</strong><span>Realisasi Waste Management masih dalam kajian.</span></div>
+  </div>
+</div>
+<div class="view mg-view" data-view="real-biochar">
+  <div class="mg-uc-view rg-uc-view">
+    <div class="mg-uc-note" role="status"><span class="mg-uc-ic" aria-hidden="true"></span><strong>Under Study</strong><span>Realisasi Bio Char masih dalam kajian.</span></div>
+  </div>
+</div>
+
 <!-- Tab 2: Realisasi view -->
 <div class="view" data-view="realisasi">
-  <div class="real-view">
+  <div class="real-view" data-sg-host>
+    <!-- V224: bilah subtab Realisasi (mobile; desktop pakai #realDropdownMenu). Dipindah
+         _mgSyncSubnav() ke view subtab yang aktif. -->
+    <div class="mg-subnav" id="rgSubnav" role="tablist" aria-label="Jenis realisasi">
+      <button class="mg-subtab active" role="tab" aria-selected="true" data-mgtab="realisasi" onclick="switchTab('realisasi')">Biomass</button>
+      <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="real-cbg" onclick="switchTab('real-cbg')">CBG</button>
+      <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="real-biohidrogen" onclick="switchTab('real-biohidrogen')">Bio Hydrogen</button>
+      <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="real-dedieselisasi" onclick="switchTab('real-dedieselisasi')">Dedieselisasi</button>
+      <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="real-waste" onclick="switchTab('real-waste')">Waste Management</button>
+      <button class="mg-subtab" role="tab" aria-selected="false" data-mgtab="real-biochar" onclick="switchTab('real-biochar')">Bio Char</button>
+    </div>
     <div class="real-header">
       <div>
         <div class="real-title">Realisasi Pasokan Biomassa</div>
@@ -8035,6 +8123,7 @@ body.gf-on .gf-bar{
       <button class="real-subtab active" data-realtab="ringkasan" onclick="setRealSubtab('ringkasan')">Ringkasan</button>
       <button class="real-subtab" data-realtab="peringkat" onclick="setRealSubtab('peringkat')">Peringkat PLTU</button>
       <button class="real-subtab" data-realtab="intel" onclick="setRealSubtab('intel')">Analisis</button>
+      <button class="real-subtab" data-realtab="bandingkan" onclick="setRealSubtab('bandingkan')">Bandingkan</button>
     </div>
     </div>
 
@@ -8189,6 +8278,39 @@ body.gf-on .gf-bar{
           </label>
         </div>
         <div class="chart-wrap h-allpltu-tall"><canvas id="realTopChart26"></canvas></div>
+      </div>
+    </div>
+
+    <!-- V222: Panel Bandingkan — dua seri bebas (PLTU × tahun): dua PLTU di tahun
+         sama, atau satu PLTU di dua tahun. Filter Wilayah/PLTU di toolbar hanya
+         dipakai sebagai nilai awal seri A; lingkup filter global tetap berlaku. -->
+    <div class="real-subpanel" data-realpanel="bandingkan" style="display:none">
+      <div class="real-card">
+        <div class="real-card-head">
+          <h3>Bandingkan realisasi bulanan</h3>
+          <div class="real-card-head-controls">
+            <label class="real-toggle-mini">
+              <input type="checkbox" id="realCmpCum">
+              <span>Kumulatif</span>
+            </label>
+          </div>
+        </div>
+        <div class="real-cmp-picks">
+          <div class="real-cmp-pick" style="--cmp:#0F496E">
+            <span class="real-cmp-tag">A</span>
+            <select id="realCmpPltuA" class="real-filter-select" aria-label="PLTU seri A"></select>
+            <select id="realCmpYearA" class="real-filter-select real-cmp-year" aria-label="Tahun seri A"></select>
+          </div>
+          <button type="button" class="real-cmp-swap" id="realCmpSwap" title="Tukar seri A dan B" aria-label="Tukar seri A dan B">&#8644;</button>
+          <div class="real-cmp-pick" style="--cmp:#7c3aed">
+            <span class="real-cmp-tag">B</span>
+            <select id="realCmpPltuB" class="real-filter-select" aria-label="PLTU seri B"></select>
+            <select id="realCmpYearB" class="real-filter-select real-cmp-year" aria-label="Tahun seri B"></select>
+          </div>
+        </div>
+        <div class="chart-wrap h320"><canvas id="realCmpChart"></canvas></div>
+        <div class="real-card-note" id="realCmpNote"></div>
+        <div class="trend-table-scroll"><div id="realCmpTable"></div></div>
       </div>
     </div>
 
@@ -10292,6 +10414,9 @@ const state = {
   realPodtBasis: 'fgd', // V213: basis kolom Target tabel Realisasi & DO per PLTU
   // V92: year filter khusus untuk tabel Rekap Kalori (GCV) per PLTU di Ringkasan
   realKalorYear: '2026',
+  // V222: sub-tab Bandingkan — dua seri { pltu, year }; pltu '__all' = total lingkup
+  // filter global. null = belum dipilih (diisi default saat pertama dibuka).
+  realCmp: { a: null, ya: null, b: null, yb: null, cum: false },
 };
 
 // utils
@@ -15197,7 +15322,7 @@ function buildRealPltuFilter(){
 
 // V65: Realisasi tab section sub-menu (same interaction as setLaporanSubtab).
 // Charts are (re)built after the panel is visible so canvases get real sizes.
-const REAL_SUBTABS = ['ringkasan','peringkat','intel'];
+const REAL_SUBTABS = ['ringkasan','peringkat','intel','bandingkan'];
 function setRealSubtab(tab){
   state.realSubtab = REAL_SUBTABS.includes(tab) ? tab : 'ringkasan';
   document.querySelectorAll('.real-subtab').forEach(b =>
@@ -15235,6 +15360,149 @@ function rerenderRealCharts(){
   renderRealView();
 }
 
+// V222: sub-tab Bandingkan. Satu seri = { pltu, year }; '__all' = total semua PLTU
+// yang lolos filter global. Bulan sesudah bulan data terakhir tahun itu (nasional)
+// dibuat null, bukan 0 — tahun berjalan tidak boleh tampak "jatuh ke nol".
+const REAL_CMP_COLORS = { a: '#0F496E', b: '#7c3aed' };
+function _realCmpYears(){
+  const ys = new Set();
+  ((DATA && DATA.plants) || []).forEach(p => Object.keys(p.historical_real || {}).forEach(y => ys.add(y)));
+  return [...ys].filter(y => /^\d{4}$/.test(y)).sort();
+}
+function _realCmpLastIdx(year){
+  let last = -1;
+  ((DATA && DATA.plants) || []).forEach(p => {
+    const arr = (p.historical_real || {})[year] || [];
+    for (let i = arr.length - 1; i > last; i--){ if (arr[i]) { last = i; break; } }
+  });
+  return last;
+}
+function _realCmpSeries(code, year){
+  const scope = ((DATA && DATA.plants) || []).filter(globalPassPlant);
+  const plants = code === '__all' ? scope : scope.filter(p => p.code === code);
+  const out = new Array(12).fill(0);
+  plants.forEach(p => ((p.historical_real || {})[year] || []).forEach((v, i) => { if (i < 12) out[i] += (+v || 0); }));
+  const last = _realCmpLastIdx(year);
+  return out.map((v, i) => i > last ? null : v);
+}
+function _realCmpLabel(code, year){
+  if (code === '__all') return (globalFilterActive() ? 'Total lingkup filter' : 'Total nasional') + ' ' + year;
+  const p = ((DATA && DATA.plants) || []).find(x => x.code === code);
+  return (p ? p.name : code) + ' ' + year;
+}
+function renderRealCompare(){
+  const selA = document.getElementById('realCmpPltuA'), selB = document.getElementById('realCmpPltuB');
+  const yA = document.getElementById('realCmpYearA'), yB = document.getElementById('realCmpYearB');
+  const cumEl = document.getElementById('realCmpCum');
+  if (!selA || !selB || !yA || !yB) return;
+  const cmp = state.realCmp;
+  const plants = ((DATA && DATA.plants) || []).filter(globalPassPlant)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const years = _realCmpYears();
+  const yNow = years[years.length - 1] || '2026';
+  const yPrev = years[years.length - 2] || yNow;
+  const valid = c => c === '__all' || plants.some(p => p.code === c);
+
+  // Default: seri A ikut pilihan PLTU di toolbar; B = PLTU yang sama, tahun lalu.
+  if (!cmp.a || !valid(cmp.a)) cmp.a = valid(state.realPltuFilterPltu) ? state.realPltuFilterPltu : '__all';
+  if (!cmp.b || !valid(cmp.b)) cmp.b = cmp.a;
+  if (!years.includes(cmp.ya)) cmp.ya = yNow;
+  if (!years.includes(cmp.yb)) cmp.yb = (cmp.a === cmp.b && cmp.ya === yNow) ? yPrev : yNow;
+
+  const opts = '<option value="__all">' + (globalFilterActive() ? 'Total lingkup filter' : 'Total nasional') + ' (' + plants.length + ' PLTU)</option>' +
+    plants.map(p => '<option value="' + escapeHtml(p.code) + '">' + escapeHtml(p.name) + '</option>').join('');
+  const yOpts = years.map(y => '<option value="' + y + '">' + y + '</option>').join('');
+  selA.innerHTML = opts; selB.innerHTML = opts;
+  yA.innerHTML = yOpts; yB.innerHTML = yOpts;
+  selA.value = cmp.a; selB.value = cmp.b; yA.value = cmp.ya; yB.value = cmp.yb;
+  if (cumEl) cumEl.checked = !!cmp.cum;
+
+  if (!selA.dataset.wired){
+    const onPick = () => {
+      Object.assign(state.realCmp, { a: selA.value, b: selB.value, ya: yA.value, yb: yB.value });
+      renderRealCompare();
+    };
+    [selA, selB, yA, yB].forEach(s => { s.onchange = onPick; });
+    if (cumEl) cumEl.onchange = () => { state.realCmp.cum = cumEl.checked; renderRealCompare(); };
+    const sw = document.getElementById('realCmpSwap');
+    if (sw) sw.onclick = () => {
+      const c = state.realCmp;
+      [c.a, c.b, c.ya, c.yb] = [c.b, c.a, c.yb, c.ya];
+      renderRealCompare();
+    };
+    selA.dataset.wired = '1';
+  }
+
+  const toCum = arr => { let s = 0; return arr.map(v => v === null ? null : (s += v)); };
+  const rawA = _realCmpSeries(cmp.a, cmp.ya), rawB = _realCmpSeries(cmp.b, cmp.yb);
+  const dA = cmp.cum ? toCum(rawA) : rawA, dB = cmp.cum ? toCum(rawB) : rawB;
+  const labA = 'A · ' + _realCmpLabel(cmp.a, cmp.ya), labB = 'B · ' + _realCmpLabel(cmp.b, cmp.yb);
+  const same = cmp.a === cmp.b && cmp.ya === cmp.yb;
+
+  if (realCharts.cmp) realCharts.cmp.destroy();
+  const canvas = document.getElementById('realCmpChart');
+  if (canvas){
+    const ds = (label, data, color, dash) => ({
+      label, data, borderColor: color, backgroundColor: 'transparent', borderWidth: 2.5,
+      borderDash: dash || [], tension: .3, spanGaps: false,
+      pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: color
+    });
+    realCharts.cmp = new Chart(canvas, {
+      type: 'line',
+      data: { labels: MONTHS, datasets: [ds(labA, dA, REAL_CMP_COLORS.a), ds(labB, dB, REAL_CMP_COLORS.b, [6, 4])] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: true, position: 'bottom', labels: { font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }, boxWidth: 16, boxHeight: 2, padding: 16 } },
+          tooltip: { callbacks: { label: c => c.dataset.label + ': ' + (c.parsed.y === null ? '—' : fmtInt(c.parsed.y) + ' ton') } }
+        },
+        scales: {
+          x: { grid: { drawBorder: false }, ticks: { font: { size: 10, family: "'Plus Jakarta Sans', sans-serif" } } },
+          y: { beginAtZero: true, grid: { drawBorder: false }, ticks: { font: { size: 10, family: "'Plus Jakarta Sans', sans-serif" }, callback: v => fmt(v) } }
+        }
+      }
+    });
+  }
+
+  // Tabel: selisih hanya pada bulan yang ADA di kedua seri; total pun dihitung
+  // atas bulan-bulan itu saja (periode sebanding), bukan setahun penuh vs YTD.
+  const pct = (a, b) => b > 0 ? ((a - b) / b * 100) : null;
+  const fmtPct = v => v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + '%';
+  const fmtD = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtInt(Math.abs(v));
+  let rows = '', sumA = 0, sumB = 0, nBoth = 0, firstM = -1, lastM = -1;
+  for (let i = 0; i < 12; i++){
+    const a = rawA[i], b = rawB[i];
+    const both = a !== null && b !== null;
+    if (both){ sumA += a; sumB += b; nBoth++; if (firstM < 0) firstM = i; lastM = i; }
+    const va = dA[i], vb = dB[i];
+    const d = (va !== null && vb !== null) ? va - vb : null;
+    rows += '<tr><td>' + MONTHS[i] + '</td>' +
+      '<td>' + (va === null ? '—' : fmtInt(va)) + '</td>' +
+      '<td>' + (vb === null ? '—' : fmtInt(vb)) + '</td>' +
+      '<td>' + (d === null ? '—' : fmtD(d)) + '</td>' +
+      '<td>' + (d === null ? '—' : fmtPct(pct(va, vb))) + '</td></tr>';
+  }
+  const per = nBoth ? (MONTHS[firstM] + (lastM > firstM ? '–' + MONTHS[lastM] : '')) : '—';
+  const foot = '<tr><td>Total ' + per + '</td><td>' + fmtInt(sumA) + '</td><td>' + fmtInt(sumB) + '</td>' +
+    '<td>' + (nBoth ? fmtD(sumA - sumB) : '—') + '</td><td>' + (nBoth ? fmtPct(pct(sumA, sumB)) : '—') + '</td></tr>';
+  const tbl = document.getElementById('realCmpTable');
+  if (tbl) tbl.innerHTML = '<table class="trend-table real-cmp-table"><thead><tr><th>Bulan</th>' +
+    '<th style="color:' + REAL_CMP_COLORS.a + '">' + escapeHtml(labA) + '</th>' +
+    '<th style="color:' + REAL_CMP_COLORS.b + '">' + escapeHtml(labB) + '</th>' +
+    '<th>A − B (ton)</th><th>A vs B</th></tr></thead><tbody>' + rows + '</tbody><tfoot>' + foot + '</tfoot></table>';
+
+  const note = document.getElementById('realCmpNote');
+  if (note){
+    const msgs = [];
+    if (same) msgs.push('Seri A dan B sama — pilih PLTU atau tahun lain di salah satu seri.');
+    if (nBoth && nBoth < 12) msgs.push('Total dan persentase dihitung atas periode sebanding (' + per + '), bulan yang datanya ada di kedua seri.');
+    if (cmp.cum) msgs.push('Mode kumulatif: nilai per bulan adalah jumlah berjalan sejak Januari.');
+    msgs.push('Satuan ton. Sumber: realisasi bulanan per PLTU, sama dengan sub-tab Ringkasan.');
+    note.textContent = msgs.join(' ');
+  }
+}
+
 // V65: renders the Realisasi tab. Only the charts of the ACTIVE sub-tab are
 // built — a hidden canvas has no size, so building it there would produce a
 // squashed chart. setRealSubtab() re-runs this after switching panels.
@@ -15259,6 +15527,7 @@ function renderRealView(){
   if (subtab === 'intel'){
     if (typeof renderInsightsView === 'function') renderInsightsView();
   }
+  if (subtab === 'bandingkan') renderRealCompare();   // V222
 
   // Sub-tab: Ringkasan — summary cards, Annual Total, Contribution by Genco
   if (subtab === 'ringkasan'){
@@ -17849,14 +18118,32 @@ let pembangkitInit = false;
 // V216: grup Map Cofiring — tab 'map' (Biomassa) tetap tab default; BioCBG dan tiga
 // jenis yang datanya belum ada jadi subtab. Tombol rail .tab[data-tab="map"] aktif
 // untuk semuanya.
-const MG_TABS = ['map', 'cbg', 'biohidrogen', 'syngas', 'waste'];
-const MG_UC_TABS = ['biohidrogen', 'syngas', 'waste'];
+// V224: + Bio Char. Pola yang sama dipakai grup Realisasi (tab 'realisasi' = Biomass,
+// lima jenis lain Under Study tanpa peta). Konfigurasi grup di SUBTAB_GROUPS.
+const MG_TABS = ['map', 'cbg', 'biohidrogen', 'syngas', 'waste', 'biochar'];
+const MG_UC_TABS = ['biohidrogen', 'syngas', 'waste', 'biochar'];
+const RG_TABS = ['realisasi', 'real-cbg', 'real-biohidrogen', 'real-dedieselisasi', 'real-waste', 'real-biochar'];
+const SUBTAB_GROUPS = {
+  map:       { tabs: MG_TABS, nav: 'mgSubnav', menu: 'mapDropdownMenu', trig: 'mapTabTrigger',
+               label: 'mapTabLabel', base: 'Map Cofiring', prefix: 'Map · ', rail: 'Map · ' },
+  realisasi: { tabs: RG_TABS, nav: 'rgSubnav', menu: 'realDropdownMenu', trig: 'realTabTrigger',
+               label: 'realTabLabel', base: 'Realisasi 2023–2026', prefix: 'Realisasi · ', rail: '' },
+};
+// Tab rail (data-tab) pemilik sebuah tab; tab di luar grup mana pun = dirinya sendiri.
+function _sgRailTab(tab){
+  for (const k in SUBTAB_GROUPS) if (SUBTAB_GROUPS[k].tabs.includes(tab)) return k;
+  return tab;
+}
 const mgUcMaps = {};
 function _mgSyncSubnav(tab){
-  const nav = document.getElementById('mgSubnav');
-  if (!nav || !MG_TABS.includes(tab)) return;
+  const key = _sgRailTab(tab), g = SUBTAB_GROUPS[key];
+  if (!g) return;
+  const nav = document.getElementById(g.nav);
+  if (!nav) return;
   const view = document.querySelector('.view[data-view="' + tab + '"]');
-  if (view && nav.parentNode !== view) view.insertBefore(nav, view.firstChild);
+  // V224: view dengan area gulir sendiri (Realisasi) menandai wadahnya [data-sg-host].
+  const host = view && (view.querySelector('[data-sg-host]') || view);
+  if (host && nav.parentNode !== host) host.insertBefore(nav, host.firstChild);
   nav.querySelectorAll('.mg-subtab').forEach(b => {
     const on = b.dataset.mgtab === tab;
     b.classList.toggle('active', on);
@@ -17864,13 +18151,14 @@ function _mgSyncSubnav(tab){
   });
   // V217: dropdown desktop + label tombol rail ikut subtab aktif
   let label = '';
-  document.querySelectorAll('#mapDropdownMenu .tab-dd-item').forEach(b => {
+  document.querySelectorAll('#' + g.menu + ' .tab-dd-item').forEach(b => {
     const on = b.dataset.mgtab === tab;
     b.classList.toggle('active', on);
     if (on) label = b.firstChild.textContent.trim();
   });
-  const lbl = document.getElementById('mapTabLabel');
-  if (lbl) lbl.textContent = tab === 'map' ? 'Map Cofiring' : 'Map · ' + label;
+  const lbl = document.getElementById(g.label);
+  // V224: item menu Realisasi sudah berawalan "Realisasi"; keterangan (…) dibuang di rail.
+  if (lbl) lbl.textContent = tab === key ? g.base : g.rail + label.replace(/\s*\(.*\)$/, '');
   // Bilah bisa digeser di layar sempit — pusatkan subtab aktif setelah view tampil.
   requestAnimationFrame(() => {
     const act = nav.querySelector('.mg-subtab.active');
@@ -17897,13 +18185,16 @@ function _mgBootUc(tab){
 
 // V217: dropdown subtab di tombol rail Map Cofiring — terbuka saat mouse hover, atau
 // lewat klik (touch/keyboard). Posisi fixed seperti dropdown Overview Pembangkit.
+// V224: berlaku untuk tiap grup di SUBTAB_GROUPS; hanya satu menu terbuka sekaligus.
 let _mgDdTimer = null, _mgDdByHover = false;
-function openMapDropdown(byHover){
-  const menu = document.getElementById('mapDropdownMenu');
-  const trig = document.getElementById('mapTabTrigger');
+function openMapDropdown(byHover, key){
+  const g = SUBTAB_GROUPS[key || 'map'];
+  const menu = document.getElementById(g.menu);
+  const trig = document.getElementById(g.trig);
   if (!menu || !trig) return;
   clearTimeout(_mgDdTimer);
   if (menu.classList.contains('open')) return;
+  closeMapDropdown();
   closePembangkitDropdown();
   _mgDdByHover = !!byHover;
   menu.classList.add('open');
@@ -17914,18 +18205,23 @@ function openMapDropdown(byHover){
   trig.setAttribute('aria-expanded', 'true');
   setTimeout(() => { document.addEventListener('click', _mgDdOutside); }, 0);
 }
+// Menutup menu SEMUA grup (dipanggil juga oleh dropdown Overview Pembangkit).
 function closeMapDropdown(){
   clearTimeout(_mgDdTimer);
-  const menu = document.getElementById('mapDropdownMenu');
-  const trig = document.getElementById('mapTabTrigger');
-  if (menu) menu.classList.remove('open');
-  if (trig){ trig.classList.remove('dd-open'); trig.setAttribute('aria-expanded', 'false'); }
+  for (const k in SUBTAB_GROUPS){
+    const menu = document.getElementById(SUBTAB_GROUPS[k].menu);
+    const trig = document.getElementById(SUBTAB_GROUPS[k].trig);
+    if (menu) menu.classList.remove('open');
+    if (trig){ trig.classList.remove('dd-open'); trig.setAttribute('aria-expanded', 'false'); }
+  }
   document.removeEventListener('click', _mgDdOutside);
 }
 function _mgDdOutside(e){
-  const menu = document.getElementById('mapDropdownMenu');
-  const trig = document.getElementById('mapTabTrigger');
-  if ((menu && menu.contains(e.target)) || (trig && trig.contains(e.target))) return;
+  for (const k in SUBTAB_GROUPS){
+    const menu = document.getElementById(SUBTAB_GROUPS[k].menu);
+    const trig = document.getElementById(SUBTAB_GROUPS[k].trig);
+    if ((menu && menu.contains(e.target)) || (trig && trig.contains(e.target))) return;
+  }
   closeMapDropdown();
 }
 // Jeda tutup supaya kursor sempat menyeberang celah 2px dari tombol ke menu.
@@ -17934,24 +18230,28 @@ function _mgDdCloseSoon(e){
   clearTimeout(_mgDdTimer);
   _mgDdTimer = setTimeout(closeMapDropdown, 180);
 }
-function _mgWireDropdown(trig){
-  const menu = document.getElementById('mapDropdownMenu');
+let _mgDdGlobalWired = false;
+function _mgWireDropdown(trig, key){
+  key = key || 'map';
+  const menu = document.getElementById(SUBTAB_GROUPS[key].menu);
   if (!menu) return;
   trig.setAttribute('aria-expanded', 'false');
-  trig.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') openMapDropdown(true); });
+  trig.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') openMapDropdown(true, key); });
   trig.addEventListener('pointerleave', _mgDdCloseSoon);
   menu.addEventListener('pointerenter', () => clearTimeout(_mgDdTimer));
   menu.addEventListener('pointerleave', _mgDdCloseSoon);
   // Klik pertama setelah hover tidak menutup menu yang baru saja muncul.
   trig.onclick = e => {
     e.stopPropagation();
-    if (!menu.classList.contains('open')) openMapDropdown(false);
+    if (!menu.classList.contains('open')) openMapDropdown(false, key);
     else if (_mgDdByHover) _mgDdByHover = false;
     else closeMapDropdown();
   };
   menu.querySelectorAll('.tab-dd-item').forEach(it => {
     it.onclick = () => { closeMapDropdown(); switchTab(it.dataset.mgtab); };
   });
+  if (_mgDdGlobalWired) return;
+  _mgDdGlobalWired = true;
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMapDropdown(); });
   window.addEventListener('resize', closeMapDropdown);
   const bar = document.querySelector('.tabs');
@@ -17982,7 +18282,7 @@ function switchTab(tab){
   // V118: tab yang basi karena filter global dibangun ulang saat dibuka (chart di
   // display:none jadi gepeng). Dipanggil sebelum lazy-init agar tidak dobel render.
   gfSyncTab(tab);
-  const railTab = MG_TABS.includes(tab) ? 'map' : tab;   // V216
+  const railTab = _sgRailTab(tab);   // V216, V224: subtab grup → tombol rail grupnya
   document.querySelectorAll('.tab').forEach(b => {
     b.classList.toggle('active', b.dataset.tab === railTab);
   });
@@ -21368,8 +21668,10 @@ function presenceRetrack(){
 
 function _onlineTabLabel(tab){
   if (!tab) return '—';
+  if (SUBTAB_GROUPS[tab]) return SUBTAB_GROUPS[tab].base;   // V224: bukan label subtab aktif
   const el = document.querySelector('.tab[data-tab="' + tab + '"], .mg-subtab[data-mgtab="' + tab + '"]');   // V216
-  const t = el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+  const sub = el && el.classList.contains('mg-subtab') ? SUBTAB_GROUPS[_sgRailTab(tab)].prefix : '';
+  const t = el ? sub + el.textContent.replace(/\s+/g, ' ').trim() : '';
   return t || tab;
 }
 
@@ -30077,6 +30379,8 @@ window.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.tab').forEach(b => {
     if (b.id === 'mapTabTrigger'){
       _mgWireDropdown(b);   // V217
+    } else if (b.id === 'realTabTrigger'){
+      _mgWireDropdown(b, 'realisasi');   // V224
     } else if (b.classList.contains('tab-dd-trigger')){
       _pkWireHover(b);   // V219
       // Klik pertama setelah hover tidak menutup menu yang baru saja muncul.
@@ -32191,10 +32495,16 @@ const QOL_TAB_KW = {
   'pembangkit':   'overview pembangkit inventaris kit jenis pltu pltgu pltg pltmg pltd pltp plta pltm pltmh plts pltb pltbm pltbg kapasitas unit mesin sentral',
   'fasilitas':    'fasilitas produksi pabrik pelet sawdust wood chip woodchip supplier',
   'biohidrogen':  'bio hydrogen hidrogen h2 map peta',
-  'syngas':       'syngas gasifikasi gas sintetis map peta',
+  'syngas':       'dedieselisasi syngas gasifikasi gas sintetis diesel pltd map peta',
   'waste':        'waste management sampah limbah rdf map peta',
+  'biochar':      'bio char biochar arang map peta',
+  'real-cbg':           'realisasi cbg biocng biometana',
+  'real-biohidrogen':   'realisasi bio hydrogen hidrogen h2',
+  'real-dedieselisasi': 'realisasi dedieselisasi syngas gasifikasi diesel',
+  'real-waste':         'realisasi waste management sampah limbah rdf',
+  'real-biochar':       'realisasi bio char biochar arang',
   'cbg':          'biocbg biocng cbg prioritas pome biometana biomethane pome pks pabrik kelapa sawit klaster prioritas co-mingle gas pltg pltmg pltgu penghematan',
-  'realisasi':    'realisasi target gap capaian achievement tahunan bulanan yoy 2023 2024 2025 2026 rekap',
+  'realisasi':    'realisasi biomass biomassa target gap capaian achievement tahunan bulanan yoy 2023 2024 2025 2026 rekap',
   'bottleneck':   'bottleneck kendala hambatan isu masalah problem',
   'pareto':       'pareto loss kehilangan kategori penyebab analisa',
   'kontrak':      'kontrak mitra pemasok vendor daftar do delivery order pasokan',
@@ -32223,14 +32533,17 @@ function qolBuildCmdkIndex(){
     const tab = btn.dataset.tab;
     if (!tab) return;
     const lblEl = btn.querySelector('#pembangkitTabLabel');
-    const label = (lblEl ? lblEl.textContent : btn.textContent).replace('▾','').trim();
+    const label = SUBTAB_GROUPS[tab] ? SUBTAB_GROUPS[tab].base   // V224: bukan label subtab aktif
+      : (lblEl ? lblEl.textContent : btn.textContent).replace('▾','').trim();
     items.push({ kind:'tab', tab, label, kw: QOL_TAB_KW[tab] || '', digit: QOL_TAB_DIGIT[tab] || '' });
   });
   // V216: subtab Map Cofiring selain Biomassa (tab 'map' sudah terambil di atas).
-  document.querySelectorAll('#mgSubnav .mg-subtab').forEach(btn => {
+  // V224: + subtab Realisasi; label diberi awalan grup agar "CBG" Map ≠ "CBG" Realisasi.
+  document.querySelectorAll('#mgSubnav .mg-subtab, #rgSubnav .mg-subtab').forEach(btn => {
     const tab = btn.dataset.mgtab;
-    if (!tab || tab === 'map') return;
-    items.push({ kind:'tab', tab, label: btn.textContent.trim(), kw: QOL_TAB_KW[tab] || '', digit: '' });
+    if (!tab || SUBTAB_GROUPS[tab]) return;
+    const g = SUBTAB_GROUPS[_sgRailTab(tab)];
+    items.push({ kind:'tab', tab, label: g.prefix + btn.textContent.trim(), kw: QOL_TAB_KW[tab] || '', digit: '' });
   });
   // V179: Kalender kini tab biasa — sudah terambil dari bilah tab di atas.
   // V158: halaman Ranking Mitra (tanpa tombol di bilah tab).
@@ -32358,7 +32671,7 @@ function qolBuildCmdkIndex(){
   // Tindakan.
   items.push({ kind:'action', id:'kbdhelp', label:'Pintasan Keyboard', sub:'Semua tombol cepat', kw:'pintasan keyboard shortcut bantuan help tombol tuts' });
   items.push({ kind:'action', id:'top',     label:'Kembali ke Atas',   sub:'Gulir tab aktif ke puncak', kw:'atas top puncak scroll gulir' });
-  items.push({ kind:'action', id:'copy',    label:'Salin Tautan Dashboard', sub:'Bagikan alamat halaman ini', kw:'salin copy link tautan url alamat bagikan share' });
+  items.push({ kind:'action', id:'copy',    label:'Salin Tautan Tampilan Ini', sub:'Tab, sub-tab, PLTU & filter ikut terbawa', kw:'salin copy link tautan url alamat bagikan share deep' });
   qolCmdkItems = items;
   return items;
 }
@@ -32672,7 +32985,7 @@ function qolRunCmdk(i){
   if (it.kind === 'kontrak'){ qolGotoKontrak({ mitra: it.mitra, pltu: it.pltu, jenis: it.jenis }, it.desc); return; }
   if (it.id === 'kbdhelp') openKbdHelp();
   else if (it.id === 'top') qolScrollActiveToTop();
-  else if (it.id === 'copy') qolCopy(location.href);
+  else if (it.id === 'copy') qolCopy(dlBuildUrl());   // V220
   else if (it.id === 'mitrarank') openMitraRanking();
   else if (it.id === 'checkpoint') openCheckpoint();
 }
@@ -32950,7 +33263,7 @@ function qolSyncMobNavA11y(){
   // Sumber kebenaran: panel yang benar-benar aktif (bukan tab yang diketuk).
   const activeView = document.querySelector('.view.active');
   let activeTab = activeView ? activeView.dataset.view : null;
-  if (MG_TABS.includes(activeTab)) activeTab = 'map';   // V216: subtab Map → tombol Map
+  activeTab = _sgRailTab(activeTab);   // V216/V224: subtab grup → tombol grupnya
   // "Lainnya" aktif hanya bila panel aktif memang ada di dalam lembarnya.
   const activeIsInMore = !!activeTab &&
     !!document.querySelector('#mobMoreMenu [data-mob-tab="' + activeTab + '"]');
@@ -33002,7 +33315,8 @@ const QOL_LAST_TAB_KEY = 'bio-qol-last-tab';
 // Dua tab SENGAJA tidak pernah dipulihkan otomatis: keduanya memasang gerbang
 // identitas, dan memunculkan prompt nama sebelum pengguna melakukan apa pun
 // adalah cara yang buruk untuk membuka sebuah dashboard.
-const QOL_RESTORABLE = ['map','cbg','biohidrogen','syngas','waste','pembangkit','fasilitas','realisasi','bottleneck',
+const QOL_RESTORABLE = ['map','cbg','biohidrogen','syngas','waste','biochar','pembangkit','fasilitas','realisasi',
+                        'real-cbg','real-biohidrogen','real-dedieselisasi','real-waste','real-biochar','bottleneck',
                         'pareto','kontrak','mou-timeline','berita','laporan','calendar'];
 const qolScrollMem = Object.create(null);
 let qolTabRestored = false;
@@ -33014,6 +33328,9 @@ function qolRememberTab(tab){
 function qolRestoreLastTab(){
   if (qolTabRestored) return;
   qolTabRestored = true;
+  // V220: tautan tampilan (#v=...) menang atas tab terakhir — orang yang membuka
+  // tautan kiriman rekan ingin melihat tampilan itu, bukan tab miliknya sendiri.
+  if (typeof dlApplyHash === 'function' && dlApplyHash(true)) return;
   let rec = null;
   try { rec = JSON.parse(localStorage.getItem(QOL_LAST_TAB_KEY) || 'null'); } catch(e){}
   if (!rec || !rec.tab || rec.tab === 'map') return;
@@ -37214,6 +37531,337 @@ window.addEventListener('popstate', ev => {
   } catch(err){ console.warn('[Nav] pulihkan tampilan gagal:', err); }
   finally { navState.restoring = false; }
 });
+
+// ===== V220: tautan tampilan (deep link) =====
+// Alamat membawa tampilan yang sedang dilihat: #v=realisasi&sub=bandingkan&a=...
+// Ditulis dengan replaceState (tidak menambah riwayat — itu urusan blok Nav di atas)
+// dan baru aktif sesudah dlApplyHash(true) dari qolRestoreLastTab, supaya hash
+// kiriman tidak tertimpa sebelum DATA siap dan tampilannya sempat dipulihkan.
+const dlState = { ready:false, applying:false, popAt:0, t:0 };
+const DL_MAP_YEAR0 = state.mapPeriod.year;
+const DL_TAB_LABEL = { map:'Map Cofiring', cbg:'CBG', biohidrogen:'Bio Hydrogen', syngas:'Dedieselisasi', waste:'Waste',
+  biochar:'Bio Char', 'real-cbg':'Realisasi CBG', 'real-biohidrogen':'Realisasi Bio Hydrogen',
+  'real-dedieselisasi':'Realisasi Dedieselisasi', 'real-waste':'Realisasi Waste', 'real-biochar':'Realisasi Bio Char',
+  pembangkit:'Pembangkit', fasilitas:'Fasilitas', realisasi:'Realisasi', bottleneck:'Bottleneck', pareto:'Pareto',
+  kontrak:'Kontrak', 'mou-timeline':'MoU', berita:'Berita', laporan:'Laporan', calendar:'Kalender' };
+
+function dlEncode(){
+  const t = state.tab, q = new URLSearchParams();
+  q.set('v', t);
+  if (t === 'map'){
+    if (state.selected) q.set('pltu', state.selected);
+    if (state.mapPeriod.year !== DL_MAP_YEAR0) q.set('th', state.mapPeriod.year);
+    if (state.mapPeriod.month !== 'all') q.set('bln', state.mapPeriod.month);
+  } else if (t === 'realisasi'){
+    if (state.realSubtab !== 'ringkasan') q.set('sub', state.realSubtab);
+    if (state.realPltuFilterProvince !== 'all') q.set('wil', state.realPltuFilterProvince);
+    if (state.realPltuFilterPltu !== 'all') q.set('pltu', state.realPltuFilterPltu);
+    const c = state.realCmp;
+    if (state.realSubtab === 'bandingkan' && c.a){
+      q.set('a', c.a); q.set('ya', c.ya); q.set('b', c.b); q.set('yb', c.yb);
+      if (c.cum) q.set('cum', '1');
+    }
+  } else if (t === 'kontrak'){
+    ['pltu','mitra','jenis'].forEach(k => {
+      const v = state.kontrakFilters[k];
+      if (v && v !== 'all') q.set(k, v);
+    });
+  } else if (t === 'laporan'){
+    if (state.laporanSubtab !== 'library') q.set('sub', state.laporanSubtab);
+  }
+  return q.toString();
+}
+function dlBuildUrl(){
+  const base = location.href.split('#')[0];
+  return QOL_RESTORABLE.includes(state.tab) ? base + '#' + dlEncode() : base;
+}
+function dlSync(){
+  if (!dlState.ready || dlState.applying || !state) return;
+  const enc = dlEncode();
+  // Tampilan awal (Map tanpa pilihan) = alamat bersih tanpa hash. Tab bergerbang
+  // identitas / halaman Mitra tidak bisa dibuka dari tautan → hash juga dikosongkan.
+  const want = (enc === 'v=map' || !QOL_RESTORABLE.includes(state.tab)) ? '' : '#' + enc;
+  if (location.hash === want || (!want && !location.hash)) return;
+  try { history.replaceState(history.state, '', location.href.split('#')[0] + want); } catch(e){}
+}
+function dlScheduleSync(){
+  clearTimeout(dlState.t);
+  dlState.t = setTimeout(dlSync, 400);
+}
+// boot=true: dipanggil sekali dari qolRestoreLastTab. Mengembalikan true bila
+// tampilan dipulihkan dari hash.
+function dlApplyHash(boot){
+  dlState.ready = true;
+  const raw = (location.hash || '').replace(/^#/, '');
+  if (!/(^|&)v=/.test(raw)) return false;
+  const q = new URLSearchParams(raw);
+  const v = q.get('v');
+  if (!QOL_RESTORABLE.includes(v)) return false;
+  // Pengguna sudah pindah tab sendiri sebelum DATA siap — jangan rebut kendali.
+  if (boot && state.tab !== 'map') return false;
+  const plants = (DATA && DATA.plants) || [];
+  const hasPlant = c => !!c && plants.some(p => p.code === c);
+  dlState.applying = true;
+  try {
+    if (v === 'map'){
+      const ySel = document.getElementById('map-year-filter'), mSel = document.getElementById('map-month-filter');
+      const th = q.get('th'), bln = q.get('bln');
+      let changed = false;
+      if (th && ySel && [...ySel.options].some(o => o.value === th)){ state.mapPeriod.year = th; ySel.value = th; changed = true; }
+      if (bln && mSel && [...mSel.options].some(o => o.value === bln)){ state.mapPeriod.month = bln; mSel.value = bln; changed = true; }
+      if (changed){ try { refreshMarkers(); updateKPIs(); } catch(e){} }
+      if (hasPlant(q.get('pltu'))) qolGotoPlant(q.get('pltu'));
+      else switchTab('map');
+    } else if (v === 'realisasi'){
+      const wil = q.get('wil'), pltu = q.get('pltu');
+      state.realPltuFilterProvince = (wil && PROVINCE_GROUPS[wil]) ? wil : 'all';
+      state.realPltuFilterPltu = hasPlant(pltu) ? pltu : 'all';
+      const provSel = document.getElementById('realProvinceFilter');
+      if (provSel) provSel.value = state.realPltuFilterProvince;
+      const sub = REAL_SUBTABS.includes(q.get('sub')) ? q.get('sub') : 'ringkasan';
+      if (sub === 'bandingkan'){
+        // Nilai tak dikenal dibiarkan; renderRealCompare() menggantinya dengan default.
+        Object.assign(state.realCmp, { a: q.get('a'), ya: q.get('ya'), b: q.get('b'), yb: q.get('yb'), cum: q.get('cum') === '1' });
+      }
+      state.realSubtab = sub;
+      switchTab('realisasi');
+      setTimeout(() => { try { setRealSubtab(sub); } catch(e){} }, 80);
+    } else if (v === 'kontrak'){
+      const opts = { pltu: q.get('pltu') || undefined, mitra: q.get('mitra') || undefined, jenis: q.get('jenis') || undefined };
+      if (opts.pltu || opts.mitra || opts.jenis) qolGotoKontrak(opts, 'sesuai tautan');
+      else switchTab('kontrak');
+    } else if (v === 'laporan'){
+      switchTab('laporan');
+      const sub = q.get('sub');
+      if (sub === 'input' || sub === 'checkpoint') setLaporanSubtab(sub);
+    } else {
+      switchTab(v);
+    }
+    if (boot) showToast('Dibuka dari tautan: ' + (DL_TAB_LABEL[v] || v) + '.', 'info', 4000);
+  } catch(e){
+    console.warn('[DeepLink] pulihkan dari tautan gagal:', e);
+  } finally {
+    setTimeout(() => { dlState.applying = false; dlSync(); }, 600);
+  }
+  return true;
+}
+
+(function(){
+  const prevSwitch = window.switchTab;
+  window.switchTab = function(){
+    const out = prevSwitch.apply(this, arguments);
+    dlScheduleSync();
+    return out;
+  };
+})();
+// Perubahan state lain (select, klik marker, sub-tab, tombol) tidak punya satu
+// titik masuk; fase capture menangkap semuanya, lalu disinkronkan sesudah handler.
+['click','change','keydown'].forEach(t => document.addEventListener(t, dlScheduleSync, { capture:true, passive:true }));
+// Back/forward: blok Nav yang memulihkan tab; hashchange yang ikut terpicu dilewati.
+// Navigasi fragmen (tempel tautan baru di tab yang sama) juga memicu popstate, tapi
+// dengan state null — hanya entri milik blok Nav (state.bm) yang berarti back/forward.
+window.addEventListener('popstate', ev => {
+  if (ev.state && ev.state.bm) dlState.popAt = Date.now();
+  dlScheduleSync();
+});
+window.addEventListener('hashchange', () => {
+  if (!dlState.ready || Date.now() - dlState.popAt < 500) return;
+  dlApplyHash(false);
+});
+
+// ===== V221: salin / ekspor Excel untuk setiap tabel =====
+const ttState = { table:null, hideT:0 };
+function _ttEl(){
+  let el = document.getElementById('tblTools');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'tblTools';
+  el.className = 'tbl-tools';
+  el.setAttribute('role', 'toolbar');
+  el.setAttribute('aria-label', 'Alat tabel');
+  el.innerHTML =
+    '<button type="button" data-tt="copy" title="Salin tabel (tempel ke Excel/Word)">' +
+      '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="1"/><path d="M11 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2"/></svg>Salin</button>' +
+    '<button type="button" data-tt="xlsx" title="Unduh tabel sebagai Excel">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Excel</button>';
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button[data-tt]');
+    if (!b || !ttState.table) return;
+    if (b.dataset.tt === 'copy') ttCopyTable(ttState.table);
+    else ttExportTable(ttState.table);
+  });
+  document.body.appendChild(el);
+  return el;
+}
+function _ttEligible(t){
+  if (!t || !t.rows || t.rows.length < 3 || !t.offsetParent) return false;
+  if (t.closest('.leaflet-container, #cmdkBackdrop, .calc-tip, [data-no-tbl-tools]')) return false;
+  return true;
+}
+function _ttShow(t){
+  clearTimeout(ttState.hideT);
+  const el = _ttEl();
+  if (ttState.table === t && el.classList.contains('show')) return;
+  ttState.table = t;
+  // Tabel lebar biasanya di dalam pembungkus ber-scroll: tepi kanan yang kelihatan
+  // adalah tepi pembungkus, bukan tepi tabel.
+  const r = t.getBoundingClientRect();
+  let right = r.right, top = r.top;
+  for (let p = t.parentElement; p && p !== document.body; p = p.parentElement){
+    const cs = getComputedStyle(p);
+    if (/(auto|scroll|hidden)/.test(cs.overflowX + cs.overflowY)){
+      const pr = p.getBoundingClientRect();
+      right = Math.min(right, pr.right);
+      top = Math.max(top, pr.top);
+      break;
+    }
+  }
+  el.classList.add('show');
+  const w = el.offsetWidth || 130;
+  top = Math.min(Math.max(top + 4, 104), r.bottom - 30);
+  el.style.top = Math.round(top) + 'px';
+  el.style.left = Math.round(Math.max(8, Math.min(right, window.innerWidth) - w - 6)) + 'px';
+}
+function _ttHide(now){
+  clearTimeout(ttState.hideT);
+  const go = () => { const el = document.getElementById('tblTools'); if (el) el.classList.remove('show'); ttState.table = null; };
+  if (now) go(); else ttState.hideT = setTimeout(go, 350);
+}
+document.addEventListener('pointerover', e => {
+  const tg = e.target;
+  if (!tg || !tg.closest) return;
+  if (tg.closest('#tblTools')){ clearTimeout(ttState.hideT); return; }
+  const t = tg.closest('table');
+  if (t && _ttEligible(t)) _ttShow(t);
+  else if (ttState.table) _ttHide(false);
+}, { passive:true });
+document.addEventListener('scroll', () => { if (ttState.table) _ttHide(true); }, { capture:true, passive:true });
+window.addEventListener('resize', () => _ttHide(true));
+
+function _ttTitle(t){
+  for (let el = t; el && el !== document.body; el = el.parentElement){
+    const h = el.querySelector('h1,h2,h3,h4,.trend-table-title');
+    if (h && (h.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING) && h.textContent.trim()) return h.textContent.trim();
+  }
+  return DL_TAB_LABEL[state.tab] || 'Tabel';
+}
+// Teks sel: node teks bertingkat dipisah spasi ("Ampana" + lencana "PNP" →
+// "Ampana PNP", bukan "AmpanaPNP"); tombol & ikon di dalam sel tidak ikut.
+function _ttCellText(c){
+  const parts = [];
+  (function walk(n){
+    for (const k of n.childNodes){
+      if (k.nodeType === 3){ parts.push(k.nodeValue); continue; }
+      if (k.nodeType !== 1) continue;
+      if (/^(BUTTON|SVG|svg|SCRIPT|STYLE|INPUT|SELECT)$/.test(k.tagName) || k.hidden || k.style.display === 'none'
+          || (k.classList && k.classList.contains('harga-lock-btn')) || k.hasAttribute('data-no-export')) continue;
+      parts.push(' ');
+      walk(k);
+      parts.push(' ');
+    }
+  })(c);
+  return parts.join('').replace(/\s+/g, ' ').trim();
+}
+// Tabel → array 2D yang menghormati rowspan/colspan; merges dicatat untuk Excel.
+// Baris tersembunyi (filter, collapse) dilewati — yang diekspor = yang terlihat.
+function _ttGrid(t){
+  const grid = [], merges = [];
+  let R = 0;
+  [...t.rows].forEach(r => {
+    if (!r.getClientRects().length) return;
+    grid[R] = grid[R] || [];
+    let C = 0;
+    [...r.cells].forEach(c => {
+      while (grid[R][C] !== undefined) C++;
+      const rs = Math.max(1, c.rowSpan || 1), cs = Math.max(1, c.colSpan || 1);
+      for (let dr = 0; dr < rs; dr++){
+        grid[R + dr] = grid[R + dr] || [];
+        for (let dc = 0; dc < cs; dc++) grid[R + dr][C + dc] = (dr || dc) ? null : _ttCellText(c);
+      }
+      if (rs > 1 || cs > 1) merges.push({ s:{ r:R, c:C }, e:{ r:R + rs - 1, c:C + cs - 1 } });
+      C += cs;
+    });
+    R++;
+  });
+  return { grid, merges };
+}
+function ttCopyTable(t){
+  const { grid } = _ttGrid(t);
+  qolCopy(grid.map(row => [...row].map(v => (v || '').replace(/\t/g, ' ')).join('\t')).join('\n'));
+}
+// Teks sel → angka bila tak ambigu. Dashboard memakai format en-US (1,234.5) dan
+// id-ID (1.234,5): pemisah yang diikuti tepat kelompok 3 digit dibaca ribuan, satu
+// pemisah dengan 1–2 atau 4+ digit dibaca desimal. Kode berawalan 0 (mis. "0592")
+// dan teks bersatuan dibiarkan string.
+function _ttNum(s){
+  let t = String(s).trim().replace(/−/g, '-').replace(/[\s ]/g, '');
+  if (!t || /^[+-]?0\d/.test(t)) return null;
+  let pct = false;
+  if (t.endsWith('%')){ pct = true; t = t.slice(0, -1); }
+  if (!/^[+-]?\d[\d.,]*$/.test(t)) return null;
+  const sign = t[0] === '-' ? -1 : 1;
+  t = t.replace(/^[+-]/, '');
+  const hasDot = t.includes('.'), hasCom = t.includes(',');
+  let n, dec = 0, grouped = false;
+  if (hasDot && hasCom){
+    const d = t.lastIndexOf('.') > t.lastIndexOf(',') ? '.' : ',';
+    const g = d === '.' ? ',' : '.';
+    const parts = t.split(d);
+    if (parts.length !== 2 || !new RegExp('^\\d{1,3}(\\' + g + '\\d{3})+$').test(parts[0])) return null;
+    n = parseFloat(parts[0].split(g).join('') + '.' + parts[1]);
+    dec = parts[1].length; grouped = true;
+  } else if (hasDot || hasCom){
+    const sep = hasDot ? '.' : ',';
+    const parts = t.split(sep);
+    if (/^[1-9]\d{0,2}$/.test(parts[0]) && parts.slice(1).every(x => /^\d{3}$/.test(x))){
+      n = parseFloat(parts.join('')); grouped = true;
+    } else if (parts.length === 2){
+      n = parseFloat(parts[0] + '.' + parts[1]); dec = parts[1].length;
+    } else return null;
+  } else {
+    n = parseFloat(t);
+  }
+  if (!isFinite(n)) return null;
+  const z = pct ? ('0' + (dec ? '.' + '0'.repeat(dec) : '') + '%')
+                : (grouped ? '#,##0' : '0') + (dec ? '.' + '0'.repeat(dec) : '');
+  // Dibulatkan ke presisi tampilan: 101.9% / 100 tidak boleh jadi 1.0190000000000001.
+  return { v: +(sign * n / (pct ? 100 : 1)).toFixed(dec + (pct ? 2 : 0)), z };
+}
+function ttExportTable(t){
+  if (typeof XLSX === 'undefined' || !XLSX.utils || !XLSX.utils.aoa_to_sheet){
+    showToast('Pustaka Excel belum termuat. Coba lagi sebentar.', 'warn', 3500);
+    return;
+  }
+  try {
+    const { grid, merges } = _ttGrid(t);
+    let nHead = 0;
+    if (t.tHead) [...t.tHead.rows].forEach(r => { if (r.getClientRects().length) nHead++; });
+    if (!nHead) nHead = 1;
+    const head = { font:{ bold:true, color:{ rgb:'FFFFFF' } }, fill:{ fgColor:{ rgb:'0F496E' } }, alignment:{ vertical:'center', wrapText:true } };
+    const widths = [];
+    const aoa = grid.map((row, R) => [...row].map((txt, C) => {
+      txt = txt || '';
+      widths[C] = Math.max(widths[C] || 6, Math.min(48, txt.length + 2));
+      if (R < nHead) return { v: txt, t: 's', s: head };
+      if (txt === '—' || txt === '-') return { v: '', t: 's' };
+      const num = _ttNum(txt);
+      return num ? { v: num.v, t: 'n', z: num.z } : { v: txt, t: 's' };
+    }));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    if (merges.length) ws['!merges'] = merges;
+    ws['!cols'] = widths.map(w => ({ wch: w || 8 }));
+    const title = _ttTitle(t);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, title.replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31) || 'Tabel');
+    const safe = title.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60) || 'Tabel';
+    const tag = typeof globalFilterFileTag === 'function' ? globalFilterFileTag() : '';
+    XLSX.writeFile(wb, 'Bioenergi_' + safe + tag + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+  } catch(e){
+    console.error('[Tabel] ekspor Excel gagal:', e);
+    showToast('Ekspor Excel gagal: ' + (e && e.message ? e.message : e), 'warn', 4500);
+  }
+}
+
 
 </script>
 </body>
