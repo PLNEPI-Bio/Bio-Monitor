@@ -38738,8 +38738,11 @@ function _ttShow(t){
     }
   }
   el.classList.add('show');
-  const w = el.offsetWidth || 130;
-  top = Math.min(Math.max(top + 4, 104), r.bottom - 30);
+  const w = el.offsetWidth || 130, h = el.offsetHeight || 30;
+  // V242: taruh tepat di atas tabel supaya tidak menutupi kolom; hanya bila tepi
+  // atas tabel sudah tertutup header, alat turun ke dalam tabel.
+  const above = top - h - 4;
+  top = above >= 104 ? above : Math.min(Math.max(top + 4, 104), r.bottom - 30);
   el.style.top = Math.round(top) + 'px';
   el.style.left = Math.round(Math.max(8, Math.min(right, window.innerWidth) - w - 6)) + 'px';
 }
