@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!-- V247: pengumuman pindah domain untuk plnepi-bio.github.io/Bio-Monitor (ditutup 1 November 2026).
+     index.html mengalihkan ke sini bila dibuka dari *.github.io. Disaring .assetsignore,
+     jadi tidak tersaji di bioenergi-plnepi.bio. -->
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="https://bioenergi-plnepi.bio/">
+<title>Dashboard Bioenergi pindah ke bioenergi-plnepi.bio</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: #f1f5f9; color: #0f172a;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .card {
+    max-width: 520px; width: 100%; background: #fff; border-radius: 16px; padding: 36px 32px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .08); border-top: 5px solid #0a3d91;
+  }
+  .kicker {
+    font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: #0a3d91; margin: 0 0 10px;
+  }
+  h1 { font-size: 24px; line-height: 1.3; margin: 0 0 14px; }
+  p { font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 14px; }
+  .url {
+    display: block; font-weight: 700; color: #0a3d91; word-break: break-all;
+    margin: 4px 0 20px; font-size: 18px;
+  }
+  .warn {
+    background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 14px;
+    border-radius: 8px; color: #78350f;
+  }
+  .btn {
+    display: inline-block; background: #0a3d91; color: #fff; text-decoration: none;
+    font-weight: 600; padding: 12px 22px; border-radius: 10px; margin-top: 6px;
+  }
+  .btn:hover { background: #082f70; }
+  .count { font-size: 13px; color: #64748b; margin: 18px 0 0; }
+  .foot { font-size: 12px; color: #94a3b8; margin: 22px 0 0; }
+</style>
+</head>
+<body>
+<main class="card">
+  <p class="kicker">Pengumuman</p>
+  <h1>Dashboard Bioenergi pindah ke domain baru</h1>
+  <p>Seluruh akses dashboard kini dialihkan ke alamat berikut:</p>
+  <a class="url" id="newUrl" href="https://bioenergi-plnepi.bio/">bioenergi-plnepi.bio</a>
+  <p class="warn">Alamat <b>plnepi-bio.github.io/Bio-Monitor</b> akan <b>ditutup pada
+    1 November 2026</b>. Mohon perbarui bookmark dan tautan yang Anda bagikan.</p>
+  <a class="btn" id="goBtn" href="https://bioenergi-plnepi.bio/">Buka dashboard baru</a>
+  <p class="count">Anda akan dialihkan otomatis dalam <b id="n">10</b> detik.</p>
+  <p class="foot">PT PLN Energi Primer Indonesia</p>
+</main>
+<script>
+(function(){
+  var url = 'https://bioenergi-plnepi.bio/' + location.hash;
+  document.getElementById('newUrl').href = url;
+  document.getElementById('goBtn').href = url;
+  var n = 10, el = document.getElementById('n');
+  var t = setInterval(function(){
+    n--;
+    el.textContent = n;
+    if (n <= 0) { clearInterval(t); location.replace(url); }
+  }, 1000);
+})();
+</script>
+</body>
+</html>

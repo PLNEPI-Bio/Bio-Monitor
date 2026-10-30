@@ -10,3 +10,5 @@ node_modules/
 *.py
 *.jsonc
 skills-lock.json
+# Pengumuman pindah domain, khusus GitHub Pages (V247).
+pindah.html
