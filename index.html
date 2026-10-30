@@ -10179,6 +10179,8 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (window._
 .ms-nav button{flex-shrink:0;background:transparent;border:none;border-bottom:3px solid transparent;padding:8px 12px 9px;font:700 var(--fs-body) 'Plus Jakarta Sans',sans-serif;color:var(--text-dim);cursor:pointer;letter-spacing:.02em}
 .ms-nav button:hover{color:var(--text-bright)}
 .ms-nav button.on{color:var(--text-bright);border-bottom-color:var(--accent-2)}
+.ms-nav button.ms-nav-back{position:sticky;left:0;z-index:1;align-self:center;margin:0 8px 6px 0;padding:0 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--ctl-radius);color:var(--text);font-weight:600;letter-spacing:0} /* V255 */
+.ms-nav button.ms-nav-back:hover{border-color:var(--border-bright);color:var(--text-bright)}
 .ms-scope{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;padding:12px 0 4px}
 .ms-scope label{display:block;font-size:var(--fs-note);letter-spacing:var(--ls-caps);color:var(--text-dim);font-weight:700;margin-bottom:4px}
 .ms-scope select{min-height:var(--ctl-h-sm);min-width:170px;max-width:100%;padding:0 var(--ctl-chevron-gutter) 0 8px;border:1px solid var(--border);border-radius:var(--ctl-radius);background-color:var(--panel);color:var(--text);font:500 var(--fs-body) 'Plus Jakarta Sans',sans-serif}
@@ -34932,7 +34934,7 @@ function _msWin(year){
   return yi < 0 ? null : { y: MS_YEARS[yi], k0: yi * 12, k1: yi * 12 + 11 };
 }
 const msState = { mitra:'', pltu:'all', jenis:'all', year:'all', prevTab:'map', trend:'month', peer:'jenis',
-                  ctSort:{ k:'awal', d:-1 }, plSort:{ k:'real', d:-1 }, model:null };
+                  ctSort:{ k:'awal', d:-1 }, plSort:{ k:'real', d:-1 }, model:null, scopeDepth:0 };
 const mitraCharts = {};
 
 function _msYM(iso){
@@ -35276,6 +35278,7 @@ function openMitraSummary(mitra, opts){
   }
   if (state.tab !== 'mitra') msState.prevTab = state.tab || 'map';
   msState.mitra = mitra;
+  msState.scopeDepth = 0;   // V255
   msState.pltu  = (opts && opts.pltu)  || 'all';
   msState.jenis = (opts && opts.jenis) || 'all';
   // V158: pindah mitra dari dalam halaman ini mempertahankan tahun yang dipilih.
@@ -35294,6 +35297,8 @@ function openMitraSummary(mitra, opts){
   }, 30);
 }
 function msGoBack(){
+  // V255: lingkup pernah diganti di halaman ini → mundur satu langkah, sama dengan Back browser.
+  if (msState.scopeDepth > 0){ history.back(); return; }
   const t = msState.prevTab && msState.prevTab !== 'mitra' ? msState.prevTab : 'map';
   switchTab(t);
 }
@@ -35302,9 +35307,25 @@ function msOpenInKontrak(){
                  msState.mitra, 'atas nama "' + msState.mitra + '"');
 }
 function msSetScope(kind, v){
-  if (kind === 'pltu') msState.pltu = v || 'all';
-  else if (kind === 'jenis') msState.jenis = v || 'all';
-  else if (kind === 'year') msState.year = v || 'all';
+  const next = { pltu: msState.pltu, jenis: msState.jenis, year: msState.year };
+  next[kind] = v || 'all';
+  _msApplyScope(next);
+}
+function msClearScope(){ _msApplyScope({ pltu:'all', jenis:'all', year:'all' }); }
+// V255: tiap ganti lingkup = satu entri riwayat. Posisi gulir disimpan di entri yang
+// ditinggalkan; pemulihannya di handler popstate.
+function _msApplyScope(next){
+  if (next.pltu === msState.pltu && next.jenis === msState.jenis && next.year === msState.year) return;
+  const view = document.getElementById('msView');
+  _navArm();
+  try {
+    const e = _navEntry();
+    e.ms.scroll = view ? view.scrollTop : 0;
+    history.replaceState(e, '', location.href);
+  } catch(err){}
+  Object.assign(msState, next);
+  msState.scopeDepth++;
+  try { history.pushState(_navEntry(), '', location.href); } catch(err){}
   renderMitraSummary(true);
 }
 function msSetTrend(mode){ msState.trend = mode; _msRenderTrend(msState.model); }
@@ -35385,6 +35406,7 @@ function renderMitraSummary(keepScroll){
   const yOpts = '<option value="all">Semua tahun (2023–2026)</option>' +
     MS_YEARS.map(y => '<option value="' + y + '"' + (y === msState.year ? ' selected' : '') + '>' + y + '</option>').join('');
   const realLbl = M.win ? M.win.y : '2023–2026';
+  const scopeBack = msState.scopeDepth > 0;   // V255
 
   // Cincin skor.
   const R = 42, C = 2 * Math.PI * R;
@@ -35400,7 +35422,7 @@ function renderMitraSummary(keepScroll){
 
   let html = '' +
     '<div class="ms-top">' +
-      '<button class="ms-back" onclick="msGoBack()" title="Kembali ke tab sebelumnya">' + MS_IC.back + ' Kembali</button>' +
+      '<button class="ms-back" onclick="msGoBack()" title="' + (scopeBack ? 'Kembali ke tampilan sebelumnya' : 'Kembali ke tab sebelumnya') + '">' + MS_IC.back + ' Kembali</button>' +
       '<span class="ms-crumb">Ringkasan Mitra</span>' +
       '<span class="ms-top-sp"></span>' +
       '<div class="ms-switch"><input type="text" id="msMitraInput" list="msMitraList" placeholder="Ganti mitra…" autocomplete="off" aria-label="Ganti mitra" ' +
@@ -35445,6 +35467,8 @@ function renderMitraSummary(keepScroll){
       '</div>' +
     '</div>' +
     '<nav class="ms-nav" id="msNav" aria-label="Bagian ringkasan mitra">' +
+      // V255: header bisa sudah tergulir keluar saat lingkup diganti, jadi Kembali ikut di nav sticky.
+      (scopeBack ? '<button type="button" class="ms-back ms-nav-back" onclick="msGoBack()" title="Kembali ke tampilan sebelumnya">' + MS_IC.back + ' Kembali</button>' : '') +
       MS_SECTIONS.map(([id, t], i) => '<button type="button" data-sec="' + id + '"' + (i === 0 ? ' class="on"' : '') + ' onclick="msGoSection(\'' + id + '\')">' + t + '</button>').join('') +
     '</nav>' +
     '<div class="ms-scope">' +
@@ -35452,7 +35476,7 @@ function renderMitraSummary(keepScroll){
       '<div><label for="msJenisSel">Jenis biomassa</label><select id="msJenisSel" onchange="msSetScope(\'jenis\', this.value)">' + jOpts + '</select></div>' +
       '<div><label for="msYearSel">Tahun</label><select id="msYearSel" onchange="msSetScope(\'year\', this.value)">' + yOpts + '</select></div>' +
       '<div class="ms-scope-note">Menampilkan <b>' + a.n + '</b> dari ' + M.all.length + ' kontrak' +
-        (scoped ? ' · <a onclick="msState.pltu=\'all\';msState.jenis=\'all\';msState.year=\'all\';renderMitraSummary(true)">tampilkan semua</a>' : '') + '</div>' +
+        (scoped ? ' · <a onclick="msClearScope()">tampilkan semua</a>' : '') + '</div>' +
     '</div>';
 
   if (!a.n){
@@ -38774,7 +38798,7 @@ function _navEntry(){
   const tab = navState.home ? 'home' : ((state && state.tab) || 'map');
   const e = { bm:1, tab };
   if (tab === 'sektor-uc'){ e.uc = state.sektorUcFor; e.sk = state.sektor; }   // V240
-  if (tab === 'mitra') e.ms = { m: msState.mitra, pltu: msState.pltu, jenis: msState.jenis, year: msState.year, prevTab: msState.prevTab };
+  if (tab === 'mitra') e.ms = { m: msState.mitra, pltu: msState.pltu, jenis: msState.jenis, year: msState.year, prevTab: msState.prevTab, depth: msState.scopeDepth };
   if (tab === 'mitrarank') e.mr = { year: mrState.year, jenis: mrState.jenis, genco: mrState.genco, metric: mrState.metric,
                                     minDo: mrState.minDo, active: mrState.active, prevTab: mrState.prevTab };
   return e;
@@ -38847,10 +38871,17 @@ window.addEventListener('popstate', ev => {
   navState.restoring = true;
   try {
     if (st.tab === 'mitra' && st.ms && st.ms.m){
-      Object.assign(msState, { mitra: st.ms.m, pltu: st.ms.pltu || 'all', jenis: st.ms.jenis || 'all', year: st.ms.year || 'all' });
+      Object.assign(msState, { mitra: st.ms.m, pltu: st.ms.pltu || 'all', jenis: st.ms.jenis || 'all', year: st.ms.year || 'all', scopeDepth: st.ms.depth || 0 });
       if (st.ms.prevTab) msState.prevTab = st.ms.prevTab;
       switchTab('mitra');
-      setTimeout(() => { navState.restoring = true; try { renderMitraSummary(); } finally { navState.restoring = false; } }, 30);
+      setTimeout(() => {
+        navState.restoring = true;
+        try {
+          renderMitraSummary();
+          const v = document.getElementById('msView');
+          if (v) v.scrollTop = st.ms.scroll || 0;   // V255
+        } finally { navState.restoring = false; }
+      }, 30);
     } else if (st.tab === 'mitrarank'){
       if (st.mr) Object.assign(mrState, st.mr, { q:'' });
       switchTab('mitrarank');
