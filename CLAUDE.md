@@ -62,7 +62,10 @@ supabase-js 2.45.4, xlsx 0.18.5, xlsx-js-style 1.2.0, jsPDF 2.5.1. Font Plus Jak
   `trendChart`, `kontrakJenisPieChart`. **Selalu `.destroy()` sebelum `new Chart()` di canvas sama.**
 - Supabase: `dashboard_data`, `upload_log`, `bottleneck_entries`, `laporan_arsip`,
   `usulan_base`/`usulan_tahap`, `do_data`, `kontrak_pasokan`, `app_control`,
-  `checkpoint_source` (ID sheet rakor — service role saja), `checkpoint_pasokan` (cache).
+  `checkpoint_source` (ID sheet rakor — service role saja), `checkpoint_pasokan` (cache),
+  `stockpile_mitra` (titik sumber mitra, **rahasia**: tanpa akses anon, baca hanya lewat edge
+  function `stockpile-read` yang memeriksa password gerbang di server; `GATE_HASH` di sana
+  harus sama dengan di `index.html`).
   Isian Checkpoint (V164, sub-tab Laporan) tersimpan di `laporan_arsip.model.checkpoint`;
   tabel `checkpoint_arsip` sudah tidak dipakai.
 - **`dashboard_data.data` (~900 KB) ditulis ulang UTUH oleh `prod-auto-refresh` tiap 20

@@ -26,19 +26,19 @@ if (/\.github\.io$/i.test(location.hostname)) location.replace('pindah.html' + l
 <meta property="og:title" content="Bioenergy Dashboard · PT PLN EPI">
 <meta property="og:description" content="Real-time monitoring 51 PLTU · Target vs Realisasi 2023-2026 · Map Cofiring Bio PLTU · Bottleneck analysis · Kontrak Mitra.">
 <meta property="og:url" content="https://bioenergi-plnepi.bio/">
-<meta property="og:image" content="https://bioenergi-plnepi.bio/preview.jpg">
-<meta property="og:image:secure_url" content="https://bioenergi-plnepi.bio/preview.jpg">
+<meta property="og:image" content="https://bioenergi-plnepi.bio/preview.jpg?v=248">
+<meta property="og:image:secure_url" content="https://bioenergi-plnepi.bio/preview.jpg?v=248">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="PLN EPI Bioenergy Dashboard - Map Cofiring Bio PLTU dengan 51 plant locations">
+<meta property="og:image:alt" content="Ilustrasi Bioenergy Dashboard PLN EPI: peta cofiring 51 PLTU, kartu target dan realisasi, grafik realisasi biomassa 2023-2026, dan pareto loss">
 <meta property="og:locale" content="id_ID">
 
 <!-- Twitter Card (also used by some other platforms) -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Bioenergy Dashboard · PT PLN EPI">
 <meta name="twitter:description" content="Real-time monitoring 51 PLTU · Map Cofiring Bio PLTU · Realisasi 2023-2026 · Bottleneck · Kontrak.">
-<meta name="twitter:image" content="https://bioenergi-plnepi.bio/preview.jpg">
+<meta name="twitter:image" content="https://bioenergi-plnepi.bio/preview.jpg?v=248">
 <meta name="twitter:image:alt" content="PLN EPI Bioenergy Dashboard preview">
 
 <!-- Theme color (mobile browser address bar) -->
@@ -1297,7 +1297,7 @@ html,body{
 
 /* Sidebar collapse button (inside sidebar, top-right corner) */
 .sidebar-collapse-btn{
-  position:absolute;top:8px;right:8px;z-index:10;
+  position:absolute;top:10px;right:16px;z-index:10;
   background:var(--panel);border:1px solid var(--border);color:var(--text-dim);
   width:24px;height:24px;cursor:pointer;border-radius:var(--r-sm);font-size:13px;line-height:1;
   display:flex;align-items:center;justify-content:center;
@@ -1336,6 +1336,10 @@ html,body{
   display:flex;align-items:center;gap:6px;
 }
 .sidebar h3:first-child{margin-top:0}
+/* V251: judul pertama sebaris dengan tombol sembunyikan panel (tombol = anak pertama,
+   jadi :first-child di atas tidak mengenai judul ini). */
+.map-view:not(.pembangkit-view) .sidebar{padding-top:12px}
+.sidebar-collapse-btn + h3{margin-top:0;min-height:24px;padding-right:32px}
 .sidebar h3::before{content:"";width:10px;height:1px;background:var(--accent)}
 
 .kpi-grid{display:grid;gap:var(--sp-2)}
@@ -1495,7 +1499,7 @@ html,body{
 }
 /* V97: the legend floats over map tiles, so it keeps a radius — but it takes the
    overlay step from the ladder instead of a loose 6px. */
-.legend{top:16px;left:16px;min-width:200px;transition:all .2s ease;z-index:var(--z-map-furniture);border-radius:var(--r-lg)}
+.legend{top:16px;left:16px;min-width:200px;box-sizing:border-box;transition:opacity var(--dur-base) var(--ease-in-out);z-index:var(--z-map-furniture);border-radius:var(--r-lg)}
 /* V64: legend yields to the hover tooltip (which renders inside the map pane and
    can't be placed above the legend via z-index alone) */
 .legend.legend-behind-tooltip{opacity:0;pointer-events:none}
@@ -1504,19 +1508,37 @@ html,body{
 .legend.collapsed .legend-body{display:none}
 .legend.collapsed{min-width:auto;padding:8px 12px}
 .legend.collapsed .legend-head{margin-bottom:0}
+/* V252: selama animasi buka/tutup (lihat toggleLegend) isi tetap dirender dan dipotong
+   oleh kotak yang ukurannya dianimasikan. */
+.legend.legend-anim{overflow:hidden}
+.legend.legend-anim .legend-body{display:block;white-space:nowrap}
+.legend.legend-anim .legend-head{margin-bottom:10px}
+.legend:not(.collapsed) .legend-collapse-btn{transform:rotate(180deg)}
 .legend-collapse-btn{
   background:transparent;border:1px solid var(--border);color:var(--text-dim);
   width:22px;height:20px;cursor:pointer;font-size:12px;line-height:1;
-  display:flex;align-items:center;justify-content:center;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform var(--dur-slow) var(--ease-out),
+             background-color var(--dur-fast) var(--ease-in-out),
+             border-color var(--dur-fast) var(--ease-in-out),
+             color var(--dur-fast) var(--ease-in-out);
   font-family:'Plus Jakarta Sans',sans-serif;
 }
 .legend-collapse-btn:hover{color:var(--text-bright);border-color:var(--border-bright);background:var(--panel)}
 .legend-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--text-dim);letter-spacing:.01em;margin-bottom:10px}
 .legend-row{display:flex;align-items:center;gap:10px;font-size:12px;margin-bottom:6px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif}
+/* V253: titik sumber biomassa mitra di Map Cofiring */
+.stockpile-legend{border-top:1px solid var(--border);margin-top:8px;padding-top:8px}
+.stockpile-legend-toggle{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text);cursor:pointer}
+.stockpile-dot{flex:none;display:inline-block;width:10px;height:10px;border-radius:50%}
+.legend-row.stockpile-row{margin-bottom:4px;font-size:11px}
+.stockpile-chips{display:flex;flex-wrap:wrap;gap:6px}
+.stockpile-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border:1px solid var(--border);border-radius:999px;font-size:11px;color:var(--text)}
+.stockpile-empty{font-size:12px;color:var(--text-dim)}
 .legend-icon{width:18px;height:18px;flex-shrink:0}
 
 /* Period selector in sidebar */
-.period-selector{display:flex;gap:6px;margin-bottom:8px}
+.period-selector{display:flex;gap:6px;margin-bottom:0}
 .period-selector select{
   flex:1;background:var(--panel);border:1px solid var(--border);color:var(--text);
   padding:7px 10px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;
@@ -1525,7 +1547,6 @@ html,body{
   background-repeat:no-repeat;background-position:right 8px center;padding-right:26px;
 }
 .period-selector select:hover,.period-selector select:focus{border-color:var(--accent);color:var(--text-bright)}
-.period-label-inline{font-family:'Plus Jakarta Sans',sans-serif;font-size:11px;color:var(--accent);letter-spacing:.01em;margin-top:-2px;margin-bottom:8px}
 
 .search-bar{top:16px;right:16px;padding:0}
 .search-bar input{
@@ -6639,12 +6660,20 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
   .bn-pltu-panel .bn-pltu-body{padding-bottom:16px}
   /* Perabot peta dinaikkan di atas bottom nav (z 2000). */
   .legend{bottom:calc(12px + var(--mobnav-safe))}
-  .terrain-toggle-btn{bottom:calc(12px + var(--mobnav-safe))}
+  /* V248: Terrain naik 12px (12 -> 24) agar tidak tertimpa atribusi Leaflet (~17px)
+     di pojok kanan bawah; tombol Tren ikut naik (64 -> 76). */
+  .terrain-toggle-btn{bottom:calc(24px + var(--mobnav-safe))}
   .trends-panel{bottom:calc(8px + var(--mobnav-safe))}
   /* V103: stacked one row above .terrain-toggle-btn in the right-hand column
-     (12 bottom + 44 button + 8 gap = 64), not beside the legend. See the sibling
+     (24 bottom + 44 button + 8 gap = 76), not beside the legend. See the sibling
      rule in the 768px block above. */
-  .trends-show-btn{bottom:calc(64px + var(--mobnav-safe));min-height:44px}
+  .trends-show-btn{bottom:calc(76px + var(--mobnav-safe));min-height:44px}
+  /* V248: kontrol Leaflet (z 1000) berada di stacking context yang sama dengan bottom
+     sheet detail/bottleneck (z 900–950), jadi atribusinya menimpa isi sheet. Saat
+     sheet terbuka peta tertutup penuh, kontrolnya disembunyikan. */
+  .map-view.detail-open .leaflet-control-container,
+  .bn-view.bn-list-open .leaflet-control-container,
+  .bn-view.bn-detail-open .leaflet-control-container{visibility:hidden}
 
   /* 2. Touch floor for controls that hardcode a height */
   /* Topbar mobile 52px dipakai di delapan calc(); tombol maksimal 44px. */
@@ -6677,7 +6706,7 @@ table.cbg-ts tr.hl td{background:rgba(255,199,44,.22);font-weight:700}
   /* A 44px button at right:8px needs the header text to stop before it. */
   .detail-close-btn,.usulan-modal-close{top:8px;right:8px}
   .detail-header{padding-right:60px}
-  .sidebar h3:first-child{padding-right:52px}
+  .sidebar-collapse-btn + h3{padding-right:52px;min-height:44px}
   /* .chart-download-btn is absolute at right:14px; the card title has to stop
      before it or a long chart heading runs underneath. 44 + 14 + 4 = 62. */
   .real-card-head{padding-right:62px}
@@ -7571,19 +7600,22 @@ body.home-open{overflow:hidden}
   .home-card-art{height:64px}
 }
 
-/* Tombol Beranda + nama program aktif di topbar. */
+/* V250: tombol Beranda hanya ikon rumah. */
 .topbar-home-btn{
-  display:inline-flex;align-items:center;gap:7px;margin-left:6px;padding:5px 11px 5px 9px;flex:none;
+  display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:0;flex:none;
+  width:32px;height:32px;
   border:1px solid rgba(255,255,255,.32);border-radius:var(--r-pill);background:transparent;cursor:pointer;
-  font:inherit;font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;
+  color:var(--text);
   transition:background-color var(--dur-fast) var(--ease-in-out),border-color var(--dur-fast) var(--ease-in-out);
 }
-.topbar-home-btn svg{width:14px;height:14px;flex:none}
+.topbar-home-btn svg{width:16px;height:16px;flex:none}
 .topbar-home-btn:hover{background:rgba(255,255,255,.12);border-color:var(--text)}
 .topbar-home-btn:focus-visible{outline:var(--focus-ring-w) solid #FFC72C;outline-offset:2px}
-.thb-sep{opacity:.5}
-.thb-sektor{font-weight:800}
-@media (max-width:768px){ .thb-label,.thb-sep{display:none} .topbar-home-btn{margin-left:2px;padding:5px 9px} }
+@media (max-width:768px){ .topbar-home-btn{margin-left:2px;width:44px;height:44px} }
+/* V248: di layar 360px brand mendorong tombol akun keluar layar; brand boleh menyusut. */
+@media (max-width:768px){
+  .topbar .brand{flex:0 1 auto;min-width:0}
+}
 /* V246: di halaman program tombol pindah ke kiri tab Map; topbar menyimpannya hanya untuk
    halaman solo dan mobile (bilah tab disembunyikan, lihat .mobile-bottom-nav). */
 /* scroll-snap-align: tanpanya rail menempel ke tab Map dan tombol ini tergulir ke balik tirai ‹. */
@@ -7732,7 +7764,12 @@ body.page-solo .mobile-bottom-nav,body.page-solo .mobile-more-menu,body.page-sol
     if (!val){ fail('Masukkan password.'); return; }
     if (!(window.crypto && crypto.subtle)){ fail('Browser tidak didukung.'); return; }
     sha256Hex(val).then(function(h){
-      if (h === GATE_HASH){ errEl.textContent = ''; unlock(); }
+      if (h === GATE_HASH){
+        errEl.textContent = '';
+        // V254: password yang sama membuka data rahasia di server, lalu tidak disimpan.
+        if (typeof window.fetchStockpile === 'function') window.fetchStockpile(val);
+        unlock();
+      }
       else { fail(); }
     }).catch(function(){ fail('Terjadi kesalahan. Coba lagi.'); });
   });
@@ -7961,10 +7998,9 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (window._
       <div class="brand-title">PT PLN Energi Primer Indonesia</div>
       <div class="brand-sub">Monitoring Pasokan Bioenergi · 2026</div>
     </div>
-    <!-- V226: kembali ke Beranda; chip = program (sektor) atau halaman yang sedang dibuka -->
-    <button type="button" class="topbar-home-btn" id="topbarHomeBtn" onclick="homeShow()" title="Kembali ke Beranda — pilih program bioenergi">
+    <!-- V226: kembali ke Beranda. V250: ikon saja. -->
+    <button type="button" class="topbar-home-btn" id="topbarHomeBtn" onclick="homeShow()" title="Kembali ke Beranda — pilih program bioenergi" aria-label="Kembali ke Beranda">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 7.5L8 2.5l6 5M3.5 6.5V13.5h9V6.5M6.5 13.5v-4h3v4"/></svg>
-      <span class="thb-label">Beranda</span><span class="thb-sep" aria-hidden="true">/</span><span class="thb-sektor" id="topbarSektor">Biomass</span>
     </button>
     <!-- V179: tombol kalender di sini dipindah menjadi tab "Kalender & Meeting". -->
   </div>
@@ -8030,6 +8066,9 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (window._
           <button type="button" class="topbar-refresh-btn" data-fn="kontrak" onclick="runManualRefresh('kontrak')" title="Jalankan kontrak-auto-refresh (dry-run dulu, lalu konfirmasi)">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="11" height="11" aria-hidden="true"><path d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1M13.5 2v3h-3"/></svg>Kontrak
           </button>
+          <button type="button" class="topbar-refresh-btn" data-fn="stockpile" onclick="runManualRefresh('stockpile')" title="Jalankan stockpile-refresh (dry-run dulu, lalu konfirmasi)">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" width="11" height="11" aria-hidden="true"><path d="M13.5 8A5.5 5.5 0 1 1 11.9 4.1M13.5 2v3h-3"/></svg>Titik Sumber
+          </button>
         </div>
         </div>
       </div>
@@ -8068,9 +8107,8 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (window._
        tombol ini membuka peta program aktif (sektorNav), label ikut _mgSyncSubnav. -->
   <!-- V246: tombol Beranda di kiri tab Map. Salinan di topbar hanya untuk halaman solo
        (bilah tab tersembunyi) dan mobile (bilah tab diganti bottom nav). -->
-  <button type="button" class="topbar-home-btn tabs-home-btn" onclick="homeShow()" title="Kembali ke Beranda — pilih program bioenergi">
+  <button type="button" class="topbar-home-btn tabs-home-btn" onclick="homeShow()" title="Kembali ke Beranda — pilih program bioenergi" aria-label="Kembali ke Beranda">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 7.5L8 2.5l6 5M3.5 6.5V13.5h9V6.5M6.5 13.5v-4h3v4"/></svg>
-    <span class="thb-label">Beranda</span><span class="thb-sep" aria-hidden="true">/</span><span class="thb-sektor">Biomass</span>
   </button>
   <button class="tab active" data-tab="map" id="mapTabTrigger" data-full="Map Cofiring" title="Map Cofiring (1)">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3zM5 2v12M11 4v12"/></svg>
@@ -8227,7 +8265,6 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (window._
         <select id="map-year-filter" title="Tahun"></select>
         <select id="map-month-filter" title="Bulan"></select>
       </div>
-      <div class="period-label-inline">▶ <span id="kpi-period-label">2026</span></div>
 
       <h3>Ringkasan nasional</h3>
       <div class="target-basis-toggle" id="targetBasisToggle" role="group" aria-label="Basis target">
@@ -9649,7 +9686,12 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (window._
   .bn-panel-collapse-btn,
   .pembangkit-filter-mini-btn,
   .real-reset-btn,
-  .fas-add-point-btn{min-height:44px}
+  .fas-add-point-btn,
+  .cal-event-nt,.cal-event-del{min-height:44px}
+  /* V248: aksi kartu acara (20px) dan kolom cari CBG (18px) di bawah lantai sentuh. */
+  .cal-event-nt,.cal-event-del{padding-left:12px;padding-right:12px}
+  .cal-event-card-actions{align-items:center}
+  .cbg-filters input[type=search]{min-height:44px}
   /* Trigger "⋯" 44×44; menu turun di 48px (44 + 4). */
   .usulan-action-trigger{min-width:44px}
   .usulan-action-menu{top:48px}
@@ -9747,7 +9789,7 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (window._
         <div class="lamp-head-row">
           <label class="lamp-toggle" for="laporanLampiranOn">
             <input type="checkbox" id="laporanLampiranOn" onchange="toggleLaporanLampiran()">
-            📎 Tambah halaman <b>Lampiran</b>: realisasi mitra per PLTU
+            <span>📎 Tambah halaman <b>Lampiran</b>: realisasi mitra per PLTU</span>
           </label>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <button class="laporan-mini-btn" id="laporanLampiranRestoreBtn" style="display:none" onclick="restoreLampiranRemoved()" title="Kembalikan mitra yang dihapus dari daftar lampiran (isian lain tetap)">↩ Kembalikan mitra dihapus</button>
@@ -10344,7 +10386,7 @@ th.harga-locked:focus-visible{outline:2px solid var(--accent);outline-offset:-2p
 .lap-h-kendala{margin-top:10px;font-size:var(--fs-data);color:var(--text);white-space:pre-line}
 .lap-h-kendala b{display:block;font-size:var(--fs-note);letter-spacing:var(--ls-caps);color:var(--text-dim);margin-bottom:2px}
 @media (max-width:768px) and (pointer:coarse){.lap-mview{width:100%;margin:0 0 4px}.lap-mview button{flex:1}.lap-harian details.ck-plant > summary{padding:10px}.lap-harian .lap-h-body{padding:0 10px 12px}}
-.laporan-arsip-ck{display:inline-block;margin-top:4px;font-size:11px;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 7px}
+.laporan-arsip-ck{display:inline-block;align-self:flex-start;width:fit-content;margin-top:4px;font-size:11px;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 7px}
 .ck-beta{font-size:var(--fs-note);font-weight:800;letter-spacing:var(--ls-caps);color:#f59e0b;border:1px solid #f59e0b;border-radius:var(--ctl-radius);padding:1px 6px}
 .ck-hero{grid-template-columns:1fr}
 .ck-scope input[type=date]{min-height:var(--ctl-h-sm);padding:0 8px;border:1px solid var(--border);border-radius:var(--ctl-radius);background:var(--panel);color:var(--text);font:500 var(--fs-body) 'Plus Jakarta Sans',sans-serif}
@@ -10658,6 +10700,8 @@ body.ck-focus .ck-scope{padding-right:200px}
   .ck-tbl .ck-m{min-width:130px;max-width:160px}
   .ck-scope > div{flex:1 1 140px}
   .ck-scope select{min-width:0;width:100%}
+  /* V248: input tanggal ikut selebar kolom seperti select di sebelahnya. */
+  .ck-scope input[type=date]{width:100%;box-sizing:border-box}
 }
 </style>
 
@@ -11954,8 +11998,23 @@ function _mobileMapView(m){
   try {
     // V235: zoom 5. Pada zoom 4–4,5 rentang lintang layar HP yang tinggi (±49°) melebihi
     // SEA_BOUNDS (45°), maxBounds memaksa pusat ke ±2,5°LU dan daratan China ikut tampil.
-    if (m && window.matchMedia('(max-width:768px) and (pointer:coarse)').matches) m.setView([-2.5, 113], 5);
+    // V248: mengembalikan true bila tampilan HP dipakai (pemanggil lewati animasi fit).
+    if (m && window.matchMedia('(max-width:768px) and (pointer:coarse)').matches){ m.setView([-2.5, 113], 5); return true; }
   } catch(e){}
+  return false;
+}
+// V248: fitBounds untuk sebaran titik. Di HP zoom tidak boleh di bawah 5 (alasan sama dengan
+// di atas): bila sebaran butuh zoom < 5, tampilkan zoom 5 di `center` (default: tengah
+// sebaran). Padding HP 16px per sisi — padding desktop memakan seperlima lebar layar.
+function _fitBoundsMobile(m, b, opts, center){
+  b = L.latLngBounds(b);
+  if (window.matchMedia('(max-width:768px) and (pointer:coarse)').matches){
+    const z = m.getBoundsZoom(b, false, L.point(32, 32));
+    if (z < 5) m.setView(center || b.getCenter(), 5);
+    else m.setView(b.getCenter(), Math.min(z, (opts && opts.maxZoom) || m.getMaxZoom()));
+    return;
+  }
+  m.fitBounds(b, opts);
 }
 // Batas pan wilayah Asia Tenggara. V95: timur/barat dilonggarkan 25° agar PLTU
 // paling ujung bisa digeser keluar dari bawah panel detail 340px.
@@ -12037,6 +12096,10 @@ function initMainMap(){
   _mobileMapView(map);
   addBaseTiles(map, 12, 3);
   markerLayer = L.layerGroup().addTo(map);
+  // V253: titik sumber & garis di bawah ikon PLTU, kanvas sendiri agar ratusan titik tetap ringan.
+  map.createPane('stockpilePane').style.zIndex = 450;
+  stockpileRenderer = L.canvas({ pane: 'stockpilePane' });
+  stockpileLayer = L.layerGroup().addTo(map);
   // V64: legenda (overlay HTML) disembunyikan selama tooltip terbuka; z-index tidak
   // bisa menyelip di antara pane Leaflet.
   const _cofiringLegend = document.querySelector('.map-view:not(.pembangkit-view):not(.fasilitas-view) .legend');
@@ -12158,6 +12221,79 @@ function refreshMarkers(){
   });
   // V106: panel rumus yang jangkarnya ikut terhapus clearLayers() ditutup.
   if (typeof pruneCalcTip === 'function') pruneCalcTip();
+  renderStockpile();
+}
+
+// V249: rekomendasi cofiring Puslitbang per PLTU (Excel "Rekap Rekomendasi Cofiring",
+// 2026-07-31). Isi: [jenis, % rekomendasi (kolom K), tanggal uji (kolom I)] satu baris per
+// jenis, diambil dari uji terbaru (Tahun Laporan J, lalu Tanggal Uji I). Tanggal sama: nilai
+// tertinggi. K kosong/N/A pada uji terbaru: mundur ke uji terakhir yang berisi. 'x' = tidak
+// direkomendasikan, 'b' = belum direkomendasikan, null = N/A. I kosong: tertulis tahun
+// laporan. Kolom Catatan tidak diekspor: memuat harga dan repo ini publik.
+const REKOM_CF = {
+  "ADP": [["WoodPellet",5,"14 Okt 2019"],["LRUK",5,"1 Nov 2023"],["Sawdust-BBJP",5,"13 Nov 2024"],["Pellet Sekam padi","x","27 Jan 2022"]],
+  "ANY": [["Cangkang Sawit",100,"26 Okt 2022"],["Woodchip",25,"14 Agu 2024"],["BBJP",5,"15 Mei 2024"]],
+  "ASM": [["Sawdust",5,"23 Nov 2021"]],
+  "BEU": [["Cangkang Sawit",20,"26 Mei 2021"]],
+  "BKY": [["Woodchip",10,"26 Jun 2023"],["Cangkang Sawit",5,"23 Des 2020"],["LRUK",5,"6 Jun 2024"],["Sawdust","x","26 Jul 2024"]],
+  "BLB": [["Sawdust",5,"11 Nov 2020"]],
+  "BLK": [["Woodchip",100,"25 Okt 2022"]],
+  "BLT": [["Solid Recovered Fuel (SRF)",5,"8 Des 2020"],["Sekam padi",4,"4 Sep 2026"],["Pellet Tandan Kosong",2,"4 Mar 2026"],["BBJP",1,"12 Sep 2023"],["Woodchip","x","21 Okt 2020"],["Pellet Sekam padi","x","19 Mar 2021"]],
+  "BRU": [["Sawdust",4,"Laporan 2022"],["WoodPellet","x","30 Jan 2024"]],
+  "HTK": [["Woodchip",5,"2 Feb 2023"],["Sawdust pellet",null,"15 Des 2021"]],
+  "JPR": [["Sawdust",5,"10 Des 2020"]],
+  "JRJ": [["Bonggol Jagung",10,"15 Nov 2024"],["LRUK",8,"30 Jul 2024"],["Solid Recovered Fuel (SRF)",3,"12 Des 2019"]],
+  "LBA": [["PKS",5,"3 Sep 2021"],["Woodchip",5,"21 Mei 2023"]],
+  "MLN": [["Serut kayu",5,"19 Sep 2024"],["Cangkang Sawit","x","9 Sep 2022"]],
+  "OMB": [["Sawdust",5,"7 Mei 2021"]],
+  "PNS": [["Sekam padi",3,"30 Jun 2021"],["BBJP",2,"12 Sep 2023"],["WoodPellet",null,"30 Agu 2021"],["PKS",null,"31 Agu 2021"]],
+  "RPA": [["Cangkang Kemiri",25,"26 Mei 2023"],["Pelet Organik",10,"16 Sep 2020"]],
+  "SBW": [["Briket Sawdust",100,"6 Feb 2024"],["Woodchip + Bonggol Jagung",10,"2 Mar 2023"],["Woodchip",10,"1 Feb 2023"],["Bonggol Jagung","x","30 Okt 2022"]],
+  "SGE": [["Woodchip",15,"20 Agu 2024"],["Cangkang Sawit",5,"18 Jun 2020"]],
+  "SLA 1-7": [["Sawdust",8,"28 Jun 2022"],["BBJP",5,"5 Apr 2022"],["Sekam padi",null,"4 Nov 2020"]],
+  "SLA 8": [["Sawdust",5,"18 Mei 2020"]],
+  "STG": [["Cangkang Sawit",75,"7 Jan 2023"],["Woodchip+Cangkang Sawit",50,"6 Jan 2023"],["Woodchip",20,"5 Jan 2023"]],
+  "TBK": [["Cangkang Sawit",5,"26 Agu 2021"],["Woodchip",5,"12 Jan 2024"],["WoodPellet","x","25 Agu 2021"]],
+  "TDR": [["Woodchip",10,"13 Jul 2023"],["Batok Kelapa",5,"12 Jan 2021"]],
+  "TIR": [["Cangkang Sawit",5,"24 Feb 2021"],["Woodchip",5,"23 Nov 2023"],["Sekam padi",3,"29 Apr 2025"]],
+  "TJB": [["Sawdust",0.5,"14 Sep 2023"],["WoodPellet","x","9 Apr 2021"]],
+  "UPBA": [["Sawdust",10,"7 Agu 2024"],["Sekam padi",3,"12 Agu 2026"]],
+  "UPCT": [["Sawdust",15,"18 Okt 2024"]],
+  "UPGT": [["Woodchip",5,"25 Jun 2020"],["LRUK",3,"17 Jul 2024"]],
+  "UPID": [["Sawdust",5,"18 Mar 2021"],["Pellet Sekam padi",3,"8 Okt 2021"],["Sekam padi",3,"3 Agu 2023"],["BBJP",1,"2 Agu 2022"]],
+  "UPKD": [["Woodchip",25,"16 Agu 2024"],["Cangkang Sawit",5,"28 Des 2020"]],
+  "UPKS": [["Woodchip",25,"23 Mei 2024"],["Cangkang Sawit",5,"21 Des 2019"]],
+  "UPKT": [["Woodchip",10,"21 Feb 2026"],["Cangkang Sawit",10,"21 Feb 2026"],["LRUK",3,"15 Okt 2024"],["Woodbark","x","2 Mar 2022"]],
+  "UPMH": [["Sawdust",5,"25 Jun 2021"],["Woodchip",5,"26 Jun 2021"],["Pelepah kelapa",5,"23 Mar 2022"],["Sekam padi",5,"28 Jun 2022"]],
+  "UPMN": [["Woodchip",20,"3 Nov 2023"]],
+  "UPNR": [["Cangkang Sawit",30,"1 Mar 2024"],["Woodchip",10,"1 Mar 2024"],["Sekam padi",3,"9 Agu 2023"],["Sawdust",3,"11 Agu 2023"]],
+  "UPPS": [["Woodchip",25,"23 Jun 2023"]],
+  "UPPY": [["Bonggol Jagung",5,"30 Agu 2021"],["Woodchip",5,"26 Mei 2023"],["Sekam padi","b","10 Mei 2023"],["Sawdust","b","25 Mei 2023"]],
+  "UPRB": [["Sawdust",10,"22 Jan 2025"],["WoodPellet",5,"5 Feb 2020"],["Sekam padi",4.63,"22 Agu 2023"],["Bagasse Tebu",2.5,"9 Nov 2023"],["Sawdust-sekam padi",2.31,"23 Agu 2023"]],
+  "UPSB": [["Woodchip",3,"9 Okt 2026"]],
+  "UPTA": [["Sekam padi-Sawdust",5,"13 Apr 2023"],["Bonggol Jagung",5,"20 Okt 2026"],["Sekam padi",3,"13 Apr 2023"],["Bagasse Tebu",3,"23 Apr 2026"],["BBJP","x","21 Jul 2022"],["Sawdust",null,"23 Mar 2021"]],
+  "UPTBH": [["Woodchip",5,"26 Okt 2023"],["Tandan Kosong Pelet","x","20 Agu 2021"],["Tandan Kosong Fiber (EFB)","x","15 Sep 2021"]],
+  "UPTH": [["Woodchip",30,"13 Agu 2024"],["Sawdust","x","12 Jan 2022"],["Sekam padi","x","29 Des 2022"]],
+  "UPTN 1-2": [["Sawdust",10,"28 Jul 2023"],["WoodPellet",5,"14 Nov 2019"],["LRUK",4,"31 Agu 2023"]],
+  "UPTN 9": [["Sawdust",5,"8 Sep 2020"]],
+  "UPTY": [["Woodchip",30,"11 Sep 2024"],["Cangkang Sawit",5,"30 Des 2019"],["OPMF",3,"30 Agu 2024"],["Sawdust","x","13 Apr 2023"]],
+};
+
+// Baris "Rekomendasi CF" pada tooltip PLTU. Untuk sementara hanya jenis berangka yang
+// ditampilkan: 'x', 'b', dan N/A tetap di data tetapi disembunyikan dari rentang dan panel.
+// Klik angkanya untuk rincian per jenis (panel data-calc, sama seperti baris lain).
+function renderRekomCfRow(p){
+  const rows = (REKOM_CF[p.code] || []).filter(r => typeof r[1] === 'number');
+  if (!rows.length) return '<div class="plant-popup-row"><span>Rekomendasi CF</span><span style="color:var(--text-dim)">—</span></div>';
+  const vals = rows.map(r => r[1]);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = (min === max ? String(min) : min + '-' + max) + '%';
+  return `<div class="plant-popup-row"><span>Rekomendasi CF</span><span${calcAttr({
+    title: 'Rekomendasi CF ' + p.name,
+    steps: rows.map(([jenis, rek, tgl]) => [jenis + ' · ' + tgl, rek + '%']),
+    result: ['Rentang', range],
+    note: 'Sumber: Rekap Rekomendasi Cofiring Puslitbang. Rekomendasi terbaru per jenis; tanggal di samping jenis adalah tanggal uji pada laporannya.'
+  })}>${range}</span></div>`;
 }
 
 // V71: tooltip selalu tahun berjalan, sembilan baris (Periode s.d. % Cofiring);
@@ -12245,6 +12381,7 @@ function renderPopup(p){
       result: ['% Cofiring', cofiringPct.toFixed(1) + '%'],
       note: 'Kebutuhan batubara diprorata ke jumlah bulan yang sudah berjalan supaya sebanding dengan realisasi yang juga baru sampai bulan itu. Menjumlahkan baris ini untuk semua PLTU menghasilkan kartu "% Cofiring" di panel National Overview.'
     })}>${cofiringPct === null ? '—' : cofiringPct.toFixed(1) + '%'}</span></div>
+    ${renderRekomCfRow(p)}
     ${shortfall ? `<div class="plant-popup-warning">⚠ Kontrak &lt; Target FGD: kurang <b${calcAttr({
       title: 'Kekurangan Kontrak vs Target FGD',
       formula: 'Target FGD − Kontrak ' + yr,
@@ -12653,9 +12790,6 @@ function updateKPIs(){
   if (doCard){
     doCard.style.display = state.mapPeriod.year === '2026' ? '' : 'none';
   }
-  // Update period label
-  const lbl = document.getElementById('kpi-period-label');
-  if (lbl) lbl.textContent = periodLabelStr();
 }
 
 // Build {c, years, annualVol, real, expired} for every contract matched to a
@@ -12841,6 +12975,120 @@ function computePlantSisaKontrak(plant){
 
 // V91: modal Sisa Kontrak dihapus; matchPlantContracts() dan
 // plantContractDurationYears() tetap dipakai _plantContractItems().
+
+// V253: titik penyimpanan mitra dari tabel stockpile_mitra (edge function
+// stockpile-refresh, sumber sheet "PLTU <nama>" Rekap Transport Biomass). Semua titik
+// tampil kecil; PLTU terpilih menyorot titiknya dan menarik garis lurus ke PLTU.
+const STOCKPILE_COLORS = {
+  'Cangkang Sawit': '#f97316', 'Sawdust': '#eab308', 'Woodchip': '#22c55e', 'Sekam Padi': '#06b6d4',
+  'Tongkol Jagung': '#ec4899', 'Bagasse': '#8b5cf6', 'Tandan Kosong': '#b45309', 'OPMF': '#84cc16',
+  'BBJP': '#3b82f6', 'Kulit Kopi': '#a8a29e', 'Cocopeat': '#f43f5e'
+};
+let stockpileData = {}, stockpileIssues = [], stockpileLayer, stockpileRenderer;
+const stockpileColor = j => STOCKPILE_COLORS[j] || '#94a3b8';
+
+function _stockpileMarker(pt, pltu, selected, dim){
+  const km = pt.km ? ' · ' + fmtInt(pt.km) + ' km' : '';
+  return L.circleMarker([pt.la, pt.lo], {
+    renderer: stockpileRenderer, radius: selected ? 6 : 3.5, color: '#0f172a', weight: selected ? 1 : 0.5,
+    fillColor: stockpileColor(pt.j), fillOpacity: dim ? 0.2 : 0.9, opacity: dim ? 0.2 : 0.9
+  }).bindTooltip('<b>' + escapeHtml(pt.m) + '</b><br>' + escapeHtml(pt.j) + km + '<br>Ke ' + escapeHtml(pltu), { sticky: true });
+}
+
+function renderStockpile(){
+  if (!stockpileLayer) return;
+  stockpileLayer.clearLayers();
+  renderStockpileLegend();
+  if (state.showStockpile === false) return;
+  const selCode = state.selected;
+  const selPts = stockpileData[selCode] || [];
+  const dim = selPts.length > 0;
+  // Satu stockpile bisa memasok beberapa PLTU; di lapisan umum cukup digambar sekali.
+  const seen = new Map();
+  currentPlants().forEach(p => {
+    if (p.code === selCode) return;
+    (stockpileData[p.code] || []).forEach(pt => {
+      const k = pt.la + ',' + pt.lo + ',' + pt.j;
+      if (seen.has(k)) seen.get(k).pltu.push(p.name);
+      else seen.set(k, { pt, pltu: [p.name] });
+    });
+  });
+  seen.forEach(({ pt, pltu }) => _stockpileMarker(pt, pltu.join(', '), false, dim).addTo(stockpileLayer));
+  const plant = dim && DATA.plants.find(p => p.code === selCode);
+  if (!plant) return;
+  selPts.forEach(pt => {
+    L.polyline([[pt.la, pt.lo], [plant.lat, plant.lon]], {
+      renderer: stockpileRenderer, color: stockpileColor(pt.j), weight: 1.5, opacity: 0.85, interactive: false
+    }).addTo(stockpileLayer);
+  });
+  selPts.forEach(pt => _stockpileMarker(pt, plant.name, true, false).addTo(stockpileLayer));
+}
+
+function renderStockpileLegend(){
+  const body = document.querySelector('.map-view:not(.pembangkit-view):not(.fasilitas-view) .legend .legend-body');
+  if (!body) return;
+  let box = document.getElementById('stockpileLegend');
+  const counts = {};
+  Object.values(stockpileData).forEach(pts => pts.forEach(pt => { counts[pt.j] = (counts[pt.j] || 0) + 1; }));
+  const jenis = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  if (!jenis.length){ if (box) box.remove(); return; }
+  if (!box){
+    box = document.createElement('div');
+    box.id = 'stockpileLegend';
+    box.className = 'stockpile-legend';
+    body.appendChild(box);
+  }
+  box.innerHTML = '<label class="stockpile-legend-toggle"><input type="checkbox"' +
+    (state.showStockpile === false ? '' : ' checked') + ' onchange="toggleStockpile(this.checked)">Titik sumber biomassa</label>' +
+    jenis.map(j => '<div class="legend-row stockpile-row"><span class="stockpile-dot" style="background:' + stockpileColor(j) + '"></span>' + escapeHtml(j) + '</div>').join('');
+}
+
+function toggleStockpile(on){
+  state.showStockpile = on;
+  renderStockpile();
+}
+
+function renderPlantStockpile(code){
+  const body = document.querySelector('#detail-panel .detail-body');
+  if (!body || !Object.keys(stockpileData).length) return;
+  const pts = stockpileData[code] || [];
+  const counts = {};
+  pts.forEach(pt => { counts[pt.j] = (counts[pt.j] || 0) + 1; });
+  const inner = pts.length
+    ? '<div class="stockpile-chips">' + Object.keys(counts).sort((a, b) => counts[b] - counts[a]).map(j =>
+        '<span class="stockpile-chip"><span class="stockpile-dot" style="background:' + stockpileColor(j) + '"></span>' + escapeHtml(j) + ' · ' + counts[j] + '</span>').join('') + '</div>'
+    : '<div class="stockpile-empty">Belum ada titik sumber tercatat untuk PLTU ini.</div>';
+  body.insertAdjacentHTML('beforeend', '<div class="detail-section"><h4>Titik sumber · ' + pts.length + ' lokasi</h4>' + inner + '</div>');
+}
+
+// V254: stockpile_mitra tertutup untuk anon key. Data hanya lewat edge function
+// stockpile-read: password gerbang saat login, sesudah itu token 12 jam per tab.
+// Tab yang sudah terbuka sebelum versi ini belum punya token sampai login ulang.
+const STOCKPILE_TOKEN_KEY = 'bio_stockpile_token';
+async function fetchStockpile(password){
+  let token = null;
+  try { token = sessionStorage.getItem(STOCKPILE_TOKEN_KEY); } catch(e){}
+  if (!password && !token) return;
+  try {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/stockpile-read', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(password ? { password } : { token }),
+    });
+    if (res.status === 401){
+      // Token habis (batas 12 jam): gerbang muncul lagi saat muat ulang untuk token baru.
+      try { sessionStorage.removeItem(STOCKPILE_TOKEN_KEY); sessionStorage.removeItem('bioGateOk'); } catch(e){}
+      return;
+    }
+    const body = await res.json();
+    if (!body.ok){ console.warn('[Stockpile] fetch error:', body.error); return; }
+    if (body.token) try { sessionStorage.setItem(STOCKPILE_TOKEN_KEY, body.token); } catch(e){}
+    stockpileData = body.data || {};
+    stockpileIssues = body.issues || [];
+    renderStockpile();
+  } catch(e){ console.warn('[Stockpile] fetch failed:', e); }
+}
+window.fetchStockpile = fetchStockpile;
 
 function selectPlant(code, fromMarkerClick){
   state.selected = code;
@@ -13347,6 +13595,8 @@ function selectPlant(code, fromMarkerClick){
   if (yoyFilter){
     yoyFilter.onchange = () => renderPlantYoyTable(p, yoyFilter.value);
   }
+
+  renderPlantStockpile(code);
 
   // V64: no auto-pan — keep the map where the user left it when a PLTU is clicked.
 }
@@ -18810,9 +19060,6 @@ function _sektorAdopt(tab){
       ' belum tersedia. Saat ini tab ini baru berisi data Biomass.';
   }
   document.body.classList.toggle('page-solo', !!SOLO_PAGES[tab]);
-  // V246: chip ada di dua tombol Beranda (topbar + bilah tab).
-  const chipTxt = SOLO_PAGES[tab] || SEKTOR[state.sektor].label;
-  document.querySelectorAll('.thb-sektor').forEach(c => { c.textContent = chipTxt; });
   // Label tombol rail Map/Realisasi ikut program walau tab lain yang sedang dibuka.
   _mgSyncSubnav(SEKTOR[state.sektor].map);
   _mgSyncSubnav(SEKTOR[state.sektor].real);
@@ -19111,7 +19358,7 @@ function _mgBootUc(tab){
       const m = L.map('mgMap-' + tab, { zoomSnap:.25, minZoom:4, maxZoom:12,
         maxBounds: SEA_BOUNDS, maxBoundsViscosity: 0.8 }).setView([-1.5, 113], 5);
       addBaseTiles(m, 12, 4);
-      m.fitBounds(CBG_ID_BOUNDS);
+      if (!_mobileMapView(m)) m.fitBounds(CBG_ID_BOUNDS);
       mgUcMaps[tab] = m;
     } catch(e){ console.error('Map ' + tab + ' init failed:', e); }
   }, 30);
@@ -22547,6 +22794,7 @@ const MANUAL_REFRESH_FN = {
   do:      { slug: 'do-auto-refresh',      label: 'DO' },
   prod:    { slug: 'prod-auto-refresh',    label: 'Produksi' },
   kontrak: { slug: 'kontrak-auto-refresh', label: 'Kontrak' },
+  stockpile: { slug: 'stockpile-refresh',  label: 'Titik Sumber' },
 };
 const _manualRefreshBusy = {};
 // V176: hasil "tidak pasti" (putus, 504, 546): fungsi bisa masih menulis, jadi klik
@@ -22828,6 +23076,25 @@ async function runManualRefresh(key){
         return;
       }
     }
+    if (key === 'stockpile'){
+      // V253: dry-run dulu seperti kontrak. V254: log fungsi hanya berisi jumlah; rincian
+      // baris bermasalah (data tersimpan terakhir) datang dari stockpile-read.
+      showToast(cfg.label + ': dry-run berjalan (tidak menulis apa pun)…', 'info', 4000);
+      const dry = await _callRefreshFn(cfg.slug, true);
+      console.log('[ManualRefresh] stockpile dry-run', dry);
+      if (!dry.ok){
+        setState('fail');
+        alert('Dry-run titik sumber GAGAL, live run dibatalkan.\n\n' + _refreshLogTail(dry, 10));
+        return;
+      }
+      const issueLines = stockpileIssues.slice(0, 16).map(i => '• ' + i.pltu + ' / ' + i.mitra + ': ' + i.alasan);
+      if (!confirm('Dry-run OK (belum ada yang ditulis).\n\n' + _refreshLogTail(dry, 3) +
+                   (issueLines.length ? '\n\nPerlu dicek (data tersimpan terakhir):\n' + issueLines.join('\n') : '') +
+                   '\n\nSimpan titik sumber sekarang?')){
+        setState(null);
+        return;
+      }
+    }
     showToast(cfg.label + ': refresh berjalan…', 'info', 3000);
     result = await _callRefreshFn(cfg.slug, false);
     console.log('[ManualRefresh] ' + cfg.slug, result);
@@ -22843,6 +23110,7 @@ async function runManualRefresh(key){
       if (key === 'do' && typeof fetchDoData === 'function') await fetchDoData();
       if (key === 'prod' && typeof syncDashboardIfStale === 'function') await syncDashboardIfStale();
       if (key === 'kontrak' && typeof fetchKontrakPasokan === 'function') await fetchKontrakPasokan();
+      if (key === 'stockpile') await fetchStockpile();
     } else if (result.uncertain){
       _manualRefreshUncertainUntil[key] = Date.now() + MANUAL_REFRESH_COOLDOWN_MS;
       setState('warn');
@@ -22896,6 +23164,7 @@ async function fetchDoData(){
 // tiap 20 menit (field penulis lain sempat terhapus, 2026-07-29).
 async function fetchKontrakPasokan(){
   if (!supabaseClient) return;
+  fetchStockpile();   // V253: dimuat bersamaan; V254: tanpa token (belum login) tidak meminta apa pun
   try {
     const { data, error } = await supabaseClient
       .from('kontrak_pasokan')
@@ -26506,7 +26775,10 @@ function initPembangkitMap(){
     minZoom: 4, maxZoom: 14,
     zoomControl: false,
     attributionControl: true,
-  }).fitBounds(INDONESIA_BOUNDS);
+  });
+  // V248: di HP langsung ke tampilan HP; fitBounds dulu memulai animasi zoom yang membuat
+  // setView berikutnya diabaikan.
+  if (!_mobileMapView(pembangkitMap)) pembangkitMap.fitBounds(INDONESIA_BOUNDS);
   addBaseTiles(pembangkitMap, 14, 3);
   // V192: ~2.500 titik — canvas jauh lebih ringan daripada divIcon per titik.
   _pkRenderer = L.canvas({ padding: 0.3 });
@@ -26517,7 +26789,9 @@ function initPembangkitMap(){
     L.DomEvent.disableClickPropagation(el);
   });
   // Ensure map size is correctly computed after init (in case container was just made visible)
-  setTimeout(() => { try { pembangkitMap.invalidateSize(); pembangkitMap.fitBounds(INDONESIA_BOUNDS); } catch(e){} }, 100);
+  // V248: _mobileMapView — di HP fitBounds jatuh ke zoom ~3,5 dan separuh Asia ikut tampil.
+  // Bukan fitBounds lalu setView: setView diabaikan Leaflet selama animasi zoom fitBounds.
+  setTimeout(() => { try { pembangkitMap.invalidateSize(); if (!_mobileMapView(pembangkitMap)) pembangkitMap.fitBounds(INDONESIA_BOUNDS); } catch(e){} }, 100);
   updatePembangkitHeatmap();
 }
 
@@ -26727,7 +27001,7 @@ function _pkFitToVisible(){
   if (!pts.length) return;
   try {
     if (pts.length === 1) pembangkitMap.setView(pts[0], 9);
-    else pembangkitMap.fitBounds(L.latLngBounds(pts).pad(0.08), { maxZoom: 9 });
+    else _fitBoundsMobile(pembangkitMap, L.latLngBounds(pts).pad(0.08), { maxZoom: 9 }, [-2.5, 113]);
   } catch(e){}
 }
 
@@ -27120,7 +27394,7 @@ function bootCbgTab(){
   _cbgLoad().then(() => {
     _cbgSetLoading(null);
     _cbgRenderAll();
-    try { cbgMap.invalidateSize(); cbgMap.fitBounds(CBG_ID_BOUNDS); } catch(e){}
+    try { cbgMap.invalidateSize(); if (!_mobileMapView(cbgMap)) cbgMap.fitBounds(CBG_ID_BOUNDS); } catch(e){}
   }).catch(e => _cbgSetLoading(e.message || String(e), true));
 }
 
@@ -27343,7 +27617,7 @@ function cbgReset(){
   document.getElementById('cbgSheet').hidden = true;
   if (!cbgData) return;
   _cbgSetKPI(null); _cbgDrawList(); _cbgDraw();
-  if (cbgMap) cbgMap.flyToBounds(CBG_ID_BOUNDS, { duration:.6 });
+  if (cbgMap && !_mobileMapView(cbgMap)) cbgMap.flyToBounds(CBG_ID_BOUNDS, { duration:.6 });
 }
 
 /* ---------- panel detail ---------- */
@@ -27599,7 +27873,8 @@ function fitFasilitasBounds(){
   if (!fasilitasMap) return;
   const all = getAllFasilitas().filter(f => isFinite(f.lat) && isFinite(f.lon));
   if (!all.length) return;
-  try { fasilitasMap.fitBounds(L.latLngBounds(all.map(f => [f.lat, f.lon])), { padding: [60, 60], maxZoom: 9 }); } catch(e){}
+  // V248: di HP potret fit jatuh ke zoom 4 dan maxBounds menggeser pusat ke Laos.
+  try { _fitBoundsMobile(fasilitasMap, all.map(f => [f.lat, f.lon]), { padding: [60, 60], maxZoom: 9 }); } catch(e){}
 }
 
 // V45.1: renderFasilitasFilters, fasilitasMatchesFilter, and
@@ -31519,12 +31794,29 @@ window.addEventListener('DOMContentLoaded', () => {
   // Legend (Genco Color Code) collapse toggle
   const legendCollapseBtn = document.getElementById('legendCollapseBtn');
   if (legendCollapseBtn){
+    // V252: ukuran kotak dianimasikan dari hasil ukur (height:auto tidak bisa ditransisikan).
+    // Klik saat animasi berjalan melanjutkan dari ukuran saat itu, tidak melompat.
+    let legendAnims = null;
+    const legendBox = (el) => {
+      const r = el.getBoundingClientRect(), c = getComputedStyle(el);
+      return { width: r.width + 'px', height: r.height + 'px', padding: c.padding, minWidth: '0' };
+    };
     const toggleLegend = (e) => {
       e.stopPropagation();
       e.preventDefault();
       const legend = document.querySelector('.legend');
-      legend.classList.toggle('collapsed');
-      legendCollapseBtn.textContent = legend.classList.contains('collapsed') ? '▼' : '▲';
+      const body = legend.querySelector('.legend-body');
+      const from = legendBox(legend);
+      if (legendAnims) legendAnims.forEach(a => a.cancel());
+      legend.classList.remove('legend-anim');
+      const closing = legend.classList.toggle('collapsed');
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const to = legendBox(legend);
+      legend.classList.add('legend-anim');
+      const opts = { duration: 260, easing: 'cubic-bezier(.16,1,.3,1)' };
+      const box = legend.animate([from, to], opts);
+      legendAnims = [box, body.animate([{ opacity: closing ? 1 : 0 }, { opacity: closing ? 0 : 1 }], opts)];
+      box.onfinish = () => { legend.classList.remove('legend-anim'); legendAnims = null; };
     };
     legendCollapseBtn.onclick = toggleLegend;
     legendCollapseBtn.addEventListener('touchend', toggleLegend, {passive:false});
