@@ -1483,6 +1483,16 @@ html,body{
 /* V86: tooltip tidak menangkap pointer; panel 320px-nya menutupi marker di belakangnya. */
 /* V106: hanya angka ber-data-calc di tooltip yang bisa diklik; sisa panel tetap tembus. */
 .leaflet-tooltip.plant-tooltip [data-calc]{pointer-events:auto}
+/* V256: kepala tooltip jadi pegangan geser; badan panel tetap tembus (V86). */
+.plant-popup-drag{
+  position:relative;margin:-8px -11px 0;padding:8px 24px 0 11px;
+  pointer-events:auto;cursor:move;touch-action:none;user-select:none;-webkit-user-select:none;
+}
+.plant-popup-drag::after{
+  content:'';position:absolute;top:10px;right:9px;width:7px;height:11px;opacity:.55;
+  background:radial-gradient(circle,var(--text-dim) 1px,transparent 1.3px) 0 0/3.5px 3.67px;
+}
+.plant-popup-drag:hover::after{opacity:1}
 /* Di dalam dua strip berwarna, --border-bright nyaris tak terlihat di atas tint
    merah/hijau — garis penanda mengikuti warna teksnya saja. */
 .plant-popup-warning [data-calc],.plant-popup-surplus [data-calc]{text-decoration-color:currentColor}
@@ -12172,6 +12182,59 @@ function cofiringMarkerSize(p){
   return Math.max(22, Math.min(44, 20 + Math.sqrt(sizeBase || 0) / 30));
 }
 
+// V256: jarak kaki ikon ke tepi bawah tooltip. Ikon terpilih di-scale 1,4× dari tengah
+// (.plant-icon.selected), jadi puncaknya 1,2× tinggi ikon di atas kaki.
+function plantTipClearance(size){ return Math.round(size * 1.15 * 1.2) + 8; }
+
+// V256: geseran tooltip per PLTU { kode → [dx, dy] }. Bertahan melewati refreshMarkers()
+// yang membangun ulang marker; hilang saat halaman dimuat ulang.
+const _plantTipDrag = {};
+
+// Dipanggil tiap tooltip dibuka karena isinya dibangun ulang Leaflet. Geseran disimpan di
+// options.offset, jadi ikut terhitung saat Leaflet memosisikan ulang ketika zoom.
+function wirePlantTipDrag(tip, code, base){
+  const el = tip.getElement();
+  const handle = el && el.querySelector('.plant-popup-drag');
+  if (!handle) return;
+  const mapEl = map.getContainer();
+  const shift = (dx, dy) => {
+    const o = tip.options.offset;
+    tip.options.offset = [o[0] + dx, o[1] + dy];
+    L.DomUtil.setPosition(el, L.DomUtil.getPosition(el).add([dx, dy]));
+  };
+  // PLTU dekat tepi atas peta: pegangan harus tetap terjangkau walau jadi menutupi ikon.
+  const over = mapEl.getBoundingClientRect().top + 6 - el.getBoundingClientRect().top;
+  if (over > 0) shift(0, Math.ceil(over));
+
+  // disableClickPropagation: tarikan tidak ikut menggeser peta, dan click sesudah lepas
+  // tidak sampai ke map.on('click') yang menutup tooltip.
+  L.DomEvent.disableClickPropagation(handle);
+  handle.addEventListener('pointerdown', e => {
+    if (e.button) return;
+    if (calcTipIsOpen()) hideCalcTip();
+    handle.setPointerCapture(e.pointerId);
+    let lastX = e.clientX, lastY = e.clientY;
+    const onMove = ev => {
+      // Batas: pegangan tidak boleh keluar peta, kalau tidak tooltip tak bisa diraih lagi.
+      const r = el.getBoundingClientRect(), m = mapEl.getBoundingClientRect();
+      const dx = Math.min(m.right - r.left - 60, Math.max(m.left - r.right + 60, ev.clientX - lastX));
+      const dy = Math.min(m.bottom - r.top - 40, Math.max(m.top - r.top, ev.clientY - lastY));
+      lastX += dx; lastY += dy;
+      shift(dx, dy);
+    };
+    const onUp = () => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+      const o = tip.options.offset;
+      _plantTipDrag[code] = [o[0] - base[0], o[1] - base[1]];
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+  });
+}
+
 function refreshMarkers(){
   if (!markerLayer) return;
   markerLayer.clearLayers();
@@ -12205,10 +12268,14 @@ function refreshMarkers(){
     const m = L.marker([p.lat, p.lon], { icon, title: p.name, zIndexOffset: baseZ });
     // V17/V86/V87: bindTooltip tanpa auto-pan, interactive:false, offset ikon diteruskan
     // agar tooltip tetap di atas ikonnya.
+    // V256: titik acuan tooltip = kaki ikon, jadi dinaikkan setinggi ikon terpilih.
+    const tipBase = [off.dx, off.dy - plantTipClearance(size)];
+    const tipDrag = _plantTipDrag[p.code] || [0, 0];
     m.bindTooltip(renderPopup(p), {
-      direction: 'top', offset: [off.dx, off.dy - 8], opacity: 1, sticky: false,
-      className: 'plant-tooltip', interactive: false,
+      direction: 'top', offset: [tipBase[0] + tipDrag[0], tipBase[1] + tipDrag[1]],
+      opacity: 1, sticky: false, className: 'plant-tooltip', interactive: false,
     });
+    m.on('tooltipopen', e => wirePlantTipDrag(e.tooltip, p.code, tipBase));
     // Klik marker: buka panel detail + tooltip (selectPlant memanggil openTooltip).
     m.on('click', () => selectPlant(p.code, true));
     markers[p.code] = m;
@@ -12331,8 +12398,10 @@ function renderPopup(p){
   // SUDAH terpilih, jadi mengkliknya cuma memilih ulang PLTU yang sama — tidak ada gunanya,
   // sementara pointer-events yang dibutuhkannya memblokir klik ke marker di belakang tooltip.
   return `<div class="plant-popup">
-    <div class="plant-popup-name">${p.name}${shortfall ? ' <span class="popup-warn">!</span>' : ''}</div>
-    <div class="plant-popup-sub"><b style="color:${color}">${p.genco || '—'}</b>${sub ? ' · ' + sub : ''}</div>
+    <div class="plant-popup-drag" title="Geser untuk memindahkan">
+      <div class="plant-popup-name">${p.name}${shortfall ? ' <span class="popup-warn">!</span>' : ''}</div>
+      <div class="plant-popup-sub"><b style="color:${color}">${p.genco || '—'}</b>${sub ? ' · ' + sub : ''}</div>
+    </div>
     <div class="plant-popup-row"><span>Periode</span><span style="color:var(--accent)">${yr}</span></div>
     <div class="plant-popup-row"><span>Target Deklarasi</span><span>${fmtInt(p.target_2026_total || 0)} ton</span></div>
     <div class="plant-popup-row"><span>Target FGD</span><span>${fgd ? fmtInt(fgd) + ' ton' : '—'}</span></div>
@@ -17456,7 +17525,7 @@ function refreshBnMap(){
     const m = L.marker([p.lat, p.lon], { icon, title: p.name, riseOnHover: true });
     // V20: bindTooltip on hover (no auto-pan) instead of bindPopup
     m.bindTooltip(renderBnPopup(p, byPlant[p.name] || []), {
-      direction: 'top', offset: [off.dx, off.dy - 8], opacity: 1, sticky: false,
+      direction: 'top', offset: [off.dx, off.dy - plantTipClearance(size)], opacity: 1, sticky: false,
       className: 'plant-tooltip', interactive: false,
     });
     if (hasBottlenecks){
