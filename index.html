@@ -7579,6 +7579,13 @@ body.home-open{overflow:hidden}
 .thb-sep{opacity:.5}
 .thb-sektor{font-weight:800}
 @media (max-width:768px){ .thb-label,.thb-sep{display:none} .topbar-home-btn{margin-left:2px;padding:5px 9px} }
+/* V246: di halaman program tombol pindah ke kiri tab Map; topbar menyimpannya hanya untuk
+   halaman solo dan mobile (bilah tab disembunyikan, lihat .mobile-bottom-nav). */
+/* scroll-snap-align: tanpanya rail menempel ke tab Map dan tombol ini tergulir ke balik tirai ‹. */
+.tabs-home-btn{align-self:center;margin:0 8px 0 0;scroll-snap-align:start}
+@media (min-width:769px), not all and (pointer:coarse){
+  body:not(.page-solo) .topbar .topbar-home-btn{display:none}
+}
 
 /* Subtab jenis kini dipilih dari Beranda — bilah & dropdown subtab tidak dipakai. */
 #mgSubnav,#rgSubnav{display:none!important}
@@ -8054,6 +8061,12 @@ requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (window._
   <!-- V235: tooltip tiap tab menyebut tuts angkanya. -->
   <!-- V217: Map Cofiring jadi dropdown subtab. V226: jenis kini dipilih di Beranda —
        tombol ini membuka peta program aktif (sektorNav), label ikut _mgSyncSubnav. -->
+  <!-- V246: tombol Beranda di kiri tab Map. Salinan di topbar hanya untuk halaman solo
+       (bilah tab tersembunyi) dan mobile (bilah tab diganti bottom nav). -->
+  <button type="button" class="topbar-home-btn tabs-home-btn" onclick="homeShow()" title="Kembali ke Beranda — pilih program bioenergi">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 7.5L8 2.5l6 5M3.5 6.5V13.5h9V6.5M6.5 13.5v-4h3v4"/></svg>
+    <span class="thb-label">Beranda</span><span class="thb-sep" aria-hidden="true">/</span><span class="thb-sektor">Biomass</span>
+  </button>
   <button class="tab active" data-tab="map" id="mapTabTrigger" data-full="Map Cofiring" title="Map Cofiring (1)">
     <svg class="tab-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3l4-1 6 2 4-1v12l-4 1-6-2-4 1V3zM5 2v12M11 4v12"/></svg>
     <span id="mapTabLabel">Map Cofiring</span>
@@ -18792,8 +18805,9 @@ function _sektorAdopt(tab){
       ' belum tersedia. Saat ini tab ini baru berisi data Biomass.';
   }
   document.body.classList.toggle('page-solo', !!SOLO_PAGES[tab]);
-  const chip = document.getElementById('topbarSektor');
-  if (chip) chip.textContent = SOLO_PAGES[tab] || SEKTOR[state.sektor].label;
+  // V246: chip ada di dua tombol Beranda (topbar + bilah tab).
+  const chipTxt = SOLO_PAGES[tab] || SEKTOR[state.sektor].label;
+  document.querySelectorAll('.thb-sektor').forEach(c => { c.textContent = chipTxt; });
   // Label tombol rail Map/Realisasi ikut program walau tab lain yang sedang dibuka.
   _mgSyncSubnav(SEKTOR[state.sektor].map);
   _mgSyncSubnav(SEKTOR[state.sektor].real);
